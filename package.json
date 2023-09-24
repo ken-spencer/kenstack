@@ -1,0 +1,58 @@
+{
+  "name": "@thaumazo/cms",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "prettier": "npx prettier src --check",
+    "prettier:fix": "npm run prettier -- --write",
+    "format": "npm run prettier:fix && npm run lint -- --fix"
+  },
+  "dependencies": {
+    "@aws-sdk/client-ses": "^3.418.0",
+    "@mui/icons-material": "^5.14.9",
+    "@mui/material": "^5.14.4",
+    "@react-email/components": "^0.0.7",
+    "@thaumazo/forms": "^0.2.0",
+    "@types/node": "^20.6.4",
+    "@types/react": "^18.2.22",
+    "@types/react-dom": "18.2.7",
+    "aws-crt": "^1.18.0",
+    "bcrypt": "^5.1.1",
+    "eslint": "^8.50.0",
+    "eslint-config": "^0.3.0",
+    "eslint-config-next": "^13.5.2",
+    "jose": "^4.14.6",
+    "js-cookie": "^3.0.5",
+    "mongoose": "^7.5.2",
+    "nanoid": "^5.0.1",
+    "next": "^13.5.2",
+    "prettier": "^3.0.3",
+    "react": "18.2.0",
+    "react-cookie": "^6.1.1",
+    "react-dom": "18.2.0",
+    "react-email": "^1.9.4",
+    "server-only": "^0.0.1",
+    "typescript": "^5.2.2",
+    "validator": "^13.11.0"
+  },
+  "description": "This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).",
+  "main": "next.config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thaumazo/cms.git"
+  },
+  "author": "Kenneth Spencer",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/thaumazo/cms/issues"
+  },
+  "homepage": "https://github.com/thaumazo/cms#readme",
+  "devDependencies": {
+    "eslint-config-prettier": "^9.0.0",
+    "sass": "^1.68.0"
+  }
+}
