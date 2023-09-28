@@ -1,5 +1,5 @@
-import Image from 'next/image'
-import styles from './page.module.css'
+import Image from "next/image";
+import styles from "./page.module.css";
 
 export default function Home() {
   return (
@@ -8,9 +8,8 @@ export default function Home() {
         <p>
           Get started by editing&nbsp;
           <code className={styles.code}>app/page.tsx</code>
-          this is a test. this is a test. this is a test
-          this is a test. this is a test. this is a test
-          this is a test. this is a test. this is a test
+          this is a test. this is a test. this is a test this is a test. this is
+          a test. this is a test this is a test. this is a test. this is a test
           this is a test. this is a test. this is a test
         </p>
         <div>
@@ -19,7 +18,7 @@ export default function Home() {
             target="_blank"
             rel="noopener noreferrer"
           >
-            By{' '}
+            By{" "}
             <Image
               src="/vercel.svg"
               alt="Vercel Logo"
@@ -95,5 +94,5 @@ export default function Home() {
         </a>
       </div>
     </main>
-  )
+  );
 }
