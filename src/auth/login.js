@@ -1,12 +1,12 @@
 import { SignJWT } from "jose";
-import { auditLog } from "logger";
+import auditLog from "log/audit";
 import Session from "models/Session";
 
 const secret = new TextEncoder().encode(process.env.SECRET);
 const alg = "HS256";
 
 export default async function login(user, request, response) {
-  auditLog(request, "LOGIN", null, {}, user);
+  auditLog(request, "login", null, {}, user);
 
   const session = new Session({ user });
   await session.save();
@@ -26,7 +26,8 @@ export default async function login(user, request, response) {
 
   response.cookies.set("auth", token, {
     httpOnly: true,
+    secure: true,
+    sameSite: "Strict",
     expires: Date.now() + 60 * 60 * 1000, // 1 hour,
-    // secure: true,
   });
 }

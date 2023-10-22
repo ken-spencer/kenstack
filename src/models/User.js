@@ -1,12 +1,11 @@
 import mongoose from "db";
-import validator from "validator";
+import isEmail from "validator/es/lib/isEmail";
 // import jwt from 'jsonwebtoken'
 // import { signature } from "auth"
 import bcrypt from "bcrypt";
+import audit from "db/audit";
 
 const { Schema } = mongoose;
-
-const SALT_WORK_FACTOR = 10;
 
 const UserSchema = new Schema(
   {
@@ -17,9 +16,9 @@ const UserSchema = new Schema(
       required: true,
       unique: true,
       lowercase: true,
-      set: (v) => v.toLowerCase(),
+      set: (v) => v.toLowerCase().trim(),
       validate: (value) => {
-        return validator.isEmail(value);
+        return isEmail(value);
       },
     },
     password: String,
@@ -27,41 +26,20 @@ const UserSchema = new Schema(
   { timestamps: true },
 );
 
-UserSchema.pre("save", function (next) {
-  let user = this;
-
+UserSchema.pre("save", async function () {
   // only hash the password if it has been modified (or is new)
-  if (!user.isModified("password")) {
-    return next();
+  if (this.password && !this.isModified("password")) {
+    return;
   }
 
   // generate a salt
-  bcrypt.genSalt(SALT_WORK_FACTOR, function (err, salt) {
-    if (err) {
-      return next(err);
-    }
-
-    // hash the password using our new salt
-    bcrypt.hash(user.password, salt, function (err, hash) {
-      if (err) {
-        return next(err);
-      }
-
-      // override the cleartext password with the hashed one
-      user.password = hash;
-      next();
-    });
-  });
+  const salt = await bcrypt.genSalt(10);
+  const hash = await bcrypt.hash(this.password.trim(), salt);
+  this.password = hash;
 });
 
-UserSchema.methods.comparePassword = function (candidatePassword, cb) {
-  bcrypt.compare(candidatePassword, this.password, function (err, isMatch) {
-    if (err) {
-      return cb(err);
-    }
-
-    return cb(null, isMatch);
-  });
+UserSchema.methods.comparePassword = async function (candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password);
 };
 
 UserSchema.methods.getFullName = function () {
@@ -105,7 +83,7 @@ UserSchema.methods.setToken = function(response) {
 }
 */
 
-//const User = mongoose.models.User || mongoose.model("User", UserSchema);
-const User = mongoose.addModel("User", UserSchema);
+// audit logging mixin
+audit("User", UserSchema);
 
-export default User;
+export default mongoose.addModel("User", UserSchema);

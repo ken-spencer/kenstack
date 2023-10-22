@@ -1,6 +1,7 @@
 import mongoose from "db";
 import { nanoid } from "nanoid";
 
+import audit from "db/audit";
 const { Schema } = mongoose;
 
 const ForgottenPasswordSchema = new Schema(
@@ -34,11 +35,8 @@ const ForgottenPasswordSchema = new Schema(
   { timestamps: true },
 );
 
-ForgottenPasswordSchema.methods.test = function (arg, cb) {
-  cb(null, true);
-};
+audit("ForgottenPassword", ForgottenPasswordSchema);
 
-// const ForgottenPassword = mongoose.models.ForgottenPassword || mongoose.model("ForgottenPassword", ForgottenPasswordSchema);
 const ForgottenPassword = mongoose.addModel(
   "ForgottenPassword",
   ForgottenPasswordSchema,

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import mailer from "utils/mailer";
 
-import { errorLog, auditLog } from "logger";
+import errorLog from "log/error";
+import auditLog from "log/audit";
 import User from "models/User";
 import ForgottenPassword from "models/ForgottenPassword";
 
@@ -9,7 +10,7 @@ import React from "react";
 import Email from "../Email";
 import { render } from "@react-email/render";
 
-export async function POST(request: Request) {
+export async function POST(request) {
   if (request.headers.get("content-type") !== "application/json") {
     const response = NextResponse.json({
       type: "error",
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
 
   const json = await request.json();
 
-  let { email } = json;
+  let { email } = json.payload;
 
   if (!email) {
     const response = NextResponse.json({
@@ -51,19 +52,35 @@ export async function POST(request: Request) {
   // send this message on success or fail as we don't want to provide a way to scrape membership.
   if (!user) {
     // might as well slow things down a bit on fail.
-    auditLog(request, `Forgotten Password; No user found with email: ${email}`);
+    auditLog(
+      request,
+      "forgottenPasswordMiss",
+      `Forgotten Password; No user found with email: ${email}`,
+      { email },
+    );
     return await new Promise((res) => setTimeout(() => res(success), 6000));
   }
 
   // make sure there are not too many requests happening over time to avoid abuse
-  const results = await ForgottenPassword.find({
-    user: user._id,
-    expiry: { $gte: new Date() },
-  });
+  let results;
+  try {
+    results = await ForgottenPassword.find({
+      user: user._id,
+      expiry: { $gte: new Date() },
+    }).count();
+  } catch (e) {
+    errorLog(e, request, "Problem retrieving forgotten password log");
+    return errorResponse;
+  }
 
   // let's avoid this feature being used to spam
-  if (results.length >= 3) {
-    auditLog(request, `Forgotten Password; Too many requests`, { user });
+  if (results >= 3) {
+    auditLog(
+      request,
+      "forgottenPasswordFlood",
+      `Forgotten Password; Too many requests`,
+      { user },
+    );
 
     const response = NextResponse.json({
       type: "error",

@@ -1,19 +1,18 @@
 import { NextResponse } from "next/server";
 import notFound from "notFound";
 import login from "auth/login";
+import errorLog from "log/error";
 
 import ForgottenPassword from "models/ForgottenPassword";
 import User from "models/User";
 
-// import {errorLog, auditLog } from "logger"
-
-export async function GET(request: Request, { params }) {
+export async function GET(request, { params }) {
   const { slug } = params;
   const { origin } = request.nextUrl;
 
   const errorResponse = (message) => {
     const res = NextResponse.redirect(origin + "/forgotten-password?");
-    res.cookies.set("error", message);
+    res.cookies.set("forgottenPasswordApiError", message);
     return res;
   };
 
@@ -40,6 +39,7 @@ export async function GET(request: Request, { params }) {
   try {
     await login(fp.user, request, res);
   } catch (e) {
+    errorLog(e, request, "Problem logging in");
     return errorResponse(
       "There was a problem logging in. Please try again later",
     );

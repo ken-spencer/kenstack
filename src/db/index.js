@@ -1,42 +1,35 @@
 import "server-only";
 
-import { auditLog } from "logger";
+// import { auditLog } from "logger";
 import mongoose from "mongoose";
+
+// todo workaround for HMR. It remove old model before added new ones
+/*
+Object.keys(mongoose.connection.models).forEach(key => {
+  delete mongoose.connection.models[key];
+});
+*/
 
 mongoose.connect(process.env.MONGO_URI);
 
-mongoose.addModel = function (name, schema, { saveLog = true } = {}) {
-  /*
-  schema.obj = {
-    meta: {
-      created: {
-        type: Date,
-        required: true,
-        default: function() {
-          return Date().now()
-        }
-      }
-    }
-    ...schema.obj
+/*
+mongoose.addModel = function (name: string, schema: Schema) {
+  // hack to allow HMR to work.
+  if (process.env.NODE_ENV === "development") {
+    delete mongoose.connection.models[name];
   }
+
+  return mongoose.model(name, schema);
+};
 */
 
-  if (saveLog) {
-    schema.methods.saveLog = function (request, user = null) {
-      const message = this.$isNew ? "CREATE" : "UPDATE";
-
-      auditLog(
-        request,
-        name,
-        message,
-        { _id: this._id, ...this.getChanges() },
-        user,
-      );
-      return this.save();
-    };
+mongoose.addModel = function (name, schema) {
+  // hack to allow HMR to work.
+  if (process.env.NODE_ENV === "development") {
+    delete mongoose.connection.models[name];
   }
 
-  return mongoose.models[name] || mongoose.model(name, schema);
+  return mongoose.model(name, schema);
 };
 
 export default mongoose;

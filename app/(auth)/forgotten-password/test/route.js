@@ -8,7 +8,7 @@ import React from "react";
 import Email from "../Email";
 import { render } from "@react-email/render";
 
-export async function GET(request: Request) {
+export async function GET(request) {
   // We only want to see this page in development
   if (process.env.NODE_ENV !== "development") {
     notFound();

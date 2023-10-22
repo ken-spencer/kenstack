@@ -1,7 +1,7 @@
 import { SignJWT } from "jose";
-import { auditLog } from "logger";
+import auditLog from "log/audit";
 import Session from "models/Session";
-import { verifyJWT } from "auth/verifyJWT";
+import verifyJWT from "./verifyJWT";
 
 const secret = new TextEncoder().encode(process.env.SECRET);
 const alg = "HS256";
@@ -25,7 +25,7 @@ export default async function revalidate(request, response) {
   }
 
   // extend session date to max of 1 hour
-  let date = new Date();
+  const date = new Date();
   session.expiresAt = date.setMinutes(date.getMinutes() + 60);
   await session.save();
 
@@ -37,11 +37,12 @@ export default async function revalidate(request, response) {
 
   response.cookies.set("auth", token, {
     httpOnly: true,
+    secure: true,
+    sameSite: "Strict",
     expires: session.expiresAt.getTime(),
-    // secure: true,
   });
 
-  auditLog(request, "REVALIDATE", null, {}, session.user);
+  auditLog(request, "revalidate", null, {}, session.user);
 
   return true;
 }

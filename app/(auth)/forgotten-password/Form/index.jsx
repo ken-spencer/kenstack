@@ -2,27 +2,33 @@
 import Link from "next/link";
 
 import { ThemeProvider, Form, TextField, Submit } from "@thaumazo/forms";
+import useFormHandler from "forms/useFormHandler";
 
 import styles from "./form.module.css";
 
 export default function LoginForm() {
+  const { notice, handleSubmit } = useFormHandler("/forgotten-password/api");
+
   return (
     <ThemeProvider theme="auto">
-      <Form className={styles.container}>
+      <Form onSubmit={handleSubmit} className={styles.container}>
         <div className={styles.item}>
-          <h1>Login</h1>
+          <p>
+            Enter your email below and a link will be sent to reset your
+            password.
+          </p>
         </div>
+
+        {notice && <div className={styles.errorItem}>{notice}</div>}
+
         <div className={styles.item}>
           <TextField name="email" type="email" required />
         </div>
         <div className={styles.item}>
-          <TextField name="password" type="password" required />
+          <Submit fullWidth>Request link</Submit>
         </div>
         <div className={styles.item}>
-          <Submit fullWidth>Sign in</Submit>
-        </div>
-        <div className={styles.item}>
-          <Link href="/forgotten-password">Forgotten your password?</Link>
+          <Link href="/login">Return to login</Link>
         </div>
       </Form>
     </ThemeProvider>

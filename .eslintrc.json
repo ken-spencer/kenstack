@@ -8,5 +8,17 @@
     "prettier"
   ],
   "rules": {
+    "import/no-unresolved": "error"
+  },
+  "settings": {
+    "import/resolver": {
+      "node": {
+        "paths": ["src"],  
+        "alias": {
+          "@": "./src"  
+        },
+        "extensions": [".js", ".jsx"]
+      }
+    }
   }
 }

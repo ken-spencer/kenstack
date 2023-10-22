@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import revalidate from "auth/revalidate";
 
-// import { errorLog, auditLog } from "logger";
 // import User from "models/User";
 
 export async function GET(request) {

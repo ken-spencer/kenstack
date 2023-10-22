@@ -1,9 +1,9 @@
 import { jwtVerify } from "jose";
-import { errorLog } from "logger";
+import errorLog from "log/error";
 
 const secret = new TextEncoder().encode(process.env.SECRET);
 
-export async function verifyJWT(request) {
+export default async function verifyJWT(request) {
   const cookie = request.cookies.get("auth");
 
   if (!cookie) {
