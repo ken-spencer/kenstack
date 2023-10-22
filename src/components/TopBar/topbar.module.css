@@ -1,7 +1,10 @@
 .appBar {
+  align-items: center;
 }
 
 .toolbar {
+  max-width: var(--max-width);
+  width: 100%;
 }
 
 .toolbar {

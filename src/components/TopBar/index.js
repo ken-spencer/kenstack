@@ -30,7 +30,7 @@ const ButtonLarge = styled(Button)((/*{ theme }*/) => ({
 export default function TopBar() {
   return (
     <ThemeProvider theme={theme}>
-      <AppBar position="static" classes={{ root: styles.appBar }}>
+      <AppBar position="fixed" classes={{ root: styles.appBar }}>
         <Toolbar classes={{ root: styles.toolbar }}>
           {false && (
             <IconButton
