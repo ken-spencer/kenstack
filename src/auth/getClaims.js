@@ -6,7 +6,7 @@ import { cookies } from "next/headers";
 
 const secret = new TextEncoder().encode(process.env.SECRET);
 
-export default async function getClaims() {
+export default async function verifyJWT() {
   const cookie = cookies().get("auth");
 
   if (!cookie) {

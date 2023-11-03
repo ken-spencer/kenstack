@@ -1,4 +1,5 @@
 import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
+import errorLog from "log/error";
 
 const client = new SESClient({
   credentials: {
@@ -45,7 +46,7 @@ export default async function SESmailer({
   try {
     command = new SendEmailCommand(params);
   } catch (e) {
-    console.error("There was a problem generating the email command", e);
+    errorLog(e, "There was a problem generating the email command");
     return false;
   }
 

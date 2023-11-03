@@ -2,8 +2,8 @@ import verifyJWT from "./verifyJWT";
 import Session from "models/Session";
 import User from "models/User";
 
-export default async function getUser(request) {
-  const claims = await verifyJWT(request);
+export default async function getUser() {
+  const claims = await verifyJWT();
 
   if (!claims) {
     return false;

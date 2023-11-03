@@ -7,5 +7,12 @@
   width: 100%;
 }
 
-.toolbar {
+.siteName {
+}
+
+.navigation {
+  padding: 0 2rem;
+  width: 100%;
+  max-width: 1024px;
+  flex-grow: 1;
 }

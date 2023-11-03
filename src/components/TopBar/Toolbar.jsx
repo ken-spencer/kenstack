@@ -3,7 +3,7 @@
 import styles from "./topbar.module.css";
 
 import theme from "components/theme";
-import { ThemeProvider, styled } from "@mui/material/styles";
+import { ThemeProvider } from "@mui/material/styles";
 
 import Link from "next/link";
 
@@ -15,23 +15,27 @@ import ButtonGroup from "@mui/material/ButtonGroup";
 import IconButton from "@mui/material/IconButton";
 import MenuIcon from "@mui/icons-material/Menu";
 
+import Logout from "components/Logout";
+
 const pages = [
   ["/projects", "Projects"],
   // ['/about', 'About'],
   ["/contact", "Contact"],
 ];
 
-const ButtonLarge = styled(Button)((/*{ theme }*/) => ({
+/*
+const ButtonLarge = styled(Button)(({ theme }) => ({
   color: "#eee",
   marginRight: 20,
   fontSize: 20,
 }));
+*/
 
-export default function TopBar() {
+export default function TopBar({ claims }) {
   return (
     <ThemeProvider theme={theme}>
       <AppBar position="fixed" classes={{ root: styles.appBar }}>
-        <Toolbar classes={{ root: styles.toolbar }}>
+        <Toolbar disableGutters classes={{ root: styles.toolbar }}>
           {false && (
             <IconButton
               size="large"
@@ -43,22 +47,20 @@ export default function TopBar() {
               <MenuIcon />
             </IconButton>
           )}
-          <Link key="siteName" href="/" passHref>
-            <ButtonLarge color="inherit" classes={{ root: styles.siteName }}>
-              Thaumazo
-            </ButtonLarge>
+          <Link key="siteName" href="/" className={styles.siteName} passHref>
+            <Button color="inherit">Thaumazo</Button>
           </Link>
           <ButtonGroup
             key="primary-nav"
             variant="text"
-            sx={{ width: "100%", maxWidth: "1024px", flexGrow: 1 }}
+            className={styles.navigation}
           >
             {pages.map(([path, title]) => {
               return (
                 <Link key={path} href={path} passHref>
                   <Button
                     color="inherit"
-                    sx={{ color: name == path ? "#222" : null }}
+                    // sx={{ color: name == path ? "#222" : null }}
                   >
                     {title}
                   </Button>
@@ -66,9 +68,13 @@ export default function TopBar() {
               );
             })}
           </ButtonGroup>
-          <Link href="/login">
-            <Button color="inherit">Login</Button>
-          </Link>
+          {claims ? (
+            <Logout />
+          ) : (
+            <Link key="login" href="/login">
+              <Button color="inherit">Login</Button>
+            </Link>
+          )}
         </Toolbar>
       </AppBar>
     </ThemeProvider>

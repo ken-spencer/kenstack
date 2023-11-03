@@ -7,12 +7,13 @@ const secret = new TextEncoder().encode(process.env.SECRET);
 const alg = "HS256";
 
 export default async function revalidate(request, response) {
-  const claims = await verifyJWT(request);
+  const claims = await verifyJWT();
 
   if (!claims) {
     return false;
   }
 
+  // TODO look up user object to ensure the user is still in the DB
   const session = await Session.findById(claims.sid);
 
   if (!session) {
@@ -42,7 +43,7 @@ export default async function revalidate(request, response) {
     expires: session.expiresAt.getTime(),
   });
 
-  auditLog(request, "revalidate", null, {}, session.user);
+  auditLog("revalidate", null, {}, session.user);
 
   return true;
 }

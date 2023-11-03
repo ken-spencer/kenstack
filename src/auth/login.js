@@ -1,3 +1,6 @@
+"use server";
+
+import { cookies } from "next/headers";
 import { SignJWT } from "jose";
 import auditLog from "log/audit";
 import Session from "models/Session";
@@ -5,8 +8,8 @@ import Session from "models/Session";
 const secret = new TextEncoder().encode(process.env.SECRET);
 const alg = "HS256";
 
-export default async function login(user, request, response) {
-  auditLog(request, "login", null, {}, user);
+export default async function login(user) {
+  auditLog("login", null, {}, user);
 
   const session = new Session({ user });
   await session.save();
@@ -24,7 +27,7 @@ export default async function login(user, request, response) {
     .setExpirationTime("1h")
     .sign(secret);
 
-  response.cookies.set("auth", token, {
+  cookies().set("auth", token, {
     httpOnly: true,
     secure: true,
     sameSite: "Strict",

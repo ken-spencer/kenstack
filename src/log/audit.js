@@ -1,18 +1,13 @@
 import AuditLog from "models/AuditLog";
+import getLogMeta from "./meta";
 
 export default function auditLog(
-  request,
   key,
   message = null,
   data = null,
   user = null,
 ) {
-  const meta = {
-    href: request.nextUrl.href,
-    ip: request.ip ?? "127.0.0.1",
-    geo: request.geo,
-    userAgent: request.headers.get("user-agent"),
-  };
+  const meta = getLogMeta();
 
   // Loading this dynamically to avoid a race condition with mongoose
   const log = new AuditLog({

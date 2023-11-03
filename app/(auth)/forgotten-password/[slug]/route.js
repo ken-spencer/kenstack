@@ -39,7 +39,7 @@ export async function GET(request, { params }) {
   try {
     await login(fp.user, request, res);
   } catch (e) {
-    errorLog(e, request, "Problem logging in");
+    errorLog(e, "Problem logging in");
     return errorResponse(
       "There was a problem logging in. Please try again later",
     );
