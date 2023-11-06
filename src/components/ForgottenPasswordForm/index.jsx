@@ -1,11 +1,9 @@
 "use client";
 
-import action from "./action";
-
 import { Provider, ThemeProvider } from "@thaumazo/forms";
 import Form from "./Form";
 
-export default function FPFormWrapper() {
+export default function FPFormWrapper({ action }) {
   return (
     <ThemeProvider theme="auto">
       <Provider action={action}>

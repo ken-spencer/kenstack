@@ -71,8 +71,7 @@ export default function ForgottenPasswordEmail({
             </Text>
             <Section className="text-center mt-[32px] mb-[32px]">
               <Button
-                pX={20}
-                pY={12}
+                style={{ padding: "10px 20px" }}
                 className="bg-blue-700 rounded text-white text-[14px] font-bold no-underline text-center"
                 href={url}
               >

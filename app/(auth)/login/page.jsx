@@ -1,4 +1,4 @@
-import Form from "./Form";
+import Form from "components/LoginForm";
 
 // import styles from "./page.module.css"
 import { Main } from "components";

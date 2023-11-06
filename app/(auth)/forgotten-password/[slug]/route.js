@@ -37,12 +37,13 @@ export async function GET(request, { params }) {
 
   const res = NextResponse.redirect(origin + "/reset-password?");
   try {
-    await login(fp.user, request, res);
+    await login(fp.user, res);
   } catch (e) {
     errorLog(e, "Problem logging in");
     return errorResponse(
       "There was a problem logging in. Please try again later",
     );
   }
+  res.cookies.set("foo", "bar");
   return res;
 }

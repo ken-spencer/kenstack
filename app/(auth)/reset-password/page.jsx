@@ -1,4 +1,4 @@
-import Form from "./Form";
+import Form from "components/ResetPasswordForm";
 
 // import styles from "./page.module.css"
 import { Main } from "components";

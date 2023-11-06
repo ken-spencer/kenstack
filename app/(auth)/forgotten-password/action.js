@@ -1,6 +1,6 @@
 "use server";
 
-import Email from "../Email";
+import Email from "./Email";
 import forgottenPasswordAction from "auth/forgottenPasswordAction";
 
 export default async function action(initial, data) {

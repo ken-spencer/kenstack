@@ -8,7 +8,7 @@ import Session from "models/Session";
 const secret = new TextEncoder().encode(process.env.SECRET);
 const alg = "HS256";
 
-export default async function login(user) {
+export default async function login(user, response = null) {
   auditLog("login", null, {}, user);
 
   const session = new Session({ user });
@@ -27,10 +27,12 @@ export default async function login(user) {
     .setExpirationTime("1h")
     .sign(secret);
 
-  cookies().set("auth", token, {
+  const resCookies = response ? response.cookies : cookies();
+  resCookies.set("auth", token, {
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === "production", // Safair won't allow this cookie otherwise
     sameSite: "Strict",
     expires: Date.now() + 60 * 60 * 1000, // 1 hour,
   });
+  //  console.log("login", response, resCookies);
 }

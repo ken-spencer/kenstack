@@ -1,12 +1,12 @@
-import Form from "./Form";
-
 // import styles from "./page.module.css"
 import { Main } from "components";
+import Form from "components/ForgottenPasswordForm";
+import action from "./action";
 
 export default function Login() {
   return (
     <Main>
-      <Form />
+      <Form action={action} />
     </Main>
   );
 }
