@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import revalidate from "auth/revalidate";
-
-// import User from "models/User";
+import revalidate from "@thaumazo/cms/auth/revalidate";
 
 export async function GET(request) {
   // for now we are only loading this from middleware.

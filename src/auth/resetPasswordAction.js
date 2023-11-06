@@ -1,14 +1,15 @@
 "use server";
 
-import loadUser from "./loadUser";
-import auditLog from "log/audit";
-import errorLog from "log/error";
-import { redirect } from "next/navigation";
+// import loadUser from "./loadUser";
+import authenticate from "./authenticate";
+import auditLog from "../log/audit";
+import errorLog from "../log/error";
+// import { redirect } from "next/navigation";
 
 export default async function resetPasswordAction(init, data) {
   let user;
   try {
-    user = await loadUser();
+    user = await authenticate(); //loadUser();
   } catch (e) {
     errorLog(e, "Problem loading the user");
     return {
@@ -16,9 +17,11 @@ export default async function resetPasswordAction(init, data) {
     };
   }
 
+  /*
   if (!user) {
     redirect("/login");
   }
+  */
 
   const password = data.get("password");
   const confirm_password = data.get("confirm_password");

@@ -1,6 +1,6 @@
 // import styles from "./page.module.css"
-import { Main } from "components";
-import Form from "components/ForgottenPasswordForm";
+import { Main } from "@thaumazo/cms/components";
+import Form from "@thaumazo/cms/components/ForgottenPasswordForm";
 import action from "./action";
 
 export default function Login() {

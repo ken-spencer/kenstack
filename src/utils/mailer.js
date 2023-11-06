@@ -1,5 +1,5 @@
 import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
-import errorLog from "log/error";
+import errorLog from "../log/error";
 
 const client = new SESClient({
   credentials: {

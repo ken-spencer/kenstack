@@ -2,15 +2,15 @@
 
 import { redirect } from "next/navigation";
 
-import getLogMeta from "log/meta";
 // import { revalidateTag } from 'next/cache'
 
-import login from "auth/login";
-import errorLog from "log/error";
+import login from "./login";
+import getLogMeta from "../log/meta";
+import errorLog from "../log/error";
 import { DateTime } from "luxon";
 
-import User from "models/User";
-import LoginLog from "models/LoginLog";
+import User from "../models/User";
+import LoginLog from "../models/LoginLog";
 
 async function failResponse(email) {
   const errorMessage = `

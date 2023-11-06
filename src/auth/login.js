@@ -2,8 +2,8 @@
 
 import { cookies } from "next/headers";
 import { SignJWT } from "jose";
-import auditLog from "log/audit";
-import Session from "models/Session";
+import auditLog from "../log/audit";
+import Session from "../models/Session";
 
 const secret = new TextEncoder().encode(process.env.SECRET);
 const alg = "HS256";

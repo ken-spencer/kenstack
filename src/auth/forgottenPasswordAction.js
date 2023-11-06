@@ -1,14 +1,14 @@
 "use server";
 
-import meta from "log/meta";
+import meta from "../log/meta";
 
 import { headers } from "next/headers";
-import mailer from "utils/mailer";
+import mailer from "../utils/mailer";
 
-import errorLog from "log/error";
-import auditLog from "log/audit";
-import User from "models/User";
-import ForgottenPassword from "models/ForgottenPassword";
+import errorLog from "../log/error";
+import auditLog from "../log/audit";
+import User from "../models/User";
+import ForgottenPassword from "../models/ForgottenPassword";
 
 import React from "react";
 import { render } from "@react-email/render";

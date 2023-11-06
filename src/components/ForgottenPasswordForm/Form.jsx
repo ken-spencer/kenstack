@@ -4,7 +4,7 @@ import Link from "next/link";
 import Cookies from "js-cookie";
 
 import { Form, TextField, Submit } from "@thaumazo/forms";
-import Notice from "components/Notice";
+import Notice from "../Notice";
 
 import styles from "./form.module.css";
 

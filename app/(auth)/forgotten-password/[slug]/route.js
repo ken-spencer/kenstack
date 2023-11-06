@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import notFound from "notFound";
-import login from "auth/login";
-import errorLog from "log/error";
+import notFound from "@thaumazo/cms/notFound";
+import login from "@thaumazo/cms/auth/login";
+import errorLog from "@thaumazo/cms/log/error";
 
-import ForgottenPassword from "models/ForgottenPassword";
-import User from "models/User";
+import ForgottenPassword from "@thaumazo/cms/models/ForgottenPassword";
+import User from "@thaumazo/cms/models/User";
 
 export async function GET(request, { params }) {
   const { slug } = params;

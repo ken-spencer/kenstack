@@ -1,7 +1,7 @@
 "use client";
 
 import { Form, Password, Submit } from "@thaumazo/forms";
-import Notice from "components/Notice";
+import Notice from "../Notice";
 
 import styles from "./form.module.css";
 

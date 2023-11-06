@@ -1,4 +1,4 @@
-import TopBar from "components/TopBar";
+import TopBar from "@thaumazo/cms/components/TopBar";
 
 import styles from "./template.module.css";
 

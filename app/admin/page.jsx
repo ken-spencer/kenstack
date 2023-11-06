@@ -1,4 +1,4 @@
-import Main from "components/Main";
+import Main from "@thaumazo/cms/components/Main";
 
 export default function Admin() {
   return (

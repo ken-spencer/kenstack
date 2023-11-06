@@ -1,7 +1,7 @@
 "use server";
 
 import Email from "./Email";
-import forgottenPasswordAction from "auth/forgottenPasswordAction";
+import forgottenPasswordAction from "@thaumazo/cms/auth/forgottenPasswordAction";
 
 export default async function action(initial, data) {
   return await forgottenPasswordAction(initial, data, { Email });

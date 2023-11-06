@@ -2,7 +2,7 @@
 
 import { Provider, ThemeProvider } from "@thaumazo/forms";
 import Form from "./Form";
-import loginAction from "auth/loginAction";
+import loginAction from "../../auth/loginAction";
 
 export default function LoginForm() {
   return (

@@ -1,4 +1,4 @@
-import getClaims from "auth/getClaims";
+import getClaims from "../../auth/getClaims";
 import Toolbar from "./Toolbar";
 
 export default async function TopBarCont() {

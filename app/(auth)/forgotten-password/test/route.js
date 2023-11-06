@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { notFound } from "next/navigation";
 
-import User from "models/User";
-// import ForgottenPassword from "models/ForgottenPassword";
+import User from "@thaumazo/cms/models/User";
 
 import React from "react";
 import Email from "../Email";

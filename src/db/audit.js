@@ -1,4 +1,4 @@
-import auditLog from "log/audit";
+import auditLog from "../log/audit";
 
 const methods = (name) => ({
   saveLog: function (user) {

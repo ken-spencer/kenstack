@@ -3,7 +3,7 @@
 import { Provider, ThemeProvider } from "@thaumazo/forms";
 import Form from "./Form";
 
-import resetPasswordAction from "auth/resetPasswordAction";
+import resetPasswordAction from "../../auth/resetPasswordAction";
 
 export default function ResetPassword() {
   return (

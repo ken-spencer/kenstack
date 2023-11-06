@@ -1,7 +1,7 @@
-import mongoose from "db";
+import mongoose from "../db";
 import { nanoid } from "nanoid";
 
-import audit from "db/audit";
+import audit from "../db/audit";
 const { Schema } = mongoose;
 
 const ForgottenPasswordSchema = new Schema(

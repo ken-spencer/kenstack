@@ -1,4 +1,4 @@
-import mongoose from "db";
+import mongoose from "../db";
 import isEmail from "validator/es/lib/isEmail";
 
 const { Schema } = mongoose;

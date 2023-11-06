@@ -1,6 +1,6 @@
 import { SignJWT } from "jose";
-import auditLog from "log/audit";
-import Session from "models/Session";
+import auditLog from "../log/audit";
+import Session from "../models/Session";
 import verifyJWT from "./verifyJWT";
 
 const secret = new TextEncoder().encode(process.env.SECRET);

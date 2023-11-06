@@ -2,7 +2,7 @@
 
 import styles from "./topbar.module.css";
 
-import theme from "components/theme";
+import theme from "../theme";
 import MenuProvider from "./AccountSettings/Provider";
 import AccountMenu from "./AccountSettings/AccountMenu";
 

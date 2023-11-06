@@ -2,7 +2,7 @@ import Link from "next/link";
 // import { experimental_useFormStatus as useFormStatus } from 'react-dom'
 
 import { TextField, Password, Submit } from "@thaumazo/forms";
-import Notice from "components/Notice";
+import Notice from "../Notice";
 
 import styles from "./form.module.css";
 

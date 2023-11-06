@@ -1,7 +1,7 @@
 import "server-only";
 
 import { jwtVerify } from "jose";
-import errorLog from "log/error";
+import errorLog from "../log/error";
 import { cookies } from "next/headers";
 
 const secret = new TextEncoder().encode(process.env.SECRET);

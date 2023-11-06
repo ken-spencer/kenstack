@@ -21,9 +21,9 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@thaumazo/cms/*": ["./src/*"]
     },
-    "baseUrl": "./src"
+    "baseUrl": "."
   },
   "exclude": ["node_modules"]
 }

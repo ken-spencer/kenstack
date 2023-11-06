@@ -14,10 +14,12 @@
   "settings": {
     "import/resolver": {
       "node": {
-        "paths": ["src"],  
-        "alias": {
-          "@": "./src"  
-        },
+        "extensions": [".js", ".jsx"]
+      },
+      "alias": {
+        "map": [
+          ["@thaumazo/cms", "./src"]
+        ],
         "extensions": [".js", ".jsx"]
       }
     }

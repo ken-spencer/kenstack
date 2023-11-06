@@ -1,6 +1,6 @@
 import verifyJWT from "./verifyJWT";
-import Session from "models/Session";
-import User from "models/User";
+import Session from "../models/Session";
+import User from "../models/User";
 
 export default async function getUser() {
   const claims = await verifyJWT();

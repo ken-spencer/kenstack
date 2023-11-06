@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 
-import auditLog from "log/audit";
+import auditLog from "../log/audit";
 import { redirect } from "next/navigation";
 
 export default async function logoutAction() {
