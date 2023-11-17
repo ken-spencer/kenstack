@@ -27,12 +27,26 @@ export default async function login(user, response = null) {
     .setExpirationTime("1h")
     .sign(secret);
 
+  const expires = Date.now() + 60 * 60 * 1000; // 1 hour,
+
   const resCookies = response ? response.cookies : cookies();
   resCookies.set("auth", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production", // Safair won't allow this cookie otherwise
     sameSite: "Strict",
-    expires: Date.now() + 60 * 60 * 1000, // 1 hour,
+    expires,
   });
+
+  const publicToken = {
+    expires,
+  };
+
+  resCookies.set("authPublic", JSON.stringify(publicToken), {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === "production", // Safair won't allow this cookie otherwise
+    sameSite: "Strict",
+    expires,
+  });
+
   //  console.log("login", response, resCookies);
 }

@@ -1,4 +1,4 @@
-"use client";
+import "server-only";
 
 import { Provider, ThemeProvider } from "@thaumazo/forms";
 import Form from "./Form";

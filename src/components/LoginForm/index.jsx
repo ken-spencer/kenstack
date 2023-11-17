@@ -1,7 +1,8 @@
 "use client";
 
-import { Provider, ThemeProvider } from "@thaumazo/forms";
 import Form from "./Form";
+import Provider from "@thaumazo/forms/Provider";
+import ThemeProvider from "@thaumazo/forms/ThemeProvider";
 import loginAction from "../../auth/loginAction";
 
 export default function LoginForm() {

@@ -1,8 +1,10 @@
+import { cache } from "react";
+
 import verifyJWT from "./verifyJWT";
 import Session from "../models/Session";
 import User from "../models/User";
 
-export default async function getUser() {
+export default cache(async function getUser() {
   const claims = await verifyJWT();
 
   if (!claims) {
@@ -24,4 +26,4 @@ export default async function getUser() {
   }
 
   return session.user;
-}
+});

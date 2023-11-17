@@ -1,17 +1,18 @@
-import { useCallback } from "react";
 import MenuItem from "@mui/material/MenuItem";
 
 import ListItemIcon from "@mui/material/ListItemIcon";
 import LogoutIcon from "@mui/icons-material/Logout";
 
+import logoutAction from "../../../auth/logoutAction";
+import useServerAction from "../../../useServerAction";
+
 export default function LogoutButton() {
-  const handleClick = useCallback((evt) => {
-    // evt.stopPropagation();
-    const form = evt.target.closest("form");
-    form.requestSubmit();
-  }, []);
+  // let [isPending, startTransition] = useTransition();
+
+  const [isPending, action] = useServerAction(logoutAction);
+
   return (
-    <MenuItem onClick={handleClick}>
+    <MenuItem onClick={isPending ? undefined : action}>
       <ListItemIcon>
         <LogoutIcon fontSize="small" />
       </ListItemIcon>

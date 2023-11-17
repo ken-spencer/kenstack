@@ -8,7 +8,7 @@ import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
 
 export default function AccountSettingsButton() {
-  const { menuButtonRef, setMenuOpen } = useContext(MenuContext);
+  const { open, menuButtonRef, setMenuOpen } = useContext(MenuContext);
 
   const handleClick = useCallback(() => {
     setMenuOpen(true);
@@ -23,7 +23,7 @@ export default function AccountSettingsButton() {
         aria-haspopup="true"
         aria-expanded={open ? "true" : undefined}
       >
-        <Avatar />
+        <Avatar sx={{ width: 32, height: 32 }} />
       </IconButton>
     </Tooltip>
   );

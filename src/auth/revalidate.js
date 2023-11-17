@@ -43,6 +43,14 @@ export default async function revalidate(request, response) {
     expires: session.expiresAt.getTime(),
   });
 
+  const publicToken = response.cookies.get("authPublic");
+  response.cookies.set("authPublic", publicToken, {
+    httpOnly: false,
+    secure: true,
+    sameSite: "Strict",
+    expires: session.expiresAt.getTime(),
+  });
+
   auditLog("revalidate", null, {}, session.user);
 
   return true;

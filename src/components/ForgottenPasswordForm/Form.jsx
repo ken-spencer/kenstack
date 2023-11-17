@@ -1,7 +1,7 @@
 "use client";
-import { useEffect, useState } from "react";
+// import { useEffect, useState } from "react";
 import Link from "next/link";
-import Cookies from "js-cookie";
+// import Cookies from "js-cookie";
 
 import { Form, TextField, Submit } from "@thaumazo/forms";
 import Notice from "../Notice";
@@ -9,6 +9,7 @@ import Notice from "../Notice";
 import styles from "./form.module.css";
 
 export default function FPForm() {
+  /*
   const [errorMessage, setErrorMessage] = useState();
   useEffect(() => {
     const error = Cookies.get("forgottenPasswordApiError");
@@ -17,6 +18,7 @@ export default function FPForm() {
       Cookies.remove("forgottenPasswordApiError");
     }
   }, []);
+  */
 
   return (
     <Form className={styles.container}>
@@ -27,7 +29,7 @@ export default function FPForm() {
       </div>
 
       <div className={styles.errorItem}>
-        <Notice error={errorMessage} />
+        <Notice name="forgottenPasswordApiError" />
       </div>
 
       <div className={styles.item}>

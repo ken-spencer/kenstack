@@ -27,7 +27,7 @@ export default function ResetPasswordForm() {
         <Password name="confirm_password" matches="password" />
       </div>
       <div className={styles.item}>
-        <Submit fullWidth>Request link</Submit>
+        <Submit fullWidth>Update password</Submit>
       </div>
     </Form>
   );

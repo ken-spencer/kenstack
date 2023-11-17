@@ -1,7 +1,10 @@
 import Link from "next/link";
 // import { experimental_useFormStatus as useFormStatus } from 'react-dom'
 
-import { TextField, Password, Submit } from "@thaumazo/forms";
+import TextField from "@thaumazo/forms/TextField";
+import Password from "@thaumazo/forms/Password";
+import Submit from "@thaumazo/forms/Submit";
+
 import Notice from "../Notice";
 
 import styles from "./form.module.css";
@@ -16,7 +19,7 @@ export default function LoginFormInner() {
       </div>
 
       <div className={styles.errorItem}>
-        <Notice />
+        <Notice name="loginError" />
       </div>
 
       <div className={styles.item}>

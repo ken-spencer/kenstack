@@ -1,7 +1,7 @@
 "use client";
 // import useFormHandler from "forms/useFormHandler";
 
-import { Form } from "@thaumazo/forms";
+import Form from "@thaumazo/forms/Form";
 import InnerForm from "./Inner";
 
 import styles from "./form.module.css";

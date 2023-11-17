@@ -2,6 +2,10 @@
   align-items: center;
 }
 
+.spacer {
+  height: 50px;
+}
+
 .toolbar {
   max-width: var(--max-width);
   width: 100%;
