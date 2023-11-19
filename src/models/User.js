@@ -25,6 +25,7 @@ const UserSchema = new Schema(
         return isEmail(value);
       },
     },
+    roles: [String],
     password: String,
   },
   { timestamps: true },

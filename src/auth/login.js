@@ -17,6 +17,7 @@ export default async function login(user, response = null) {
   const claims = {
     sub: user._id.toString(), // The UID of the user in your system
     sid: session._id.toString(),
+    roles: user.roles,
   };
 
   const token = await new SignJWT(claims)
@@ -39,9 +40,13 @@ export default async function login(user, response = null) {
 
   const publicToken = {
     expires,
+    roles: user.roles,
   };
 
-  resCookies.set("authPublic", JSON.stringify(publicToken), {
+  let json = JSON.stringify(publicToken);
+  let encodedString = Buffer.from(json, "utf-8").toString('base64');
+
+  resCookies.set("authPublic", encodedString, {
     httpOnly: false,
     secure: process.env.NODE_ENV === "production", // Safair won't allow this cookie otherwise
     sameSite: "Strict",

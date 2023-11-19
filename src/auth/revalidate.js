@@ -39,7 +39,13 @@ export default async function revalidate(cookies) {
   session.expiresAt = date.setMinutes(date.getMinutes() + 60);
   await session.save();
 
-  const token = await new SignJWT(claims)
+  const newClaims = {
+    sub: user._id.toString(), // The UID of the user in your system
+    sid: session._id.toString(),
+    roles: user.roles,
+  }; 
+
+  const token = await new SignJWT(newClaims)
     .setProtectedHeader({ alg })
     .setIssuedAt()
     .setExpirationTime(session.expiresAt.getTime() / 1000)
@@ -52,8 +58,15 @@ export default async function revalidate(cookies) {
     expires: session.expiresAt.getTime(),
   });
 
-  const publicToken = cookies.get("authPublic");
-  cookies.set("authPublic", publicToken, {
+  const publicToken = {
+    expires: session.expiresAt.getTime(),
+    roles: user.roles,
+  };
+
+  let json = JSON.stringify(publicToken);
+  let encodedString = Buffer.from(json, "utf-8").toString('base64');
+
+  cookies.set("authPublic", encodedString, {
     httpOnly: false,
     secure: true,
     sameSite: "Strict",

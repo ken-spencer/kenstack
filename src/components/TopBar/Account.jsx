@@ -1,7 +1,10 @@
 "use client";
 
+import { useContext } from "react";
+import MenuContext from "./AccountSettings/Context";
+
 import Cookies from "js-cookie";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useSelectedLayoutSegment } from "next/navigation";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 
@@ -10,7 +13,7 @@ import Button from "@mui/material/Button";
 import AccountSettings from "./AccountSettings";
 
 export default function Account() {
-  const [userInfo, setUserInfo] = useState(null);
+  const { userInfo, setUserInfo } = useContext(MenuContext);
   const segment = useSelectedLayoutSegment();
   const path = usePathname();
   const searchParams = useSearchParams();
@@ -18,11 +21,18 @@ export default function Account() {
 
   useEffect(() => {
     const auth = Cookies.get("authPublic");
-    setUserInfo(auth || false);
+    let claims;
+
+    if (auth) {
+      const json = atob(auth);
+      claims = JSON.parse(json);
+    }
+
+    setUserInfo(claims || false);
     if (searchParams.get("homeRefresh")) {
       router.replace("/");
     }
-  }, [path, searchParams, router]);
+  }, [path, searchParams, router, setUserInfo]);
 
   if (userInfo === null || segment === "(auth)") {
     return null;
