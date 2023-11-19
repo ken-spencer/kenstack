@@ -9,6 +9,7 @@ export default function connect(server) {
   const uri = process.env.MONGODB_URI;
 
   cachedDb = MongoClient.connect(uri, {
+    // autoIndex: false,
     useNewUrlParser: true,
     poolSize: 5,
     useUnifiedTopology: true, // get a deprecation warning without this

@@ -29,8 +29,8 @@ export async function middleware(request) {
   }
 
   // Token has 1/2 hour left before expiration let's re-issue
-  const now = Math.round(Date.now() / 1000);
-  if (claims.exp - now <= 1800) {
+  const secondsRemaining = Math.round((claims.exp - Date.now() / 1000));
+  if (secondsRemaining <= 1800) {
     let res = NextResponse.rewrite(new URL("/login/revalidate", request.url));
     return res;
   }

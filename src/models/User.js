@@ -9,8 +9,12 @@ const { Schema } = mongoose;
 
 const UserSchema = new Schema(
   {
-    first_name: String,
-    last_name: String,
+    first_name: {
+      type: String,
+    },  
+    last_name: {
+      type: String,
+    },
     email: {
       type: String,
       required: true,
@@ -25,6 +29,9 @@ const UserSchema = new Schema(
   },
   { timestamps: true },
 );
+
+// tried this for a full text search, but seemed fairly useless. 
+// UserSchema.index({ first_name: 'text', last_name: 'text', email: 'text' });
 
 UserSchema.pre("save", async function () {
   // only hash the password if it has been modified (or is new)

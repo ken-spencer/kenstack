@@ -1,27 +1,36 @@
 import { SignJWT } from "jose";
 import auditLog from "../log/audit";
-import Session from "../models/Session";
 import verifyJWT from "./verifyJWT";
+
+import loadUser from "./loadUser";
 
 const secret = new TextEncoder().encode(process.env.SECRET);
 const alg = "HS256";
 
-export default async function revalidate(request, response) {
+export default async function revalidate(cookies) {
   const claims = await verifyJWT();
 
   if (!claims) {
     return false;
   }
 
-  // TODO look up user object to ensure the user is still in the DB
-  const session = await Session.findById(claims.sid);
+  const secondsRemaining = Math.round((claims.exp - Date.now() / 1000));
 
-  if (!session) {
-    return false;
+  if (secondsRemaining > 1800) {
+    return null;
   }
 
+  const user = await loadUser();
+
+  if (!user) {
+    return false;
+  }
+  const session = user.session;
+
   // additional security check, may want to audit this
-  if (session.user.toString() !== claims.sub) {
+
+
+  if (session.user._id.toString() !== claims.sub) {
     return false;
   }
 
@@ -33,18 +42,18 @@ export default async function revalidate(request, response) {
   const token = await new SignJWT(claims)
     .setProtectedHeader({ alg })
     .setIssuedAt()
-    .setExpirationTime(session.expiresAt.getTime())
+    .setExpirationTime(session.expiresAt.getTime() / 1000)
     .sign(secret);
 
-  response.cookies.set("auth", token, {
+  cookies.set("auth", token, {
     httpOnly: true,
     secure: true,
     sameSite: "Strict",
     expires: session.expiresAt.getTime(),
   });
 
-  const publicToken = response.cookies.get("authPublic");
-  response.cookies.set("authPublic", publicToken, {
+  const publicToken = cookies.get("authPublic");
+  cookies.set("authPublic", publicToken, {
     httpOnly: false,
     secure: true,
     sameSite: "Strict",

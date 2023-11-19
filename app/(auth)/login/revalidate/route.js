@@ -9,7 +9,7 @@ export async function GET(request) {
   }
 
   const response = NextResponse.redirect(request.nextUrl.href);
-  const success = await revalidate(request, response);
+  const success = await revalidate(response.cookies);
 
   if (success) {
     return response;

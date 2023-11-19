@@ -2,6 +2,9 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 
 import loadUser from "./loadUser";
+import revalidate from "./revalidate";
+
+
 
 export default async function authenticate(roles = []) {
   const user = await loadUser();
@@ -13,6 +16,8 @@ export default async function authenticate(roles = []) {
     );
     redirect("/login");
   }
+
+  await revalidate(cookies())
 
   if (roles.length === 0) {
     return user;
