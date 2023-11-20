@@ -34,11 +34,11 @@ export default cache(async function getUser() {
 
   const user = session.user;
 
-  // ensure this is safe. There is likely a more orthodox way. 
+  // ensure this is safe. There is likely a more orthodox way.
   cookies.user = user;
 
   // temporarilly link session
   user.session = session;
-  
+
   return user;
 });

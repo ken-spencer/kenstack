@@ -6,15 +6,17 @@ import { useCallback } from "react";
 
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
+import Divider from "@mui/material/Divider";
 
-import AccountCircleIcon from '@mui/icons-material/AccountCircle';
-import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import PasswordIcon from "@mui/icons-material/Password";
 import Logout from "./Logout";
 
 export default function AccountMenu() {
-  const { menuButtonRef, setMenuOpen, menuOpen, userInfo } = useContext(MenuContext);
+  const { menuButtonRef, setMenuOpen, menuOpen, userInfo } =
+    useContext(MenuContext);
   const router = useRouter();
 
   const handleClose = useCallback(() => {
@@ -56,8 +58,9 @@ export default function AccountMenu() {
       transformOrigin={{ horizontal: "right", vertical: "top" }}
       anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
     >
-      {(userInfo && userInfo.roles.includes("ADMIN")) ? (
-         <MenuItem
+      {userInfo && userInfo.roles.includes("ADMIN") ? (
+        <>
+          <MenuItem
             onClick={() => {
               router.push("/admin");
             }}
@@ -65,9 +68,10 @@ export default function AccountMenu() {
             <ListItemIcon>
               <AdminPanelSettingsIcon fontSize="small" />
             </ListItemIcon>
-          Admin
-        </MenuItem>
-
+            Admin
+          </MenuItem>
+          <Divider />
+        </>
       ) : null}
 
       <MenuItem
@@ -78,7 +82,6 @@ export default function AccountMenu() {
         <ListItemIcon>
           <AccountCircleIcon fontSize="small" />
         </ListItemIcon>
-
         Profile
       </MenuItem>
       <MenuItem

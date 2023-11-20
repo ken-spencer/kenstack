@@ -44,7 +44,7 @@ export default async function login(user, response = null) {
   };
 
   let json = JSON.stringify(publicToken);
-  let encodedString = Buffer.from(json, "utf-8").toString('base64');
+  let encodedString = Buffer.from(json, "utf-8").toString("base64");
 
   resCookies.set("authPublic", encodedString, {
     httpOnly: false,

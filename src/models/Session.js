@@ -19,7 +19,7 @@ const SessionSchema = new Schema(
         date = date.setMinutes(date.getMinutes() + 60);
         return date;
       },
-      index: { expires: '60m' },
+      index: { expires: "60m" },
     },
   },
   { timestamps: true },

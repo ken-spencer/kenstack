@@ -19,7 +19,6 @@ const rules = {
 export default async function loadProfile(initial, formData) {
   const user = await authenticate();
 
-
   formData.forEach((value, key) => {
     if (rules[key]) {
       user[key] = value;
@@ -38,10 +37,11 @@ export default async function loadProfile(initial, formData) {
 
   try {
     await user.saveLog(user);
-  } catch(e) {
+  } catch (e) {
     errorLog(e, "Problem saving profile");
     return {
-      error: "There was an unexpected problem saving your profile. Please try again later.",
+      error:
+        "There was an unexpected problem saving your profile. Please try again later.",
     };
   }
 

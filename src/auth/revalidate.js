@@ -14,7 +14,7 @@ export default async function revalidate(cookies) {
     return false;
   }
 
-  const secondsRemaining = Math.round((claims.exp - Date.now() / 1000));
+  const secondsRemaining = Math.round(claims.exp - Date.now() / 1000);
 
   if (secondsRemaining > 1800) {
     return null;
@@ -29,7 +29,6 @@ export default async function revalidate(cookies) {
 
   // additional security check, may want to audit this
 
-
   if (session.user._id.toString() !== claims.sub) {
     return false;
   }
@@ -43,7 +42,7 @@ export default async function revalidate(cookies) {
     sub: user._id.toString(), // The UID of the user in your system
     sid: session._id.toString(),
     roles: user.roles,
-  }; 
+  };
 
   const token = await new SignJWT(newClaims)
     .setProtectedHeader({ alg })
@@ -64,7 +63,7 @@ export default async function revalidate(cookies) {
   };
 
   let json = JSON.stringify(publicToken);
-  let encodedString = Buffer.from(json, "utf-8").toString('base64');
+  let encodedString = Buffer.from(json, "utf-8").toString("base64");
 
   cookies.set("authPublic", encodedString, {
     httpOnly: false,

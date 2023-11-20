@@ -11,7 +11,7 @@ const UserSchema = new Schema(
   {
     first_name: {
       type: String,
-    },  
+    },
     last_name: {
       type: String,
     },
@@ -31,7 +31,7 @@ const UserSchema = new Schema(
   { timestamps: true },
 );
 
-// tried this for a full text search, but seemed fairly useless. 
+// tried this for a full text search, but seemed fairly useless.
 // UserSchema.index({ first_name: 'text', last_name: 'text', email: 'text' });
 
 UserSchema.pre("save", async function () {

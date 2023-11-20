@@ -12,7 +12,7 @@ export default async function logoutAction() {
   const claims = await verifyJWT();
 
   // run this first before the relevant cookies are deleted
-  await auditLog("logout")
+  await auditLog("logout");
 
   cookies().delete("auth");
   cookies().delete("authPublic");
@@ -26,7 +26,7 @@ export default async function logoutAction() {
   }
 
   if (claims) {
-    await Session.deleteOne({ _id: claims.sid })
+    await Session.deleteOne({ _id: claims.sid });
   }
 
   if (referer && url.pathname == "/") {
