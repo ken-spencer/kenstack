@@ -24,7 +24,7 @@ interface LexicalEditorProps {
 export default function LexicalEditor({ field }): JSX.Element {
   const initialConfig = {
     // editorState: getPrepopulatedRichText,
-    editorState: field.value,
+    editorState: field.value || null,
     namespace: "Playground",
     nodes: [...PlaygroundNodes],
     onError: (error: Error) => {
