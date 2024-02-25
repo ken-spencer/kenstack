@@ -22,5 +22,6 @@ export default async function auditLog(
     ...meta,
     data,
   });
-  log.save();
+
+  return await log.save();
 }

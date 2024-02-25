@@ -7,26 +7,12 @@ import errorLog from "../log/error";
 // import { redirect } from "next/navigation";
 
 export default async function resetPasswordAction(init, data) {
-  let user;
-  try {
-    user = await authenticate(); //loadUser();
-  } catch (e) {
-    errorLog(e, "Problem loading the user");
-    return {
-      error: "There was a problem loading your user. Please try again later",
-    };
-  }
-
-  /*
-  if (!user) {
-    redirect("/login");
-  }
-  */
+  const user = await authenticate(); //loadUser();
 
   const password = data.get("password");
-  const confirm_password = data.get("confirm_password");
+  const confirmPassword = data.get("confirmPassword");
 
-  if (password !== confirm_password) {
+  if (password !== confirmPassword) {
     return { error: "The passwords you entered don't match." };
   }
 

@@ -1,0 +1,19 @@
+.item {
+  margin: 16px 0;
+  max-width: 500px;
+  width: 100%;
+}
+
+.buttonContainer {
+  display: flex;
+  align-items: center; /* Vertically center align items */
+}
+
+.submit {
+  flex-shrink: 0;
+}
+
+.forgottenPassword {
+  flex-grow: 1; /* Take up remaining space */
+  text-align: center;
+}

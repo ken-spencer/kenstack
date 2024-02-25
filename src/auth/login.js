@@ -33,7 +33,7 @@ export default async function login(user, response = null) {
   const resCookies = response ? response.cookies : cookies();
   resCookies.set("auth", token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production", // Safair won't allow this cookie otherwise
+    secure: !process.env.DEVELOPMENT && process.env.NODE_ENV === "production", // Safair won't allow this cookie otherwise
     sameSite: "Strict",
     expires,
   });
@@ -48,7 +48,7 @@ export default async function login(user, response = null) {
 
   resCookies.set("authPublic", encodedString, {
     httpOnly: false,
-    secure: process.env.NODE_ENV === "production", // Safair won't allow this cookie otherwise
+    secure: !process.env.DEVELOPMENT && process.env.NODE_ENV === "production", // Safair won't allow this cookie otherwise
     sameSite: "Strict",
     expires,
   });

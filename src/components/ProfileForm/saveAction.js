@@ -2,37 +2,16 @@
 
 import errorLog from "../../log/error";
 import authenticate from "../../auth/authenticate";
-import validate from "../../db/validate";
 
+import fields from "./fields";
 // const fields = ["first_name", "last_name", "email"];
-const rules = {
-  first_name: "required",
-  last_name: "required",
-  email: {
-    required: true,
-    email: true,
-    unique:
-      "A subscriber with this email already exists. If this is you please login as that user.",
-  },
-};
 
 export default async function loadProfile(initial, formData) {
   const user = await authenticate();
 
-  formData.forEach((value, key) => {
-    if (rules[key]) {
-      user[key] = value;
-    }
-  });
-
-  const errors = await validate(user, rules);
-
+  const errors = await user.bindFormData(fields, formData);
   if (errors) {
-    return {
-      error:
-        "Oops! It looks like there are some issues with your form. See below for details.",
-      fieldErrors: errors,
-    };
+    return errors;
   }
 
   try {

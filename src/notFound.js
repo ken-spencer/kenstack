@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
-export default async function notFound(origin) {
+export default async function notFound(req) {
+  const origin = req.nextUrl.origin;
   const fetchRes = await fetch(origin + "/404");
   const html = await fetchRes.text();
 

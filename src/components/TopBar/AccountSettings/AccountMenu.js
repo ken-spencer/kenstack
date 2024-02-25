@@ -58,21 +58,22 @@ export default function AccountMenu() {
       transformOrigin={{ horizontal: "right", vertical: "top" }}
       anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
     >
-      {userInfo && userInfo.roles.includes("ADMIN") ? (
-        <>
-          <MenuItem
-            onClick={() => {
-              router.push("/admin");
-            }}
-          >
-            <ListItemIcon>
-              <AdminPanelSettingsIcon fontSize="small" />
-            </ListItemIcon>
-            Admin
-          </MenuItem>
-          <Divider />
-        </>
-      ) : null}
+      {userInfo && userInfo.roles.includes("ADMIN")
+        ? [
+            <MenuItem
+              key="admin"
+              onClick={() => {
+                router.push("/admin");
+              }}
+            >
+              <ListItemIcon>
+                <AdminPanelSettingsIcon fontSize="small" />
+              </ListItemIcon>
+              Admin
+            </MenuItem>,
+            <Divider key="admin-divider" />,
+          ]
+        : null}
 
       <MenuItem
         onClick={() => {

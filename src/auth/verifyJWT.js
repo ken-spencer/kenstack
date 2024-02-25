@@ -6,7 +6,7 @@ import { cookies } from "next/headers";
 
 const secret = new TextEncoder().encode(process.env.SECRET);
 
-export default async function getClaims() {
+export default async function verifyJWT(roles = []) {
   const cookie = cookies().get("auth");
 
   if (!cookie) {
@@ -14,6 +14,10 @@ export default async function getClaims() {
   }
 
   const { value: token } = cookie;
+
+  if (!token) {
+    return false;
+  }
 
   let jwt;
   try {
@@ -34,5 +38,16 @@ export default async function getClaims() {
     return false;
   }
 
-  return claims;
+  if (roles.length === 0) {
+    return claims;
+  }
+
+  if (Array.isArray(claims.roles)) {
+    for (const role of roles) {
+      if (claims.roles.includes(role)) {
+        return claims;
+      }
+    }
+  }
+  return false;
 }

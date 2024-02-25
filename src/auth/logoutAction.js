@@ -1,12 +1,14 @@
 "use server";
 
-import { nanoid } from "nanoid";
+import { revalidatePath } from "next/cache";
+
+// import { nanoid } from "nanoid";
 import { cookies, headers } from "next/headers";
 import verifyJWT from "./verifyJWT";
 import Session from "../models/Session";
 
+// import { redirect } from "next/navigation";
 import auditLog from "../log/audit";
-import { redirect } from "next/navigation";
 
 export default async function logoutAction() {
   const claims = await verifyJWT();
@@ -20,18 +22,24 @@ export default async function logoutAction() {
   // use nanoid to ensure the page is updated if already on the  home page.
   const referer = headers().get("referer");
 
+  /*
   let url;
   if (referer) {
     url = new URL(referer);
   }
+  */
 
   if (claims) {
     await Session.deleteOne({ _id: claims.sid });
   }
 
+  revalidatePath(referer);
+
+  /*
   if (referer && url.pathname == "/") {
     redirect("/?homeRefresh=" + nanoid());
   }
 
-  redirect("/");
+  redirect(thaumazoAdmin.pathName("/login"));
+  */
 }

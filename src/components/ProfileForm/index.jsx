@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import ThemeProvider from "@thaumazo/forms/ThemeProvider";
+import ThemeProvider from "../admin/ThemeProvider";
 
-import { Provider } from "@thaumazo/forms";
-import Form from "./Form";
+import SaveIcon from "@mui/icons-material/Save";
 // import AvatarEditor from "../AvatarEditor";
 import CircularProgress from "@mui/material/CircularProgress";
 import Box from "@mui/material/Box";
@@ -13,7 +12,8 @@ import loadAction from "./loadAction";
 import saveAction from "./saveAction";
 import Notice from "../Notice";
 
-import styles from "./form.module.css";
+import fields from "./fields";
+import AutoForm from "@thaumazo/forms/AutoForm";
 
 export default function ProfileCont() {
   const [loaded, setLoaded] = useState(false);
@@ -40,7 +40,7 @@ export default function ProfileCont() {
 
   if (error) {
     return (
-      <div className={styles.errorItem}>
+      <div>
         <ThemeProvider theme="auto">
           <Notice error={error} />
         </ThemeProvider>
@@ -57,8 +57,16 @@ export default function ProfileCont() {
   }
 
   return (
-    <Provider action={saveAction} values={values}>
-      <Form />
-    </Provider>
+    <AutoForm
+      title="Profile"
+      name="loginError"
+      fields={fields}
+      action={saveAction}
+      values={values}
+      submit={{
+        startIcon: <SaveIcon />,
+        children: "Save changes",
+      }}
+    />
   );
 }

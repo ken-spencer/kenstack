@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import verifyJWT from "@thaumazo/cms/auth/verifyJWT";
 
 export async function middleware(request) {
+  return;
   const publicPaths = [
     "/login",
     "/forgotten-password",
@@ -24,7 +25,6 @@ export async function middleware(request) {
 
   // check if user is authenticated. If not, redirect to login page.
   if (!claims) {
-    console.log(request.url, new URL("/login", request.url));
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
@@ -35,8 +35,35 @@ export async function middleware(request) {
     return res;
   }
 
+  /*
+  if (path.startsWith("/admin") && !hasRole(claims, ["ADMIN"])) {
+    const response = NextResponse.redirect(new URL("/login", request.url));
+    response.cookies.set(
+        "loginError",
+        "You do not have permission to access this page.",
+      );
+    return response;
+  }
+  */
+
   return response
 }
+
+/*
+function hasRole(claims, roles) {
+  if (!claims?.roles) {
+    return false;
+  }
+
+  for (const role of roles) {
+    if (claims.roles.includes(role)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+*/
 
 export const config = {
   matcher: [

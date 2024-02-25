@@ -9,7 +9,6 @@ import getLogMeta from "../log/meta";
 import errorLog from "../log/error";
 import { DateTime } from "luxon";
 
-import User from "../models/User";
 import LoginLog from "../models/LoginLog";
 
 async function failResponse(email) {
@@ -29,13 +28,17 @@ async function failResponse(email) {
     await log.save();
   } catch (e) {
     errorLog(e, "Problem saving loginLog");
-    return { error: "There was a problem. Please try again later." };
+    return {
+      error:
+        "There was an unexpected connection problem. Please try again later.",
+    };
   }
 
   return { error: errorMessage };
 }
 
-export default async function loginAction(initial, formData) {
+export default async function loginAction(state, formData, configs = {}) {
+  const { redirect: redirectPath = thaumazoAdmin.path } = configs;
   let email = formData.get("email");
   email = email.trim().toLowerCase();
 
@@ -65,7 +68,10 @@ export default async function loginAction(initial, formData) {
     }).count();
   } catch (e) {
     errorLog(e, "Problem retrieving loginLog");
-    return { error: "There was a problem. Please try again later." };
+    return {
+      error:
+        "There was an unexpected connection problem. Please try again later.",
+    };
   }
 
   // Too many failed login attempts. Display an error.
@@ -76,13 +82,15 @@ export default async function loginAction(initial, formData) {
     };
   }
 
+  const User = await thaumazoModels.get("User");
   let user;
   try {
     user = await User.findOne({ email });
   } catch (e) {
     errorLog(e, "Problem loading the user");
     return {
-      error: "There was a problem loading your user. Please try again later",
+      error:
+        "There was an unexpected connection problem. Please try again later.",
     };
   }
 
@@ -100,9 +108,14 @@ export default async function loginAction(initial, formData) {
   } catch (e) {
     errorLog(e, "Problem logging in");
     return {
-      error: "There was a problem logging in. Please try again later",
+      error:
+        "There was an unexpected connection problem. Please try again later.",
     };
   }
 
-  redirect("/");
+  if (redirectPath) {
+    redirect(redirectPath);
+  }
+
+  return { authenticated: true, success: "You are logged in." };
 }

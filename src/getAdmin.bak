@@ -1,0 +1,7 @@
+// import admin from "@site/admin";
+
+// Stand in for future code that will be run from within a npm module
+export default async function getAdmin(modelName) {
+  const {default: admin} = await import("@site/admin");
+  return admin.get(modelName);
+}

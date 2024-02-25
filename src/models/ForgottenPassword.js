@@ -35,7 +35,7 @@ const ForgottenPasswordSchema = new Schema(
   { timestamps: true },
 );
 
-audit("ForgottenPassword", ForgottenPasswordSchema);
+audit(ForgottenPasswordSchema);
 
 const ForgottenPassword = mongoose.addModel(
   "ForgottenPassword",
