@@ -7,6 +7,7 @@ import { headers } from "next/headers";
 import revalidateAction from "./auth/revalidateAction";
 import loginAction from "./auth/loginAction";
 import forgottenPasswordRoute from "./auth/forgottenPasswordRoute";
+import clientErrorLog from "./log/clientErrorLog";
 
 // import listLoadAction from "./apiActions/listLoad";
 // import listDeleteAction from "./apiActions/listDelete";
@@ -53,6 +54,8 @@ export default function API() {
           retval = await loginAction({}, formData, { redirect: false });
         }
         break;
+      case "client-error-log":
+        return await clientErrorLog(req);
       // case "list-load":
       //  return listLoadAction(server, req);
       //case "list-delete":

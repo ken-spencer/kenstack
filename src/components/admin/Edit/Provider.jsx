@@ -1,6 +1,5 @@
 "use client";
 
-//import fetchJSON from "../../../utils/fetchJSON";
 import { useState, useEffect, useMemo } from "react";
 
 // import { usePathname } from "next/navigation";

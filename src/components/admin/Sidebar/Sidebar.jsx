@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 
 import ListItem from "./ListItem";
+import ErrorBoundary from "../ErrorBoundary";
 
 import PasswordIcon from "@mui/icons-material/PasswordOutlined";
 
@@ -98,7 +99,11 @@ export default function Sidebar(props) {
           </ul>
         </div>
         <main className={styles.main + (open ? " " + styles.mainOpen : "")}>
-          <div className={styles.admin}>{props.children}</div>
+          <div className={styles.admin}>
+            <ErrorBoundary>
+              {props.children}
+            </ErrorBoundary>
+          </div>
         </main>
       </div>
     </div>
