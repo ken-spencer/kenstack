@@ -1,9 +1,10 @@
 import { cookies } from "next/headers";
 
-import authenticate from "../../../auth/authenticate";
+// import authenticate from "../../../auth/authenticate";
 import Alert from "@mui/material/Alert";
 import ThemeProvider from "../ThemeProvider";
 
+import verifyJWT from "@thaumazo/cms/auth/verifyJWT";
 import loadQuery from "./loadQuery";
 import errorLog from "../../../log/error";
 
@@ -15,13 +16,14 @@ import Pagination from "./Pagination";
 
 // Let's us pass server data to server actions
 export default async function AdminList({ admin, model, modelName }) {
-  const user = await authenticate(["ADMIN"]);
-  const userId = String(user._id);
+  // const user = await authenticate("ADMIN");
+  // const userId = String(user._id);
 
   if (!modelName) {
     throw Error("Model must be provided to AdminList");
   }
 
+  const claims = verifyJWT();
   const key = "admin" + modelName;
   const sortCookie = cookies().get(key + "Sort");
   const keywordsCookie = cookies().get(key + "Keywords") || "";
@@ -50,11 +52,13 @@ export default async function AdminList({ admin, model, modelName }) {
       keywords={keywords}
       rows={rows}
       modelName={modelName}
-      userId={userId}
+      userId={claims.sub}
     >
-      <Toolbar />
-      <AdminListTable />
-      <Pagination />
+      <div>
+        <Toolbar />
+        <AdminListTable />
+        <Pagination />
+      </div>
     </Provider>
   );
 }

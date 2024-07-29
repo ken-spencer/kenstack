@@ -23,7 +23,7 @@ export async function generateMetadata({ params }) {
     segment = null;
   }
 
-  const claims = await verifyJWT(["ADMIN"]);
+  const claims = await verifyJWT("ADMIN");
   if (!claims) {
     return { title: prefix + "Login" };
   }

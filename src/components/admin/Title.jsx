@@ -2,17 +2,17 @@ import styles from "./admin.module.scss";
 import Typography from "@mui/material/Typography";
 import LoadingIcon from "@mui/material/CircularProgress";
 
-export default function AdminTitle({ modelName, loading }) {
+export default function AdminTitle({ modelName, loading, children = null }) {
   const admin = thaumazoAdmin.get(modelName);
 
-  if (!admin) {
+  if (!children && !admin) {
     return null;
   }
 
   return (
     <div className={styles.toolbarMiddle}>
       <Typography sx={{ position: "relative" }} variant="h6" component="div">
-        {admin.title}
+        {children || admin.title}
         {loading ? (
           <div
             style={{

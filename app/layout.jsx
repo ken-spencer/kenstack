@@ -15,7 +15,7 @@ export const metadata = {
 export default async function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={"dark " + inter.className}>
         <AppRouterCacheProvider>
           <TopBar />
           {children}

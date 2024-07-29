@@ -9,11 +9,13 @@ import SpinnerIcon from "@heroicons/react/24/outline/ArrowPathIcon";
 export default function ListItem({
   active,
   icon: Icon,
+  endIcon = null,
   disabled,
   badge,
   children,
   component: Component = Link,
   action,
+  className = null,
   ...props
 }) {
   // const [pending, startTransition] = useTransition();
@@ -23,8 +25,11 @@ export default function ListItem({
 
   if (action) {
     props.onClick = () => {
-      setPending(true);
-      action().finally(() => setPending(false));
+      const obj = action();
+      if (typeof obj === "object" && obj.finally) {
+        setPending(true);
+        obj.finally(() => setPending(false));
+      }
     };
   }
 
@@ -50,8 +55,14 @@ export default function ListItem({
 
   // let Component = component;
   return (
-    <li>
-      <Component {...props} className={styles.item + (active ? " " + styles.active : "")} disabled={isDisabled}>
+    <li
+      className={
+        styles.item +
+        (className ? " " + className : "") +
+        (active ? " " + styles.active : "")
+      }
+    >
+      <Component className={styles.link} {...props} disabled={isDisabled}>
         {Icon &&
           (pending ? (
             <SpinnerIcon className={styles.icon + " animate-spin"} />
@@ -61,6 +72,7 @@ export default function ListItem({
         <span className={styles.text}>{children}</span>
         {badge && <div className={styles.badge}>{badge}</div>}
       </Component>
+      {endIcon && endIcon}
     </li>
   );
 }

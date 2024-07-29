@@ -17,16 +17,33 @@
   background-color: #111;
 }
 
-.body, .listBody {
+.body,
+.listBody {
   border-radius: 0.25rem;
   border: 1px solid #4b5563;
   padding: 1rem;
 }
 
+/*
+.section {
+  border-radius: 0.25rem;
+  border: 1px solid #4b5563;
+
+  > header {
+    padding: .25rem 0.5rem;
+    background-color: #333;
+    border-bottom: 1px solid #4b5563;
+  }
+
+  > main {
+    padding: 0.5rem;
+  }
+}
+*/
+
 .listBody {
   padding: 0;
 }
-
 
 .toolbarLeft,
 .toolbarRight {
@@ -64,6 +81,7 @@
 }
 
 .loadingCont {
+  flex: 1;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -76,4 +94,3 @@
   align-items: center;
   height: 100px;
 }
-

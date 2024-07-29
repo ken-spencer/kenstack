@@ -4,7 +4,7 @@ import authenticate from "../../../../auth/authenticate";
 import errorLog from "../../../../log/error";
 
 export default async function checkAction() {
-  await authenticate(["ADMIN"]);
+  await authenticate("ADMIN");
 
   for (let name of thaumazoModels.models.keys()) {
     const model = await thaumazoModels.get(name);

@@ -1,6 +1,7 @@
 import "server-only";
 
-import authenticate from "../../../auth/authenticate";
+import verifyJWT from "@thaumazo/cms/auth/verifyJWT";
+// import authenticate from "../../../auth/authenticate";
 
 import Alert from "@mui/material/Alert";
 import ThemeProvider from "../ThemeProvider";
@@ -25,9 +26,6 @@ export default async function AdminEdit({
   params,
   modelName,
 }) {
-  const user = await authenticate(["ADMIN"]);
-  const userId = String(user._id);
-
   if (!modelName) {
     throw Error("Model must be provided to AdminList");
   }
@@ -37,6 +35,7 @@ export default async function AdminEdit({
     id = params.id || "";
   }
 
+  const claims = verifyJWT();
   let isNew = false;
 
   if (id === "new") {
@@ -75,7 +74,7 @@ export default async function AdminEdit({
       isNew={isNew}
       id={id}
       row={row && row.toAdminDTO(select)}
-      userId={userId}
+      userId={claims.sub}
     >
       <AdminForm />
     </Provider>

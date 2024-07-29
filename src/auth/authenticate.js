@@ -8,7 +8,7 @@ import { URLSearchParams } from "url";
 
 import accessCheck from "./accessCheck";
 
-export default async function authenticate(roles = []) {
+export default async function authenticate(...roles) {
   let user;
   try {
     user = await accessCheck(roles);

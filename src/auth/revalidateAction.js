@@ -20,13 +20,12 @@ export default async function revalidate() {
     return false;
   }
 
-  const secondsRemaining = Math.round(claims.exp - Date.now() / 1000);
-  if (secondsRemaining > 2700) {
+  const now = Date.now();
+  const secondsRemaining = Math.round(claims.exp - now / 1000);
+  // if session is halfway expired extend the session
+  if (secondsRemaining > thaumazoModels.sessionTimeout / 2) {
     return null;
   }
-
-  // detect server action
-  // headers().get("next-action")
 
   const user = await loadUser();
 
@@ -34,6 +33,14 @@ export default async function revalidate() {
     return false;
   }
   const session = user.session;
+
+  // handle possible edge case where this function is called in rapid succession. Only want to update once.
+  // Does not appear to fire though.
+  /*
+  if (secondsRemaining - Math.round((session.expiresAt.getTime() - now) / 1000) !== 0) {
+    return false;
+  }
+  */
 
   // additional security check, may want to audit this
 
@@ -43,7 +50,9 @@ export default async function revalidate() {
 
   // extend session date to max of 1 hour
   const date = new Date();
-  session.expiresAt = date.setMinutes(date.getMinutes() + 60);
+  session.expiresAt = date.setSeconds(
+    date.getSeconds() + thaumazoModels.sessionTimeout,
+  );
   await session.save();
 
   const newClaims = {

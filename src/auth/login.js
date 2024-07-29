@@ -24,22 +24,22 @@ export default async function login(user, response = null) {
     .setProtectedHeader({ alg })
     .setIssuedAt()
     // .setIssuer('urn:example:issuer')
-    // .setAudience('urn:example:audience')
-    .setExpirationTime("1h")
+    // .setExpirationTime("24h")
+    .setExpirationTime(session.expiresAt.getTime() / 1000)
     .sign(secret);
 
-  const expires = Date.now() + 60 * 60 * 1000; // 1 hour,
+  // const expires = Date.now() + 60 * 60 * 1000; // 1 hour,
 
   const resCookies = response ? response.cookies : cookies();
   resCookies.set("auth", token, {
     httpOnly: true,
     secure: !process.env.DEVELOPMENT && process.env.NODE_ENV === "production", // Safair won't allow this cookie otherwise
     sameSite: "Strict",
-    expires,
+    expires: session.expiresAt.getTime(),
   });
 
   const publicToken = {
-    expires,
+    expires: session.expiresAt.getTime(),
     roles: user.roles,
   };
 
@@ -50,7 +50,7 @@ export default async function login(user, response = null) {
     httpOnly: false,
     secure: !process.env.DEVELOPMENT && process.env.NODE_ENV === "production", // Safair won't allow this cookie otherwise
     sameSite: "Strict",
-    expires,
+    expires: session.expiresAt.getTime(),
   });
 
   //  console.log("login", response, resCookies);

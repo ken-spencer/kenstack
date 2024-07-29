@@ -1,42 +1,43 @@
 "use server";
 
 // import errorLog from "../../../log/error";
-import authenticate from "../../../auth/authenticate";
+import acl from "@thaumazo/cms/auth/acl";
 import { cookies } from "next/headers";
 
 import loadQuery from "./loadQuery";
 
-export default async function loadRowsAction({ modelName, sortBy, keywords }) {
-  await authenticate(["ADMIN"]);
+const loadRowsAction = async ({ modelName, sortBy, keywords }) =>
+  acl("ADMIN", async () => {
+    // await authenticate("ADMIN");
 
-  const admin = thaumazoAdmin.get(modelName);
-  if (!admin) {
-    throw Error("Unknown admin: " + modelName);
-  }
+    const admin = thaumazoAdmin.get(modelName);
+    if (!admin) {
+      throw Error("Unknown admin: " + modelName);
+    }
 
-  const model = await thaumazoModels.get(modelName);
-  if (!model) {
-    throw Error("Unknown model: " + modelName);
-  }
+    const model = await thaumazoModels.get(modelName);
+    if (!model) {
+      throw Error("Unknown model: " + modelName);
+    }
 
-  const key = "admin" + modelName;
-  const sortCookie = cookies().get(key + "Sort");
-  const keywordsCookie = cookies().get(key + "Keywords") || "";
+    const key = "admin" + modelName;
+    const sortCookie = cookies().get(key + "Sort");
+    const keywordsCookie = cookies().get(key + "Keywords") || "";
 
-  if (sortBy === undefined && sortCookie) {
-    sortBy = sortCookie.value.split(",");
-  }
+    if (sortBy === undefined && sortCookie) {
+      sortBy = sortCookie.value.split(",");
+    }
 
-  if (keywords === undefined && keywordsCookie) {
-    keywords = keywordsCookie.value;
-  }
+    if (keywords === undefined && keywordsCookie) {
+      keywords = keywordsCookie.value;
+    }
 
-  const rows = await loadQuery({ model, admin, sortBy, keywords });
-  return {
-    rows,
-  };
+    const rows = await loadQuery({ model, admin, sortBy, keywords });
+    return {
+      rows,
+    };
 
-  /*
+    /*
   const list = admin.getList();
   const fields = list.map(({ name }) => name);
 
@@ -87,4 +88,6 @@ export default async function loadRowsAction({ modelName, sortBy, keywords }) {
   const rows = JSON.parse(JSON.stringify(leanRows));
 
   */
-}
+  });
+
+export default loadRowsAction;

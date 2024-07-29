@@ -14,8 +14,7 @@ export default function LogoutButton() {
       return;
     }
     setLoading(true);
-    logoutAction()
-    .then(() => {
+    logoutAction().then(() => {
       window.location.reload();
     });
   }, [loading]);

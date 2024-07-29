@@ -3,7 +3,9 @@
 const webpack = require('webpack');
 
 const nextConfig = {
+  transpilePackages: ['@thaumazo/forms'],
   eslint: {
+    ignoreDuringBuilds: true,
     dirs: ["site", "app", "src"],
   },
   // productionBrowserSourceMaps: true,
@@ -11,7 +13,7 @@ const nextConfig = {
     // instrumentationHook: true,
   },
 
-  // reactStrictMode: true,
+  reactStrictMode: false,
   webpack: (config, { dev, isServer }) => {
     if (isServer) {
       // config.devtool = 'source-map';
@@ -36,3 +38,4 @@ const nextConfig = {
 }
 
 module.exports = nextConfig
+

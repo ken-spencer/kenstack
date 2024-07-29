@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import ListItem from "./ListItem";
 import ErrorBoundary from "../ErrorBoundary";
+import Hr from "../Hr";
 
 import PasswordIcon from "@mui/icons-material/PasswordOutlined";
 
@@ -79,7 +80,7 @@ export default function Sidebar(props) {
               );
             })}
           </ul>
-          <hr className="h-px my-2 bg-gray-200 border-0 dark:bg-gray-700" />
+          <Hr />
           <ul className="space-y-2 font-medium">
             <ListItem
               icon={PasswordIcon}
@@ -100,9 +101,7 @@ export default function Sidebar(props) {
         </div>
         <main className={styles.main + (open ? " " + styles.mainOpen : "")}>
           <div className={styles.admin}>
-            <ErrorBoundary>
-              {props.children}
-            </ErrorBoundary>
+            <ErrorBoundary>{props.children}</ErrorBoundary>
           </div>
         </main>
       </div>

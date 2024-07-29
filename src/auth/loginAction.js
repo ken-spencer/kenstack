@@ -65,7 +65,7 @@ export default async function loginAction(state, formData, configs = {}) {
     results = await LoginLog.find({
       email,
       createdAt: { $gte: fifteenMinutesAgo },
-    }).count();
+    }).countDocuments();
   } catch (e) {
     errorLog(e, "Problem retrieving loginLog");
     return {

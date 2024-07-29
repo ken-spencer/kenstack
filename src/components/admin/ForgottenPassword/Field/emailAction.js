@@ -14,7 +14,7 @@ import DefaultEmail from "../Email";
 import { render } from "@react-email/render";
 
 export default async function emailAction(userId) {
-  const admin = await authenticate(["ADMIN"]);
+  const admin = await authenticate("ADMIN");
 
   const User = await thaumazoModels.get("User");
   let user;

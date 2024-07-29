@@ -34,7 +34,7 @@ const config = {
       "alias": {
         "map": [
           ["@thaumazo/cms", "./src"],
-          // ["@thaumazo/forms", "./forms/src"],
+          ["@thaumazo/forms", "../forms/src"],
           ["@site", "./site"]
         ],
         "extensions": [".js", ".jsx"]

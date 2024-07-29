@@ -20,7 +20,18 @@ import loadUser from "../auth/loadUser";
 class AdminSchema extends Schema {
   // _admin = null;
 
-  constructor(schema, inputOptions = {}) {
+  constructor(inputSchema, inputOptions = {}) {
+    const schema = {
+      meta: {
+        deleted: {
+          type: Boolean,
+          default: false,
+          index: true,
+        },
+      },
+      ...inputSchema,
+    };
+
     const options = {
       timestamps: {
         createdAt: "meta.createdAt",
@@ -37,6 +48,23 @@ class AdminSchema extends Schema {
     this.methods.checkValidity = checkValidity;
     this.methods.trash = trash;
     this.methods.toAdminDTO = toAdminDTO;
+
+    const query = function () {
+      const filter = this.getFilter();
+      if (!filter["meta.deleted"] && this.options.trash !== false) {
+        this.where({ "meta.deleted": { $ne: true } });
+      }
+    };
+
+    this.pre("find", query);
+    this.pre("findById", query);
+    this.pre("findOne", query);
+    this.pre("findOneAndUpdate", query);
+    this.pre("findOneAndDelete", query);
+    this.pre("updateOne", query);
+    this.pre("updateMany", query);
+    this.pre("deleteOne", query);
+    this.pre("deleteMany", query);
 
     audit(this);
   }

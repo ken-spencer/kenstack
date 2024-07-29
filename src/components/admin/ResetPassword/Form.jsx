@@ -2,13 +2,13 @@ import resetPasswordAction from "../../../auth/resetPasswordAction";
 import fields from "./fields";
 import AutoForm from "@thaumazo/forms/AutoForm";
 
-import authenticate from "../../../auth/authenticate";
+//import authenticate from "../../../auth/authenticate";
 
 export default async function ResetPasswordForm() {
-  await authenticate();
+  // await authenticate();
 
   return (
-    <div style={{ maxWidth: "500px" }}>
+    <div className="py-6" style={{ maxWidth: "500px" }}>
       <AutoForm
         title="Reset your password"
         description={

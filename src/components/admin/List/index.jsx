@@ -1,13 +1,19 @@
+export { default } from "./List";
+
+/*
 import Suspense from "../Suspense";
-import List from "./List";
 import Layout from "../Layout";
+import Authenticate from "../Authenticate";
 
 export default async function AdminListIndex(props) {
   return (
     <Layout>
       <Suspense>
-        <List {...props} />
+        <Authenticate>
+          <List {...props} />
+        </Authenticate>
       </Suspense>
     </Layout>
   );
 }
+*/

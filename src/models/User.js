@@ -42,6 +42,15 @@ UserSchema.pre("save", async function (next) {
   next();
 });
 
+UserSchema.methods.hasRole = async function (...roles) {
+  for (const role of roles) {
+    if (this.roles.includes(role)) {
+      return true;
+    }
+  }
+  return false;
+};
+
 UserSchema.methods.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };

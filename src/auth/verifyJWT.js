@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 
 import { jwtVerify } from "jose";
 import errorLog from "../log/error";
@@ -6,7 +7,7 @@ import { cookies } from "next/headers";
 
 const secret = new TextEncoder().encode(process.env.SECRET);
 
-export default async function verifyJWT(roles = []) {
+const verifyJWT = async (...roles) => {
   const cookie = cookies().get("auth");
 
   if (!cookie) {
@@ -50,4 +51,7 @@ export default async function verifyJWT(roles = []) {
     }
   }
   return false;
-}
+};
+
+// cache not defined in edge runtime
+export default cache ? cache(verifyJWT) : verifyJWT;

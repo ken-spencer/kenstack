@@ -72,7 +72,10 @@ please click on the link below to reset your password:\
             <Text className="text-black text-[14px] leading-[24px]">
               Hello {name},
             </Text>
-            <Text style={{ whiteSpace: "pre-wrap" }} className="text-black text-[14px] leading-[24px]">
+            <Text
+              style={{ whiteSpace: "pre-wrap" }}
+              className="text-black text-[14px] leading-[24px]"
+            >
               {message}
             </Text>
             <Section className="text-center mt-[32px] mb-[32px]">
@@ -84,24 +87,27 @@ please click on the link below to reset your password:\
                 Reset your password
               </Button>
             </Section>
-            <Text style={{ whiteSpace: "pre-wrap" }} className="text-black text-[14px] leading-[24px]">
-              {postMessage }
+            <Text
+              style={{ whiteSpace: "pre-wrap" }}
+              className="text-black text-[14px] leading-[24px]"
+            >
+              {postMessage}
             </Text>
             {admin ? null : (
               <>
                 <Hr className="border border-solid border-[#eaeaea] my-[26px] mx-0 w-full" />
                 <Text className="text-[#666666] text-[12px] leading-[24px]">
                   This email was intended for{" "}
-                  <span className="text-black">{name} </span>. It was requested from{" "}
-                  <span className="text-black">{ip}</span>
+                  <span className="text-black">{name} </span>. It was requested
+                  from <span className="text-black">{ip}</span>
                   {location && (
                     <>
                       located in <span className="text-black">{location}</span>
                     </>
                   )}
-                  . If you were not expecting this email, you can ignore it. If you
-                  are concerned about your account{"'"}s safety, please reply to
-                  this email to get in touch with us.
+                  . If you were not expecting this email, you can ignore it. If
+                  you are concerned about your account{"'"}s safety, please
+                  reply to this email to get in touch with us.
                 </Text>
               </>
             )}

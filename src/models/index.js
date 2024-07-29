@@ -4,6 +4,7 @@ import mongoose from "../db";
 
 export default class models {
   static models = new Map();
+  static sessionTimeout = process.env.SESSION_TIMEOUT || 3600 * 24;
 
   constructor() {
     throw Error("models is a static class and cannot be instantiated");

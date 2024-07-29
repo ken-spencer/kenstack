@@ -1,0 +1,6 @@
+$admin-border-color: #4b5563;
+
+@mixin admin-border() {
+  border-radius: 0.25rem;
+  border: 1px solid $admin-border-color;
+}

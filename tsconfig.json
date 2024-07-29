@@ -28,6 +28,9 @@
       "@site/*": [
         "./site/*"
       ],
+      "@thaumazo/forms/*": [
+        "../forms/src/*"
+      ],
       "@thaumazo/cms/*": [
         "./src/*"
       ]

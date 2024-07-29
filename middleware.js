@@ -3,22 +3,18 @@ import verifyJWT from "@thaumazo/cms/auth/verifyJWT";
 
 export async function middleware(request) {
   return;
-  const publicPaths = [
-    "/login",
-    "/forgotten-password",
-    "/test",
-  ]
+  const publicPaths = ["/login", "/forgotten-password", "/test"];
 
   const path = request.nextUrl.pathname;
 
-  const response = NextResponse.next()
-  response.headers.append("x-href", request.nextUrl.href)
-  response.headers.append("x-ip", request.ip || "127.0.0.1")
-  response.headers.append("x-geo", JSON.stringify(request.geo))
+  const response = NextResponse.next();
+  response.headers.append("x-href", request.nextUrl.href);
+  response.headers.append("x-ip", request.ip || "127.0.0.1");
+  response.headers.append("x-geo", JSON.stringify(request.geo));
 
-  const isPublic = publicPaths.find(value => path.startsWith(value));
+  const isPublic = publicPaths.find((value) => path.startsWith(value));
   if (isPublic) {
-    return response
+    return response;
   }
 
   const claims = await verifyJWT();
@@ -29,7 +25,7 @@ export async function middleware(request) {
   }
 
   // Token has 1/2 hour left before expiration let's re-issue
-  const secondsRemaining = Math.round((claims.exp - Date.now() / 1000));
+  const secondsRemaining = Math.round(claims.exp - Date.now() / 1000);
   if (secondsRemaining <= 1800) {
     let res = NextResponse.rewrite(new URL("/login/revalidate", request.url));
     return res;
@@ -46,7 +42,7 @@ export async function middleware(request) {
   }
   */
 
-  return response
+  return response;
 }
 
 /*
@@ -69,7 +65,7 @@ export const config = {
   matcher: [
     // "/admin/:path*",
     // "/reset-password",
-    '/((?!login|$))',
+    "/((?!login|$))",
     "/((?!react_devtools|_next/static|_next/image|auth|favicon.ico|robots.txt|images|$).*)",
-  ]
+  ],
 };

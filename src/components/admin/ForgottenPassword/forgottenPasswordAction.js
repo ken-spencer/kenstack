@@ -60,7 +60,7 @@ export default async function forgottenPasswordAction(
     results = await ForgottenPassword.find({
       user: user._id,
       expiry: { $gte: new Date() },
-    }).count();
+    }).countDocuments();
   } catch (e) {
     errorLog(e, "Problem retrieving forgotten password log");
     return errorResponse;
