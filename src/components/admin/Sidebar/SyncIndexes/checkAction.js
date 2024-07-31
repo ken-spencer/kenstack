@@ -1,6 +1,6 @@
 "use server";
 
-import accessCheck from "@thaumazo/cms/auth/accessCheck";
+import accessCheck from "@admin/auth/accessCheck";
 import errorLog from "../../../../log/error";
 
 export default async function checkAction() {

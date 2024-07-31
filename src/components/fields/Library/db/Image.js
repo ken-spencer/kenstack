@@ -5,7 +5,7 @@ const Schema = mongoose.Schema;
 import { basename, extname } from "path";
 
 // import Sharp from "sharp";
-// import errorLog from "@thaumazo/cms/log/error";
+// import errorLog from "@admin/log/error";
 import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
 const s3 = new S3Client();
 

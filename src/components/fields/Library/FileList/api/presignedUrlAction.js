@@ -2,7 +2,7 @@
 
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import acl from "@thaumazo/cms/auth/acl";
+import acl from "@admin/auth/acl";
 
 // import generateS3Key from "./generateS3Key";
 

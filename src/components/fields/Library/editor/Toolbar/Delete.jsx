@@ -4,7 +4,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 
 import useLibrary from "../../useLibrary";
 
-import { useMutation } from "@thaumazo/cms/query";
+import { useMutation } from "@admin/query";
 import deleteAction from "../../FileList/api/deleteAction";
 
 export default function Delete() {

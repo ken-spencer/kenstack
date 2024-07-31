@@ -14,7 +14,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 
 import useLibrary from "../useLibrary";
 import deleteAction from "./api/deleteAction";
-import { useMutation } from "@thaumazo/cms/query";
+import { useMutation } from "@admin/query";
 
 // import globals from "../globals";
 import useChangeFolder from "./useChangeFolder";

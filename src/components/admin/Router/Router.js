@@ -2,7 +2,7 @@ import React from "react";
 
 // import authenticate from "../../../auth/authenticate";
 
-// import verifyJWT from "@thaumazo/cms/auth/verifyJWT";
+// import verifyJWT from "@admin/auth/verifyJWT";
 
 import { notFound } from "next/navigation";
 const Login = React.lazy(() => import("../Login"));

@@ -1,7 +1,7 @@
 "use server";
 
 // import errorLog from "../../../log/error";
-import acl from "@thaumazo/cms/auth/acl";
+import acl from "@admin/auth/acl";
 import { cookies } from "next/headers";
 
 import loadQuery from "./loadQuery";

@@ -4,7 +4,7 @@ import "@thaumazo/forms/global.css";
 import { Inter } from "next/font/google";
 
 const inter = Inter({ subsets: ["latin"] });
-import TopBar from "@thaumazo/cms/components/TopBar";
+import TopBar from "@admin/components/TopBar";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v14-appRouter";
 
 export const metadata = {

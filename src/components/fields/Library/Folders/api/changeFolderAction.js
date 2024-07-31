@@ -1,12 +1,12 @@
 "use server";
 
 import Image from "../../db/Image";
-import acl from "@thaumazo/cms/auth/acl";
-import errorLog from "@thaumazo/cms/log/error";
-import auditLog from "@thaumazo/cms/log/audit";
+import acl from "@admin/auth/acl";
+import errorLog from "@admin/log/error";
+import auditLog from "@admin/log/audit";
 // import mongoose from "mongoose";
 
-import defaultError from "@thaumazo/cms/defaultError";
+import defaultError from "@admin/defaultError";
 
 const changeFolderAction = async ({ idArray, folder }) =>
   acl("ADMIN", async () => {

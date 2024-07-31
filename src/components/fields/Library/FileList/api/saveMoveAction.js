@@ -1,10 +1,10 @@
 "use server";
 
 import Image from "../../db/Image";
-import acl from "@thaumazo/cms/auth/acl";
-import errorLog from "@thaumazo/cms/log/error";
-import auditLog from "@thaumazo/cms/log/audit";
-import defaultError from "@thaumazo/cms/defaultError";
+import acl from "@admin/auth/acl";
+import errorLog from "@admin/log/error";
+import auditLog from "@admin/log/audit";
+import defaultError from "@admin/defaultError";
 
 import mongoose from "mongoose";
 

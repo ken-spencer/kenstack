@@ -1,4 +1,4 @@
-import AdminSchema from "@thaumazo/cms/db/AdminSchema";
+import AdminSchema from "@admin/db/AdminSchema";
 
 const BlogSchema = new AdminSchema({
   title: {

@@ -1,7 +1,7 @@
 import Form from "./LoginForm";
 
 // import styles from "./page.module.css"
-import { Main } from "@thaumazo/cms/components";
+import { Main } from "@admin/components";
 
 export default function Login() {
   return (

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useMutation } from "@thaumazo/cms/query";
+import { useMutation } from "@admin/query";
 import useLibrary from "../useLibrary";
 
 import globals from "../globals";

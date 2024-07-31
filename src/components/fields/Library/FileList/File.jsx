@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback } from "react";
 
 import useLibrary from "../useLibrary";
-import { useMutation } from "@thaumazo/cms/query";
+import { useMutation } from "@admin/query";
 
 import globals from "../globals";
 

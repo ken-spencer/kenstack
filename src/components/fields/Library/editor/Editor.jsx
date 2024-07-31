@@ -13,8 +13,8 @@ import loadAction from "./api/loadAction";
 import { useQuery } from "@tanstack/react-query";
 
 import Toolbar from "./Toolbar";
-import Spinner from "@thaumazo/cms/components/admin/Loading";
-import ErrorIndicator from "@thaumazo/cms/components/admin/ErrorIndicator";
+import Spinner from "@admin/components/admin/Loading";
+import ErrorIndicator from "@admin/components/admin/ErrorIndicator";
 
 export default function Editor() {
   const { edit } = useLibrary();

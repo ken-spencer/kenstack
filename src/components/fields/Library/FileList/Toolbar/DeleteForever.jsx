@@ -6,7 +6,7 @@ import useLibrary from "../../useLibrary";
 import Confirm from "../../Confirm";
 
 import deleteForeverAction from "../api/deleteForeverAction";
-import { useMutation } from "@thaumazo/cms/query";
+import { useMutation } from "@admin/query";
 
 export default function DeleteForever() {
   const { selected, setError } = useLibrary();

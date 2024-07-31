@@ -1,4 +1,4 @@
-import verifyJWT from "@thaumazo/cms/auth/verifyJWT";
+import verifyJWT from "@admin/auth/verifyJWT";
 
 export async function generateMetadata({ params }) {
   const adminParams = params.admin || [];

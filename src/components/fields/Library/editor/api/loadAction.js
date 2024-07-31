@@ -1,10 +1,10 @@
 "use server";
 
 import Image from "../../db/Image";
-import acl from "@thaumazo/cms/auth/acl";
-import errorLog from "@thaumazo/cms/log/error";
+import acl from "@admin/auth/acl";
+import errorLog from "@admin/log/error";
 
-import defaultError from "@thaumazo/cms/defaultError";
+import defaultError from "@admin/defaultError";
 
 const loadAction = async (id) =>
   acl("ADMIN", async () => {

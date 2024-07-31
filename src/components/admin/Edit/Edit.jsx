@@ -1,13 +1,13 @@
 import "server-only";
 
-import verifyJWT from "@thaumazo/cms/auth/verifyJWT";
+import verifyJWT from "@admin/auth/verifyJWT";
 // import authenticate from "../../../auth/authenticate";
 
 import Alert from "@mui/material/Alert";
 import ThemeProvider from "../ThemeProvider";
 import errorLog from "../../../log/error";
 
-// import accessCheck from "@thaumazo/cms/auth/accessCheck";
+// import accessCheck from "@admin/auth/accessCheck";
 
 // import errorLog from "../../../log/error";
 

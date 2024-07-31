@@ -1,10 +1,10 @@
-import Section from "@thaumazo/cms/components/admin/Section";
+import Section from "@admin/components/admin/Section";
 import Input from "@thaumazo/forms/Input";
 import Form from "@thaumazo/forms/Form";
 
 import useLibrary from "../useLibrary";
 import saveAction from "./api/saveAction";
-import defaultError from "@thaumazo/cms/defaultError";
+import defaultError from "@admin/defaultError";
 
 export default function EditForm({ file }) {
   const { setError } = useLibrary();

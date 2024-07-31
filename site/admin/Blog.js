@@ -1,7 +1,7 @@
 import NewsIcon from "@heroicons/react/24/outline/NewspaperIcon";
 
-import Editor from "@thaumazo/cms/components/fields/Editor";
-import Library from "@thaumazo/cms/components/fields/Library";
+import Editor from "@admin/components/fields/Editor";
+import Library from "@admin/components/fields/Library";
 
 const blogAdmin = {
   icon: NewsIcon,

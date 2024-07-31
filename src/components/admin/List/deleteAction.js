@@ -1,6 +1,6 @@
 "use server";
 
-import acl from "@thaumazo/cms/auth/acl";
+import acl from "@admin/auth/acl";
 
 import errorLog from "../../../log/error";
 

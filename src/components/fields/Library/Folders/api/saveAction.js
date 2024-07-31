@@ -1,8 +1,8 @@
 "use server";
 
 import Folder from "../../db/Folder";
-import acl from "@thaumazo/cms/auth/acl";
-import errorLog from "@thaumazo/cms/log/error";
+import acl from "@admin/auth/acl";
+import errorLog from "@admin/log/error";
 
 // import listAction from "./listAction";
 

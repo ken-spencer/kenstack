@@ -4,7 +4,7 @@ import RestoreFromTrashIcon from "@mui/icons-material/RestoreFromTrash";
 
 import useLibrary from "../../useLibrary";
 
-import { useMutation } from "@thaumazo/cms/query";
+import { useMutation } from "@admin/query";
 import deleteAction from "../api/deleteAction";
 
 export default function Delete() {

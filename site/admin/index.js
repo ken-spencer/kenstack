@@ -1,7 +1,7 @@
 
-import admin from "@thaumazo/cms/admin";
+import admin from "@admin/admin";
 
-import User from "@thaumazo/cms/admin/User";
+import User from "@admin/admin/User";
 import Blog from "./Blog";
 
 admin.add("User", "/", User, {title: "Manage users"});

@@ -2,10 +2,10 @@
 
 import Folder from "../../db/Folder";
 import Image from "../../db/Image";
-import acl from "@thaumazo/cms/auth/acl";
-import defaultError from "@thaumazo/cms/defaultError";
+import acl from "@admin/auth/acl";
+import defaultError from "@admin/defaultError";
 
-import errorLog from "@thaumazo/cms/log/error";
+import errorLog from "@admin/log/error";
 
 const deleteAction = async (id) =>
   acl("ADMIN", async () => {

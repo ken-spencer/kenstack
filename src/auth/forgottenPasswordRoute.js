@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import notFound from "@thaumazo/cms/notFound";
-import login from "@thaumazo/cms/auth/login";
-import errorLog from "@thaumazo/cms/log/error";
+import notFound from "@admin/notFound";
+import login from "@admin/auth/login";
+import errorLog from "@admin/log/error";
 
 // import { redirect } from "next/navigation";
 // import { cookies } from "next/headers";
 
-import ForgottenPassword from "@thaumazo/cms/models/ForgottenPassword";
+import ForgottenPassword from "@admin/models/ForgottenPassword";
 
 export default async function forgottenPasswordRoute(request, slug) {
   const User = await thaumazoModels.get("User");

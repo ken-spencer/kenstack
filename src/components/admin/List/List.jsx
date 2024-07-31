@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import Alert from "@mui/material/Alert";
 import ThemeProvider from "../ThemeProvider";
 
-import verifyJWT from "@thaumazo/cms/auth/verifyJWT";
+import verifyJWT from "@admin/auth/verifyJWT";
 import loadQuery from "./loadQuery";
 import errorLog from "../../../log/error";
 

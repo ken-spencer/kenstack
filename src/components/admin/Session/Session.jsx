@@ -1,5 +1,5 @@
 import React from "react";
-import verifyJWT from "@thaumazo/cms/auth/verifyJWT";
+import verifyJWT from "@admin/auth/verifyJWT";
 import Revalidate from "./Revalidate";
 
 import Suspense from "../Suspense";
