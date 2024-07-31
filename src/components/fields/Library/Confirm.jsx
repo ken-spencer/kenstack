@@ -5,7 +5,7 @@ import DialogTitle from "@admin/components/Dialog/DialogTitle";
 import DialogBody from "@admin/components/Dialog/DialogBody";
 import DialogActions from "@admin/components/Dialog/DialogActions";
 
-import Button from "@thaumazo/forms/Button";
+import Button from "@admin/forms/Button";
 
 import DeleteIcon from "@mui/icons-material/Delete";
 import CloseIcon from "@mui/icons-material/Close";

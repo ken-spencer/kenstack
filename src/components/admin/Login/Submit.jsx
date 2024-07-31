@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Submit from "@thaumazo/forms/Submit";
+import Submit from "@admin/forms/Submit";
 
 import styles from "./login.module.css";
 

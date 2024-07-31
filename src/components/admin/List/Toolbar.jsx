@@ -19,7 +19,7 @@ import Search from "./Search";
 import Notice from "../Notice";
 
 import AddIcon from "@mui/icons-material/Add";
-import Button from "@thaumazo/forms/Button";
+import Button from "@admin/forms/Button";
 
 import deleteAction from "./deleteAction";
 

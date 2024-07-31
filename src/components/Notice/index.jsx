@@ -5,7 +5,7 @@ import Cookies from "js-cookie";
 
 import Alert from "@mui/material/Alert";
 import Fade from "@mui/material/Fade";
-import Notice from "@thaumazo/forms/Notice";
+import Notice from "@admin/forms/Notice";
 
 import styles from "./notice.module.css";
 

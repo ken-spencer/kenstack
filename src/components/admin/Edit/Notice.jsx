@@ -1,6 +1,6 @@
 import Notice from "../Notice";
 
-import useForm from "@thaumazo/forms/useForm";
+import useForm from "@admin/forms/useForm";
 
 export default function EditNotice() {
   const form = useForm();

@@ -1,4 +1,4 @@
-import Button from "@thaumazo/forms/Button";
+import Button from "@admin/forms/Button";
 import DeleteIcon from "@mui/icons-material/Delete";
 import RestoreFromTrashIcon from "@mui/icons-material/RestoreFromTrash";
 

@@ -3,7 +3,7 @@
 const webpack = require('webpack');
 
 const nextConfig = {
-  transpilePackages: ['@thaumazo/forms'],
+  transpilePackages: ['@admin/forms'],
   eslint: {
     ignoreDuringBuilds: true,
     dirs: ["site", "app", "src"],

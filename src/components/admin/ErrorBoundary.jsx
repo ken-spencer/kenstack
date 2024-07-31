@@ -3,7 +3,7 @@
 import fetchJSON from "../../utils/fetchJSON";
 
 import React from "react";
-import Alert from "@thaumazo/forms/Alert";
+import Alert from "@admin/forms/Alert";
 
 // looks like this functionality can currently only be implmented as a class component
 

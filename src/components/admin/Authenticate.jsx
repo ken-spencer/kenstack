@@ -1,7 +1,7 @@
 import React from "react";
 
 import errorLog from "../../log/error";
-import Alert from "@thaumazo/forms/Alert";
+import Alert from "@admin/forms/Alert";
 import accessCheck from "../../auth/accessCheck";
 
 import Suspense from "./Suspense";

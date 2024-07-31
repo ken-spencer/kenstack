@@ -1,6 +1,6 @@
 import resetPasswordAction from "../../../auth/resetPasswordAction";
 import fields from "./fields";
-import AutoForm from "@thaumazo/forms/AutoForm";
+import AutoForm from "@admin/forms/AutoForm";
 
 //import authenticate from "../../../auth/authenticate";
 

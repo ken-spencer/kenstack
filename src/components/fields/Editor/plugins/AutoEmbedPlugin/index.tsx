@@ -6,7 +6,7 @@
  *
  */
 
-import Button from "@thaumazo/forms/Button";
+import Button from "@admin/forms/Button";
 import Icons from "../../icons";
 
 import type { LexicalEditor } from "lexical";

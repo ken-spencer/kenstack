@@ -1,5 +1,5 @@
 import { useSquareTool } from "./Provider";
-import Button from "@thaumazo/forms/Button";
+import Button from "@admin/forms/Button";
 
 export default function ResetButton(props) {
   const { reset, changed } = useSquareTool();

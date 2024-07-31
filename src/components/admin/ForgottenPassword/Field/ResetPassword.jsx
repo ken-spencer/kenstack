@@ -1,10 +1,10 @@
 "use client";
 import { useState } from "react";
 import useAdmin from "../../Edit/useAdmin";
-import Field from "@thaumazo/forms/Field";
+import Field from "@admin/forms/Field";
 
-import Button from "@thaumazo/forms/Button";
-import Alert from "@thaumazo/forms/Alert";
+import Button from "@admin/forms/Button";
+import Alert from "@admin/forms/Alert";
 
 import emailAction from "./emailAction";
 

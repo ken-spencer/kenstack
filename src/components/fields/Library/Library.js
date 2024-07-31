@@ -1,8 +1,8 @@
 import React from "react";
 
 import Title from "../../admin/Title";
-// import Item from "@thaumazo/forms/Grid/Item";
-// import Grid from "@thaumazo/forms/Grid";
+// import Item from "@admin/forms/Grid/Item";
+// import Grid from "@admin/forms/Grid";
 // import ErrorBoundary from "../../admin/ErrorBoundary";
 
 import ToggleTrash from "./ToggleTrash";

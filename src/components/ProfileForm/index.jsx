@@ -13,7 +13,7 @@ import saveAction from "./saveAction";
 import Notice from "../Notice";
 
 import fields from "./fields";
-import AutoForm from "@thaumazo/forms/AutoForm";
+import AutoForm from "@admin/forms/AutoForm";
 
 export default function ProfileCont() {
   const [loaded, setLoaded] = useState(false);

@@ -1,6 +1,6 @@
 import React from "react";
 
-import SearchInput from "@thaumazo/forms/base/Search";
+import SearchInput from "@admin/forms/base/Search";
 import useLibrary from "./useLibrary";
 
 export default function Search() {

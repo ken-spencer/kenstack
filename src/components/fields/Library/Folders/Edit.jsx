@@ -3,7 +3,7 @@ import React, { useRef, useEffect, useCallback } from "react";
 
 import { useMutation } from "../../../../query";
 
-import Input from "@thaumazo/forms/base/Input";
+import Input from "@admin/forms/base/Input";
 
 import saveAction from "./api/saveAction";
 import useLibrary from "../useLibrary";

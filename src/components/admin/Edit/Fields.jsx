@@ -3,7 +3,7 @@
 import useAdmin from "./useAdmin";
 import styles from "../admin.module.scss";
 
-import Layout from "@thaumazo/forms/Layout";
+import Layout from "@admin/forms/Layout";
 
 export default function AdminEditFields() {
   const { modelName } = useAdmin();

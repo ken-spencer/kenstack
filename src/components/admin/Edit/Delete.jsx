@@ -6,9 +6,9 @@ import useAdmin from "./useAdmin";
 
 import DeleteIcon from "@mui/icons-material/Delete";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
-import Submit from "@thaumazo/forms/Submit";
+import Submit from "@admin/forms/Submit";
 // import Button from "@mui/material/Button";
-import Button from "@thaumazo/forms/Button";
+import Button from "@admin/forms/Button";
 
 export default function DeleteButton() {
   const [warn, setWarn] = useState(false);

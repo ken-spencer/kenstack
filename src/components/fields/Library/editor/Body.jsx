@@ -1,5 +1,5 @@
 import FormFields from "./Form";
-import FormProvider from "@thaumazo/forms/Provider";
+import FormProvider from "@admin/forms/Provider";
 import SquareTool from "./SquareTool";
 import useLibrary from "../useLibrary";
 

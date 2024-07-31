@@ -1,7 +1,7 @@
 "use client";
 // import { useEffect, useState } from "react";
 
-import AutoForm from "@thaumazo/forms/AutoForm";
+import AutoForm from "@admin/forms/AutoForm";
 import Submit from "./Submit";
 import fields from "./fields";
 

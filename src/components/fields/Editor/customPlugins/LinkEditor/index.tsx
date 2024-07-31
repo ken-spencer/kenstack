@@ -7,8 +7,8 @@
  */
 
 import styles from "./link-editor.module.scss";
-import IconButton from "@thaumazo/forms/IconButton";
-import Input from "@thaumazo/forms/base/Input";
+import IconButton from "@admin/forms/IconButton";
+import Input from "@admin/forms/base/Input";
 import PencilIcon from "../../icons/PencilFill";
 import TrashIcon from "../../icons/Trash";
 import CloseIcon from "../../icons/X";

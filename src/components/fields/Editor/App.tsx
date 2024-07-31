@@ -1,7 +1,7 @@
 "use client";
 
 import styles from "./editor.module.scss";
-// import Field from "@thaumazo/forms/Field";
+// import Field from "@admin/forms/Field";
 
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { isDevPlayground } from "./lib/appSettings";

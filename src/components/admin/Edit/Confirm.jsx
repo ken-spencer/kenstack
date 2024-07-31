@@ -8,8 +8,8 @@ import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 
 import useAdmin from "./useAdmin";
-import useForm from "@thaumazo/forms/useForm";
-import useConfirm from "@thaumazo/forms/useConfirm";
+import useForm from "@admin/forms/useForm";
+import useConfirm from "@admin/forms/useConfirm";
 
 const confirmMessage = "Exit without saving changes?";
 export default function AdminConfirm() {

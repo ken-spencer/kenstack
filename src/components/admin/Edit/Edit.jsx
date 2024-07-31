@@ -15,7 +15,7 @@ import errorLog from "../../../log/error";
 
 import Provider from "./Provider";
 import AdminForm from "./Form";
-// import ThemeProvider from "@thaumazo/forms/ThemeProvider";
+// import ThemeProvider from "@admin/forms/ThemeProvider";
 
 import { notFound } from "next/navigation";
 

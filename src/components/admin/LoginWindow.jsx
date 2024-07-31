@@ -1,5 +1,5 @@
 import Dialog from "./Dialog";
-import AutoForm from "@thaumazo/forms/AutoForm";
+import AutoForm from "@admin/forms/AutoForm";
 
 import fields from "./Login/fields";
 // import loginAction from "./../../auth/loginAction";

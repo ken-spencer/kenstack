@@ -2,15 +2,15 @@
 
 import saveAction from "./saveAction";
 
-import AutoForm from "@thaumazo/forms/AutoForm";
+import AutoForm from "@admin/forms/AutoForm";
 
 /*
-import ThemeProvider from "@thaumazo/forms/ThemeProvider";
+import ThemeProvider from "@admin/forms/ThemeProvider";
 import Typography from "@mui/material/Typography";
-import Form from "@thaumazo/forms/Form";
-import Notice from "@thaumazo/forms/Notice";
-import Submit from "@thaumazo/forms/Submit";
-import Layout from "@thaumazo/forms/Layout";
+import Form from "@admin/forms/Form";
+import Notice from "@admin/forms/Notice";
+import Submit from "@admin/forms/Submit";
+import Layout from "@admin/forms/Layout";
 */
 
 import fields from "./fields";

@@ -3,7 +3,7 @@
 import saveAction from "./saveAction";
 import { useCallback } from "react";
 
-import Form from "@thaumazo/forms/Form";
+import Form from "@admin/forms/Form";
 import Toolbar from "./Toolbar";
 import Notice from "./Notice";
 import AdminFields from "./Fields";
@@ -11,7 +11,7 @@ import Confirm from "./Confirm";
 import Login from "../LoginWindow";
 // import Alert from "@mui/material/Alert";
 
-import FormProvider from "@thaumazo/forms/Provider";
+import FormProvider from "@admin/forms/Provider";
 import useAdmin from "./useAdmin";
 import { usePathname, useRouter } from "next/navigation";
 

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import verifyJWT from "@thaumazo/cms/auth/verifyJWT";
+import verifyJWT from "@admin/auth/verifyJWT";
 
 export async function middleware(request) {
   return;

@@ -1,7 +1,7 @@
 "use client";
 
 import loginAction from "../../../auth/loginAction";
-import AutoForm from "@thaumazo/forms/AutoForm";
+import AutoForm from "@admin/forms/AutoForm";
 import fields from "./fields";
 import Submit from "./Submit";
 

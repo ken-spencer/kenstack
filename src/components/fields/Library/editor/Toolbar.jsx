@@ -1,6 +1,6 @@
 import useLibrary from "../useLibrary";
 
-import Button from "@thaumazo/forms/Button";
+import Button from "@admin/forms/Button";
 import ArrowBackIosIcon from "@mui/icons-material/ArrowBackIos";
 
 import Delete from "./Toolbar/Delete";

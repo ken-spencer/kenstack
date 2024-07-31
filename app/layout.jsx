@@ -1,6 +1,6 @@
 import React from "react";
 import "./globals.css";
-import "@thaumazo/forms/global.css";
+import "@admin/forms/global.css";
 import { Inter } from "next/font/google";
 
 const inter = Inter({ subsets: ["latin"] });

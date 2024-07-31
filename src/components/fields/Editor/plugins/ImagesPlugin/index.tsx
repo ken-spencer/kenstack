@@ -6,7 +6,7 @@
  *
  */
 
-import Button from "@thaumazo/forms/Button";
+import Button from "@admin/forms/Button";
 
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $wrapNodeInElement, mergeRegister } from "@lexical/utils";

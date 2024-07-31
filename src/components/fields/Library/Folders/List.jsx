@@ -10,7 +10,7 @@ import Folders from "./Folders";
 import Confirm from "../Confirm";
 
 import CreateNewFolderIcon from "@mui/icons-material/CreateNewFolder";
-import IconButton from "@thaumazo/forms/IconButton";
+import IconButton from "@admin/forms/IconButton";
 
 // import styles from "./folders.module.scss";
 

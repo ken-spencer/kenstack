@@ -1,5 +1,5 @@
 import ContentPasteIcon from "@mui/icons-material/ContentPaste";
-import Button from "@thaumazo/forms/Button";
+import Button from "@admin/forms/Button";
 
 import useLibrary from "../../useLibrary";
 import useChangeFolder from "../../Folders/useChangeFolder";

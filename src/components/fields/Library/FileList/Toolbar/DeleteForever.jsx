@@ -1,6 +1,6 @@
 import { useState } from "react";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
-import Button from "@thaumazo/forms/Button";
+import Button from "@admin/forms/Button";
 import useLibrary from "../../useLibrary";
 
 import Confirm from "../../Confirm";

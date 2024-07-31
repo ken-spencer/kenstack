@@ -6,9 +6,9 @@
  *
  */
 
-import Button from "@thaumazo/forms/Button";
-import Checkbox from "@thaumazo/forms/base/Checkbox";
-// import Select from "@thaumazo/forms/base/Select";
+import Button from "@admin/forms/Button";
+import Checkbox from "@admin/forms/base/Checkbox";
+// import Select from "@admin/forms/base/Select";
 
 import type { Position } from "../../nodes/InlineImageNode";
 

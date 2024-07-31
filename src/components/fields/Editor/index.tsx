@@ -3,8 +3,8 @@
 import dynamic from "next/dynamic";
 import Loading from "../../admin/Loading";
 
-import Field from "@thaumazo/forms/Field";
-import useField from "@thaumazo/forms/useField";
+import Field from "@admin/forms/Field";
+import useField from "@admin/forms/useField";
 
 const Editor = dynamic(() => import("./App"), {
   ssr: false,

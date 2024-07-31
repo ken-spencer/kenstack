@@ -1,6 +1,6 @@
 "use client";
 
-import useForm from "@thaumazo/forms/useForm";
+import useForm from "@admin/forms/useForm";
 
 import styles from "../admin.module.scss";
 
@@ -9,7 +9,7 @@ import useAdmin from "./useAdmin";
 
 import Title from "../Title";
 // import Button from "@mui/material/Button";
-import Button from "@thaumazo/forms/Submit";
+import Button from "@admin/forms/Submit";
 import SaveIcon from "@mui/icons-material/SaveOutlined";
 import AddIcon from "@mui/icons-material/Add";
 import ListIcon from "@mui/icons-material/List";

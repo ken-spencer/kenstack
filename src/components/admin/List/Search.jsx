@@ -2,7 +2,7 @@ import useAdmin from "./useAdmin";
 
 //import OutlinedInput from "@mui/material/OutlinedInput";
 
-import SearchInput from "@thaumazo/forms/base/Search";
+import SearchInput from "@admin/forms/base/Search";
 
 export default function Search() {
   // const [showValue, setShowValue] = useState(false);

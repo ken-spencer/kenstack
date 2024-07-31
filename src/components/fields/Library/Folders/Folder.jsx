@@ -9,7 +9,7 @@ import ListItem from "../../../admin/Sidebar/ListItem";
 import FolderIcon from "@mui/icons-material/Folder";
 import DriveFileMoveIcon from "@mui/icons-material/DriveFileMove";
 
-import IconButton from "@thaumazo/forms/IconButton";
+import IconButton from "@admin/forms/IconButton";
 import DeleteIcon from "@mui/icons-material/Delete";
 
 import useLibrary from "../useLibrary";

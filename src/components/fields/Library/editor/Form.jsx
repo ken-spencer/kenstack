@@ -1,6 +1,6 @@
 import Section from "@admin/components/admin/Section";
-import Input from "@thaumazo/forms/Input";
-import Form from "@thaumazo/forms/Form";
+import Input from "@admin/forms/Input";
+import Form from "@admin/forms/Form";
 
 import useLibrary from "../useLibrary";
 import saveAction from "./api/saveAction";
