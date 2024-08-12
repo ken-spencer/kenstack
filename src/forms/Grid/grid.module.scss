@@ -1,0 +1,30 @@
+$breakpoints: (
+  "xs": 0px,
+  "sm": 600px,
+  "md": 900px,
+  "lg": 1200px,
+  "xl": 1536px,
+);
+
+.container {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--grid-gap);
+}
+
+@each $breakpoint, $width in $breakpoints {
+  @for $i from 1 through 12 {
+    .#{$breakpoint}-#{$i} {
+      grid-column: span 12;
+    }
+    @media (min-width: $width) {
+      .#{$breakpoint}-#{$i} {
+        grid-column: span $i;
+      }
+    }
+  }
+}
+
+.hideEmpty:empty {
+  display: none;
+}

@@ -7,15 +7,14 @@ import pick from "lodash/pick";
 // import get from "lodash/get";
 
 const { Schema } = mongoose;
-import Trash from "../models/Trash";
+// import Trash from "../models/Trash";
 
 import formSchema from "@admin/forms/lib/formSchema";
 import validity from "./validate";
 import checkServerValidity from "@admin/forms/validity/checkServerValidity";
 import errorLog from "../log/error";
-import auditLog from "../log/audit";
+// import auditLog from "../log/audit";
 import audit from "./audit";
-import loadUser from "../auth/loadUser";
 
 class AdminSchema extends Schema {
   // _admin = null;
@@ -43,10 +42,10 @@ class AdminSchema extends Schema {
     super(schema, options);
 
     // this.statics.getAdminData = getAdminData;
-    this.statics.trashMany = trashMany;
     this.methods.bindFormData = bindFormData;
     this.methods.checkValidity = checkValidity;
     this.methods.trash = trash;
+    // this.statics.trashMany = trashMany;
     this.methods.toAdminDTO = toAdminDTO;
 
     const query = function () {
@@ -237,18 +236,24 @@ async function checkValidity() {
 
 // Copy to Trash and then delete.
 async function trash() {
+  /*
   const doc = new Trash({
     modelId: this._id,
     modelName: this.constructor.modelName,
     document: this,
   });
+  */
 
-  await doc.save();
+  this.set('meta.deleted', true);
+  await this.save();
 
+  /*  
   const model = this.constructor;
   await model.deleteOne({ _id: this._id });
+  */
 }
 
+/*
 async function trashMany(arrayToTrash) {
   const user = await loadUser();
 
@@ -288,7 +293,7 @@ async function trashMany(arrayToTrash) {
 
   return retval;
 }
-
+*/
 /*
 function flatten(retval, object) {
   for (const [key, value] of Object.entries(object)) {

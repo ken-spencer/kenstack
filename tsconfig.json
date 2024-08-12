@@ -28,9 +28,6 @@
       "@site/*": [
         "./site/*"
       ],
-      "@admin/forms/*": [
-        "../forms/src/*"
-      ],
       "@admin/*": [
         "./src/*"
       ]

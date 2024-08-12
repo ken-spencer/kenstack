@@ -1,0 +1,15 @@
+.section {
+  border: 1px solid #4b5563;
+  border-radius: 0.25rem;
+
+  .heading {
+    font-size: 1.25rem;
+    padding: 0.5rem;
+    border-bottom: 1px solid #4b5563;
+    background-color: rgba(128, 128, 128, 0.15);
+  }
+
+  .body {
+    padding: 0.5rem;
+  }
+}

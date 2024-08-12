@@ -58,4 +58,3 @@ export { getWeekdayNames, getMonthNames, generateCalendarDays };
 
 // get list of zones
 // const zones = Intl.supportedValuesOf("timeZone");
-

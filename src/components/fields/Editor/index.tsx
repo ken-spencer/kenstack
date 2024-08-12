@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import Loading from "../../admin/Loading";
+import Loading from "@admin/components/Loading";
 
 import Field from "@admin/forms/Field";
 import useField from "@admin/forms/useField";

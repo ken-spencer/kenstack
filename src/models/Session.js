@@ -16,9 +16,7 @@ const SessionSchema = new Schema(
       default: function () {
         let date = new Date();
         // expire in 24 hour
-        date = date.setSeconds(
-          date.getSeconds() + thaumazoModels.sessionTimeout,
-        );
+        date = date.setSeconds(date.getSeconds() + 60 * 3600 * 24);
         return date;
       },
       index: { expires: "60m" },

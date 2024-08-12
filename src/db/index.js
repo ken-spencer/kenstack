@@ -6,7 +6,7 @@ import mongoose from "mongoose";
 function connect() {
   return mongoose
     .connect(process.env.MONGO_URI, {
-      autoIndex: false, // Disable automatic index creation
+      autoIndex: true, // Toggle automatic index creation
       maxPoolSize: 50,
     })
     .then(
