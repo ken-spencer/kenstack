@@ -3,7 +3,7 @@ import React, { useCallback } from "react";
 import UploadFiles from "./UploadFiles";
 import File from "./File";
 import Toolbar from "./Toolbar";
-import Spinner from "@admin/components/Loading";
+import Spinner from "@kenstack/components/Loading";
 
 // var fileToken = null;
 // var { actions, context } = store;

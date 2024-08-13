@@ -6,9 +6,9 @@ import { useAdminEdit } from "./context";
 
 import DeleteIcon from "@mui/icons-material/Delete";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
-import Submit from "@admin/forms/Submit";
+import Submit from "@kenstack/forms/Submit";
 // import Button from "@mui/material/Button";
-import Button from "@admin/forms/Button";
+import Button from "@kenstack/forms/Button";
 
 export default function DeleteButton() {
   const [warn, setWarn] = useState(false);

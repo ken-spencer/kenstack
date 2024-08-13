@@ -1,7 +1,7 @@
 import resetPasswordAction from "./resetPasswordAction";
-import apiAction from "@admin/server/apiAction";
+import apiAction from "@kenstack/server/apiAction";
 
-import Session from "@admin/server/Session";
+import Session from "@kenstack/server/Session";
 
 const API = (session) => {
   if (!(session instanceof Session)) {

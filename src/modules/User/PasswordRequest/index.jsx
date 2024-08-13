@@ -1,5 +1,5 @@
 import dynamic from "next/dynamic";
-import Loading from "@admin/components/Loading";
+import Loading from "@kenstack/components/Loading";
 
 const ResetPasswordField = dynamic(() => import("./ResetPassword"), {
   // ssr: false,

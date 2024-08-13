@@ -6,9 +6,9 @@
  *
  */
 
-import Button from "@admin/forms/Button";
-import Checkbox from "@admin/forms/base/Checkbox";
-// import Select from "@admin/forms/base/Select";
+import Button from "@kenstack/forms/Button";
+import Checkbox from "@kenstack/forms/base/Checkbox";
+// import Select from "@kenstack/forms/base/Select";
 
 import type { Position } from "../../nodes/InlineImageNode";
 

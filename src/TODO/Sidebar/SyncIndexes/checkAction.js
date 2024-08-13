@@ -1,6 +1,6 @@
 "use server";
 
-import accessCheck from "@admin/auth/accessCheck";
+import accessCheck from "@kenstack/auth/accessCheck";
 import errorLog from "../../../../log/error";
 
 export default async function checkAction() {

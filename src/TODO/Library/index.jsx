@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-query";
 import { useState } from "react";
 
-import Loading from "@admin/components/Loading";
+import Loading from "@kenstack/components/Loading";
 import dynamic from "next/dynamic";
 import Dialog from "../../Dialog";
 

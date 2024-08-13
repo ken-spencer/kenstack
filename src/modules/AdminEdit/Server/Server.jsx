@@ -1,17 +1,17 @@
 import "server-only";
 
 import React from "react";
-import Authenticate from "@admin/server/Authenticate";
+import Authenticate from "@kenstack/server/Authenticate";
 
-import Session from "@admin/server/Session";
-import clientModel from "@admin/client/Model";
-import ThemeProvider from "@admin/components/ThemeProvider";
+import Session from "@kenstack/server/Session";
+import clientModel from "@kenstack/client/Model";
+import ThemeProvider from "@kenstack/components/ThemeProvider";
 
-import errorLog from "@admin/log/error";
+import errorLog from "@kenstack/log/error";
 import Alert from "@mui/material/Alert";
 import { notFound } from "next/navigation";
 
-import { ServerProvider } from "@admin/server/context";
+import { ServerProvider } from "@kenstack/server/context";
 
 export default async function Server({
   children,

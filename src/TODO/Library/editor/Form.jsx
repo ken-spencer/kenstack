@@ -1,10 +1,10 @@
-import Section from "@admin/components/admin/Section";
-import Input from "@admin/forms/Input";
-import Form from "@admin/forms/Form";
+import Section from "@kenstack/components/admin/Section";
+import Input from "@kenstack/forms/Input";
+import Form from "@kenstack/forms/Form";
 
 import useLibrary from "../useLibrary";
 import saveAction from "./api/saveAction";
-import defaultError from "@admin/defaultError";
+import defaultError from "@kenstack/defaultError";
 
 export default function EditForm({ file }) {
   const { setError } = useLibrary();

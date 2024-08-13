@@ -1,8 +1,8 @@
 import React from "react";
 
-import Title from "@admin/components/Title";
-// import Item from "@admin/forms/Grid/Item";
-// import Grid from "@admin/forms/Grid";
+import Title from "@kenstack/components/Title";
+// import Item from "@kenstack/forms/Grid/Item";
+// import Grid from "@kenstack/forms/Grid";
 // import ErrorBoundary from "../../admin/ErrorBoundary";
 
 import ToggleTrash from "./ToggleTrash";

@@ -1,18 +1,18 @@
 import "server-only";
 
-import Authenticate from "@admin/server/Authenticate";
+import Authenticate from "@kenstack/server/Authenticate";
 
-import Session from "@admin/server/Session";
-import clientModel from "@admin/client/Model";
-import ThemeProvider from "@admin/components/ThemeProvider";
+import Session from "@kenstack/server/Session";
+import clientModel from "@kenstack/client/Model";
+import ThemeProvider from "@kenstack/components/ThemeProvider";
 
-import { ServerProvider } from "@admin/server/context";
+import { ServerProvider } from "@kenstack/server/context";
 import load from "../api/load";
 
 import { cookies } from "next/headers";
 
 import Alert from "@mui/material/Alert";
-import errorLog from "@admin/log/error";
+import errorLog from "@kenstack/log/error";
 
 
 export default async function Server({ children, session, admin, model }) {

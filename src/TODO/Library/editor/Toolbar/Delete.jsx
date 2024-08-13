@@ -1,10 +1,10 @@
-import Button from "@admin/forms/Button";
+import Button from "@kenstack/forms/Button";
 import DeleteIcon from "@mui/icons-material/Delete";
 // import RestoreFromTrashIcon from "@mui/icons-material/RestoreFromTrash";
 
 import useLibrary from "../../useLibrary";
 
-import { useMutation } from "@admin/query";
+import { useMutation } from "@kenstack/query";
 import deleteAction from "../../FileList/api/deleteAction";
 
 export default function Delete() {

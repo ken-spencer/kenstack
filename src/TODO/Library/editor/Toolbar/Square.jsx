@@ -1,4 +1,4 @@
-import Button from "@admin/forms/Button";
+import Button from "@kenstack/forms/Button";
 import AccountBoxIcon from "@mui/icons-material/AccountBox";
 
 import useLibrary from "../../useLibrary";

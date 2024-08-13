@@ -1,5 +1,5 @@
 import React from "react";
-import sentenceCase from "@admin/utils/sentenceCase";
+import sentenceCase from "@kenstack/utils/sentenceCase";
 
 import { Section, Row, Column } from "@react-email/components";
 

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import sentenceCase from "@admin/utils/sentenceCase";
+import sentenceCase from "@kenstack/utils/sentenceCase";
 
 import styles from "./layout.module.scss";
 

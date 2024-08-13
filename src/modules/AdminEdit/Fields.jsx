@@ -2,7 +2,7 @@
 
 import { useAdminEdit } from "./context";
 
-import Layout from "@admin/forms/Layout";
+import Layout from "@kenstack/forms/Layout";
 
 export default function AdminEditFields() {
   const { admin } = useAdminEdit();

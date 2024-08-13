@@ -1,7 +1,7 @@
 import saveAction from "./save";
-import apiAction from "@admin/server/apiAction";
+import apiAction from "@kenstack/server/apiAction";
 
-import clientModel from "@admin/client/Model";
+import clientModel from "@kenstack/client/Model";
 
 import { notFound } from "next/navigation";
 

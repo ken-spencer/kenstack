@@ -1,12 +1,12 @@
 import { useState } from "react";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
-import Button from "@admin/forms/Button";
+import Button from "@kenstack/forms/Button";
 import useLibrary from "../../useLibrary";
 
 import Confirm from "../../Confirm";
 
 import deleteForeverAction from "../api/deleteForeverAction";
-import { useMutation } from "@admin/query";
+import { useMutation } from "@kenstack/query";
 
 export default function DeleteForever() {
   const { selected, setError } = useLibrary();

@@ -1,8 +1,8 @@
 import loadAction from "./load";
-import apiAction from "@admin/server/apiAction";
+import apiAction from "@kenstack/server/apiAction";
 
-// import Session from "@admin/server/Session";
-import clientModel from "@admin/client/Model";
+// import Session from "@kenstack/server/Session";
+import clientModel from "@kenstack/client/Model";
 
 import { notFound } from "next/navigation";
 

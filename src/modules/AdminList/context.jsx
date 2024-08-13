@@ -8,7 +8,7 @@ import { usePathname } from "next/navigation";
 import Cookies from "js-cookie";
 
 import debounce from "lodash/debounce";
-import apiAction from "@admin/client/apiAction";
+import apiAction from "@kenstack/client/apiAction";
 
 
 const AdminListContext = createContext({});

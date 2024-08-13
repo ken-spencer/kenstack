@@ -1,8 +1,8 @@
 "use server";
 
 import Image from "../../db/Image";
-import acl from "@admin/auth/acl";
-import errorLog from "@admin/log/error";
+import acl from "@kenstack/auth/acl";
+import errorLog from "@kenstack/log/error";
 
 const listAction = async (activeFolder, trash) =>
   acl("ADMIN", async () => {

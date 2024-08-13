@@ -3,7 +3,7 @@ import Form from "./Form";
 
 import { ForgottenPasswordProvider } from "./context";
 
-import Session from "@admin/server/Session";
+import Session from "@kenstack/server/Session";
 
 export default function ForgottenPassword({ session }) {
   if (!(session instanceof Session)) {

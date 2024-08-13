@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Submit from "@admin/forms/Submit";
+import Submit from "@kenstack/forms/Submit";
 
 import styles from "./form.module.css";
 

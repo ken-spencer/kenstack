@@ -2,9 +2,9 @@
 
 import { useCallback } from "react";
 import fields from "./fields";
-import AutoForm from "@admin/forms/AutoForm";
+import AutoForm from "@kenstack/forms/AutoForm";
 
-import apiAction from "@admin/client/apiAction";
+import apiAction from "@kenstack/client/apiAction";
 
 export default function ResetPasswordForm({ apiPath }) {
   const handleSubmit = useCallback(

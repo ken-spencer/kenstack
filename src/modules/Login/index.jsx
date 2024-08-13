@@ -2,7 +2,7 @@ import Form from "./Form";
 
 // import styles from "./page.module.css"
 
-import Session from "@admin/server/Session";
+import Session from "@kenstack/server/Session";
 import { LoginProvider } from "./context";
 
 export default function Login({ session }) {

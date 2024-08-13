@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 
-// const Login = React.lazy(() => import("@admin/cms/Login"));
+// const Login = React.lazy(() => import("@kenstack/cms/Login"));
 
-import Session from "@admin/server/Session";
+import Session from "@kenstack/server/Session";
 
 // Deep authentication. Call this later to allow for some UI to be rendered.
 export default async function Authenticate({ session, roles, children }) {

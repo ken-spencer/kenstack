@@ -1,11 +1,11 @@
 "use client";
 
 import { useAdminList } from "./context";
-import Error from "@admin/components/Error";
+import Error from "@kenstack/components/Error";
 
 import TableContainer from "@mui/material/TableContainer";
 import Table from "@mui/material/Table";
-import Loading from "@admin/components/Loading";
+import Loading from "@kenstack/components/Loading";
 
 import Head from "./Head";
 import Body from "./Body";

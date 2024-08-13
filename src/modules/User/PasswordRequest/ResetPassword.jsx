@@ -1,13 +1,13 @@
 "use client";
 import { useState } from "react";
-import { useAdminEdit } from "@admin/modules/AdminEdit/context";
-import Field from "@admin/forms/Field";
+import { useAdminEdit } from "@kenstack/modules/AdminEdit/context";
+import Field from "@kenstack/forms/Field";
 
-import Button from "@admin/forms/Button";
-import Alert from "@admin/forms/Alert";
+import Button from "@kenstack/forms/Button";
+import Alert from "@kenstack/forms/Alert";
 
 // import emailAction from "./emailAction";
-import  apiAction from "@admin/client/apiAction";
+import  apiAction from "@kenstack/client/apiAction";
 
 export default function ResetPasswordField() {
   const { id } = useAdminEdit();

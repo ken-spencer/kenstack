@@ -1,5 +1,5 @@
-import apiAction from "@admin/server/apiAction";
-import Session from "@admin/server/Session";
+import apiAction from "@kenstack/server/apiAction";
+import Session from "@kenstack/server/Session";
 
 import forgottenPasswordAction from "./forgottenPasswordAction";
 

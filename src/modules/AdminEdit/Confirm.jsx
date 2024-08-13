@@ -8,8 +8,8 @@ import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 
 import { useAdminEdit } from "./context";
-import useForm from "@admin/forms/useForm";
-// import useConfirm from "@admin/forms/useConfirm";
+import useForm from "@kenstack/forms/useForm";
+// import useConfirm from "@kenstack/forms/useConfirm";
 
 export default function AdminConfirm() {
   // useConfirm(true);

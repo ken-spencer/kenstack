@@ -1,7 +1,7 @@
 import { useReducer, useMemo, useId, useRef, useEffect } from "react";
 
 import omit from "lodash/omit";
-import sentenceCase from "@admin/utils/sentenceCase";
+import sentenceCase from "@kenstack/utils/sentenceCase";
 import checkInputValidity from "./validity/checkInputValidity";
 import useForm from "./useForm";
 

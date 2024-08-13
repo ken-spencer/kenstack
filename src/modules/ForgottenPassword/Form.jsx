@@ -1,11 +1,11 @@
 "use client";
 import { useCallback } from "react";
 
-import AutoForm from "@admin/forms/AutoForm";
+import AutoForm from "@kenstack/forms/AutoForm";
 import Submit from "./Submit";
 import fields from "./fields";
 
-import apiAction from "@admin/client/apiAction";
+import apiAction from "@kenstack/client/apiAction";
 import { useForgottenPassword } from "./context";
 
 export default function ForgottenPasswordForm({ action }) {

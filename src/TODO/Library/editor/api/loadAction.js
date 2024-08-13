@@ -1,10 +1,10 @@
 "use server";
 
 import Image from "../../db/Image";
-import acl from "@admin/auth/acl";
-import errorLog from "@admin/log/error";
+import acl from "@kenstack/auth/acl";
+import errorLog from "@kenstack/log/error";
 
-import defaultError from "@admin/defaultError";
+import defaultError from "@kenstack/defaultError";
 
 const loadAction = async (id) =>
   acl("ADMIN", async () => {

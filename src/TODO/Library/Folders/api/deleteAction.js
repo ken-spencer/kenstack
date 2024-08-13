@@ -2,10 +2,10 @@
 
 import Folder from "../../db/Folder";
 import Image from "../../db/Image";
-import acl from "@admin/auth/acl";
-import defaultError from "@admin/defaultError";
+import acl from "@kenstack/auth/acl";
+import defaultError from "@kenstack/defaultError";
 
-import errorLog from "@admin/log/error";
+import errorLog from "@kenstack/log/error";
 
 const deleteAction = async (id) =>
   acl("ADMIN", async () => {

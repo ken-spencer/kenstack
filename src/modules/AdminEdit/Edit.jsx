@@ -5,7 +5,7 @@
 import { AdminEditProvider } from "./context";
 import AdminForm from "./Form";
 
-import { useServer } from "@admin/server/context";
+import { useServer } from "@kenstack/server/context";
 
 export default function AdminEdit({ admin }) {
   const { id, isNew, row, userId } = useServer();

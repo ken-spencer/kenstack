@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback } from "react";
 
 import useLibrary from "../useLibrary";
-import { useMutation } from "@admin/query";
+import { useMutation } from "@kenstack/query";
 
 import globals from "../globals";
 

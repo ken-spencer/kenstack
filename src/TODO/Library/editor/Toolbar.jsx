@@ -1,6 +1,6 @@
 import useLibrary from "../useLibrary";
 
-import Button from "@admin/forms/Button";
+import Button from "@kenstack/forms/Button";
 import ArrowBackIosIcon from "@mui/icons-material/ArrowBackIos";
 
 import Delete from "./Toolbar/Delete";

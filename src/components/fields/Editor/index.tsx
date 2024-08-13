@@ -1,10 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import Loading from "@admin/components/Loading";
+import Loading from "@kenstack/components/Loading";
 
-import Field from "@admin/forms/Field";
-import useField from "@admin/forms/useField";
+import Field from "@kenstack/forms/Field";
+import useField from "@kenstack/forms/useField";
 
 const Editor = dynamic(() => import("./App"), {
   ssr: false,

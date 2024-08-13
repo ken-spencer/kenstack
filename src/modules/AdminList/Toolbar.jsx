@@ -7,17 +7,17 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import Title from "@admin/components/Title";
+import Title from "@kenstack/components/Title";
 import Tooltip from "@mui/material/Tooltip";
 import IconButton from "@mui/material/IconButton";
 // import FilterListIcon from "@mui/icons-material/FilterList";
 import DeleteIcon from "@mui/icons-material/Delete";
 import Badge from "@mui/material/Badge";
 import Search from "./Search";
-import Notice from "@admin/components/Notice";
+import Notice from "@kenstack/components/Notice";
 
 import AddIcon from "@mui/icons-material/Add";
-import Button from "@admin/forms/Button";
+import Button from "@kenstack/forms/Button";
 
 // import deleteAction from "./deleteAction";
 

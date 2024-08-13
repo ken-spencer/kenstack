@@ -3,9 +3,9 @@ import "server-only";
 import { isRedirectError } from "next/dist/client/components/redirect";
 
 import { NextResponse } from "next/server";
-import defaultError from "@admin/defaultError";
+import defaultError from "@kenstack/defaultError";
 
-import Session from "@admin/server/Session";
+import Session from "@kenstack/server/Session";
 
 export default async function apiAction(
   action,

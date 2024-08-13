@@ -1,9 +1,9 @@
-import mongoose from "@admin/db";
+import mongoose from "@kenstack/db";
 
 import isEmail from "validator/es/lib/isEmail";
 import bcrypt from "bcrypt";
 
-import AdminSchema from "@admin/db/AdminSchema";
+import AdminSchema from "@kenstack/db/AdminSchema";
 
 const UserSchema = new AdminSchema({
   first_name: {

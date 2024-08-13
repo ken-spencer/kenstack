@@ -1,9 +1,9 @@
 "use server";
 
 import Folder from "../../db/Folder";
-import acl from "@admin/auth/acl";
+import acl from "@kenstack/auth/acl";
 
-import errorLog from "@admin/log/error";
+import errorLog from "@kenstack/log/error";
 
 const listAction = async () =>
   acl("ADMIN", async () => {

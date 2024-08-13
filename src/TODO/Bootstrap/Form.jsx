@@ -2,15 +2,15 @@
 
 import saveAction from "./saveAction";
 
-import AutoForm from "@admin/forms/AutoForm";
+import AutoForm from "@kenstack/forms/AutoForm";
 
 /*
-import ThemeProvider from "@admin/forms/ThemeProvider";
+import ThemeProvider from "@kenstack/forms/ThemeProvider";
 import Typography from "@mui/material/Typography";
-import Form from "@admin/forms/Form";
-import Notice from "@admin/forms/Notice";
-import Submit from "@admin/forms/Submit";
-import Layout from "@admin/forms/Layout";
+import Form from "@kenstack/forms/Form";
+import Notice from "@kenstack/forms/Notice";
+import Submit from "@kenstack/forms/Submit";
+import Layout from "@kenstack/forms/Layout";
 */
 
 import fields from "./fields";

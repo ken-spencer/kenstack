@@ -6,7 +6,7 @@
  *
  */
 
-import Button from "@admin/forms/Button";
+import Button from "@kenstack/forms/Button";
 import Icons from "../../icons";
 
 import type { LexicalEditor } from "lexical";

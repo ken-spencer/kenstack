@@ -3,7 +3,7 @@
 // import saveAction from "./saveAction";
 import { useCallback } from "react";
 
-import Form from "@admin/forms/Form";
+import Form from "@kenstack/forms/Form";
 import Toolbar from "./Toolbar";
 import Notice from "./Notice";
 import AdminFields from "./Fields";
@@ -11,11 +11,11 @@ import Confirm from "./Confirm";
 // import Login from "../LoginWindow";
 // import Alert from "@mui/material/Alert";
 
-import FormProvider from "@admin/forms/Provider";
+import FormProvider from "@kenstack/forms/Provider";
 import { useAdminEdit } from "./context";
 import { usePathname, useRouter } from "next/navigation";
 
-import apiAction from "@admin/client/apiAction";
+import apiAction from "@kenstack/client/apiAction";
 
 export default function AdminEditFormCont() {
   const router = useRouter();

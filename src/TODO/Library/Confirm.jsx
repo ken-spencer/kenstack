@@ -1,11 +1,11 @@
 import { useRef, useEffect } from "react";
 
-import Dialog from "@admin/components/Dialog";
-import DialogTitle from "@admin/components/Dialog/DialogTitle";
-import DialogBody from "@admin/components/Dialog/DialogBody";
-import DialogActions from "@admin/components/Dialog/DialogActions";
+import Dialog from "@kenstack/components/Dialog";
+import DialogTitle from "@kenstack/components/Dialog/DialogTitle";
+import DialogBody from "@kenstack/components/Dialog/DialogBody";
+import DialogActions from "@kenstack/components/Dialog/DialogActions";
 
-import Button from "@admin/forms/Button";
+import Button from "@kenstack/forms/Button";
 
 import DeleteIcon from "@mui/icons-material/Delete";
 import CloseIcon from "@mui/icons-material/Close";

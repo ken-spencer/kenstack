@@ -1,7 +1,7 @@
 
 import Sidebar from "./Sidebar";
 
-import ThemeProvider from "@admin/components/ThemeProvider";
+import ThemeProvider from "@kenstack/components/ThemeProvider";
 
 // import "./styles/admin.scss";
 

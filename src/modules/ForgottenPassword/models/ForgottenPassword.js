@@ -1,7 +1,7 @@
-import mongoose from "@admin/db";
+import mongoose from "@kenstack/db";
 import { nanoid } from "nanoid";
 
-import audit from "@admin/db/audit";
+import audit from "@kenstack/db/audit";
 const { Schema } = mongoose;
 
 const ForgottenPasswordSchema = new Schema(

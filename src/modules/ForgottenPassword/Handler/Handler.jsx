@@ -1,12 +1,12 @@
 import "server-only";
 
 import { redirect, notFound } from "next/navigation";
-import Session from "@admin/server/Session";
+import Session from "@kenstack/server/Session";
 
-//import errorLog from "@admin/log/error";
+//import errorLog from "@kenstack/log/error";
 import { cookies } from "next/headers";
 
-import ForgottenPassword from "@admin/modules/ForgottenPassword/models/ForgottenPassword";
+import ForgottenPassword from "@kenstack/modules/ForgottenPassword/models/ForgottenPassword";
 
 export default async function ForgottenPasswordHandler({
   session,

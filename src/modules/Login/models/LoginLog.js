@@ -1,4 +1,4 @@
-import mongoose from "@admin/db";
+import mongoose from "@kenstack/db";
 import isEmail from "validator/es/lib/isEmail";
 
 const { Schema } = mongoose;

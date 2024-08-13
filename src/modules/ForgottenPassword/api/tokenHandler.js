@@ -1,10 +1,10 @@
 import "server-only";
-import Session from "@admin/server/Session";
+import Session from "@kenstack/server/Session";
 import { NextResponse } from "next/server";
-import notFound from "@admin/notFound";
+import notFound from "@kenstack/notFound";
 
 import ForgottenPassword from "../models/ForgottenPassword";
-import errorLog from "@admin/log/error";
+import errorLog from "@kenstack/log/error";
 
 export default function API(session) {
   if (!(session instanceof Session)) {

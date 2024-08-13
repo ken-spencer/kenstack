@@ -1,12 +1,12 @@
 "use server";
 
 import Image from "../../db/Image";
-import acl from "@admin/auth/acl";
-import errorLog from "@admin/log/error";
-import auditLog from "@admin/log/audit";
+import acl from "@kenstack/auth/acl";
+import errorLog from "@kenstack/log/error";
+import auditLog from "@kenstack/log/audit";
 // import mongoose from "mongoose";
 
-import defaultError from "@admin/defaultError";
+import defaultError from "@kenstack/defaultError";
 
 const changeFolderAction = async ({ idArray, folder }) =>
   acl("ADMIN", async () => {

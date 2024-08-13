@@ -6,7 +6,7 @@
  *
  */
 
-import Button from "@admin/forms/Button";
+import Button from "@kenstack/forms/Button";
 
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $wrapNodeInElement, mergeRegister } from "@lexical/utils";

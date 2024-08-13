@@ -1,6 +1,6 @@
 import React, { useCallback } from "react";
 
-import Button from "@admin/forms/Button";
+import Button from "@kenstack/forms/Button";
 import UploadIcon from "@mui/icons-material/Upload";
 
 import useLibrary from "../../useLibrary";

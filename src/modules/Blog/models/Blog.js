@@ -1,4 +1,4 @@
-import AdminSchema from "@admin/db/AdminSchema";
+import AdminSchema from "@kenstack/db/AdminSchema";
 
 const BlogSchema = new AdminSchema({
   title: {

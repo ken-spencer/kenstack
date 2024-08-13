@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback } from "react";
-import AutoForm from "@admin/forms/AutoForm";
+import AutoForm from "@kenstack/forms/AutoForm";
 import fields from "./fields";
 import Submit from "./Submit";
 
-import apiAction from "@admin/client/apiAction";
+import apiAction from "@kenstack/client/apiAction";
 import { useLogin } from "./context";
 
 export default function LoginForm() {

@@ -1,6 +1,6 @@
 import React from "react";
 
-import Button from "@admin/forms/Button";
+import Button from "@kenstack/forms/Button";
 import RestoreFromTrashIcon from "@mui/icons-material/RestoreFromTrash";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 

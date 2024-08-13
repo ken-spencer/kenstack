@@ -4,7 +4,7 @@ import React from "react";
 // import authenticate from "../../../auth/authenticate";
 // import Alert from "@mui/material/Alert";
 
-// import verifyJWT from "@admin/auth/verifyJWT";
+// import verifyJWT from "@kenstack/auth/verifyJWT";
 // import loadQuery from "./loadQuery";
 // import errorLog from "../../../log/error";
 
@@ -14,7 +14,7 @@ import Toolbar from "./Toolbar";
 import AdminListTable from "./Table";
 import Pagination from "./Pagination";
 
-import { useServer } from "@admin/server/context";
+import { useServer } from "@kenstack/server/context";
 
 import {
   QueryClient,

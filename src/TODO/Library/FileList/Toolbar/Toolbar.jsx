@@ -2,7 +2,7 @@ import React from "react";
 import Browse from "./Browse";
 // import SB from "SB/js/SB";
 
-import Button from "@admin/forms/Button";
+import Button from "@kenstack/forms/Button";
 
 import PasteButton from "./PasteButton";
 import DeleteButton from "./DeleteButton";

@@ -1,10 +1,10 @@
 "use server";
 
 import Image from "../../db/Image";
-import acl from "@admin/auth/acl";
-import errorLog from "@admin/log/error";
-import auditLog from "@admin/log/audit";
-import defaultError from "@admin/defaultError";
+import acl from "@kenstack/auth/acl";
+import errorLog from "@kenstack/log/error";
+import auditLog from "@kenstack/log/audit";
+import defaultError from "@kenstack/defaultError";
 
 import mongoose from "mongoose";
 

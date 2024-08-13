@@ -1,5 +1,5 @@
 import React, { memo, useMemo } from "react";
-import sentenceCase from "@admin/utils/sentenceCase";
+import sentenceCase from "@kenstack/utils/sentenceCase";
 
 import GridItem from "../Grid/Item";
 

@@ -1,6 +1,6 @@
 import React from "react";
 
-import SearchInput from "@admin/forms/base/Search";
+import SearchInput from "@kenstack/forms/base/Search";
 import useLibrary from "./useLibrary";
 
 export default function Search() {

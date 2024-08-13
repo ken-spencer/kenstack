@@ -28,7 +28,7 @@
       "@site/*": [
         "./site/*"
       ],
-      "@admin/*": [
+      "@kenstack/*": [
         "./src/*"
       ]
     },

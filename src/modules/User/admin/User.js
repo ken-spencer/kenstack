@@ -2,7 +2,7 @@ import UsersIcon from "@heroicons/react/24/outline/UsersIcon";
 
 import PasswordRequest from "../PasswordRequest";
 
-import clientModel from "@admin/client/Model";
+import clientModel from "@kenstack/client/Model";
 
 const fields = {
   modelName: "User",

@@ -1,6 +1,6 @@
-import Notice from "@admin/components/Notice";
+import Notice from "@kenstack/components/Notice";
 
-import useForm from "@admin/forms/useForm";
+import useForm from "@kenstack/forms/useForm";
 
 export default function EditNotice() {
   const form = useForm();

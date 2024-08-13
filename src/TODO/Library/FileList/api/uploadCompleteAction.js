@@ -19,7 +19,7 @@ const nanoid = customAlphabet("1234567890abcdefghijklmnopqrstuvwxyz", 15);
 // import { promisify } from "util";
 // import { pipeline } from "stream/promises";
 
-import acl from "@admin/auth/acl";
+import acl from "@kenstack/auth/acl";
 
 const s3 = new S3Client();
 // const streamPipeline = promisify(pipeline);

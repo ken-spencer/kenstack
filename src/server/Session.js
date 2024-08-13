@@ -5,7 +5,7 @@ import { cache } from "react";
 import { jwtVerify, SignJWT } from "jose";
 
 import auditLog from "../log/audit";
-import SessionModel from "@admin/models/Session";
+import SessionModel from "@kenstack/models/Session";
 
 const secret = new TextEncoder().encode(process.env.SECRET);
 const alg = "HS256";

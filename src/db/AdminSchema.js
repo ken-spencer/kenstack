@@ -9,9 +9,9 @@ import pick from "lodash/pick";
 const { Schema } = mongoose;
 // import Trash from "../models/Trash";
 
-import formSchema from "@admin/forms/lib/formSchema";
+import formSchema from "@kenstack/forms/lib/formSchema";
 import validity from "./validate";
-import checkServerValidity from "@admin/forms/validity/checkServerValidity";
+import checkServerValidity from "@kenstack/forms/validity/checkServerValidity";
 import errorLog from "../log/error";
 // import auditLog from "../log/audit";
 import audit from "./audit";

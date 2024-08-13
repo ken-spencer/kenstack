@@ -9,12 +9,12 @@ import ListItem from "../../../admin/Sidebar/ListItem";
 import FolderIcon from "@mui/icons-material/Folder";
 import DriveFileMoveIcon from "@mui/icons-material/DriveFileMove";
 
-import IconButton from "@admin/forms/IconButton";
+import IconButton from "@kenstack/forms/IconButton";
 import DeleteIcon from "@mui/icons-material/Delete";
 
 import useLibrary from "../useLibrary";
 import deleteAction from "./api/deleteAction";
-import { useMutation } from "@admin/query";
+import { useMutation } from "@kenstack/query";
 
 // import globals from "../globals";
 import useChangeFolder from "./useChangeFolder";

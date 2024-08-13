@@ -1,6 +1,6 @@
 "use server";
 
-import errorLog from "@admin/log/error";
+import errorLog from "@kenstack/log/error";
 
 export default async function deleteAction(selected, { model }) {
   let result;
