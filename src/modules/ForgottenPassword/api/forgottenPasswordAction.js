@@ -14,22 +14,29 @@ import ForgottenPassword from "../models/ForgottenPassword";
 import React from "react";
 import { render } from "@react-email/render";
 
+const errorResponse = {
+  error:
+    "We experienced a problem resetting your password. Please try again later.",
+};
+
 export default async function forgottenPasswordAction(
   formData,
   { Email, from = "nobody@nowhere.com", session, request } = {},
 ) {
+  const User = session.userModel;
   // const Email = CustomEmail || DefaultEmail;
 
   let id = formData.get('id');
   let email;
   // special case when sending from admin
   let administrator;
+  let user;
   if (id) {
     if (await session.hasRole("ADMIN") !== true) {
       return { error: "You do not have permission to perform this action"}
     }
     administrator = await session.getAuthenticatedUser();
-    const user = await session.userModel.findById(id);
+    user = await User.findById(id);
 
     if (!user) {
       return { error: "Unknown user"};
@@ -37,23 +44,18 @@ export default async function forgottenPasswordAction(
     email = user.email;
   } else {
     email = formData.get("email") ?? "";
+
+    email = email.trim().toLowerCase();
+
+    if (!email) {
+      return {
+        error: "Invalid request. No email address was recieved.",
+        fieldErrors: { email: "Please enter a valid email address" },
+      };
+    }
+
+    user = await User.findOne({ email });
   }
-  email = email.trim().toLowerCase();
-
-  if (!email) {
-    return {
-      error: "Invalid request. No email address was recieved.",
-      fieldErrors: { email: "Please enter a valid email address" },
-    };
-  }
-
-  const errorResponse = {
-    error:
-      "We experienced a problem resetting your password. Please try again later.",
-  };
-
-  const User = session.userModel;
-  const user = await User.findOne({ email });
 
   // send this message on success or fail as we don't want to provide a way to scrape membership.
   if (!user) {

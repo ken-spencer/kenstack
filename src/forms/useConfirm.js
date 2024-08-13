@@ -17,7 +17,7 @@ export default function useConfirm(message = "Exit without saving changes?") {
       return;
     }
 
-    const message = confirm;
+    // const message = confirm;
     /* // restore this code if running from within next.js
     const routeChangeStart = (url) => {
       if (Router.asPath !== url && form.changed && !window.confirm(message)) {
@@ -35,8 +35,8 @@ export default function useConfirm(message = "Exit without saving changes?") {
     const beforeunload = (e) => {
       if (form.changed) {
         e.preventDefault();
-        e.returnValue = message;
-        return message;
+        e.returnValue = confirm;
+        return confirm;
       }
 
       return null;

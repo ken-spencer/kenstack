@@ -1,4 +1,4 @@
-type onClick = (event?: React.MouseEvent<HTMLButtonElement>) => void;
+type onClickType = (event?: React.MouseEvent<HTMLButtonElement>) => void;
 
 export default function IconButton({
   title,
@@ -11,7 +11,7 @@ export default function IconButton({
   icon: JSX.Element;
   active?: boolean;
   disabled?: boolean;
-  onClick: onClick;
+  onClick: onClickType;
 }): JSX.Element {
   return (
     <button

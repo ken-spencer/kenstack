@@ -22,7 +22,8 @@ const config = {
     "@typescript-eslint/no-unused-vars": ["error", { "args": "none" }],
     "no-unused-vars": "off",
     "no-console": "error",
-    "import/no-unresolved": "error"
+    "import/no-unresolved": "error",
+    "@typescript-eslint/no-shadow": ["error", { "hoist": "all", "builtinGlobals": false }],
   },
   "settings": {
     "import/resolver": {

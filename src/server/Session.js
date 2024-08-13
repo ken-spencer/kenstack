@@ -41,7 +41,6 @@ export default class Session {
 
     const { value: token } = cookie;
 
-    const secret = new TextEncoder().encode(process.env.SECRET);
     let jwt;
     try {
       jwt = await jwtVerify(token, secret);
@@ -120,7 +119,7 @@ export default class Session {
     await this.#sessionCookies(resCookies, session, user);
   }
 
-  async #sessionCookies(cookies, session, user) {
+  async #sessionCookies(_cookies, session, user) {
     const claims = {
       sub: user._id.toString(), // The UID of the user in your system
       sid: session._id.toString(),
@@ -135,7 +134,7 @@ export default class Session {
       .setExpirationTime(session.expiresAt.getTime() / 1000)
       .sign(secret);
 
-    cookies.set("auth", token, {
+    _cookies.set("auth", token, {
       httpOnly: true,
       secure: !process.env.DEVELOPMENT && process.env.NODE_ENV === "production", // Safair won't allow this cookie otherwise
       sameSite: "Strict",
@@ -150,7 +149,7 @@ export default class Session {
     let json = JSON.stringify(publicToken);
     let encodedString = Buffer.from(json, "utf-8").toString("base64");
 
-    cookies.set("authPublic", encodedString, {
+    _cookies.set("authPublic", encodedString, {
       httpOnly: false,
       secure: !process.env.DEVELOPMENT && process.env.NODE_ENV === "production", // Safair won't allow this cookie otherwise
       sameSite: "Strict",

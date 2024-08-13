@@ -6,6 +6,8 @@
  *
  */
 
+/* eslint-disable @typescript-eslint/no-shadow */
+
 import {
   $convertFromMarkdownString,
   $convertToMarkdownString,

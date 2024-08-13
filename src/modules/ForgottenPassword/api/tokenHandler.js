@@ -19,11 +19,11 @@ export default function API(session) {
     }
 
     const errorResponse = (message) => {
-      const response = NextResponse.redirect(
+      const redirect = NextResponse.redirect(
         origin + session.forgottenPasswordPath,
       );
-      response.cookies.set("forgottenPassword", message);
-      return response;
+      redirect.cookies.set("forgottenPassword", message);
+      return redirect;
     };
 
     const User = session.userModel;

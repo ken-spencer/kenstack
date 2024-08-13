@@ -1,7 +1,7 @@
 import NewsIcon from "@heroicons/react/24/outline/NewspaperIcon";
 
 import Editor from "@admin/components/fields/Editor";
-import Library from "@admin/components/fields/Library";
+// import Library from "@admin/components/fields/Library";
 
 const blogAdmin = {
   icon: NewsIcon,
@@ -34,11 +34,13 @@ const blogAdmin = {
       md: 12,
       lg: 6,
       fields: {
+        /*
         hero: {
           label: "Hero image",
           field: Library,
           
         },
+        */
         body: {
           field: Editor,
         },
