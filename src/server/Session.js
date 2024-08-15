@@ -15,7 +15,7 @@ export default class Session {
     model,
     {
       loginPath = "/login",
-      homePath = "/admin", // redirect here after login
+      homePath = "/", // redirect here after login
       forgottenPasswordPath = "/forgotten-password",
       resetPasswordPath = "/reset-password",
     } = [],
@@ -136,21 +136,6 @@ export default class Session {
 
     _cookies.set("auth", token, {
       httpOnly: true,
-      secure: !process.env.DEVELOPMENT && process.env.NODE_ENV === "production", // Safair won't allow this cookie otherwise
-      sameSite: "Strict",
-      expires: session.expiresAt.getTime(),
-    });
-
-    const publicToken = {
-      expires: session.expiresAt.getTime(),
-      roles: user.roles,
-    };
-
-    let json = JSON.stringify(publicToken);
-    let encodedString = Buffer.from(json, "utf-8").toString("base64");
-
-    _cookies.set("authPublic", encodedString, {
-      httpOnly: false,
       secure: !process.env.DEVELOPMENT && process.env.NODE_ENV === "production", // Safair won't allow this cookie otherwise
       sameSite: "Strict",
       expires: session.expiresAt.getTime(),
