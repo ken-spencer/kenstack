@@ -6,30 +6,35 @@ import React, {
   useState,
 } from "react";
 
-import styles from "../Button/button.module.scss";
-
 import Input from "./Input";
 import IconButton from "../IconButton";
 import MagnifyingGlassIcon from "../icons/MagnifyingGlassIcon";
 import XCircleIcon from "../icons/XCircleIcon";
 
-const Search = ({ handleClear, ...props }, refProp) => {
+const Search = ({ handleClear, clear, ...props }, refProp) => {
+  if (handleClear) {
+    throw Error("handleclear is now just clear");
+  }
+
   const defaultRef = useRef();
   const ref = refProp || defaultRef;
 
   return (
     <Input
       start={<MagnifyingGlassIcon width="1.5rem" height="1.5rem" />}
-      end={<ClearButton inputRef={ref} handleClear={handleClear} />}
+      end={<ClearButton value={props.value} inputRef={ref} handleClear={clear} />}
       {...props}
       ref={ref}
     />
   );
 };
 
-function ClearButton({ inputRef, handleClear }) {
+function ClearButton({ value, inputRef, handleClear }) {
   const [visible, setVisible] = useState(false);
   useEffect(() => {
+    if (value !== undefined) {
+      return;
+    }
     const input = inputRef.current;
     if (input.value.length) {
       setVisible(true);
@@ -46,7 +51,7 @@ function ClearButton({ inputRef, handleClear }) {
     return () => {
       input.removeEventListener("input", handleInput);
     };
-  }, [visible, inputRef]);
+  }, [value, visible, inputRef]);
 
   const handleClick = useCallback(() => {
     if (handleClear) {
@@ -60,11 +65,10 @@ function ClearButton({ inputRef, handleClear }) {
 
   return (
     <IconButton
+      type="button"
       onClick={handleClick}
       className={
-        styles.clearButton +
-        " " +
-        (visible ? styles.opaque : styles.transparent)
+        ((typeof(value) === "string" ? value.length : visible) ? "opacity-1" : "opacity-0")
       }
     >
       <XCircleIcon width="1.25rem" height="1.25rem" />
