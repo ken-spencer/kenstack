@@ -5,8 +5,6 @@ import useField from "./useField";
 import Radio from "./base/Radio";
 import Field from "./Field";
 
-import styles from "./form.module.scss";
-
 export default function RadioField(props) {
   const inputRef = React.useRef();
   const field = useField(props, inputRef);
@@ -16,11 +14,7 @@ export default function RadioField(props) {
   return (
     <Field field={field}>
       <ul
-        className={
-          styles.radioList +
-          " " +
-          (row ? styles["radioRow" + row] || styles.radioRowxs : "")
-        }
+        className={"radio-list " + (row ? "radio-row-" + row : "radio-row-xs")}
       >
         {options.map(([_value, _label], key) => {
           const id = field.props.id + "-" + _value;
@@ -41,42 +35,4 @@ export default function RadioField(props) {
       </ul>
     </Field>
   );
-
-  /*
-  return (
-    <div>
-      <Label field={field} className={styles.mb} />
-      <div className={styles["radioRow" + row] || null}>
-        {options.map(([_value, _label], key) => {
-          const id = field.id + "-" + _value;
-          return (
-            <div
-              key={_value}
-              className={styles.flex + " " + styles["option" + row] || ""}
-            >
-              <label className={styles.radio}>
-                <input
-                  value={_value}
-                  disabled={disabled}
-                  ref={key === 0 ? inputRef : undefined}
-                  {...rest}
-                  id={id}
-                  checked={field.value === String(_value)}
-                  type="radio"
-                />
-                <span>
-                  <CircleIcon width="0.875rem" height="0.875rem" />
-                </span>
-              </label>
-              <label className={styles.label} htmlFor={id}>
-                {_label}
-              </label>
-            </div>
-          );
-        })}
-      </div>
-      <Error field={field} />
-    </div>
-  );
-  */
 }

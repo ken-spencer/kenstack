@@ -5,8 +5,6 @@ import useField from "./useField";
 import Checkbox from "./base/Checkbox";
 import Field from "./Field";
 
-import styles from "./form.module.scss";
-
 export default function CheckboxList(props) {
   const inputRef = React.useRef();
   const field = useField(props, inputRef);
@@ -19,11 +17,7 @@ export default function CheckboxList(props) {
   return (
     <Field field={field}>
       <ul
-        className={
-          styles.radioList +
-          " " +
-          (row ? styles["radioRow" + row] || styles.radioRowxs : "")
-        }
+        className={"radio-list " + (row ? "radio-row-" + row : "radio-row-xs")}
       >
         {options.map(([value, label], key) => {
           const id = field.props.id + "-" + value;

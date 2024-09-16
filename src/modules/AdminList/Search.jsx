@@ -30,7 +30,7 @@ export default function Search() {
       name="search"
       type="search"
       placeholder="Keyword search"
-      handleClear={handleClear}
+      clear={handleClear}
       /*
       endAdornment={
         <IconButton

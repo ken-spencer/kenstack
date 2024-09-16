@@ -26,20 +26,20 @@ export default async function forgottenPasswordAction(
   const User = session.userModel;
   // const Email = CustomEmail || DefaultEmail;
 
-  let id = formData.get('id');
+  let id = formData.get("id");
   let email;
   // special case when sending from admin
   let administrator;
   let user;
   if (id) {
-    if (await session.hasRole("ADMIN") !== true) {
-      return { error: "You do not have permission to perform this action"}
+    if ((await session.hasRole("ADMIN")) !== true) {
+      return { error: "You do not have permission to perform this action" };
     }
     administrator = await session.getAuthenticatedUser();
     user = await User.findById(id);
 
     if (!user) {
-      return { error: "Unknown user"};
+      return { error: "Unknown user" };
     }
     email = user.email;
   } else {
@@ -114,7 +114,11 @@ export default async function forgottenPasswordAction(
   }
 
   const url =
-    request.nextUrl.origin + session.forgottenPasswordPath + "/" + fp.token;
+    request.nextUrl.protocol +
+    request.headers.get("host") +
+    session.forgottenPasswordPath +
+    "/" +
+    fp.token;
 
   const emailElement = React.createElement(
     Email,

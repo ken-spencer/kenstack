@@ -15,7 +15,7 @@ const config = {
     "prettier"
   ],
   "plugins": [
-    "@typescript-eslint"
+    // "@typescript-eslint"
   ],
   "rules": {
     "@next/next/no-img-element": "off",

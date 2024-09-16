@@ -15,23 +15,4 @@ export default function CheckboxField(props) {
       <Checkbox {...field.props} label={field.label} />
     </Field>
   );
-
-  /*
-  return (
-    <div className={styles.inlineFlex + " " + styles.flexWrap}>
-      <label className={styles.checkbox}>
-        <input
-          {...field.props}
-          type="checkbox"
-          checked={field.value || false}
-        />
-        <span>
-          <CheckIcon width="0.874rem" height="0.874rem" />
-        </span>
-      </label>
-      <Label field={field} />
-      <Error field={field} />
-    </div>
-  );
-  */
 }

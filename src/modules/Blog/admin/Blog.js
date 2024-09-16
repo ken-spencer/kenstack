@@ -5,9 +5,7 @@ import Editor from "@kenstack/components/fields/Editor";
 
 const blogAdmin = {
   icon: NewsIcon,
-  list: [
-    ["title"],
-  ],
+  list: [["title"]],
   fields: {
     list: {
       label: "Blog",
@@ -44,8 +42,8 @@ const blogAdmin = {
         body: {
           field: Editor,
         },
-      }
-    }
+      },
+    },
   },
 };
 

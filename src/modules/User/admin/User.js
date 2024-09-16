@@ -50,7 +50,7 @@ const fields = {
   },
 };
 
-export { fields }
+export { fields };
 
-const UserAdmin =  new clientModel(fields);
-export default UserAdmin
+const UserAdmin = clientModel(fields);
+export default UserAdmin;

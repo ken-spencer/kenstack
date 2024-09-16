@@ -4,7 +4,7 @@ import styles from "./alert.module.scss";
 
 function Alert(
   {
-    severity = null,
+    severity = "error",
     success = null,
     error = null,
     className,

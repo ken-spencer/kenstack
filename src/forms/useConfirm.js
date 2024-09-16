@@ -5,7 +5,7 @@ import useForm from "./useForm";
 // import Router from 'next/router';
 
 // confirm before leaving.
-// TODO this component needs to be updated to work properly. 
+// TODO this component needs to be updated to work properly.
 // specific problems with blocking page leave between submit and reqact-query completing a load
 // Should be cancelled by any action that doesn't return an error until further changes
 export default function useConfirm(message = "Exit without saving changes?") {

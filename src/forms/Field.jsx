@@ -1,5 +1,3 @@
-import styles from "./form.module.scss";
-
 export default function Field({ field, ...props }) {
   const fp = field?.props || {};
 
@@ -12,9 +10,9 @@ export default function Field({ field, ...props }) {
     children,
   } = props;
 
-  let classes = styles.field;
+  let classes = "field";
   if (required) {
-    classes += " " + styles.required;
+    classes += " required";
   }
   if (className) {
     classes += className;
@@ -23,13 +21,13 @@ export default function Field({ field, ...props }) {
   return (
     <div className={classes}>
       {label && (
-        <label htmlFor={id} className={styles.label + " " + styles.mb}>
+        <label htmlFor={id} className="label mb-2">
           {label}
-          {required && <span className={styles.required}>*</span>}
+          {required && <span className="required">*</span>}
         </label>
       )}
       {children}
-      {error && <div className={styles.errorMessage}>{error}</div>}
+      {error && <div className="field-error">{error}</div>}
     </div>
   );
 }

@@ -5,7 +5,6 @@ import Authenticate from "@kenstack/server/Authenticate";
 
 import Session from "@kenstack/server/Session";
 import clientModel from "@kenstack/client/Model";
-import ThemeProvider from "@kenstack/components/ThemeProvider";
 
 import errorLog from "@kenstack/log/error";
 import Alert from "@mui/material/Alert";
@@ -18,7 +17,8 @@ export default async function Server({
   session,
   admin,
   model,
-  params: { id },
+  id,
+  // params: { id },
 }) {
   if (!(session instanceof Session)) {
     throw Error("Authenticate request a session to be specified");
@@ -30,11 +30,9 @@ export default async function Server({
 
   return (
     <Authenticate session={session} roles={["ADMIN"]}>
-      <ThemeProvider theme="dark">
-        <Query id={id} model={model} admin={admin} session={session}>
-          {children}
-        </Query>
-      </ThemeProvider>
+      <Query id={id} model={model} admin={admin} session={session}>
+        {children}
+      </Query>
     </Authenticate>
   );
 }

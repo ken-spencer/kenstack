@@ -1,0 +1,11 @@
+@mixin dark() {
+  .dark & {
+    @content;
+  }
+
+  .system & {
+    @media (prefers-color-scheme: dark) {
+      @content;
+    }
+  }
+}

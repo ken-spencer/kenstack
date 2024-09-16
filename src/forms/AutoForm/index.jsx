@@ -25,13 +25,22 @@ export default function AutoForm({
   onSubmit,
   onChange,
   onResponse,
+  reset: resetInitial,
   gap = "16px",
   state = empty,
   children,
 }) {
+  const reset =
+    resetInitial === undefined ? (onResponse ?? false) : resetInitial;
+
   return (
     <Provider state={state} action={action} values={values}>
-      <Form onSubmit={onSubmit} onChange={onChange} onResponse={onResponse}>
+      <Form
+        onSubmit={onSubmit}
+        onChange={onChange}
+        onResponse={onResponse}
+        reset={reset}
+      >
         <Grid gap={gap}>
           {title && (
             <Item>

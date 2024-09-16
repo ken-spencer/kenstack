@@ -1,4 +1,4 @@
-@import "../form.module.scss";
+// @import "../form.module.scss";
 
 .button:not(.iconButton) {
   display: inline-flex;
@@ -22,7 +22,7 @@
     background-color: rgb(66, 165, 245);
   }
 
-  &.error {
+  &.button-error {
     color: white;
     background-color: rgb(246, 67, 44);
 
@@ -31,7 +31,7 @@
     }
   }
 
-  &.cancel {
+  &.button-cancel {
     background-color: #6c757d;
     color: white;
 
@@ -55,17 +55,17 @@
     cursor: default;
   }
 
-  &.loading {
+  &.is-loading {
     opacity: 0.9;
   }
 
-  &.startIcon,
-  &.endIcon {
+  &.has-start-icon,
+  &.has-end-icon {
     display: inline-flex;
     align-items: center;
 
-    .startIconSpan,
-    .endIconSpan {
+    .start-icon-span,
+    .end-icon-span {
       display: inline-block;
       width: 20px;
       height: 20px;
@@ -77,12 +77,12 @@
       }
     }
 
-    .startIconSpan {
+    .start-icon-span {
       margin-right: 0.5rem;
       margin-left: -0.25rem;
     }
 
-    .endIconSpan {
+    .end-icon-span {
       margin-left: 0.5rem;
       margin-right: -0.25rem;
     }
@@ -90,7 +90,7 @@
 }
 
 @mixin dark {
-  .button:not(.error, .cancel) {
+  .button:not(.button-error, .button-cancel) {
     background-color: rgb(144, 202, 249);
     color: black;
 
@@ -114,7 +114,7 @@
   }
 }
 
-.iconButton {
+.icon-button {
   display: flex;
   align-items: center;
   border: none;
@@ -123,7 +123,7 @@
   border-radius: 100%;
   background: transparent;
   cursor: pointer;
-  opacity: 1;
+  // opacity: 1;
 
   transition:
     opacity 0.4s,
@@ -156,7 +156,7 @@
   }
 }
 
-.spinner {
+.button-spinner {
   animation:
     spin 2s linear infinite,
     fadeInOut 3s ease-in-out infinite;

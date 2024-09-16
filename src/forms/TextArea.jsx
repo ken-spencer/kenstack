@@ -1,7 +1,6 @@
 import React, { forwardRef } from "react";
 
 import useField from "./useField";
-import styles from "./form.module.scss";
 
 import Field from "./Field";
 
@@ -12,7 +11,7 @@ const TextArea = (props, ref) => {
     <Field field={field}>
       <textarea
         {...field.props}
-        className={styles.textArea}
+        className="textarea"
         value={field.value}
         ref={field.ref}
       />

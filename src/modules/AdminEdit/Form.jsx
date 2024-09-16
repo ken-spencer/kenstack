@@ -26,12 +26,13 @@ export default function AdminEditFormCont() {
     // loadError,
     setRow,
     setLogin,
+    apiPath,
   } = useAdminEdit();
 
   // const arg = { isNew, id, pathName, modelName };
   // const saveActionBound = saveAction.bind(null, arg);
   const saveActionBound = (state, formData) => {
-    return apiAction(pathname + "/api/save", formData, { pathname });
+    return apiAction(apiPath + "/save", formData, { pathname });
   };
 
   const handleResponse = useCallback(
@@ -66,13 +67,13 @@ export default function AdminEditFormCont() {
 
   return (
     <FormProvider
-      result="none"
+      // result="none"
       values={row}
       action={saveActionBound}
       disabled={loaded === false}
       // fieldProps={loaded ? {} : { InputLabelProps: { shrink: true } }}
     >
-      <Form className="w-full" onResponse={handleResponse}>
+      <Form className="w-full" reset={false} onResponse={handleResponse}>
         <Confirm />
         {/*
         <Login login={login} setLogin={setLogin} />

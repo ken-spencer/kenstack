@@ -8,9 +8,9 @@ import defaultError from "@kenstack/defaultError";
 import Session from "@kenstack/server/Session";
 
 export default async function apiAction(
-  action,
+  actionData, // function or Map of actions
   request,
-  { roles = [], session, ...props } = {},
+  { roles = [], session, middleware, ...props } = {},
 ) {
   const contentType = request.headers.get("content-type");
 
@@ -23,10 +23,9 @@ export default async function apiAction(
     const jsonString = data.get("_api_props");
     if (jsonString) {
       const json = JSON.parse(jsonString);
-      props = {...json, ...props};
+      props = { ...json, ...props };
       data.delete("_api_props");
     }
-
   }
 
   const meta = {
@@ -51,15 +50,51 @@ export default async function apiAction(
     await session.revalidate(response);
   }
 
+  const options = {
+    ...props,
+    session,
+    request,
+    response,
+    logMeta: meta,
+  };
+
   let retval;
+  if (middleware) {
+    try {
+      retval = await middleware(data, options);
+    } catch (e) {
+      // make sure redirects still work.
+      if (isRedirectError(e)) {
+        throw e;
+      }
+
+      // eslint-disable-next-line no-console
+      console.error("Fatal Error: ", meta, e);
+      return NextResponse.json(defaultError);
+    }
+
+    if (retval) {
+      if (retval instanceof NextResponse) {
+        return retval;
+      }
+
+      return NextResponse.json(retval, response);
+    }
+  }
+
+  let action;
+  if (actionData instanceof Map) {
+    const name = request.headers.get("x-action");
+    action = actionData.get(name);
+    if (!action) {
+      throw Error("Unknown action: " + name);
+    }
+  } else {
+    action = actionData;
+  }
+
   try {
-    retval = await action(data, {
-      ...props,
-      session,
-      request,
-      response,
-      logMeta: meta,
-    });
+    retval = await action(data, options);
   } catch (e) {
     // make sure redirects still work.
     if (isRedirectError(e)) {

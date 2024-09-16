@@ -8,8 +8,11 @@ export default function Form({
   onSubmit,
   onResponse,
   children,
+  reset: resetInitial,
   ...props
 }) {
+  const reset =
+    resetInitial === undefined ? !Boolean(onResponse) : resetInitial;
   const form = useForm();
 
   useConfirm(confirm);
@@ -20,12 +23,14 @@ export default function Form({
       if (onResponse) {
         const evt = new Event("response");
         onResponse(evt, form);
-      } else if (form?.state.success) {
+      }
+
+      if (reset && form?.state.success) {
         form.reset();
       }
     }
     lastState.current = form.state;
-  }, [form, form.initialState, form.state, onResponse]);
+  }, [form, form.initialState, form.state, onResponse, reset]);
 
   const handleSubmit = useCallback(
     (evt) => {

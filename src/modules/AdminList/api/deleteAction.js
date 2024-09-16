@@ -14,8 +14,6 @@ export default async function deleteAction(selected, { model }) {
   }
 
   return {
-    success:
-      result.deletedCount + " record(s) have successfully been deleted",
+    success: result.deletedCount + " record(s) have successfully been deleted",
   };
-};
-
+}

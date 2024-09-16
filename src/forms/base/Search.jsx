@@ -22,7 +22,9 @@ const Search = ({ handleClear, clear, ...props }, refProp) => {
   return (
     <Input
       start={<MagnifyingGlassIcon width="1.5rem" height="1.5rem" />}
-      end={<ClearButton value={props.value} inputRef={ref} handleClear={clear} />}
+      end={
+        <ClearButton value={props.value} inputRef={ref} handleClear={clear} />
+      }
       {...props}
       ref={ref}
     />
@@ -68,7 +70,9 @@ function ClearButton({ value, inputRef, handleClear }) {
       type="button"
       onClick={handleClick}
       className={
-        ((typeof(value) === "string" ? value.length : visible) ? "opacity-1" : "opacity-0")
+        (typeof value === "string" ? value.length : visible)
+          ? "opacity-1"
+          : "opacity-0"
       }
     >
       <XCircleIcon width="1.25rem" height="1.25rem" />

@@ -7,7 +7,7 @@ const fields = {
   },
   password: {
     field: "password",
-    placeholder: "●●●●●●●●",
+    // placeholder: "●●●●●●●●",
     required: true,
   },
 };

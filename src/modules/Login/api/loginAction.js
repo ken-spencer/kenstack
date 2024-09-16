@@ -10,7 +10,7 @@ import LoginLog from "../models/LoginLog";
 
 export default async function loginAction(
   formData,
-  { session, response, logMeta },
+  { session, request, response, logMeta },
 ) {
   let email = formData.get("email");
   email = email.trim().toLowerCase();
@@ -58,9 +58,10 @@ export default async function loginAction(
 
   await session.login(user, response);
 
+  const homePath = await session.getHomePath(user, request);
   return {
     authenticated: true,
-    redirect: session.homePath,
+    redirect: homePath,
   };
 }
 

@@ -49,7 +49,7 @@ export default function Notice({ name, ...props }) {
     */
   }, [name]);
 
-  const notice = error || success || cookieError  || cookieSuccess;
+  const notice = error || success || cookieError || cookieSuccess;
   useEffect(() => {
     if (notice && ref.current) {
       // ref.current.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -89,7 +89,7 @@ export default function Notice({ name, ...props }) {
     severity = "error";
   } else if (success) {
     severity = "success";
-  } else if (cookieError){
+  } else if (cookieError) {
     severity = "error";
   } else {
     severity = "success";

@@ -5,7 +5,10 @@ import { revalidatePath } from "next/cache";
 
 import errorLog from "../../../log/error";
 
-export default async function saveAction(formData, { session, model, admin, id, isNew, pathname}) {
+export default async function saveAction(
+  formData,
+  { session, model, admin, id, isNew, pathname },
+) {
   const user = await session.getAuthenticatedUser();
 
   let doc;
@@ -57,7 +60,7 @@ export default async function saveAction(formData, { session, model, admin, id, 
           "There was an unexpected problem deleting your data. Please try again later.",
       };
     }
-    return { redirect: basePath};
+    return { redirect: basePath };
   } else {
     if (errors) {
       return errors;
@@ -94,7 +97,6 @@ export default async function saveAction(formData, { session, model, admin, id, 
   revalidatePath(basePath);
   return {
     success: "Changes saved successfully",
-    // row: doc.toAdminDTO(admin.getPaths()),
+    row: doc.toAdminDTO(admin.getPaths()),
   };
 }
-

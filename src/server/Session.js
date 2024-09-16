@@ -18,6 +18,7 @@ export default class Session {
       homePath = "/", // redirect here after login
       forgottenPasswordPath = "/forgotten-password",
       resetPasswordPath = "/reset-password",
+      domain = null,
     } = [],
   ) {
     // model.syncIndexes();
@@ -27,6 +28,7 @@ export default class Session {
     // this.loginAPIPath = loginPath + "/api";
     this.forgottenPasswordPath = forgottenPasswordPath;
     this.resetPasswordPath = resetPasswordPath;
+    this.domain = domain; // do,main to set cookies on.
 
     // session expires in 24 hours
     this.ttl = 3600 * 24;
@@ -119,6 +121,30 @@ export default class Session {
     await this.#sessionCookies(resCookies, session, user);
   }
 
+  async logout() {
+    const claims = await this.getClaims();
+
+    if (!claims) {
+      return false;
+    }
+
+    cookies().delete("auth", {
+      domain: this.domain,
+    });
+
+    cookies().set("auth", "", {
+      httpOnly: true,
+      domain: this.domain,
+      secure: !process.env.DEVELOPMENT && process.env.NODE_ENV === "production", // Safair won't allow this cookie otherwise
+      sameSite: "Strict",
+      expires: new Date(0),
+    });
+
+    await SessionModel.deleteOne({ _id: claims.sid });
+
+    return true;
+  }
+
   async #sessionCookies(_cookies, session, user) {
     const claims = {
       sub: user._id.toString(), // The UID of the user in your system
@@ -136,6 +162,7 @@ export default class Session {
 
     _cookies.set("auth", token, {
       httpOnly: true,
+      domain: this.domain,
       secure: !process.env.DEVELOPMENT && process.env.NODE_ENV === "production", // Safair won't allow this cookie otherwise
       sameSite: "Strict",
       expires: session.expiresAt.getTime(),
@@ -193,12 +220,19 @@ export default class Session {
     auditLog("revalidate", null, {}, session.user);
     return true;
   }
+
+  // this is async as it will often be extended
+  async getHomePath() {
+    return this.homePath;
+  }
 }
 
 const loadUserById = cache(async (User, userId, sessionId) => {
   const session = await SessionModel.findById(sessionId).populate({
     path: "user",
     model: User,
+    // THis signals to middleware not to filter authenticated users on multi tenant sites
+    options: { isSession: true },
   });
 
   // User.syncIndexes()

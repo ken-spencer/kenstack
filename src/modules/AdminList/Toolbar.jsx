@@ -29,8 +29,8 @@ export default function AdminListToolbar() {
   const pathName = usePathname();
 
   const handleDelete = () => {
-     setResponse("TODO, bring this feature back online");
-     setSelected(new Set()); // for linting, remove when able. 
+    setResponse("TODO, bring this feature back online");
+    setSelected(new Set()); // for linting, remove when able.
 
     /*
     deleteAction({ modelName, selected })
@@ -99,7 +99,7 @@ export default function AdminListToolbar() {
           )}
         </div>
       </div>
-      <Notice formState={response || {}} noScroll />
+      <Notice actionState={response || {}} noScroll collapse />
     </>
   );
 }

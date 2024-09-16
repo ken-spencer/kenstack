@@ -1,6 +1,5 @@
 import { lazy, Suspense, forwardRef } from "react";
 
-import styles from "./button.module.scss";
 import omit from "lodash/omit";
 
 //const Spinner = lazy(() => import("./Spinner"));
@@ -20,17 +19,17 @@ const Button = (
   },
   ref,
 ) => {
-  let classes = styles.button;
+  let classes = "button";
 
   if (loading === true || (loading === false && !startIcon)) {
     if (loading === true) {
       props.disabled = true;
     }
-    classes += " " + styles.loading;
+    classes += " is-loading";
     startIcon = (
       <Suspense>
         <Spinner
-          className={styles.spinner}
+          className="button-spinner"
           style={{ visibility: loading ? "visible" : "hidden" }}
         />
       </Suspense>
@@ -43,12 +42,12 @@ const Button = (
 
   // get same appearance as :disabled when not a button
   if (props.disabled && Component !== "button") {
-    classes += " " + styles.disabled;
+    classes += " disabled";
     props = omit(props, ["href", "onClick", "disabled"]);
   }
 
   if (startIcon) {
-    classes += " " + styles.startIcon;
+    classes += " has-start-icon";
     /*
     if (typeof startIcon === "function") {
       const StartIcon = lazy(startIcon);
@@ -63,15 +62,15 @@ const Button = (
 
   switch (color) {
     case "error":
-      classes += " " + styles.error;
+      classes += " button-error";
       break;
     case "cancel":
-      classes += " " + styles.cancel;
+      classes += " button-cancel";
       break;
   }
 
   if (endIcon) {
-    classes += " " + styles.endIcon;
+    classes += " has-end-icon";
   }
 
   if (className) {
@@ -80,9 +79,9 @@ const Button = (
 
   return (
     <Component type={type} className={classes} ref={ref} {...props}>
-      {startIcon && <span className={styles.startIconSpan}>{startIcon}</span>}
+      {startIcon && <span className="start-icon-span">{startIcon}</span>}
       {children}
-      {endIcon && <span className={styles.endIconSpan}>{endIcon}</span>}
+      {endIcon && <span className="end-icon-span">{endIcon}</span>}
     </Component>
   );
 };

@@ -12,8 +12,8 @@ export default function API(session) {
   }
 
   const GET = async (request, { params: { token } }) => {
+    const origin = request.nextUrl.protocol + request.headers.get("host");
 
-    const origin = request.nextUrl.origin;
     if (!token || !token.match(/^[A-Za-z0-9_-]{21}$/)) {
       return await notFound(request);
     }

@@ -1,3 +1,15 @@
+@mixin dark() {
+  .dark & {
+    @content;
+  }
+
+  .system & {
+    @media (prefers-color-scheme: dark) {
+      @content;
+    }
+  }
+}
+
 .admin-main {
   max-width: var(--max-width);
   width: 100%;
@@ -11,7 +23,27 @@
   margin-bottom: 0.5rem;
   border-radius: 0.25rem;
   border: 1px solid #4b5563;
-  background-color: #111;
+  background-color: #eee;
+
+  @include dark() {
+    background-color: #111;
+  }
+
+  /*
+  .dark & {
+    background-color: #111;
+  }
+
+  .system & {
+    background: red;
+  }
+  */
+}
+
+.system .admin-toolbar {
+  @media (prefers-color-scheme: dark) {
+    background-color: #111;
+  }
 }
 
 .admin-body,

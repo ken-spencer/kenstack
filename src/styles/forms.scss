@@ -1,3 +1,5 @@
+@import "dark";
+
 $breakpoints: (
   "xs": 0px,
   "sm": 600px,
@@ -15,28 +17,35 @@ $breakpoints: (
   color: #e5e7eb;
 }
 
+/*
 .mb {
   margin-bottom: 0.5rem;
 }
+*/
 
 .relative {
   position: relative;
 }
 
+/*
 .flex {
   display: flex;
   align-items: center;
   // flex-wrap: wrap;
 }
+*/
 
+/*
 .inlineFlex {
   display: inline-flex;
   align-items: center;
 }
-
+*/
+/*
 .flexWrap {
   flex-wrap: wrap;
 }
+*/
 
 .field {
   display: block;
@@ -48,12 +57,16 @@ $breakpoints: (
   @include text;
   margin: 0;
 
+  @include dark {
+    @include text-dark;
+  }
+
   .required {
     padding-left: 0.25rem;
   }
 }
 
-.errorMessage {
+.field-error {
   margin-top: 0.5rem;
   width: 100%;
   color: #f87171;
@@ -94,7 +107,7 @@ $breakpoints: (
   }
 }
 
-.labelInput {
+.label-input {
   @include input;
   display: flex;
   align-items: center;
@@ -102,6 +115,10 @@ $breakpoints: (
 
   border-radius: 0.25rem;
   cursor: text;
+
+  @include dark {
+    @include input-dark;
+  }
 
   input {
     appearance: none;
@@ -130,7 +147,7 @@ $breakpoints: (
 }
 
 .input,
-.textArea {
+.textarea {
   @include input;
   display: block;
   width: 100%;
@@ -141,8 +158,12 @@ $breakpoints: (
 
   border-radius: 0.25rem;
 
+  @include dark {
+    @include input-dark;
+  }
+
   &:focus {
-    background-color: #ffffff;
+    background-color: #fff;
     border-color: #111827;
   }
 }
@@ -163,7 +184,7 @@ $breakpoints: (
 }
 */
 
-.radioList {
+.radio-list {
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -173,7 +194,7 @@ $breakpoints: (
 
   @each $breakpoint, $width in $breakpoints {
     @media (min-width: $width) {
-      &.radioRow#{$breakpoint} {
+      &.radio-row-#{$breakpoint} {
         flex-direction: row;
         gap: 1.5rem;
       }
@@ -181,8 +202,10 @@ $breakpoints: (
   }
 }
 
+/*
 .radioRow {
 }
+*/
 
 .checkbox,
 .radio {
@@ -202,21 +225,29 @@ $breakpoints: (
     transition: all;
     cursor: pointer;
     border-radius: 0.125rem;
+
+    @include dark {
+      @include input-dark;
+    }
   }
 
-  input:checked + .check {
+  input:checked + svg {
     opacity: 1;
   }
 
-  .check {
+  svg {
     position: absolute;
-    color: white;
     transition: opacity 0.3s;
     opacity: 0;
     pointer-events: none;
     top: 50%;
     left: 50%;
     transform: translateY(-50%) translateX(-50%);
+
+    color: black;
+    @include dark() {
+      color: white;
+    }
 
     /*
     svg {
@@ -243,26 +274,7 @@ $breakpoints: (
   }
 }
 
-@mixin dark {
-  .label {
-    @include text-dark;
-  }
-  .input,
-  .textArea {
-    @include input-dark;
-  }
-  .labelInput {
-    @include input-dark;
-  }
-
-  .checkbox input {
-    @include input-dark;
-  }
-  .radio input {
-    @include input-dark;
-  }
-}
-
+/*
 :global {
   .system {
   }
@@ -277,5 +289,118 @@ $breakpoints: (
 @media (prefers-color-scheme: dark) {
   :global(.system) {
     @include dark;
+  }
+}
+*/
+
+// @import "../../styles/form.scss";
+
+.select {
+  position: relative;
+
+  /*
+  .selectButton {
+    @include input;
+    display: flex;
+    padding: 0.75rem;
+    width: 100%;
+    text-align: left;
+
+  }
+  */
+
+  .select {
+    span.end {
+    }
+
+    .select-menu {
+      li.selected {
+        background: #333;
+      }
+    }
+  }
+
+  span.end {
+    // display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    pointer-events: none;
+    transition: transform 0.3s;
+
+    color: black;
+    @include dark {
+      color: white;
+    }
+  }
+
+  .select-menu {
+    @include input;
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 3;
+    display: block;
+    padding: 0;
+    box-shadow: 0px 4px 8px rgba(128, 128, 128, 0.4);
+    overflow-y: auto;
+    bottom: 0;
+
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+
+    @include dark {
+      @include input-dark;
+    }
+
+    input {
+      appearance: none;
+      position: absolute;
+      left: -9999px;
+      opacity: 0;
+    }
+
+    li {
+      appearance: none;
+
+      display: block;
+      width: 100%;
+      cursor: pointer;
+      padding: 0.75rem;
+
+      &.selected {
+        background: #aaa;
+      }
+    }
+
+    li + li {
+      margin-top: 2px;
+    }
+
+    /*
+    label {
+      display: block;
+      width: 100%;
+      cursor: pointer;
+      padding: 0.75rem;
+    }
+
+    input:checked ~ label,
+    label:hover {
+      background: #aaa;
+    }
+    */
+  }
+
+  &.visible {
+    // visibility: visible;
+    .select-menu {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    span.end {
+      transform: rotate(-180deg);
+    }
   }
 }

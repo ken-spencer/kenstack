@@ -1,12 +1,14 @@
 "use server";
 
+import escapeRegExp from "@kenstack/utils/escapeRegExp";
+
 export default async function load({ sortBy, keywords }, { model, admin }) {
   const list = admin.getList();
   const fields = list.map(({ name }) => name);
 
   let where = null;
   if (keywords) {
-    const escaped = keywords.replace(/[\\^$*+?.()|[\]{}]/g, "\\$&");
+    const escaped = escapeRegExp(keywords);
     const regex = new RegExp(escaped, "i");
 
     const or = admin.getPaths().reduce((acc, path) => {
@@ -19,7 +21,7 @@ export default async function load({ sortBy, keywords }, { model, admin }) {
 
     if (or.length) {
       where = {
-        $or: or,
+        $and: [{ $or: or }],
       };
     }
   }

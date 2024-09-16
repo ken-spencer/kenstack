@@ -4,7 +4,6 @@ import Authenticate from "@kenstack/server/Authenticate";
 
 import Session from "@kenstack/server/Session";
 import clientModel from "@kenstack/client/Model";
-import ThemeProvider from "@kenstack/components/ThemeProvider";
 
 import { ServerProvider } from "@kenstack/server/context";
 import load from "../api/load";
@@ -13,7 +12,6 @@ import { cookies } from "next/headers";
 
 import Alert from "@mui/material/Alert";
 import errorLog from "@kenstack/log/error";
-
 
 export default async function Server({ children, session, admin, model }) {
   if (!(session instanceof Session)) {
@@ -26,25 +24,22 @@ export default async function Server({ children, session, admin, model }) {
 
   return (
     <Authenticate session={session} roles={["ADMIN"]}>
-      <ThemeProvider theme="dark">
-        <Query session={session} admin={admin} model={model}>
-          {children}
-        </Query>
-      </ThemeProvider>
+      <Query session={session} admin={admin} model={model}>
+        {children}
+      </Query>
     </Authenticate>
   );
 }
 
-async function Query({session, model, admin, children}) {
+async function Query({ session, model, admin, children }) {
   const claims = await session.getClaims();
-  
+
   const key = "admin-list-" + admin.modelName;
   const sortCookie = cookies().get(key + "Sort");
   const keywordsCookie = cookies().get(key + "Keywords") || "";
 
   const sortBy = sortCookie ? sortCookie.value : "";
   const keywords = keywordsCookie ? keywordsCookie.value : "";
-
 
   let initialData;
   try {
@@ -60,8 +55,13 @@ async function Query({session, model, admin, children}) {
   }
 
   return (
-    <ServerProvider claims={claims} sortBy={sortBy} keywords={keywords} initialData={initialData}>
+    <ServerProvider
+      claims={claims}
+      sortBy={sortBy}
+      keywords={keywords}
+      initialData={initialData}
+    >
       {children}
     </ServerProvider>
-  )
+  );
 }

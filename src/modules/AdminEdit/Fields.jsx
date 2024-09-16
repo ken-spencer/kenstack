@@ -10,7 +10,7 @@ export default function AdminEditFields() {
   const fields = admin.getFields();
 
   return (
-    <div className="admin-body">
+    <div>
       <Layout fields={fields} />
     </div>
   );

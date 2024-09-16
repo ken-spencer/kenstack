@@ -41,9 +41,16 @@ const SlugField = ({ subscribe, onChange, ...props }, ref) => {
       return;
     }
 
-    const title = subscribedField?.value || "";
+    const title = subscribe ? subscribedField?.value || "" : "";
     field.value = strToSlug(title);
-  }, [interacted, field.initialValue, locked, field, subscribedField.value]);
+  }, [
+    interacted,
+    field.initialValue,
+    locked,
+    field,
+    subscribe,
+    subscribedField?.value,
+  ]);
 
   return (
     <Field field={field}>

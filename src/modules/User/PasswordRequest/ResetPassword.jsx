@@ -7,7 +7,7 @@ import Button from "@kenstack/forms/Button";
 import Alert from "@kenstack/forms/Alert";
 
 // import emailAction from "./emailAction";
-import  apiAction from "@kenstack/client/apiAction";
+import apiAction from "@kenstack/client/apiAction";
 
 export default function ResetPasswordField() {
   const { id } = useAdminEdit();
@@ -17,7 +17,7 @@ export default function ResetPasswordField() {
   const handleClick = () => {
     setLoading(true);
     const formData = new FormData();
-    formData.append('id', id);
+    formData.append("id", id);
 
     apiAction("/forgotten-password/api", formData)
       .then(

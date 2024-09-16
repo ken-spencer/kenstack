@@ -1,4 +1,3 @@
-
 import Sidebar from "./Sidebar";
 
 import ThemeProvider from "@kenstack/components/ThemeProvider";

@@ -8,7 +8,7 @@ import React from "react";
 // import loadQuery from "./loadQuery";
 // import errorLog from "../../../log/error";
 
-import { AdminListProvider }  from "./context";
+import { AdminListProvider } from "./context";
 
 import Toolbar from "./Toolbar";
 import AdminListTable from "./Table";
@@ -38,7 +38,7 @@ export default function AdminList({ admin }) {
         staleTime: 60 * 1000,
       },
     },
-  })
+  });
 
   /*
   const claims = {}; // verifyJWT();

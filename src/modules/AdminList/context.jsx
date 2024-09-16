@@ -1,18 +1,23 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback,  useMemo } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useMemo,
+} from "react";
 import { useQuery } from "@tanstack/react-query";
-
 
 import { usePathname } from "next/navigation";
 import Cookies from "js-cookie";
 
-import debounce from "lodash/debounce";
+import useDebounce from "@kenstack/hooks/useDebounce";
+
+// import debounce from "lodash/debounce";
 import apiAction from "@kenstack/client/apiAction";
 
-
 const AdminListContext = createContext({});
-
 
 export function AdminListProvider({
   admin,
@@ -30,6 +35,12 @@ export function AdminListProvider({
   // const [error, setError] = useState();
 
   const [sortBy, setSortByBase] = useState(initialSortBy);
+  const [keywords, debouncedKeywords, setKeywordsBase] = useDebounce(
+    initialKeywords,
+    300,
+  );
+
+  /*
   const [keywords, setKeywordsBase] = useState(initialKeywords);
   const [debouncedKeywords, setDebouncedKeywordsBase] = useState(keywords);
 
@@ -38,6 +49,7 @@ export function AdminListProvider({
     debounce((value) => setDebouncedKeywordsBase(value), 500),
     [],
   );
+  */
 
   const {
     data,
@@ -52,7 +64,10 @@ export function AdminListProvider({
         keywords,
       });
     },
-    initialData: (initialSortBy === sortBy && initialKeywords === keywords) ? initialData : undefined,
+    initialData:
+      initialSortBy === sortBy && initialKeywords === keywords
+        ? initialData
+        : undefined,
     // staleTime: typeof(window) ? Infinity : 0,
     initialDataUpdatedAt: Date.now(),
   });
@@ -86,9 +101,9 @@ export function AdminListProvider({
         path,
       });
       setKeywordsBase(value);
-      setDebouncedKeywords(value);
+      // setDebouncedKeywords(value);
     },
-    [queryKey, path, setDebouncedKeywords],
+    [queryKey, path, setKeywordsBase],
   );
 
   const select = useCallback(
@@ -152,7 +167,11 @@ export function AdminListProvider({
     ],
   );
 
-  return <AdminListContext.Provider value={context}>{children}</AdminListContext.Provider>;
+  return (
+    <AdminListContext.Provider value={context}>
+      {children}
+    </AdminListContext.Provider>
+  );
 }
 
 export function useAdminList() {
@@ -167,4 +186,3 @@ export function useAdminList() {
 
   return context;
 }
-

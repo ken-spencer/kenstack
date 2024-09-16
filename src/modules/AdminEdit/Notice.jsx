@@ -10,5 +10,5 @@ export default function EditNotice() {
     return null;
   }
 
-  return <Notice formState={form.state} />;
+  return <Notice actionState={form.state} collapse />;
 }

@@ -244,7 +244,7 @@ async function trash() {
   });
   */
 
-  this.set('meta.deleted', true);
+  this.set("meta.deleted", true);
   await this.save();
 
   /*  

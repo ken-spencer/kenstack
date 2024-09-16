@@ -2,8 +2,6 @@ import React from "react";
 
 import useField from "../useField";
 
-import styles from "./select.module.scss";
-
 import Error from "../Error";
 import SearchInput from "./SearchInput";
 
@@ -190,7 +188,7 @@ export default function Select(props) {
   React.useEffect(() => {
     if (selected) {
       const menu = menuRef.current;
-      const li = menu.querySelector("." + styles.selected);
+      const li = menu.querySelector(".selected");
       if (li) {
         li.scrollIntoView({
           block: "nearest",
@@ -211,18 +209,12 @@ export default function Select(props) {
 
   return (
     <div>
-      <label
-        className={styles.label + " " + styles.mb}
-        htmlFor={field.props.id}
-      >
+      <label className="label mb-2" htmlFor={field.props.id}>
         {field.label}
       </label>
       <input type="hidden" name={field.name} value={field.value} readOnly />
-      <div
-        className={styles.select + " " + (visible && styles.visible)}
-        ref={buttonContRef}
-      >
-        <label className={styles.labelInput}>
+      <div className={"select " + (visible && "visible")} ref={buttonContRef}>
+        <label className="label-input">
           <SearchInput
             key={visible}
             field={field}
@@ -231,7 +223,7 @@ export default function Select(props) {
             setVisible={setVisible}
             searchRef={searchRef}
           />
-          <span className={styles.end}>
+          <span className="end">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="1rem"
@@ -249,7 +241,7 @@ export default function Select(props) {
             </svg>
           </span>
         </label>
-        <ul className={styles.selectMenu} onClick={handleClick} ref={menuRef}>
+        <ul className="select-menu" onClick={handleClick} ref={menuRef}>
           {options.map(([value, text]) => {
             // const id = field.props.id + "-" + value;
             return (
@@ -259,7 +251,7 @@ export default function Select(props) {
                 aria-selected={selected == value ? "true" : "false"}
                 data-value={value}
                 onMouseOver={handleMouseOver}
-                className={selected == value ? styles.selected : ""}
+                className={selected == value ? "selected" : ""}
               >
                 {text}
                 {/*

@@ -2,8 +2,9 @@
 
 import { createContext, useContext, useState, useEffect, useMemo } from "react";
 
-
 const AdminEditContext = createContext({});
+import { usePathname } from "next/navigation";
+import escapeRegExp from "@kenstack/utils/escapeRegExp";
 
 export function AdminEditProvider({
   admin,
@@ -13,7 +14,7 @@ export function AdminEditProvider({
   children,
   userId,
 }) {
-  // const pathName = usePathname();
+  const pathname = usePathname();
   const [row, setRow] = useState(initialRow);
   // const [loaded, setLoaded] = useState(isNew);
   const [loaded, setLoaded] = useState(true);
@@ -21,6 +22,9 @@ export function AdminEditProvider({
   const [confirm, setConfirm] = useState(false);
   // const [loadError, setLoadError] = useState();
   const [login, setLogin] = useState();
+
+  const exp = new RegExp(`/${escapeRegExp(id)}($|/.+})`);
+  const apiPath = pathname.replace(exp, "") + `/api/${id}`;
 
   useEffect(() => {
     if (isNew || !id) {
@@ -44,6 +48,7 @@ export function AdminEditProvider({
       login,
       setLogin,
       userId,
+      apiPath,
     }),
     [
       admin,
@@ -55,6 +60,7 @@ export function AdminEditProvider({
       confirm,
       login,
       userId,
+      apiPath,
     ],
   );
 
@@ -64,9 +70,12 @@ export function AdminEditProvider({
   }
   */
 
-  return <AdminEditContext.Provider value={context}>{children}</AdminEditContext.Provider>;
+  return (
+    <AdminEditContext.Provider value={context}>
+      {children}
+    </AdminEditContext.Provider>
+  );
 }
-
 
 export function useAdminEdit() {
   const context = useContext(AdminEditContext);
