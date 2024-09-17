@@ -1,0 +1,38 @@
+.account-menu-cont {
+  @apply relative inline-block text-left;
+
+  > button {
+    @apply inline-flex items-center;
+    @apply text-sm font-medium text-gray-700;
+    @apply px-2 py-1;
+    @apply border border-gray-300 rounded-md outline-none shadow-sm;
+    @apply bg-white hover:bg-gray-50 transition;
+
+    svg {
+      @apply ml-2 h-5 w-5 text-gray-500 transition-transform transform;
+      @apply rotate-0;
+    }
+  }
+
+  .account-menu {
+    @apply origin-top-right absolute right-0;
+    @apply mt-2 w-56;
+    @apply border border border-gray-300 rounded-md shadow-lg;
+    @apply bg-white;
+    @apply transform transition-all duration-300;
+
+    @apply opacity-0 scale-90 pointer-events-none;
+  }
+
+  &.is-open {
+    > button {
+      svg {
+        @apply rotate-180;
+      }
+    }
+
+    .account-menu {
+      @apply opacity-100 scale-100 pointer-events-auto;
+    }
+  }
+}
