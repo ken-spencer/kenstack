@@ -192,10 +192,12 @@ export default function BlockFormatDropDown({
 }
 
 // currently duplicate
+/*
 const rootTypeToRootName = {
   root: "Root",
   table: "Table",
 };
+*/
 
 // currently duplicate
 function dropDownActiveClass(active: boolean) {

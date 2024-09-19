@@ -92,10 +92,12 @@ import {
 // import { InsertPollDialog } from "../plugins/PollPlugin";
 import { InsertTableDialog } from "../plugins/TablePlugin";
 
+/*
 const rootTypeToRootName = {
   root: "Root",
   table: "Table",
 };
+*/
 
 function getCodeLanguageOptions(): [string, string][] {
   const options: [string, string][] = [];
