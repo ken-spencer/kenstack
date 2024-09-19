@@ -2,8 +2,8 @@
 
 import React from "react";
 
-import Grid from "../Grid";
-import Item from "../Grid/Item";
+// import Grid from "../Grid";
+// import Item from "../Grid/Item";
 
 import Provider from "../Provider";
 import Form from "../Form";
@@ -16,12 +16,13 @@ const empty = {};
 export default function AutoForm({
   action,
   values,
-  title,
+  // title,
   name,
-  description,
+  // description,
   fields,
   submit = "Submit",
-  buttons, // replace subit button with custom buttons
+  // buttons, // TODO should be "submit" (login) replace subit button with custom buttons
+  submitClass="",
   onSubmit,
   onChange,
   onResponse,
@@ -31,7 +32,7 @@ export default function AutoForm({
   children,
 }) {
   const reset =
-    resetInitial === undefined ? (onResponse ?? false) : resetInitial;
+    resetInitial === undefined ? !Boolean(onResponse) : resetInitial;
 
   return (
     <Provider state={state} action={action} values={values}>
@@ -41,7 +42,8 @@ export default function AutoForm({
         onResponse={onResponse}
         reset={reset}
       >
-        <Grid gap={gap}>
+ 
+          {/*
           {title && (
             <Item>
               {(() => {
@@ -50,22 +52,6 @@ export default function AutoForm({
                 } else if (typeof title === "string") {
                   return <h2>{title}</h2>;
                 }
-
-                /*
-                let titleOptions = {
-                  variant: "h4",
-                };
-
-                if (typeof title === "string") {
-                  titleOptions.children = title;
-                } else if (typeof title === "object") {
-                  titleOptions = {
-                    ...titleOptions,
-                    ...title,
-                  };
-                }
-                return <h2 {...titleOptions} />;
-                */
               })()}
             </Item>
           )}
@@ -78,32 +64,18 @@ export default function AutoForm({
                 } else if (typeof description === "string") {
                   return <p>{description}</p>;
                 }
-
-                /*
-                let descriptionOptions = {
-                  variant: "subtitle1",
-                };
-
-                if (typeof description === "string") {
-                  descriptionOptions.children = description;
-                } else if (typeof description === "object") {
-                  descriptionOptions.children = {
-                    ...descriptionOptions,
-                    ...description,
-                  };
-                }
-                return <div {...descriptionOptions} />;
-                */
               })()}
             </Item>
           )}
+          */}
 
-          <Item hideIfEmpty>
-            <Notice name={name} />
-          </Item>
-          <Item>{children || <Layout gap={gap} fields={fields} />}</Item>
-          <Item>
+          <Notice className="mb-4" name={name} />
+
+          <div>{children || <Layout gap={gap} fields={fields} />}</div>
+
+          <div className="mt-4">
             {(() => {
+            /*
               if (buttons) {
                 if (typeof buttons === "function") {
                   return buttons();
@@ -111,19 +83,28 @@ export default function AutoForm({
                   return buttons;
                 }
               }
+            */
 
               let submitOptions = {};
               if (typeof submit === "string") {
                 submitOptions.children = submit;
+              } else if (typeof submit === "function") {
+                  return submit();
+              } else if (React.isValidElement(submit)) {
+                return submit;
               } else if (typeof submit === "object") {
                 submitOptions = submit;
               }
 
               return <Submit {...submitOptions} />;
             })()}
-          </Item>
-        </Grid>
+          </div>
       </Form>
     </Provider>
   );
 }
+
+      /*
+        <Grid gap={gap}>
+        </Grid>
+      */

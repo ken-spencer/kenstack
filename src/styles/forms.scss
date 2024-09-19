@@ -185,21 +185,11 @@ $breakpoints: (
 */
 
 .radio-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  display: grid;
+  gap: 0.5rem;
   list-style-type: none;
   padding: 0;
   margin: 0;
-
-  @each $breakpoint, $width in $breakpoints {
-    @media (min-width: $width) {
-      &.radio-row-#{$breakpoint} {
-        flex-direction: row;
-        gap: 1.5rem;
-      }
-    }
-  }
 }
 
 /*

@@ -9,16 +9,25 @@ export default function CheckboxList(props) {
   const inputRef = React.useRef();
   const field = useField(props, inputRef);
 
-  let { row = false, options = [], name, ...rest } = field.props;
+  let {
+    row = false,
+    listClass = "",
+    options = [],
+    name,
+    ...rest
+  } = field.props;
 
   // fix client side validation as not designed to work with lists of checkboxes.
   delete rest.required;
 
+  let classes = "";
+  if (row) {
+    classes = typeof row === "string" ? " radio-row-" + row : " radio-row-xs";
+  }
+
   return (
     <Field field={field}>
-      <ul
-        className={"radio-list " + (row ? "radio-row-" + row : "radio-row-xs")}
-      >
+      <ul className={listClass ? listClass : "radio-list" + classes}>
         {options.map(([value, label], key) => {
           const id = field.props.id + "-" + value;
           value = String(value);

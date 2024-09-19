@@ -11,11 +11,14 @@ export default function RadioField(props) {
 
   let { row = false, options = [], ...rest } = field.props;
 
+  let classes = "";
+  if (row) {
+    classes = typeof row === "string" ? " radio-row-" + row : " radio-row-xs";
+  }
+
   return (
     <Field field={field}>
-      <ul
-        className={"radio-list " + (row ? "radio-row-" + row : "radio-row-xs")}
-      >
+      <ul className={"radio-list " + classes}>
         {options.map(([_value, _label], key) => {
           const id = field.props.id + "-" + _value;
           return (

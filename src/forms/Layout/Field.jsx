@@ -1,7 +1,8 @@
 import React, { memo, useMemo } from "react";
 import sentenceCase from "@kenstack/utils/sentenceCase";
+import { twMerge } from "tailwind-merge";
 
-import GridItem from "../Grid/Item";
+// import GridItem from "../Grid/Item";
 
 import pick from "lodash/pick";
 import omit from "lodash/omit";
@@ -14,32 +15,15 @@ import Radio from "../Radio";
 import Select from "../Select";
 import Slug from "../Slug";
 
-import gridPropsList from "./gridProps";
+function Field({ field = "text", span="", containerClass = "", ...props }) {
 
-function Field({ field = "text", ...props }) {
-  const gridProps = useMemo(() => {
-    let retval = pick(props, gridPropsList);
-
-    if (Object.keys(retval).length === 0) {
-      retval.md = 12;
-    }
-    return retval;
-  }, [props]);
+  props.containerClass = useMemo(() => twMerge(
+    "col-span-12",
+    containerClass,
+  ), [containerClass, span]);
 
   const fieldProps = useMemo(() => {
-    let retval = omit(props, gridPropsList);
-    /*
-    pick(props, [
-      "value",
-      "label",
-      "max",
-      "min",
-      "pattern",
-      "placeholder",
-      "required",
-      "type",
-    ]);
-    */
+    let retval = props;
 
     if (!("label" in retval)) {
       retval.label = sentenceCase(retval.name);
@@ -47,8 +31,9 @@ function Field({ field = "text", ...props }) {
 
     return retval;
   }, [props]);
+
   return (
-    <GridItem {...gridProps}>
+    <>
       {(() => {
         if (typeof field === "function" || typeof field === "object") {
           // const Lazy = React.lazy(field);
@@ -79,7 +64,7 @@ function Field({ field = "text", ...props }) {
             throw Error("unknown field type: " + field);
         }
       })()}
-    </GridItem>
+    </>
   );
 }
 

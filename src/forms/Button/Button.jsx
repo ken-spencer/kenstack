@@ -12,7 +12,7 @@ const Button = (
     endIcon = null,
     className = null,
     children,
-    type = "button",
+    // type = "button",
     color = null,
     component: Component = "button",
     ...props
@@ -48,16 +48,6 @@ const Button = (
 
   if (startIcon) {
     classes += " has-start-icon";
-    /*
-    if (typeof startIcon === "function") {
-      const StartIcon = lazy(startIcon);
-      startIcon = (
-        <Suspense>
-          <StartIcon />
-        </Suspense>
-      );
-    }
-    */
   }
 
   switch (color) {
@@ -78,7 +68,7 @@ const Button = (
   }
 
   return (
-    <Component type={type} className={classes} ref={ref} {...props}>
+    <Component className={classes} ref={ref} {...props}>
       {startIcon && <span className="start-icon-span">{startIcon}</span>}
       {children}
       {endIcon && <span className="end-icon-span">{endIcon}</span>}

@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import Grid from "../Grid";
 
 import Field from "./Field";
 
@@ -13,10 +12,10 @@ export default function Fields(props) {
   }
 
   return (
-    <Grid gap="16px">
+    <>
       {fieldList.map(([name, field]) => (
         <Field key={name} name={name} {...field} />
       ))}
-    </Grid>
+    </>
   );
 }

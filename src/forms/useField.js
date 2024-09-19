@@ -9,7 +9,14 @@ const reducer = (count) => count + 1;
 const validities = ["required", "pattern"];
 
 export default function useField(
-  { onChange, onBlur, ...props },
+  {
+    onChange,
+    onBlur,
+    containerClass = "",
+    labelClass = "",
+    // inputClass = "",
+    ...props
+  },
   userRef = null,
 ) {
   const ref = useRef();
@@ -38,6 +45,8 @@ export default function useField(
   } else {
     field = new FieldState(reRender);
     field.name = name;
+    field.containerClass = containerClass;
+    field.labelClass = labelClass;
     field.ref = userRef || ref;
     field.initialValue = initial;
     field.interacted = false;
@@ -66,6 +75,8 @@ export default function useField(
   field.props = useMemo(() => {
     let retval = omit(props, [
       "label",
+      'containerClass',
+      'labelClass',
       "message",
       "email",
       "unique",

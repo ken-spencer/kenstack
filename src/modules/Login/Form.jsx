@@ -25,8 +25,8 @@ export default function LoginForm() {
         fields={fields}
         // action={loginAction}
         action={handleSubmit}
-        buttons={Submit}
-        submit="Login"
+        submit={Submit}
+        // submit="Login"
       />
     </div>
   );

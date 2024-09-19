@@ -24,7 +24,7 @@ export default function ForgottenPasswordForm({ action }) {
       fields={fields}
       // title="Reset your password"
       // description="Enter your email below and a link will be sent to reset your password."
-      buttons={Submit}
+      submit={Submit}
     />
   );
 }

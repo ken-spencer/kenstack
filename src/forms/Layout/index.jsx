@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import Grid from "../Grid";
+// import Grid from "../Grid";
 
 import Group from "./Group";
 import Field from "./Field";
@@ -15,7 +15,7 @@ export default function FormLayout({ gap = "16px", fields: fields = {} }) {
   );
 
   return (
-    <Grid gap={gap}>
+    <div className="grid grid-cols-12 gap-4">
       {fieldArray.map(([name, data]) => {
         if (data.fields) {
           return <Group key={name} name={name} {...data} />;
@@ -23,7 +23,7 @@ export default function FormLayout({ gap = "16px", fields: fields = {} }) {
           return <Field key={name} name={name} {...data} />;
         }
       })}
-    </Grid>
+    </div>
   );
 }
 

@@ -1,4 +1,5 @@
 const config = {
+  "root": true,
   "parser": "@typescript-eslint/parser", 
   "env": {
     "browser": true,
@@ -19,6 +20,7 @@ const config = {
   ],
   "rules": {
     "@next/next/no-img-element": "off",
+    "@next/next/no-html-link-for-pages": "off",
     "@typescript-eslint/no-unused-vars": ["error", { "args": "none" }],
     "no-unused-vars": "off",
     "no-console": "error",
