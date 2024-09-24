@@ -15,24 +15,24 @@ import Submit from "../Submit";
 const empty = {};
 export default function AutoForm({
   action,
-  values,
+  values = empty,
   // title,
-  name,
+  name = "",
   // description,
   fields,
   submit = "Submit",
   // buttons, // TODO should be "submit" (login) replace subit button with custom buttons
   submitClass="",
-  onSubmit,
-  onChange,
-  onResponse,
-  reset: resetInitial,
+  onSubmit = null,
+  onChange = null,
+  onResponse = null,
+  reset: resetInitial = null,
   gap = "16px",
   state = empty,
-  children,
+  children = null,
 }) {
   const reset =
-    resetInitial === undefined ? !Boolean(onResponse) : resetInitial;
+    resetInitial === null ? !Boolean(onResponse) : resetInitial;
 
   return (
     <Provider state={state} action={action} values={values}>

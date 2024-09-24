@@ -176,7 +176,7 @@ export default function CodeActionMenuPlugin({
   anchorElem = document.body,
 }: {
   anchorElem?: HTMLElement;
-}): React.ReactPortal | null {
+}) {
   return createPortal(
     <CodeActionMenuContainer anchorElem={anchorElem} />,
     anchorElem,

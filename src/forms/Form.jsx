@@ -5,9 +5,9 @@ import useConfirm from "./useConfirm";
 
 export default function Form({
   confirm = false,
-  onSubmit,
-  onResponse,
-  children,
+  onSubmit = null,
+  onResponse = null,
+  children = null,
   reset: resetInitial,
   ...props
 }) {
