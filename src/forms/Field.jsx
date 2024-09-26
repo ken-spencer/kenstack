@@ -1,5 +1,5 @@
 import { twMerge } from "tailwind-merge";
-import {useMemo} from "react"
+import { useMemo } from "react";
 
 export default function Field({ field, ...props }) {
   const fp = field?.props || {};
@@ -14,17 +14,15 @@ export default function Field({ field, ...props }) {
     children,
   } = props;
 
-  let classes = useMemo(() => twMerge(
-    "field",
-    required && "required",
-    containerClass,
-  ), [required, containerClass]);
+  let classes = useMemo(
+    () => twMerge("field", required && "required", containerClass),
+    [required, containerClass],
+  );
 
-  let classesLabel = useMemo(() => twMerge(
-    "label mb-2",
-    labelClass,
-  ), [required, labelClass]);
-
+  let classesLabel = useMemo(
+    () => twMerge("label mb-2", labelClass),
+    [required, labelClass],
+  );
 
   return (
     <div className={classes}>

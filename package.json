@@ -48,6 +48,7 @@
     "postcss": "^8.4.32",
     "prettier": "^3.0.3",
     "remark": "^15.0.1",
+    "remark-gfm": "^4.0.0",
     "remark-html": "^16.0.1",
     "server-only": "^0.0.1",
     "sharp": "^0.33.4",

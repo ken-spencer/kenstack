@@ -22,7 +22,7 @@ export default function AutoForm({
   fields,
   submit = "Submit",
   // buttons, // TODO should be "submit" (login) replace subit button with custom buttons
-  submitClass="",
+  submitClass = "",
   onSubmit = null,
   onChange = null,
   onResponse = null,
@@ -31,8 +31,7 @@ export default function AutoForm({
   state = empty,
   children = null,
 }) {
-  const reset =
-    resetInitial === null ? !Boolean(onResponse) : resetInitial;
+  const reset = resetInitial === null ? !Boolean(onResponse) : resetInitial;
 
   return (
     <Provider state={state} action={action} values={values}>
@@ -42,8 +41,7 @@ export default function AutoForm({
         onResponse={onResponse}
         reset={reset}
       >
- 
-          {/*
+        {/*
           {title && (
             <Item>
               {(() => {
@@ -69,12 +67,12 @@ export default function AutoForm({
           )}
           */}
 
-          <Notice className="mb-4" name={name} />
+        <Notice className="mb-4" name={name} />
 
-          <div>{children || <Layout gap={gap} fields={fields} />}</div>
+        <div>{children || <Layout gap={gap} fields={fields} />}</div>
 
-          <div className="mt-4">
-            {(() => {
+        <div className="mt-4">
+          {(() => {
             /*
               if (buttons) {
                 if (typeof buttons === "function") {
@@ -85,26 +83,26 @@ export default function AutoForm({
               }
             */
 
-              let submitOptions = {};
-              if (typeof submit === "string") {
-                submitOptions.children = submit;
-              } else if (typeof submit === "function") {
-                  return submit();
-              } else if (React.isValidElement(submit)) {
-                return submit;
-              } else if (typeof submit === "object") {
-                submitOptions = submit;
-              }
+            let submitOptions = {};
+            if (typeof submit === "string") {
+              submitOptions.children = submit;
+            } else if (typeof submit === "function") {
+              return submit();
+            } else if (React.isValidElement(submit)) {
+              return submit;
+            } else if (typeof submit === "object") {
+              submitOptions = submit;
+            }
 
-              return <Submit {...submitOptions} />;
-            })()}
-          </div>
+            return <Submit {...submitOptions} />;
+          })()}
+        </div>
       </Form>
     </Provider>
   );
 }
 
-      /*
+/*
         <Grid gap={gap}>
         </Grid>
       */
