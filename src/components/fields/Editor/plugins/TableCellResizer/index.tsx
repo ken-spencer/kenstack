@@ -32,7 +32,6 @@ import {
 import * as React from "react";
 import {
   MouseEventHandler,
-  ReactPortal,
   useCallback,
   useEffect,
   useMemo,
@@ -404,7 +403,7 @@ function TableCellResizer({ editor }: { editor: LexicalEditor }): JSX.Element {
   );
 }
 
-export default function TableCellResizerPlugin(): null | ReactPortal {
+export default function TableCellResizerPlugin() {
   const [editor] = useLexicalComposerContext();
   const isEditable = useLexicalEditable();
 

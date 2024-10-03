@@ -75,8 +75,8 @@ export default function useField(
   field.props = useMemo(() => {
     let retval = omit(props, [
       "label",
-      'containerClass',
-      'labelClass',
+      "containerClass",
+      "labelClass",
       "message",
       "email",
       "unique",

@@ -41,7 +41,7 @@ import {
   $isTextNode,
 } from "lexical";
 import * as React from "react";
-import { ReactPortal, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import invariant from "../../shared/invariant";
 
@@ -791,7 +791,7 @@ export default function TableActionMenuPlugin({
 }: {
   anchorElem?: HTMLElement;
   cellMerge?: boolean;
-}): null | ReactPortal {
+}) {
   const isEditable = useLexicalEditable();
   return createPortal(
     isEditable ? (

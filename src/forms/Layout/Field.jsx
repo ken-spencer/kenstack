@@ -15,12 +15,11 @@ import Radio from "../Radio";
 import Select from "../Select";
 import Slug from "../Slug";
 
-function Field({ field = "text", span="", containerClass = "", ...props }) {
-
-  props.containerClass = useMemo(() => twMerge(
-    "col-span-12",
-    containerClass,
-  ), [containerClass, span]);
+function Field({ field = "text", span = "", containerClass = "", ...props }) {
+  props.containerClass = useMemo(
+    () => twMerge("col-span-12", containerClass),
+    [containerClass, span],
+  );
 
   const fieldProps = useMemo(() => {
     let retval = props;

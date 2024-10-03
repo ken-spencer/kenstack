@@ -92,12 +92,11 @@ import {
 // import { InsertPollDialog } from "../plugins/PollPlugin";
 import { InsertTableDialog } from "../plugins/TablePlugin";
 
-/*
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const rootTypeToRootName = {
   root: "Root",
   table: "Table",
 };
-*/
 
 function getCodeLanguageOptions(): [string, string][] {
   const options: [string, string][] = [];

@@ -192,12 +192,11 @@ export default function BlockFormatDropDown({
 }
 
 // currently duplicate
-/*
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const rootTypeToRootName = {
   root: "Root",
   table: "Table",
 };
-*/
 
 // currently duplicate
 function dropDownActiveClass(active: boolean) {
