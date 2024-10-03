@@ -15,17 +15,16 @@ const fields = {
   ],
   fields: {
     personal: {
-      label: "Personal information",
-      md: 12,
-      lg: 6,
+      title: "Personal information",
+      containerClass: "lg:col-span-6",
       fields: {
         first_name: {
           required: true,
-          md: 6,
+          containerClass: "lg:col-span-6",
         },
         last_name: {
           required: true,
-          md: 6,
+          containerClass: "lg:col-span-6",
         },
         email: {
           required: true,

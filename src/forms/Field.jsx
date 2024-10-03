@@ -9,8 +9,8 @@ export default function Field({ field, ...props }) {
     id = fp.id,
     required = fp.required,
     error = field?.error,
-    containerClass = field.containerClass,
-    labelClass = field.labelClass,
+    containerClass = field?.containerClass,
+    labelClass = field?.labelClass,
     children,
   } = props;
 

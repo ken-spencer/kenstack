@@ -47,7 +47,7 @@ const API = (session, props) => {
       null,
     );
 
-    const html = render(emailElement);
+    const html = await render(emailElement);
 
     return new NextResponse(html, {
       headers: { "content-type": "text/html" },

@@ -131,7 +131,7 @@ export default async function forgottenPasswordAction(
     },
     null,
   );
-  const emailHtml = render(emailElement);
+  const emailHtml = await render(emailElement);
 
   try {
     await mailer({
