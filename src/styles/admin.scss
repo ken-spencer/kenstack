@@ -103,3 +103,28 @@
   align-items: center;
   height: 100px;
 }
+
+.admin-table {
+  @apply grid border border-gray-500 rounded;
+
+  & > *:not(.admin-row),
+  & .admin-row > * {
+    @apply flex items-center py-2 px-4;
+    @apply border-b border-gray-300;
+    @apply transition;
+  }
+
+  & .admin-row:hover > * {
+    @apply bg-gray-200;
+  }
+
+  .sortable {
+    svg {
+      @apply transform transition-all duration-300;
+    }
+
+    &:hover svg {
+      // @apply bg-red-500;
+    }
+  }
+}

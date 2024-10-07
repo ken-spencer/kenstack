@@ -8,15 +8,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import Title from "@kenstack/components/Title";
-import Tooltip from "@mui/material/Tooltip";
-import IconButton from "@mui/material/IconButton";
-// import FilterListIcon from "@mui/icons-material/FilterList";
 import DeleteIcon from "@mui/icons-material/Delete";
-import Badge from "@mui/material/Badge";
 import Search from "./Search";
 import Notice from "@kenstack/components/Notice";
 
-import AddIcon from "@mui/icons-material/Add";
+import AddIcon from "@heroicons/react/24/outline/PlusIcon";
 import Button from "@kenstack/forms/Button";
 
 // import deleteAction from "./deleteAction";
@@ -25,7 +21,7 @@ import { useAdminList } from "./context";
 
 export default function AdminListToolbar() {
   const [response, setResponse] = useState({});
-  const { modelName, selected, setSelected } = useAdminList();
+  const { modelName, selected, setSelected, admin } = useAdminList();
   const pathName = usePathname();
 
   const handleDelete = () => {
@@ -54,8 +50,8 @@ export default function AdminListToolbar() {
 
   return (
     <>
-      <div className="admin-toolbar">
-        <div className="admin-toolbar-left">
+      <div className="flex rounder border border-gray-500 rounded p-1 mb-2">
+        <div className="">
           <Button
             component={Link}
             href={pathName + "/new"}
@@ -65,33 +61,19 @@ export default function AdminListToolbar() {
           </Button>
         </div>
 
-        <Title modelName={modelName} />
+        <div className="flex-1 text-center">{admin.title}</div>
 
-        <div className="admin-toolbar-right">
+        <div className="text-right w-64">
           {selected.size > 0 ? (
-            <Tooltip title={"Delete " + selected.size}>
-              <IconButton onClick={handleDelete}>
-                <Badge
-                  sx={{
-                    "& .MuiBadge-badge": {
-                      marginLeft: "3px",
-                      marginBottom: "3px",
-                      fontSize: 9,
-                      height: 15,
-                      minWidth: 15,
-                    },
-                  }}
-                  badgeContent={selected.size}
-                  color="secondary"
-                  anchorOrigin={{
-                    vertical: "bottom",
-                    horizontal: "left",
-                  }}
-                >
-                  <DeleteIcon />
-                </Badge>
-              </IconButton>
-            </Tooltip>
+            <Button
+              type="button"
+              onClick={handleDelete}
+              // disabled={isNew || id === userId}
+              variant="contained"
+              startIcon={<DeleteIcon />}
+            >
+              Delete {selected.size}
+            </Button>
           ) : (
             <div>
               <Search />

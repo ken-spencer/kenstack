@@ -9,8 +9,8 @@ const fields = {
   title: "Manage users",
   icon: UsersIcon,
   list: [
-    ["first_name", { label: "First" }],
-    ["last_name", { label: "Last" }],
+    ["first_name", { label: "First", width: "auto" }],
+    ["last_name", { label: "Last", width: "auto" }],
     ["email"],
   ],
   fields: {

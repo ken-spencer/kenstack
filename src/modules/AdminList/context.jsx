@@ -7,7 +7,7 @@ import {
   useCallback,
   useMemo,
 } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { usePathname } from "next/navigation";
 import Cookies from "js-cookie";
@@ -35,6 +35,7 @@ export function AdminListProvider({
   // const [error, setError] = useState();
 
   const [sortBy, setSortByBase] = useState(initialSortBy);
+
   const [keywords, debouncedKeywords, setKeywordsBase] = useDebounce(
     initialKeywords,
     300,
@@ -55,6 +56,7 @@ export function AdminListProvider({
     data,
     error: queryError,
     isLoading,
+    isPreviousData,
   } = useQuery({
     queryKey: [queryKey, sortBy, debouncedKeywords],
     queryFn: () => {
@@ -70,6 +72,7 @@ export function AdminListProvider({
         : undefined,
     // staleTime: typeof(window) ? Infinity : 0,
     initialDataUpdatedAt: Date.now(),
+    placeholderData: keepPreviousData,
   });
 
   /*

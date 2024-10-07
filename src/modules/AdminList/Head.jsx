@@ -2,14 +2,15 @@
 
 import { useAdminList } from "./context";
 
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
-import TableCell from "@mui/material/TableCell";
-import TableSortLabel from "@mui/material/TableSortLabel";
-import Box from "@mui/material/Box";
-import { visuallyHidden } from "@mui/utils";
+// import TableHead from "@mui/material/TableHead";
+// import TableRow from "@mui/material/TableRow";
+// import TableCell from "@mui/material/TableCell";
+// import TableSortLabel from "@mui/material/TableSortLabel";
+// import Box from "@mui/material/Box";
+// import { visuallyHidden } from "@mui/utils";
 
-import Checkbox from "@mui/material/Checkbox";
+import ArrowIcon from "@heroicons/react/24/outline/ArrowUpIcon";
+import Checkbox from "@kenstack/forms/base/Checkbox";
 
 export default function ListHead() {
   const { rows, selected, select, sortBy, setSortBy, admin } = useAdminList();
@@ -37,19 +38,56 @@ export default function ListHead() {
   };
 
   const list = admin.getList();
+  return (
+    <>
+      <label className="cursor-pointer">
+        <Checkbox
+          // indeterminate={selected.size > 0 && selected.size < rows.length - 1}
+          // checked={rows.length > 0 && selected.size >= rows.length - 1}
+          checked={rows.length > 0 && selected.size > 0}
+          onChange={handleSelectAllClick}
+        />
+      </label>
 
+      {list.map((cell, key) => {
+        return (
+          <div
+            key={cell.name}
+            className={
+              "font-boldk group " +
+              (cell.sortable ? " sortable cursor-pointer" : "")
+            }
+            onClick={cell.sortable && handleSortClick(cell.name)}
+          >
+            {cell.label}
+            {cell.sortable && (
+              <ArrowIcon
+                className={
+                  "w-4 h-4 ml-2 inline-block " +
+                  (orderBy === cell.name
+                    ? order === "desc"
+                      ? " rotate-180"
+                      : ""
+                    : " opacity-0 group-hover:opacity-50")
+                }
+              />
+            )}
+          </div>
+        );
+      })}
+    </>
+  );
+
+  /*
   return (
     <TableHead>
       <TableRow>
         <TableCell padding="checkbox">
           <Checkbox
-            color="primary"
-            indeterminate={selected.size > 0 && selected.size < rows.length - 1}
-            checked={rows.length > 0 && selected.size >= rows.length - 1}
+            // indeterminate={selected.size > 0 && selected.size < rows.length - 1}
+            // checked={rows.length > 0 && selected.size >= rows.length - 1}
+            checked={rows.length > 0 && selected.size > 0}
             onChange={handleSelectAllClick}
-            inputProps={{
-              "aria-label": "select all desserts",
-            }}
           />
         </TableCell>
         {list.map((headCell, key) => {
@@ -86,4 +124,5 @@ export default function ListHead() {
       </TableRow>
     </TableHead>
   );
+   */
 }

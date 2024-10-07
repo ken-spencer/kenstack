@@ -1,16 +1,18 @@
 "use client";
 
 import get from "lodash/get";
-import { useCallback } from "react";
+import React, { useCallback } from "react";
 // import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
 
-import TableBody from "@mui/material/TableBody";
-import TableRow from "@mui/material/TableRow";
-import TableCell from "@mui/material/TableCell";
-import Checkbox from "@mui/material/Checkbox";
+// import TableBody from "@mui/material/TableBody";
+// import TableRow from "@mui/material/TableRow";
+// import TableCell from "@mui/material/TableCell";
+
+import Checkbox from "@kenstack/forms/base/Checkbox";
 
 import { useAdminList } from "./context";
+import Link from "next/link";
 
 const emptyRows = 1;
 const dense = true;
@@ -38,6 +40,43 @@ export default function AdminListBody() {
 
   const list = admin.getList();
 
+  return rows.map((row) => {
+    const isItemSelected = isSelected(row.id);
+
+    return (
+      <div className="admin-row contents" key={row._id}>
+        <label
+          key="select"
+          className={userId !== row._id ? "cursor-pointer" : ""}
+        >
+          <Checkbox
+            disabled={userId == row._id}
+            checked={selected.has(row._id)}
+            onChange={(event) => handleCheckbox(event, row._id)}
+          />
+        </label>
+
+        {list.map((cell, key) => {
+          let value = get(row, cell.name);
+          if (cell.filter) {
+            value = cell.filter(value);
+          }
+          if (cell.component) {
+            let Component = cell.component;
+            value = <Component value={value} />;
+          }
+
+          return (
+            <Link key={cell.name} href={pathName + "/" + row._id}>
+              {value}
+            </Link>
+          );
+        })}
+      </div>
+    );
+  });
+
+  /*
   return (
     <TableBody>
       {rows.map((row) => {
@@ -62,7 +101,6 @@ export default function AdminListBody() {
               onClick={(event) => handleCheckbox(event, row._id)}
             >
               <Checkbox
-                color="primary"
                 disabled={userId == row._id}
                 checked={selected.has(row._id)}
               />
@@ -80,8 +118,8 @@ export default function AdminListBody() {
                       return cell.filter(value);
                     }
                     if (cell.component) {
-                      let Component = cell.component;
-                      return <Component value={value} />;
+                      // let Component = cell.component;
+                      // return <Component value={value} />;
                     }
                     return value;
                   })()}
@@ -102,4 +140,5 @@ export default function AdminListBody() {
       )}
     </TableBody>
   );
+  */
 }

@@ -31,6 +31,7 @@ export default function clientModel(data) {
       {
         label: "Created",
         component: DateRelative,
+        width: "auto",
       },
     ]);
 
@@ -109,6 +110,7 @@ export default class clientModel {
       "meta.createdAt",
       {
         label: "Created",
+        width: "auto",
         component: DateRelative,
       },
     ]);

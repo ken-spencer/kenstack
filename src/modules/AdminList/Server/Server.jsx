@@ -38,7 +38,9 @@ async function Query({ session, model, admin, children }) {
   const sortCookie = cookies().get(key + "Sort");
   const keywordsCookie = cookies().get(key + "Keywords") || "";
 
-  const sortBy = sortCookie ? sortCookie.value : "";
+  const sortBy = sortCookie
+    ? sortCookie.value.split(",")
+    : ["meta.createdAt", "desc"];
   const keywords = keywordsCookie ? keywordsCookie.value : "";
 
   let initialData;

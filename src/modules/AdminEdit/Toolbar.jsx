@@ -6,11 +6,11 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAdminEdit } from "./context";
 
 import Title from "@kenstack/components/Title";
-// import Button from "@mui/material/Button";
 import Button from "@kenstack/forms/Submit";
-import SaveIcon from "@mui/icons-material/SaveOutlined";
-import AddIcon from "@mui/icons-material/Add";
-import ListIcon from "@mui/icons-material/List";
+import SaveIcon from "@heroicons/react/24/outline/CheckIcon";
+import AddIcon from "@heroicons/react/24/outline/PlusIcon";
+import ListIcon from "@heroicons/react/24/outline/ListBulletIcon";
+
 import Delete from "./Delete";
 
 export default function AdminEditToolbar() {
