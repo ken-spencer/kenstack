@@ -6,6 +6,6 @@ const ResetPasswordField = dynamic(() => import("./ResetPassword"), {
   loading: Loading,
 });
 
-export default function ResetPasswordFieldCont() {
-  return <ResetPasswordField />;
+export default function ResetPasswordFieldCont(props) {
+  return <ResetPasswordField {...props} />;
 }

@@ -9,7 +9,7 @@ import Alert from "@kenstack/forms/Alert";
 // import emailAction from "./emailAction";
 import apiAction from "@kenstack/client/apiAction";
 
-export default function ResetPasswordField() {
+export default function ResetPasswordField({ containerClass = "", span = "" }) {
   const { id } = useAdminEdit();
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState(null);
@@ -44,7 +44,7 @@ export default function ResetPasswordField() {
   }
 
   return (
-    <Field label="Password reset">
+    <Field label="Password reset" containerClass={containerClass} span={span}>
       <div>
         Click the button below to send a password reset email to the user.{" "}
       </div>

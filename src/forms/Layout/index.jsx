@@ -15,7 +15,7 @@ export default function FormLayout({ gap = "16px", fields: fields = {} }) {
   );
 
   return (
-    <div className="grid grid-cols-12 gap-4">
+    <div className="grid grid-cols-12 gap-2">
       {fieldArray.map(([name, data]) => {
         if (data.fields) {
           return <Group key={name} name={name} {...data} />;

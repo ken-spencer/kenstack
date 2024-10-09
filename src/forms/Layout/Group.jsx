@@ -12,22 +12,33 @@ export default function Group(props) {
   let {
     name,
     fields,
+    card = false,
     title,
     containerClass = "",
+    span = "",
     titleClass = "",
     bodyClass = "",
   } = props;
 
   const classesContainer = useMemo(
-    () => twMerge("col-span-12", containerClass),
-    [containerClass],
+    () =>
+      twMerge(
+        card ? "border border-gray-500 rounded" : "",
+        "col-span-12",
+        span,
+        containerClass,
+      ),
+    [card, containerClass, span],
   );
 
-  const classesTitle = useMemo(() => twMerge("", titleClass), [titleClass]);
+  const classesTitle = useMemo(
+    () => twMerge(card ? "bg-gray-300 dark:bg-gray-700  px-2" : "", titleClass),
+    [card, titleClass],
+  );
 
   const classesBody = useMemo(
-    () => twMerge("grid grid-cols-12 gap-4", bodyClass),
-    [bodyClass],
+    () => twMerge(card ? "px-2" : "", "grid grid-cols-12 gap-2", bodyClass),
+    [card, bodyClass],
   );
 
   /*

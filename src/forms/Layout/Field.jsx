@@ -2,8 +2,6 @@ import React, { memo, useMemo } from "react";
 import sentenceCase from "@kenstack/utils/sentenceCase";
 import { twMerge } from "tailwind-merge";
 
-// import GridItem from "../Grid/Item";
-
 import pick from "lodash/pick";
 import omit from "lodash/omit";
 import InputField from "../Input";
@@ -17,7 +15,7 @@ import Slug from "../Slug";
 
 function Field({ field = "text", span = "", containerClass = "", ...props }) {
   props.containerClass = useMemo(
-    () => twMerge("col-span-12", containerClass),
+    () => twMerge("col-span-12", span, containerClass),
     [containerClass, span],
   );
 
