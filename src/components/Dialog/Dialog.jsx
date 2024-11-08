@@ -1,70 +1,78 @@
 import { useEffect, useState, useRef } from "react";
 import ReactDOM from "react-dom";
 
-import styles from "./dialog.module.scss";
+import "./dialog.scss";
 // Modal component
 
 const dialogs = [];
-const zIndex = 50;
+// const zIndex = 50;
 
 export default function Dialog({
   className = null,
   open = false,
   children = null,
   onClose = null,
-  variant = "small", // small | large
+  onShow = null,
+  // variant = "small", // small | large
 }) {
+  const ref = useRef();
   // unique identifier for dialog;
   const id = useRef(Date.now());
-  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    if (!open) {
-      return;
-    }
+    const dialog = ref.current;
 
-    setLoaded(true);
+    // always fires when dislog closes
+    const handleClose = () => {};
 
-    dialogs.push(id.current);
-    const keyDown = (evt) => {
-      if (evt.key !== "Escape") {
-        return;
-      }
-
-      if (dialogs[dialogs.length - 1] === id.current) {
-        dialogs.pop();
-        if (onClose) {
-          onClose();
-        }
+    // close when clicking backdrop
+    const handleBackdropClick = (evt) => {
+      if (evt.target === dialog && onClose) {
+        onClose();
       }
     };
 
-    window.addEventListener("keydown", keyDown);
+    // escape key was pressed
+    const handleCancel = (evt) => {
+      // oncly close the top dialog
+      if (dialogs[dialogs.length - 1] !== id.current) {
+        evt.preventDefault();
+      } else if (onClose) {
+        onClose();
+      }
+    };
+
+    dialog.addEventListener("close", handleClose);
+    dialog.addEventListener("click", handleBackdropClick);
+    dialog.addEventListener("cancel", handleCancel);
     return () => {
-      window.removeEventListener("keydown", keyDown);
+      dialog.removeEventListener("close", handleClose);
+      dialog.removeEventListener("click", handleBackdropClick);
+      dialog.removeEventListener("cancel", handleCancel);
     };
-  }, [open, onClose]);
+  }, [onClose]);
 
-  if (loaded === false || open === false) {
-    return null;
-  }
+  useEffect(() => {
+    if (open) {
+      ref.current.showModal();
+      dialogs.push(id.current);
+      // used to focus on buttons
+      if (onShow) {
+        onShow();
+      }
+    } else {
+      ref.current.close();
+      dialogs.pop();
+    }
+  }, [open, onShow]);
 
-  let classes = styles.dialog;
+  let classes = "admin-dialog";
   classes += className ? " " + className : "";
-  classes += variant ? " " + styles[variant] : "";
+  // classes += variant ? " " + styles[variant] : "";
 
-  const z = zIndex + dialogs.length * 2;
-  return ReactDOM.createPortal(
-    <>
-      <div className={classes} style={{ zIndex: z + 1 }}>
-        {children}
-      </div>
-      <div
-        onClick={onClose}
-        className={styles.underlay}
-        style={{ zIndex: z }}
-      />
-    </>,
-    document.body,
+  return (
+    <dialog ref={ref} className={classes} style={{ zIndex: dialogs.length }}>
+      {children}
+    </dialog>
   );
 }

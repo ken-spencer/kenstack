@@ -15,7 +15,7 @@ export default async function apiAction(
     body = data;
   } else {
     headers["Content-Type"] = "application/json";
-    body = JSON.stringify(data);
+    body = JSON.stringify(data) || "{}";
   }
   if (action) {
     headers["x-action"] = action;
@@ -28,16 +28,18 @@ export default async function apiAction(
     body,
   });
 
+  if (response.status === 404) {
+    return { error: "Page not found: " + path };
+  } else if (!response.ok) {
+    return {
+      error: "Request to server failed with status: " + response.status,
+    };
+  }
+
   if (response.headers.get("content-type") !== "application/json") {
     return {
       error: "Invalid response recieved from server status: " + response.status,
     };
-  }
-
-  if (response.status === 404) {
-    return { error: "Page not found: " + path };
-  } else if (!response.ok) {
-    // do something.
   }
 
   let json;

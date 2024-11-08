@@ -2,11 +2,9 @@
 
 // Set which fields have errorsin a set. Trigger re render on form if set changes betweeon 0 and 1
 
-import { useReducer, useRef, useMemo, useEffect } from "react";
+import { useActionState, useReducer, useRef, useMemo, useEffect } from "react";
 
 const reducer = (count) => count + 1;
-
-import { useFormState } from "react-dom";
 
 import FormContext from "./Context";
 import GlobalFormState from "./lib/GlobalFormState";
@@ -30,15 +28,18 @@ export default function FormProvider({
     form.ref = formRef;
     form.initialValues = initialValues;
     form.initProp("showErrors", false);
-    form.initProp("pending", false);
     form.initProp("noValidate", initialNoValidate);
     form.initProp("disabled", disabled);
     form.initProp("fieldProps", fieldProps);
     return form;
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const [formState, formAction] = useFormState(action, initialState);
+  const [formState, formAction, isPending] = useActionState(
+    action,
+    initialState,
+  );
   form.action = action ? formAction : null;
+  form.pending = action ? isPending : null;
   if (action) {
     form.state = formState;
   }

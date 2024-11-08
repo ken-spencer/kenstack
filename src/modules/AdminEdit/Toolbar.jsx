@@ -6,10 +6,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAdminEdit } from "./context";
 
 import Title from "@kenstack/components/Title";
-import Button from "@kenstack/forms/Submit";
-import SaveIcon from "@heroicons/react/24/outline/CheckIcon";
-import AddIcon from "@heroicons/react/24/outline/PlusIcon";
-import ListIcon from "@heroicons/react/24/outline/ListBulletIcon";
+import AdminIcon from "@kenstack/components/AdminIcon";
+import SaveIcon from "@kenstack/icons/Save";
+import AddIcon from "@kenstack/icons/Add";
+import ArrowBackIcon from "@kenstack/icons/ArrowBack";
 
 import Delete from "./Delete";
 
@@ -58,36 +58,39 @@ export default function AdminEditToolbar() {
   return (
     <div className="admin-toolbar">
       <div className="admin-toolbar-left">
-        <Button
+        <AdminIcon
+          type="submit"
           name="adminAction"
           value="save"
           variant="contained"
-          startIcon={<SaveIcon />}
+          tooltip="Save"
         >
-          Save
-        </Button>
-        <Button
+          <SaveIcon />
+        </AdminIcon>
+        <AdminIcon
+          type="submit"
           onClick={handleClick("new")}
           name="adminAction"
           value={JSON.stringify(["new", { path: basePath + "/new" }])}
-          startIcon={<AddIcon />}
+          tooltip="New entry"
         >
-          New
-        </Button>
-        <Button
-          onClick={handleClick("list")}
-          name="adminAction"
-          value={JSON.stringify(["list", { path: basePath }])}
-          variant="contained"
-          startIcon={<ListIcon />}
-        >
-          List
-        </Button>
+          <AddIcon />
+        </AdminIcon>
+        <Delete />
       </div>
 
       <Title modelName={modelName} loading={loaded === false} />
       <div className="admin-toolbar-right">
-        <Delete />
+        <AdminIcon
+          type="submit"
+          onClick={handleClick("list")}
+          name="adminAction"
+          value={JSON.stringify(["list", { path: basePath }])}
+          variant="contained"
+          tooltip="Back to list"
+        >
+          <ArrowBackIcon />
+        </AdminIcon>
       </div>
     </div>
   );

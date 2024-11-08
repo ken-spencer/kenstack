@@ -1,5 +1,3 @@
-import styles from "./dialog.module.scss";
-
 export default function DialogTitle({
   className = null,
   children = null,
@@ -8,7 +6,10 @@ export default function DialogTitle({
   return (
     <div
       {...props}
-      className={styles.title + (className ? "" + className : "")}
+      className={
+        "border-b border-gray-400 bg-gray-300 dark:bg-gray-700  px-2 " +
+        (className ? "" + className : "")
+      }
     >
       {children}
     </div>

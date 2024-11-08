@@ -7,7 +7,7 @@ export default async function auditLog(
   data = null,
   user = null,
 ) {
-  const meta = getLogMeta();
+  const meta = await getLogMeta();
 
   // Loading this dynamically to avoid a race condition with mongoose
   const log = new AuditLog({

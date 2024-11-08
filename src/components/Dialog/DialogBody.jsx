@@ -1,12 +1,10 @@
-import styles from "./dialog.module.scss";
-
 export default function DialogBody({
   className = null,
   children = null,
   ...props
 }) {
   return (
-    <div {...props} className={styles.body + (className ? "" + className : "")}>
+    <div {...props} className={"p-2 " + (className ? "" + className : "")}>
       {children}
     </div>
   );

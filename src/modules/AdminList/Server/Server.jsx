@@ -34,9 +34,10 @@ export default async function Server({ children, session, admin, model }) {
 async function Query({ session, model, admin, children }) {
   const claims = await session.getClaims();
 
+  const cookieStore = await cookies();
   const key = "admin-list-" + admin.modelName;
-  const sortCookie = cookies().get(key + "Sort");
-  const keywordsCookie = cookies().get(key + "Keywords") || "";
+  const sortCookie = cookieStore.get(key + "Sort");
+  const keywordsCookie = cookieStore.get(key + "Keywords") || "";
 
   const sortBy = sortCookie
     ? sortCookie.value.split(",")

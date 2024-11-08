@@ -35,7 +35,8 @@ export default class Session {
   }
 
   async getClaims() {
-    const cookie = cookies().get("auth");
+    const cookieStore = await cookies();
+    const cookie = cookieStore.get("auth");
 
     if (!cookie || !cookie.value) {
       return false;

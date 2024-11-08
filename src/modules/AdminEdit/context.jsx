@@ -23,8 +23,13 @@ export function AdminEditProvider({
   // const [loadError, setLoadError] = useState();
   const [login, setLogin] = useState();
 
-  const exp = new RegExp(`/${escapeRegExp(id)}($|/.+})`);
-  const apiPath = pathname.replace(exp, "") + `/api/${id}`;
+  let apiPath;
+  if (id) {
+    const exp = new RegExp(`/${escapeRegExp(id)}($|/.+})`);
+    apiPath = pathname.replace(exp, "") + `/api/${id}`;
+  } else {
+    apiPath = pathname.slice(0, -3) + "api/new"; // strip 'new' from the end;
+  }
 
   useEffect(() => {
     if (isNew || !id) {

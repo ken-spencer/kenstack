@@ -128,3 +128,11 @@
     }
   }
 }
+
+.admin-border {
+  @apply rounded border border-gray-500;
+}
+
+.admin-border-b {
+  @apply border-b border-gray-500;
+}

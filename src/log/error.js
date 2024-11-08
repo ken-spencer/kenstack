@@ -1,7 +1,7 @@
 import getLogMeta from "./meta";
 
-export default function errorLog(error, message = null, data = null) {
-  const meta = getLogMeta();
+export default async function errorLog(error, message = null, data = null) {
+  const meta = await getLogMeta();
 
   const trace = new Error();
   // eslint-disable-next-line no-console

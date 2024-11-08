@@ -1,4 +1,4 @@
-@import "dark";
+@use "dark";
 
 $breakpoints: (
   "xs": 0px,
@@ -57,7 +57,7 @@ $breakpoints: (
   @include text;
   margin: 0;
 
-  @include dark {
+  @include dark.dark {
     @include text-dark;
   }
 
@@ -116,7 +116,7 @@ $breakpoints: (
   border-radius: 0.25rem;
   cursor: text;
 
-  @include dark {
+  @include dark.dark {
     @include input-dark;
   }
 
@@ -158,7 +158,7 @@ $breakpoints: (
 
   border-radius: 0.25rem;
 
-  @include dark {
+  @include dark.dark {
     @include input-dark;
   }
 
@@ -216,7 +216,7 @@ $breakpoints: (
     cursor: pointer;
     border-radius: 0.125rem;
 
-    @include dark {
+    @include dark.dark {
       @include input-dark;
     }
   }
@@ -235,7 +235,7 @@ $breakpoints: (
     transform: translateY(-50%) translateX(-50%);
 
     color: black;
-    @include dark() {
+    @include dark.dark() {
       color: white;
     }
 
@@ -273,12 +273,12 @@ $breakpoints: (
 }
 
 :global(.dark) {
-  @include dark;
+  @include dark.dark;
 }
 
 @media (prefers-color-scheme: dark) {
   :global(.system) {
-    @include dark;
+    @include dark.dark;
   }
 }
 */
@@ -318,7 +318,7 @@ $breakpoints: (
     transition: transform 0.3s;
 
     color: black;
-    @include dark {
+    @include dark.dark {
       color: white;
     }
   }
@@ -339,7 +339,7 @@ $breakpoints: (
     opacity: 0;
     transition: opacity 0.3s;
 
-    @include dark {
+    @include dark.dark {
       @include input-dark;
     }
 

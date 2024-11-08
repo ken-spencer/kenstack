@@ -1,4 +1,5 @@
 export default class GlobalFormState {
+  pending = false;
   #props = new Map();
   initialValues = null;
   fields = new Map();

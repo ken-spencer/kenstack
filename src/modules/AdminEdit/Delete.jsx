@@ -1,20 +1,20 @@
 import { useState, useEffect } from "react";
-
-// import deleteAction from "./deleteAction";
+import { useFormStatus } from "react-dom";
 
 import { useAdminEdit } from "./context";
 
-import DeleteIcon from "@mui/icons-material/Delete";
+import AdminIcon from "@kenstack/components/AdminIcon";
+import DeleteIcon from "@kenstack/icons/Delete";
+import DeleteForeverIcon from "@kenstack/icons/DeleteForever";
 
-import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import Submit from "@kenstack/forms/Submit";
-// import Button from "@mui/material/Button";
-import Button from "@kenstack/forms/Button";
 
 export default function DeleteButton() {
   const [warn, setWarn] = useState(false);
   const { isNew, id, userId } = useAdminEdit();
 
+  const { pending } = useFormStatus();
+  console.log(pending);
   useEffect(() => {
     if (!warn) {
       return;
@@ -36,28 +36,28 @@ export default function DeleteButton() {
 
   if (warn) {
     return (
-      <Submit
+      <AdminIcon
+        type="submit"
+        disabled={pending}
         name="adminAction"
         value="delete"
         color="error"
-        variant="contained"
-        startIcon={<DeleteForeverIcon />}
+        tooltip="Confirm delete"
       >
-        Confirm
-      </Submit>
+        <DeleteForeverIcon className="text-red-500" />
+      </AdminIcon>
     );
   }
 
   return (
-    <Button
+    <AdminIcon
       type="button"
       onClick={handleDeleteClick}
       disabled={isNew || id === userId}
-      variant="contained"
-      startIcon={<DeleteIcon />}
+      tooltip="Delete"
     >
-      Delete
-    </Button>
+      <DeleteIcon />
+    </AdminIcon>
   );
 }
 

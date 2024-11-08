@@ -36,6 +36,7 @@ export default function useMutation({
               context = await onMutate(post, {
                 set,
                 previous: queryKey ? queryClient.getQueryData(queryKey) : null,
+                queryClient,
               });
             } catch (e) {
               // eslint-disable-next-line no-console
@@ -57,7 +58,7 @@ export default function useMutation({
       // apply success side effects
       if (onSuccess && data?.success) {
         try {
-          onSuccess({ data, variables, context });
+          onSuccess({ data, variables, context, queryClient });
         } catch (e) {
           // eslint-disable-next-line no-console
           console.error(e);
@@ -65,12 +66,24 @@ export default function useMutation({
       }
 
       if (data?.success && (queryKey || successKey)) {
-        if (data?.success) {
-          // refetch data on success
-          queryClient.invalidateQueries({ queryKey: successKey ?? queryKey });
-        } else if (data?.error && context.previous) {
-          // revert optimistic changes
-          queryClient.setQueryData(queryKey, context.previous);
+        // refetch data on success
+        queryClient.invalidateQueries({ queryKey: successKey ?? queryKey });
+      } else if (data?.error && queryKey && context.previous) {
+        // revert optimistic changes
+        queryClient.setQueryData(queryKey, context.previous);
+      }
+
+      if (data?.error && onError) {
+        try {
+          onError({
+            error: new Error(data.error),
+            variables,
+            context,
+            queryClient,
+          });
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.error(e);
         }
       }
     },
@@ -80,7 +93,7 @@ export default function useMutation({
 
       if (onError) {
         try {
-          onError({ error, variables, context });
+          onError({ error, variables, context, queryClient });
         } catch (e) {
           // eslint-disable-next-line no-console
           console.error(e);

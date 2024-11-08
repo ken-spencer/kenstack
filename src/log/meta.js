@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 
-export default function getLogMeta() {
-  const headerList = headers();
+export default async function getLogMeta() {
+  const headerList = await headers();
 
   const href = headerList.get("x-href");
   const ip = headerList.get("x-ip");

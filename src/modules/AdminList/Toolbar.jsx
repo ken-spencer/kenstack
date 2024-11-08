@@ -12,7 +12,8 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import Search from "./Search";
 import Notice from "@kenstack/components/Notice";
 
-import AddIcon from "@heroicons/react/24/outline/PlusIcon";
+import AddIcon from "@kenstack/icons/Add";
+import AdminIcon from "@kenstack/components/AdminIcon";
 import Button from "@kenstack/forms/Button";
 
 // import deleteAction from "./deleteAction";
@@ -50,15 +51,15 @@ export default function AdminListToolbar() {
 
   return (
     <>
-      <div className="flex rounder border border-gray-500 rounded p-1 mb-2">
+      <div className="flex items-center admin-border p-1 mb-2">
         <div className="">
-          <Button
+          <AdminIcon
             component={Link}
             href={pathName + "/new"}
-            startIcon={<AddIcon />}
+            tooltip="New entry"
           >
-            New
-          </Button>
+            <AddIcon width="32" height="32" />
+          </AdminIcon>
         </div>
 
         <div className="flex-1 text-center">{admin.title}</div>

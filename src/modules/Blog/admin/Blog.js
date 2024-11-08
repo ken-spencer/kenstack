@@ -1,6 +1,6 @@
 import NewsIcon from "@heroicons/react/24/outline/NewspaperIcon";
 
-import Editor from "@kenstack/components/fields/Editor";
+// import Editor from "@kenstack/components/fields/Editor";
 // import Library from "@kenstack/components/fields/Library";
 
 const blogAdmin = {
@@ -39,9 +39,11 @@ const blogAdmin = {
           
         },
         */
+        /*
         body: {
           field: Editor,
         },
+        */
       },
     },
   },

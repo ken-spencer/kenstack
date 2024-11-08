@@ -1,5 +1,3 @@
-import styles from "./dialog.module.scss";
-
 export default function DialogActions({
   className = null,
   children = null,
@@ -8,7 +6,7 @@ export default function DialogActions({
   return (
     <div
       {...props}
-      className={styles.actions + (className ? "" + className : "")}
+      className={"admin-dialog-actions" + (className ? "" + className : "")}
     >
       {children}
     </div>
