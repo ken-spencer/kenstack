@@ -1,8 +1,10 @@
+"use client"
+
 import { useEffect, useCallback, useState, useRef } from "react";
 
 import "./notice.scss";
-import ErrorIcon from "@heroicons/react/24/outline/ExclamationTriangleIcon";
-import SuccessIcon from "@heroicons/react/24/outline/CheckCircleIcon";
+import ErrorIcon from "@kenstack/icons/Error";
+import SuccessIcon from "@kenstack/icons/CheckCircleOutline";
 import InformationIcon from "@heroicons/react/24/outline/InformationCircleIcon";
 
 const collapseTime = 400; // ms

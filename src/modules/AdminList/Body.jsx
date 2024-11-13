@@ -5,10 +5,6 @@ import React, { useCallback } from "react";
 // import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
 
-// import TableBody from "@mui/material/TableBody";
-// import TableRow from "@mui/material/TableRow";
-// import TableCell from "@mui/material/TableCell";
-
 import Checkbox from "@kenstack/forms/base/Checkbox";
 
 import { useAdminList } from "./context";

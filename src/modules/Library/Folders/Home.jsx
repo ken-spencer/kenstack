@@ -1,5 +1,6 @@
-import HomeIcon from "@mui/icons-material/Home";
-import HomeArrowIcon from "./HomeArrowIcon";
+import HomeIcon from "@kenstack/icons/Home";
+import DriveFileMoveIcon from "@kenstack/icons/DriveFileMove";
+
 import useLibrary from "../useLibrary";
 import useChangeFolder from "./useChangeFolder";
 
@@ -19,7 +20,7 @@ export default function HOme() {
       onClick={() => setActiveFolder(null)}
       {...dndEvents}
     >
-      {isDragOver ? <HomeArrowIcon /> : <HomeIcon />}
+      {isDragOver ? <DriveFileMoveIcon /> : <HomeIcon />}
       Home
     </button>
   );

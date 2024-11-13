@@ -9,7 +9,7 @@ import Folders from "./Folders";
 import Confirm from "../Confirm";
 import ErrorIndicator from "@kenstack/components/ErrorIndicator";
 
-import CreateNewFolderIcon from "@mui/icons-material/CreateNewFolder";
+import CreateNewFolderIcon from "@kenstack/icons/NewFolder";
 import IconButton from "@kenstack/forms/IconButton";
 
 export default function FolderList(props) {

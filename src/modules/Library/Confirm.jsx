@@ -7,8 +7,8 @@ import DialogActions from "@kenstack/components/Dialog/DialogActions";
 
 import Button from "@kenstack/forms/Button";
 
-import DeleteIcon from "@mui/icons-material/Delete";
-import CloseIcon from "@mui/icons-material/Close";
+import DeleteIcon from "@kenstack/icons/Delete";
+import CloseIcon from "@kenstack/icons/Close";
 
 export default function Confirm({
   confirm = false,

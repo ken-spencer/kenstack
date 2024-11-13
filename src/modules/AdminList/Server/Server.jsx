@@ -10,7 +10,7 @@ import load from "../api/load";
 
 import { cookies } from "next/headers";
 
-import Alert from "@mui/material/Alert";
+import Notice from "@kenstack/components/Notice";
 import errorLog from "@kenstack/log/error";
 
 export default async function Server({ children, session, admin, model }) {
@@ -49,13 +49,10 @@ async function Query({ session, model, admin, children }) {
     initialData = await load({ sortBy, keywords }, { model, admin });
   } catch (e) {
     errorLog(e, "Problem loading admin list");
-    return (
-      <Alert severity="error">
-        There was an unexpected problem loading admin data. Please try again
-        later.
-      </Alert>
-    );
+    return <Notice error="There was an unexpected problem loading admin data. Please try again later." />;
   }
+
+
 
   return (
     <ServerProvider

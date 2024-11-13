@@ -1,7 +1,5 @@
 import { useAdminList } from "./context";
 
-//import OutlinedInput from "@mui/material/OutlinedInput";
-
 import SearchInput from "@kenstack/forms/base/Search";
 
 export default function Search() {

@@ -8,7 +8,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import Title from "@kenstack/components/Title";
-import DeleteIcon from "@mui/icons-material/Delete";
+import DeleteIcon from "@kenstack/icons/Delete";
 import Search from "./Search";
 import Notice from "@kenstack/components/Notice";
 

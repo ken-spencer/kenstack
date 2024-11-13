@@ -3,7 +3,7 @@ import { lazy, Suspense, forwardRef } from "react";
 import omit from "lodash/omit";
 
 //const Spinner = lazy(() => import("./Spinner"));
-const Spinner = lazy(() => import("@mui/icons-material/Autorenew"));
+const Spinner = lazy(() => import("@kenstack/icons/Progress"));
 
 const Button = (
   {
@@ -29,7 +29,7 @@ const Button = (
     startIcon = (
       <Suspense>
         <Spinner
-          className="button-spinner"
+          className="button-spinner animate-spin"
           style={{ visibility: loading ? "visible" : "hidden" }}
         />
       </Suspense>

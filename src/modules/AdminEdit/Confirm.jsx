@@ -1,11 +1,13 @@
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
-import Dialog from "./Dialog";
-import Button from "@mui/material/Button";
+// import Dialog from "./Dialog";
+import Dialog from "@kenstack/components/Dialog";
+import Button from "@kenstack/forms/Button";
 
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
-import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
+
+import CheckCircleOutlineIcon from "@kenstack/icons/CheckCircleOutline";
+import DeleteForeverIcon from "@kenstack/icons/DeleteForever";
 
 import { useAdminEdit } from "./context";
 import useForm from "@kenstack/forms/useForm";

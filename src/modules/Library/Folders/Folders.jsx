@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import FolderEdit from "./Edit";
 
 import Folder from "./Folder";
-import FolderIcon from "@mui/icons-material/Folder";
+import FolderIcon from "@kenstack/icons/Folder";
 
 import useLibrary from "../useLibrary";
 

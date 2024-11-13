@@ -24,8 +24,9 @@ export default function AdminEditToolbar() {
   const basePath = pathName.replace(/\/[^/]*$/, "");
 
   const handleClick =
-    (type) =>
-    (evt, path = null) => {
+    (type, path = "/") =>
+    (evt) => {
+console.log(path);
       const name = evt.target.getAttribute("name");
       const action = evt.target.getAttribute("value");
       if (!path && name === "adminAction") {

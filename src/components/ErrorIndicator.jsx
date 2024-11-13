@@ -1,4 +1,4 @@
-import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
+import ErrorOutlineIcon from "@kenstack/icons/Error";
 
 export default function Loading() {
   return (

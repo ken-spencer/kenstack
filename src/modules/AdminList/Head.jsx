@@ -2,13 +2,6 @@
 
 import { useAdminList } from "./context";
 
-// import TableHead from "@mui/material/TableHead";
-// import TableRow from "@mui/material/TableRow";
-// import TableCell from "@mui/material/TableCell";
-// import TableSortLabel from "@mui/material/TableSortLabel";
-// import Box from "@mui/material/Box";
-// import { visuallyHidden } from "@mui/utils";
-
 import ArrowIcon from "@heroicons/react/24/outline/ArrowUpIcon";
 import Checkbox from "@kenstack/forms/base/Checkbox";
 

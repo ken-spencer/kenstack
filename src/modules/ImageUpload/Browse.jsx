@@ -3,7 +3,7 @@
 import React, { useCallback, useState } from "react";
 
 import Button from "@kenstack/forms/Button";
-import UploadIcon from "@mui/icons-material/Upload";
+import UploadIcon from "@kenstack/icons/Upload";
 
 import apiAction from "@kenstack/client/apiAction";
 

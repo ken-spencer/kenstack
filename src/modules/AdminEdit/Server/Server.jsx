@@ -7,7 +7,7 @@ import Session from "@kenstack/server/Session";
 import clientModel from "@kenstack/client/Model";
 
 import errorLog from "@kenstack/log/error";
-import Alert from "@mui/material/Alert";
+import Notice from "@kenstack/components/Notice";
 import { notFound } from "next/navigation";
 
 import { ServerProvider } from "@kenstack/server/context";
@@ -58,10 +58,7 @@ async function Query({ session, id, model, admin, children }) {
     } catch (e) {
       errorLog(e, "Problem loading admin row");
       return (
-        <Alert severity="error">
-          There was an unexpected problem loading admin data. Please try again
-          later.
-        </Alert>
+        <Notice message="There was an unexpected problem loading admin data. Please try again later." />
       );
     }
 

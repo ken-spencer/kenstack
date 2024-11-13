@@ -1,6 +1,5 @@
 import AdminIcon from "@kenstack/components/AdminIcon";
 import DeleteIcon from "@kenstack/icons/Delete";
-// import RestoreFromTrashIcon from "@mui/icons-material/RestoreFromTrash";
 
 import useLibrary from "../../useLibrary";
 

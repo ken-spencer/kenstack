@@ -1,78 +1,25 @@
-import { useEffect, useState, useRef } from "react";
-import ReactDOM from "react-dom";
+import DialogContainer from "./DialogContainer";
+import DialogTitle from "./DialogTitle";
+import DialogBody from "./DialogBody";
 
-import "./dialog.scss";
-// Modal component
-
-const dialogs = [];
-// const zIndex = 50;
 
 export default function Dialog({
-  className = null,
-  open = false,
-  children = null,
-  onClose = null,
-  onShow = null,
-  // variant = "small", // small | large
+  title = "",
+  children,
+  className = "",
+  actions = null,
+  ...props
 }) {
-  const ref = useRef();
-  // unique identifier for dialog;
-  const id = useRef(Date.now());
-
-  useEffect(() => {
-    const dialog = ref.current;
-
-    // always fires when dislog closes
-    const handleClose = () => {};
-
-    // close when clicking backdrop
-    const handleBackdropClick = (evt) => {
-      if (evt.target === dialog && onClose) {
-        onClose();
-      }
-    };
-
-    // escape key was pressed
-    const handleCancel = (evt) => {
-      // oncly close the top dialog
-      if (dialogs[dialogs.length - 1] !== id.current) {
-        evt.preventDefault();
-      } else if (onClose) {
-        onClose();
-      }
-    };
-
-    dialog.addEventListener("close", handleClose);
-    dialog.addEventListener("click", handleBackdropClick);
-    dialog.addEventListener("cancel", handleCancel);
-    return () => {
-      dialog.removeEventListener("close", handleClose);
-      dialog.removeEventListener("click", handleBackdropClick);
-      dialog.removeEventListener("cancel", handleCancel);
-    };
-  }, [onClose]);
-
-  useEffect(() => {
-    if (open) {
-      ref.current.showModal();
-      dialogs.push(id.current);
-      // used to focus on buttons
-      if (onShow) {
-        onShow();
-      }
-    } else {
-      ref.current.close();
-      dialogs.pop();
-    }
-  }, [open, onShow]);
-
-  let classes = "admin-dialog";
-  classes += className ? " " + className : "";
-  // classes += variant ? " " + styles[variant] : "";
 
   return (
-    <dialog ref={ref} className={classes} style={{ zIndex: dialogs.length }}>
-      {children}
-    </dialog>
+    <DialogContainer className={"admin-border max-w-2xl " + className} {...props}>
+      <DialogTitle>{title}</DialogTitle>
+      <DialogBody>{children}</DialogBody>
+      {actions && (
+        <div className="flex gap-2 justify-end p-2">
+          {actions}
+        </div>
+      )}
+    </DialogContainer>
   );
 }

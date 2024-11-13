@@ -1,7 +1,7 @@
 "use client";
 
 import { useAdminList } from "./context";
-import Error from "@kenstack/components/Error";
+import Notice from "@kenstack/components/Notice";
 
 import Loading from "@kenstack/components/Loading";
 
@@ -12,7 +12,7 @@ export default function AdminListTable() {
   const { error, isLoading, admin } = useAdminList();
 
   if (error) {
-    return <Error message={error} />;
+    return <Notice error={error} />;
   }
 
   const list = admin.getList();

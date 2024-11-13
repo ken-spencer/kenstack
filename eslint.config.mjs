@@ -21,6 +21,13 @@ const config = [
   // js.configs.recommended, // think this is baked in below
   ...compat.extends("next/core-web-vitals", "next/typescript", "prettier"),
   {
+    rules: {
+      "@next/next/no-img-element": "off",
+      "@next/next/no-html-link-for-pages": "off",
+    },
+  },
+  {
+    files: ["**/*.js", "**/*.jsx", "**/*.ts", "**/*.tsx"],
     plugins: {
       'react-compiler': reactCompiler,
     },
@@ -28,8 +35,6 @@ const config = [
       "@typescript-eslint/no-unused-vars": ["error", { "args": "none" }],
       "no-unused-vars": "off",
       "@typescript-eslint/no-shadow": ["error", { "hoist": "all", "builtinGlobals": false }],
-      "@next/next/no-img-element": "off",
-      "@next/next/no-html-link-for-pages": "off",
       "no-console": "error",
       "import/no-unresolved": "error",
 

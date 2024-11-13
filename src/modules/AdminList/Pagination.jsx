@@ -1,6 +1,5 @@
 "use client";
 
-import TablePagination from "@mui/material/TablePagination";
 
 const page = 1;
 const rowsPerPage = 10;
@@ -13,6 +12,11 @@ export default function Pagination() {
   if (rows.length < rowsPerPage) {
     return null;
   }
+
+  // TODO implement pagination
+
+  return null;
+  /*
   return (
     <TablePagination
       rowsPerPageOptions={[5, 10, 25]}
@@ -24,4 +28,5 @@ export default function Pagination() {
       onRowsPerPageChange={handleChangeRowsPerPage}
     />
   );
+  */
 }

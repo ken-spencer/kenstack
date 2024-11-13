@@ -5,10 +5,9 @@ import { useRef } from "react";
 //import FolderEdit from "./Edit";
 // import sidebar from "../../../admin/Sidebar/sidebar.module.scss";
 
-import FolderIcon from "@mui/icons-material/Folder";
-import DriveFileMoveIcon from "@mui/icons-material/DriveFileMove";
-
-import DeleteIcon from "@mui/icons-material/Delete";
+import FolderIcon from "@kenstack/icons/Folder";
+import DriveFileMoveIcon from "@kenstack/icons/DriveFileMove";
+import DeleteIcon from "@kenstack/icons/Delete";
 
 import useLibrary from "../useLibrary";
 import apiAction from "@kenstack/client/apiAction";

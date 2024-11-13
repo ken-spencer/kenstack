@@ -2,8 +2,6 @@ import { useState, useCallback, forwardRef } from "react";
 
 import TextField from "./Input";
 
-// import Visibility from "@mui/icons-material/VisibilityOutlined";
-// import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import Visibility from "./icons/EyeIcon";
 import VisibilityOff from "./icons/EyeSlashIcon";
 

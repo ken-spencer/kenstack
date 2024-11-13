@@ -15,14 +15,9 @@ import CheckboxBlankIcon from "@kenstack/icons/CheckboxBlank";
 import IndeterminateIcon from "@kenstack/icons/Indeterminate";
 import CutIcon from "@kenstack/icons/Cut";
 import SelectAllIcon from "@kenstack/icons/SelectAll";
-import DeselectAllIcon from "@kenstack/icons/DeselectAll";
+import DeselectAllIcon from "@kenstack/icons/CheckboxBlank";
 
-import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
-// import IndeterminateCheckBoxIcon from "@mui/icons-material/IndeterminateCheckBox";
-
-// import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
-// import RestoreFromTrashIcon from "@mui/icons-material/RestoreFromTrash";
-// import CancelIcon from "@mui/icons-material/Cancel";
+import CheckBoxOutlineBlankIcon from "@kenstack/icons/CheckboxBlank";
 
 import useLibrary from "../../useLibrary";
 import useFiles from "../useFiles";

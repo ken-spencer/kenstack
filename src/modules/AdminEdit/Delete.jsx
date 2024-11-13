@@ -14,7 +14,6 @@ export default function DeleteButton() {
   const { isNew, id, userId } = useAdminEdit();
 
   const { pending } = useFormStatus();
-  console.log(pending);
   useEffect(() => {
     if (!warn) {
       return;
