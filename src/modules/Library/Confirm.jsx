@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useRef } from "react";
 
 import Dialog from "@kenstack/components/Dialog";
 import DialogTitle from "@kenstack/components/Dialog/DialogTitle";

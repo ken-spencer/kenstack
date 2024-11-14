@@ -111,8 +111,8 @@ export default function Upload({ file }) {
         return;
       }
 
-      const onProgress = (progress) => {
-        setProgress(progress);
+      const onProgress = (value) => {
+        setProgress(value);
       };
       try {
         await uploadToPresigned(res.uploadUrl, file.ref, onProgress);

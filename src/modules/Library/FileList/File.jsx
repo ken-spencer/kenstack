@@ -20,7 +20,6 @@ export default function File({ file }) {
     selected,
     setSelected,
     activeFolder,
-    setError,
     trash,
     setEdit,
     addMessage,
@@ -32,9 +31,6 @@ export default function File({ file }) {
   const saveMoveMutation = useMutation({
     queryKey: ["files", activeFolder, false],
     mutationFn: (post) => apiAction(apiPath + "/save-move", post),
-    onMutate: () => {
-      console.log("blah");
-    },
     onError: ({ error }) => {
       addMessage({ error: error.message });
     },
@@ -106,7 +102,7 @@ export default function File({ file }) {
         return;
       }
 
-      setFiles((files) => {
+      setFiles(() => {
         const index1 = files.findIndex((f) => f.id === id);
         if (index1 === -1) {
           return files;
@@ -127,7 +123,7 @@ export default function File({ file }) {
         return newFiles;
       });
     },
-    [file, dragData, setFiles],
+    [file, dragData, files, setFiles],
   );
 
   const handleDragEnd = useCallback(
@@ -166,7 +162,7 @@ export default function File({ file }) {
   if (selecting || trash) {
     events = {
       onClick: () => {
-        setSelected((selected) => {
+        setSelected(() => {
           if (selected.includes(file.id)) {
             return selected.filter((s) => s !== file.id);
           } else {

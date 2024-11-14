@@ -12,4 +12,3 @@ const SvgHome = (props) => (
   </svg>
 );
 export default SvgHome;
-

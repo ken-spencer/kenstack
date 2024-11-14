@@ -4,9 +4,9 @@ import { useState } from "react";
 
 import Loading from "@kenstack/components/Loading";
 import dynamic from "next/dynamic";
-import Dialog from "../../Dialog";
+import Dialog from "@kenstack/components/Dialog";
 
-import QuertyProvider from "./QueryProvider";
+import QueryProvider from "./QueryProvider";
 import Provider from "./Provider";
 
 const Library = dynamic(

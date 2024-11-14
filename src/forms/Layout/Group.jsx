@@ -1,16 +1,12 @@
 import { useMemo } from "react";
-import sentenceCase from "@kenstack/utils/sentenceCase";
 import { twMerge } from "tailwind-merge";
 
-import styles from "./layout.module.scss";
-
 // import GridItem from "../Grid/Item";
-import pick from "lodash/pick";
 import Fields from "./Fields";
 
 export default function Group(props) {
   let {
-    name,
+    // name,
     fields,
     card = false,
     title,

@@ -13,4 +13,3 @@ const SvgDriveFileMove = (props) => (
   </svg>
 );
 export default SvgDriveFileMove;
-

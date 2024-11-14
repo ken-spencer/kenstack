@@ -13,4 +13,3 @@ const SvgError = (props) => (
   </svg>
 );
 export default SvgError;
-

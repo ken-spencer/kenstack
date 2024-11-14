@@ -1,11 +1,9 @@
-import styles from "./button.module.scss";
-
 const SvgTmp = ({ className = "", ...props }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
     aria-hidden="true"
-    className={styles.spinner + (className ? " " + className : "")}
+    className={"button-spinner" + (className ? " " + className : "")}
     viewBox="0 0 100 101"
     width="20px"
     height="20px"

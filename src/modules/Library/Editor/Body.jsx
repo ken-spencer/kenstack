@@ -1,12 +1,11 @@
 import FormFields from "./Form";
 import FormProvider from "@kenstack/forms/Provider";
 import SquareTool from "./SquareTool";
-import useLibrary from "../useLibrary";
 
 import { useLibraryEditor } from "./context";
 
 export default function Body() {
-  const { id, file, mode } = useLibraryEditor();
+  const { file, mode } = useLibraryEditor();
 
   return (
     <div className="admin-library-editor">

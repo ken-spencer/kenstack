@@ -7,7 +7,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import Title from "@kenstack/components/Title";
 import DeleteIcon from "@kenstack/icons/Delete";
 import Search from "./Search";
 import Notice from "@kenstack/components/Notice";
@@ -22,7 +21,7 @@ import { useAdminList } from "./context";
 
 export default function AdminListToolbar() {
   const [response, setResponse] = useState({});
-  const { modelName, selected, setSelected, admin } = useAdminList();
+  const { selected, setSelected, admin } = useAdminList();
   const pathName = usePathname();
 
   const handleDelete = () => {

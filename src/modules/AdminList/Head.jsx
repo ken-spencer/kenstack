@@ -21,10 +21,10 @@ export default function ListHead() {
 
   const handleSelectAllClick = (evt) => {
     if (evt.target.checked) {
-      const list = rows.map((row) => {
+      const selectList = rows.map((row) => {
         return row._id;
       });
-      select(list);
+      select(selectList);
     } else {
       select([]);
     }

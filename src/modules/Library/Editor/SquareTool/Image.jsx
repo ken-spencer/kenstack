@@ -47,8 +47,6 @@ export default function SquareTool() {
       width: rect.width,
       height: rect.height,
     };
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zoom, cropX, setCropX, cropY, setCropY]);
 
   useEffect(() => {
@@ -109,13 +107,13 @@ export default function SquareTool() {
         }}
         onMouseDown={(evt) => {
           setIsDragging(true);
-          setData((data) => ({
+          setData({
             ...data,
             x: evt.clientX,
             y: evt.clientY,
             cropX: cropX,
             cropY: cropY,
-          }));
+          });
         }}
       />
     </div>

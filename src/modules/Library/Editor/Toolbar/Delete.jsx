@@ -5,14 +5,15 @@ import useLibrary from "../../useLibrary";
 
 import useMutation from "@kenstack/hooks/useMutation";
 // import deleteAction from "../../FileList/api/deleteAction";
-import apiAction from "@kenstack/client/apiAction";
+// import apiAction from "@kenstack/client/apiAction";
 
 export default function Delete() {
   const { edit, setEdit, activeFolder, setError } = useLibrary();
   const deleteMutation = useMutation(
     ["files", activeFolder, false],
-    // deleteAction,
+    // TODO reimplmenet deleteAction,
     () => {
+      // eslint-disable-next-line no-console
       console.log("TODO Delete action goes here");
     },
     {

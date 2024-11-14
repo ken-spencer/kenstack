@@ -12,4 +12,3 @@ const SvgCheckCircleOutline = (props) => (
   </svg>
 );
 export default SvgCheckCircleOutline;
-

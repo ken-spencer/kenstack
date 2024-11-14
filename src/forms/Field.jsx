@@ -21,7 +21,7 @@ export default function Field({ field, ...props }) {
 
   let classesLabel = useMemo(
     () => twMerge("label mb-2", labelClass),
-    [required, labelClass],
+    [labelClass],
   );
 
   return (

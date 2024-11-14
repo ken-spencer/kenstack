@@ -26,8 +26,8 @@ const SlugField = ({ subscribe, onChange, ...props }, ref) => {
     [onChange],
   );
 
-  props.onBlur = useCallback((evt, field) => {
-    field.value = strToSlug(field.value);
+  props.onBlur = useCallback((evt, slugField) => {
+    slugField.value = strToSlug(slugField.value);
   }, []);
 
   const field = useField(props, ref);

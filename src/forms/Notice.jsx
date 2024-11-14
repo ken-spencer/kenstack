@@ -37,9 +37,9 @@ export default function Notice({ name, ...props }) {
     } else {
       // const href = window.location.href;
       const url = new URL(window.location.href);
-      const error = url.searchParams.get(name);
-      if (error) {
-        setCookieError(error);
+      const err = url.searchParams.get(name);
+      if (err) {
+        setCookieError(err);
       }
       window.history.replaceState(null, null, url.origin + url.pathname);
     }
@@ -109,7 +109,7 @@ export default function Notice({ name, ...props }) {
 
 function getCookie(name) {
   const cookies = document.cookie.split(";");
-  const cookie = cookies.find((cookie) => cookie.trim().startsWith(name + "="));
+  const cookie = cookies.find((value) => value.trim().startsWith(name + "="));
 
   if (cookie) {
     const [, encoded] = cookie.split("=");

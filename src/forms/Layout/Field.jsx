@@ -2,8 +2,6 @@ import React, { memo, useMemo } from "react";
 import sentenceCase from "@kenstack/utils/sentenceCase";
 import { twMerge } from "tailwind-merge";
 
-import pick from "lodash/pick";
-import omit from "lodash/omit";
 import InputField from "../Input";
 import TextArea from "../TextArea";
 import Password from "../Password";
@@ -35,8 +33,8 @@ function Field({ field = "text", span = "", containerClass = "", ...props }) {
         if (typeof field === "function" || typeof field === "object") {
           // const Lazy = React.lazy(field);
           // return <Suspense><Lazy {...fieldProps}/></Suspense>;
-          const Field = field;
-          return <Field {...fieldProps} />;
+          const FunctionField = field;
+          return <FunctionField {...fieldProps} />;
         }
 
         switch (field.toLowerCase()) {

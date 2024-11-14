@@ -10,9 +10,7 @@ import Checkbox from "@kenstack/forms/base/Checkbox";
 import { useAdminList } from "./context";
 import Link from "next/link";
 
-const emptyRows = 1;
-const dense = true;
-const isSelected = () => false;
+// const isSelected = () => false;
 
 export default function AdminListBody() {
   const { rows, admin, userId, select, deselect, selected } = useAdminList();
@@ -37,7 +35,7 @@ export default function AdminListBody() {
   const list = admin.getList();
 
   return rows.map((row) => {
-    const isItemSelected = isSelected(row.id);
+    // const isItemSelected = isSelected(row.id);
 
     return (
       <div className="admin-row contents" key={row._id}>
@@ -71,70 +69,4 @@ export default function AdminListBody() {
       </div>
     );
   });
-
-  /*
-  return (
-    <TableBody>
-      {rows.map((row) => {
-        const isItemSelected = isSelected(row.id);
-
-        return (
-          <TableRow
-            hover
-            role="checkbox"
-            aria-checked={selected.has(row._id)}
-            tabIndex={-1}
-            key={row._id}
-            selected={isItemSelected}
-            sx={{ cursor: "pointer" }}
-            onClick={() => {
-              // router.push(pathName + "/" + row._id);
-              window.location.href = pathName + "/" + row._id;
-            }}
-          >
-            <TableCell
-              padding="checkbox"
-              onClick={(event) => handleCheckbox(event, row._id)}
-            >
-              <Checkbox
-                disabled={userId == row._id}
-                checked={selected.has(row._id)}
-              />
-            </TableCell>
-            {list.map((cell, key) => {
-              const isLast = list.length - 2 === key;
-              return (
-                <TableCell
-                  key={cell.name}
-                  className={isLast ? "admin-second-last-cell" : "admin-cell"}
-                >
-                  {(() => {
-                    const value = get(row, cell.name);
-                    if (cell.filter) {
-                      return cell.filter(value);
-                    }
-                    if (cell.component) {
-                      // let Component = cell.component;
-                      // return <Component value={value} />;
-                    }
-                    return value;
-                  })()}
-                </TableCell>
-              );
-            })}
-          </TableRow>
-        );
-      })}
-      {emptyRows > 0 && (
-        <TableRow
-          style={{
-            height: (dense ? 33 : 53) * emptyRows,
-          }}
-        >
-          <TableCell colSpan={list.length + 1} />
-        </TableRow>
-      )}
-    </TableBody>
-  );
-  */
 }

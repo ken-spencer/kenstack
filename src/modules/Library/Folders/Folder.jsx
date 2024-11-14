@@ -50,10 +50,10 @@ export default function Folder({
       // revert();
       setError(error.message);
     },
-    onSuccess: ({ data, variables: folder }) => {
+    onSuccess: ({ data, variables: folderId }) => {
       // Current folder has been deleted
       if (data.success) {
-        if (folder === activeFolder) {
+        if (folderId === activeFolder) {
           setActiveFolder(null);
         }
       } else {

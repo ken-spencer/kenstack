@@ -3,7 +3,6 @@ import Input from "@kenstack/forms/Input";
 
 import { useLibraryEditor } from "./context";
 import apiAction from "@kenstack/client/apiAction";
-import defaultError from "@kenstack/defaultError";
 
 import useMutation from "@kenstack/hooks/useMutation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -24,7 +23,7 @@ export default function EditForm({ file }) {
     onError: ({ error }) => {
       addMessage({ error: error.message });
     },
-    onSuccess: ({ queryClient }) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["editor", id] });
     },
   });

@@ -56,7 +56,7 @@ export function AdminListProvider({
     data,
     error: queryError,
     isLoading,
-    isPreviousData,
+    // isPreviousData,
   } = useQuery({
     queryKey: [queryKey, sortBy, debouncedKeywords],
     queryFn: () => {

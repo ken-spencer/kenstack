@@ -1,5 +1,4 @@
-import { useEffect, useState, useRef } from "react";
-import ReactDOM from "react-dom";
+import { useEffect, useRef } from "react";
 
 import "./dialog.scss";
 // Modal component

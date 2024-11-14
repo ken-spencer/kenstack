@@ -12,4 +12,3 @@ const SvgFolder = (props) => (
   </svg>
 );
 export default SvgFolder;
-

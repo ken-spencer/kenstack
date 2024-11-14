@@ -1,11 +1,9 @@
 "use client";
 
-
-const page = 1;
-const rowsPerPage = 10;
-const rows = [];
-
+// TODO implement pagination
 export default function Pagination() {
+  return null;
+  /*
   const handleChangePage = () => {};
   const handleChangeRowsPerPage = () => {};
 
@@ -13,10 +11,7 @@ export default function Pagination() {
     return null;
   }
 
-  // TODO implement pagination
 
-  return null;
-  /*
   return (
     <TablePagination
       rowsPerPageOptions={[5, 10, 25]}

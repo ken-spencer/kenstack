@@ -78,16 +78,16 @@ export default function AdminIcon({
         return;
       }
 
-      enterTimeout.current = setTimeout((evt) => {
+      enterTimeout.current = setTimeout(() => {
         const button = buttonRef.current;
-        const tooltip = tooltipRef.current;
+        const tooltipNode = tooltipRef.current;
         const rect = button.getBoundingClientRect();
 
-        const offset = tooltip.offsetWidth / 2 - button.offsetWidth / 2;
-        tooltip.style.left = rect.left + window.scrollX - offset + "px";
-        tooltip.style.top = rect.bottom + window.scrollY + 1 + "px";
+        const offset = tooltipNode.offsetWidth / 2 - button.offsetWidth / 2;
+        tooltipNode.style.left = rect.left + window.scrollX - offset + "px";
+        tooltipNode.style.top = rect.bottom + window.scrollY + 1 + "px";
 
-        tooltip.classList.add("show-admin-tooltip");
+        tooltipNode.classList.add("show-admin-tooltip");
       }, 1000);
       if (onMouseEnter) {
         onMouseEnter(evt);

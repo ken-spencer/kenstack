@@ -12,4 +12,3 @@ const SvgClose = (props) => (
   </svg>
 );
 export default SvgClose;
-

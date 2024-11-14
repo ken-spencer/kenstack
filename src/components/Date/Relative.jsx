@@ -15,6 +15,8 @@ export default function RelativeDate(props) {
   const date = DateTime.fromISO(props.value);
   const format = date.toFormat("MMMM dd, yyyy, h:mm a");
   return (
-    <span title={show && format} suppressHydrationWarning>{date.toRelative()}</span>
+    <span title={show && format} suppressHydrationWarning>
+      {date.toRelative()}
+    </span>
   );
 }

@@ -13,4 +13,3 @@ const SvgProgress = (props) => (
   </svg>
 );
 export default SvgProgress;
-

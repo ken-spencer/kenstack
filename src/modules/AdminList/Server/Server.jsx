@@ -49,10 +49,10 @@ async function Query({ session, model, admin, children }) {
     initialData = await load({ sortBy, keywords }, { model, admin });
   } catch (e) {
     errorLog(e, "Problem loading admin list");
-    return <Notice error="There was an unexpected problem loading admin data. Please try again later." />;
+    return (
+      <Notice error="There was an unexpected problem loading admin data. Please try again later." />
+    );
   }
-
-
 
   return (
     <ServerProvider

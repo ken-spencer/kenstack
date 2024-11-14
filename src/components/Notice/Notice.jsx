@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useEffect, useCallback, useState, useRef } from "react";
 
@@ -11,7 +11,7 @@ const collapseTime = 400; // ms
 
 export default function Notice({
   actionState,
-  noScroll = false,
+  noScroll = false, // TODO make scroll opt in with a scroll flag. Possibly redundant with components version
   error: errorProp,
   success: successProp,
   information: informationProp,
@@ -86,7 +86,7 @@ export default function Notice({
       },
       error ? 5000 : 5500,
     );
-  }, [actionState, message, noScroll, setShow]);
+  }, [actionState, message, noScroll, setShow, collapse, error]);
 
   let classes = className ? " " + className : "";
   let Icon;

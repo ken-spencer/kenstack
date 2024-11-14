@@ -13,4 +13,3 @@ const SvgUndelete = (props) => (
   </svg>
 );
 export default SvgUndelete;
-

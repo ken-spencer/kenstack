@@ -10,11 +10,7 @@ export default function ToggleTrash() {
 
   if (trash) {
     return (
-      <AdminIcon
-        onClick={() => setTrash(false)}
-        tooltip="Back to list"
-        tooltip="Back to list"
-      >
+      <AdminIcon onClick={() => setTrash(false)} tooltip="Back to list">
         <ArrowBackIcon />
       </AdminIcon>
     );

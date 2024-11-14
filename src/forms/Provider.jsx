@@ -23,15 +23,18 @@ export default function FormProvider({
   const [, reRender] = useReducer(reducer, 0);
 
   const form = useMemo(() => {
-    const form = new GlobalFormState();
-    form.reRender = reRender;
-    form.ref = formRef;
-    form.initialValues = initialValues;
-    form.initProp("showErrors", false);
-    form.initProp("noValidate", initialNoValidate);
-    form.initProp("disabled", disabled);
-    form.initProp("fieldProps", fieldProps);
-    return form;
+    const newForm = new GlobalFormState();
+    Object.assign(newForm, {
+      reRender: reRender,
+      ref: formRef,
+      initialValues: initialValues,
+    });
+
+    newForm.initProp("showErrors", false);
+    newForm.initProp("noValidate", initialNoValidate);
+    newForm.initProp("disabled", disabled);
+    newForm.initProp("fieldProps", fieldProps);
+    return newForm;
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [formState, formAction, isPending] = useActionState(

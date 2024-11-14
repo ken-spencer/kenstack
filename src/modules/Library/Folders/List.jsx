@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import apiAction from "@kenstack/client/apiAction";
@@ -10,7 +10,6 @@ import Confirm from "../Confirm";
 import ErrorIndicator from "@kenstack/components/ErrorIndicator";
 
 import CreateNewFolderIcon from "@kenstack/icons/NewFolder";
-import IconButton from "@kenstack/forms/IconButton";
 
 export default function FolderList(props) {
   const { /*folders, setFolders, */ apiPath } = useLibrary();

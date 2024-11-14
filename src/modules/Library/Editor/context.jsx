@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useMemo } from "react";
+import { createContext, useContext, useState, useMemo } from "react";
 const LibraryEditorContext = createContext({});
 
 import apiAction from "@kenstack/client/apiAction";

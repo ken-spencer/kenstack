@@ -2,7 +2,6 @@ import React from "react";
 import Browse from "./Browse";
 // import SB from "SB/js/SB";
 
-import Button from "@kenstack/forms/Button";
 import AdminIcon from "@kenstack/components/AdminIcon";
 
 import Search from "./Search";
@@ -16,8 +15,6 @@ import IndeterminateIcon from "@kenstack/icons/Indeterminate";
 import CutIcon from "@kenstack/icons/Cut";
 import SelectAllIcon from "@kenstack/icons/SelectAll";
 import DeselectAllIcon from "@kenstack/icons/CheckboxBlank";
-
-import CheckBoxOutlineBlankIcon from "@kenstack/icons/CheckboxBlank";
 
 import useLibrary from "../../useLibrary";
 import useFiles from "../useFiles";
@@ -58,9 +55,9 @@ export default function Toolbar() {
                 key="cut"
                 disabled={selected.length === 0}
                 onClick={() => {
-                  const clipboard = [...selected];
-                  clipboard.activeFolder = activeFolder;
-                  setClipboard(clipboard);
+                  const newClipboard = [...selected];
+                  newClipboard.activeFolder = activeFolder;
+                  setClipboard(newClipboard);
                   setSelected([]);
                 }}
                 tooltip="Cut"

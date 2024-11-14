@@ -21,11 +21,10 @@ export default function SearchInput({
 
   const handleChange = useCallback(
     (evt) => {
-      const value = evt.target.value;
-      setValue(value);
+      setValue(evt.target.valu);
       const options = field.props.options || [];
       const newOptions = options.filter(([, text = ""]) => {
-        return text.toLowerCase().includes(value.toLowerCase());
+        return text.toLowerCase().includes(evt.target.valu.toLowerCase());
       });
       setOptions(newOptions);
     },

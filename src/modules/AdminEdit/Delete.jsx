@@ -7,8 +7,6 @@ import AdminIcon from "@kenstack/components/AdminIcon";
 import DeleteIcon from "@kenstack/icons/Delete";
 import DeleteForeverIcon from "@kenstack/icons/DeleteForever";
 
-import Submit from "@kenstack/forms/Submit";
-
 export default function DeleteButton() {
   const [warn, setWarn] = useState(false);
   const { isNew, id, userId } = useAdminEdit();

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import FolderEdit from "./Edit";
 
 import Folder from "./Folder";
-import FolderIcon from "@kenstack/icons/Folder";
+// import FolderIcon from "@kenstack/icons/Folder";
 
 import useLibrary from "../useLibrary";
 
@@ -13,7 +13,7 @@ import useMutation from "@kenstack/hooks/useMutation";
 
 export default function Folders({ folders, setFolders, setConfirm }) {
   const [dragging, setDragging] = useState(null);
-  const { apiPath, psetError } = useLibrary();
+  const { apiPath } = useLibrary();
 
   const reorderMutation = useMutation({
     queryKey: ["folders"],

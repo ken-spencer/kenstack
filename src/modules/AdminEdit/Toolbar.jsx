@@ -26,7 +26,6 @@ export default function AdminEditToolbar() {
   const handleClick =
     (type, path = "/") =>
     (evt) => {
-console.log(path);
       const name = evt.target.getAttribute("name");
       const action = evt.target.getAttribute("value");
       if (!path && name === "adminAction") {
