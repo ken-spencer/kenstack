@@ -1,15 +1,14 @@
 const fields = {
   contact: {
     label: "Contact",
-    xs: 12,
     fields: {
       first_name: {
         required: true,
-        xs: 6,
+        containerClass: "lg:col-span-6",
       },
       last_name: {
         required: true,
-        xs: 6,
+        containerClass: "lg:col-span-6",
       },
       email: {
         required: true,
@@ -20,20 +19,20 @@ const fields = {
   },
   login: {
     label: "Password",
-    xs: 12,
     fields: {
       password: {
         required: true,
         field: "password",
+        containerClass: "lg:col-span-6",
       },
       confirm_password: {
         required: true,
         field: "password",
-        readOnly: true, // does not write to db
         matches: {
           field: "password",
           message: "The passwords you entered don't match.",
         },
+        containerClass: "lg:col-span-6",
       },
     },
   },

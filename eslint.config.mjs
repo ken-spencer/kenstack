@@ -16,7 +16,7 @@ const compat = new FlatCompat({
 
 const config = [
   {
-    ignores: ["node_modules/**", "src/TODO/**"],
+    ignores: ["node_modules/**", "src/TODO/**", "**/_sample/**"],
   },
   // js.configs.recommended, // think this is baked in below
   ...compat.extends("next/core-web-vitals", "next/typescript", "prettier"),

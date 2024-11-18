@@ -1,26 +1,15 @@
-"use server";
+"user server";
 
-import errorLog from "../../../log/error";
-import auditLog from "../../../log/audit";
+import errorLog from "@kenstack/log/error";
+import auditLog from "@kenstack/log/audit";
 
-import login from "../../../auth/login";
 import fields from "./fields";
-// import checkServerValidity from "@kenstack/forms/validity/checkServerValidity";
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-export default async function saveAction(init, formData) {
-  /*
-  let fieldErrors = checkServerValidity(fields, formData);
-  if (fieldErrors) {
-    return {
-      error: "We couldn't process your request. See the errors marked in red below.",
-      fieldErrors,
-    }
-  }
-  */
-
+export default async function saveAction(formData, { session }) {
+  const User = session.userModel;
   const duplicateUser = await User.findOne();
 
   if (duplicateUser) {
@@ -30,28 +19,11 @@ export default async function saveAction(init, formData) {
     };
   }
 
-  const User = await thaumazoModels.get("User");
   const user = new User({ roles: ["ADMIN"] });
   let errors = await user.bindFormData(fields, formData);
   if (errors) {
     return errors;
   }
-
-  /*
-  try {
-    fieldErrors = await user.checkValidity();
-  } catch (e) {
-    errorLog(e, "Problem validating user");
-    return {error: "There was an unexpected problem saving your information"};
-  }
-
-  if (fieldErrors) {
-    return {
-      error: "We couldn't process your request. See the errors marked in red below.",
-      fieldErrors,
-    }
-  }
-  */
 
   try {
     await user.save();
@@ -65,7 +37,7 @@ export default async function saveAction(init, formData) {
   auditLog("bootstrapAdmin", null, {}, user);
 
   try {
-    await login(user);
+    await session.login(user);
   } catch (e) {
     errorLog(e, "Problem logging into  user");
     return { error: "There was an unexpected problem logging in" };
