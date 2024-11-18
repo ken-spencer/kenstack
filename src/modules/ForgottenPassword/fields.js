@@ -4,7 +4,6 @@ const fields = {
     required: true,
     type: "email",
     placeholder: "Enter your email address",
-    InputLabelProps: { shrink: true },
     autoFocus: true,
   },
 };
