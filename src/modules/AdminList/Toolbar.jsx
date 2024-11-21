@@ -85,11 +85,3 @@ export default function AdminListToolbar() {
     </>
   );
 }
-/*
-<Tooltip title="Filter list">
-  <IconButton>
-    <FilterListIcon />
-  </IconButton>
-</Tooltip>
-
-*/

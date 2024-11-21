@@ -21,8 +21,6 @@ const defaultMouseData = {
   timeout: null,
   startX: null,
   startY: null,
-  // x: null,
-  // y: null,
 };
 
 export default function Folder({
@@ -52,12 +50,8 @@ export default function Folder({
     },
     onSuccess: ({ data, variables: folderId }) => {
       // Current folder has been deleted
-      if (data.success) {
-        if (folderId === activeFolder) {
-          setActiveFolder(null);
-        }
-      } else {
-        setError(data.error);
+      if (data.success && folderId === activeFolder) {
+        setActiveFolder(null);
       }
     },
   });
@@ -100,7 +94,7 @@ export default function Folder({
       <button
         type="button"
         className={
-          "library-folder " +
+          "library-folder truncate border border-red-500 " +
           (dragging?.active ? "cursor-ns-resize" : "cursor-pointer")
         }
         data-id={folder.id}
@@ -187,7 +181,7 @@ export default function Folder({
         {...dndEvents}
       >
         {isDragOver ? <DriveFileMoveIcon /> : <FolderIcon />}
-        {folder.title}
+        <span className="truncate">{folder.title}</span>
       </button>
       {folder.id && trash === false && activeFolder === folder.id && (
         <button

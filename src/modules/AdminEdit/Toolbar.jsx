@@ -24,54 +24,41 @@ export default function AdminEditToolbar() {
   const basePath = pathName.replace(/\/[^/]*$/, "");
 
   const handleClick =
-    (type, path = "/") =>
+    (type, path = null) =>
     (evt) => {
-      const name = evt.target.getAttribute("name");
-      const action = evt.target.getAttribute("value");
-      if (!path && name === "adminAction") {
-        if (action.match(/^\[/)) {
-          const json = JSON.parse(action);
-          const [, info] = json;
-          path = info.path;
-        }
-      }
+      const button = evt.currentTarget;
+      button.setAttribute("name", "adminAction");
+      button.setAttribute("value", JSON.stringify([type, { path }]));
 
-      if (evt.target.closest("form").checkValidity()) {
-        return;
-      }
+      // const name = evt.currentTarget.getAttribute("name");
+      // const action = evt.currentTarget.getAttribute("value");
+      // if (!path && name === "adminAction") {
+      //   if (action.match(/^\[/)) {
+      //     const json = JSON.parse(action);
+      //     const [, info] = json;
+      //     path = info.path;
+      //   }
+      // }
 
-      if (form.changed) {
+      if (form.changed && !evt.target.closest("form").checkValidity()) {
         setConfirm(path);
-        return;
       } else if (path) {
         router.push(path);
+        evt.preventDefault();
       }
-
-      evt.preventDefault();
-
-      /*
-    if (path) {
-    }
-    */
     };
 
   return (
     <div className="admin-toolbar">
       <div className="admin-toolbar-left">
-        <AdminIcon
-          type="submit"
-          name="adminAction"
-          value="save"
-          variant="contained"
-          tooltip="Save"
-        >
+        <AdminIcon type="submit" name="adminAction" value="save" tooltip="Save">
           <SaveIcon />
         </AdminIcon>
         <AdminIcon
           type="submit"
-          onClick={handleClick("new")}
-          name="adminAction"
-          value={JSON.stringify(["new", { path: basePath + "/new" }])}
+          onClick={handleClick("new", basePath + "/new")}
+          // name="adminAction"
+          // value={JSON.stringify(["new", { path: basePath + "/new" }])}
           tooltip="New entry"
         >
           <AddIcon />
@@ -83,10 +70,9 @@ export default function AdminEditToolbar() {
       <div className="admin-toolbar-right">
         <AdminIcon
           type="submit"
-          onClick={handleClick("list")}
-          name="adminAction"
-          value={JSON.stringify(["list", { path: basePath }])}
-          variant="contained"
+          onClick={handleClick("list", basePath)}
+          // name="adminAction"
+          // value={JSON.stringify(["list", { path: basePath }])}
           tooltip="Back to list"
         >
           <ArrowBackIcon />

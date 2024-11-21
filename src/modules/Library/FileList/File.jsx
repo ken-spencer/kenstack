@@ -8,6 +8,8 @@ import globals from "../globals";
 
 import apiAction from "@kenstack/client/apiAction";
 
+import SettingsIcon from "@kenstack/icons/Settings";
+
 export default function File({ file }) {
   const [dragging, setDragging] = useState();
 
@@ -35,10 +37,6 @@ export default function File({ file }) {
       addMessage({ error: error.message });
     },
   });
-
-  const handleClick = useCallback(() => {
-    setEdit(file.id);
-  }, [file, setEdit]);
 
   const handleDragStart = useCallback(
     (evt) => {
@@ -173,7 +171,7 @@ export default function File({ file }) {
     };
   } else {
     events = {
-      onClick: handleClick,
+      // onClick: handleClick,
       //  onDoubleClick: this.handleDoubleClick,
       onDragStart: handleDragStart,
       onDragEnter: trash ? null : handleDragEnter,
@@ -213,6 +211,17 @@ export default function File({ file }) {
         alt={file.alt || ""}
         ref={imgRef}
       />
+      {selecting || trash || (
+        <button
+          className="absolute top-1 right-1 z-10 rounded-full bg-white/50"
+          onClick={(evt) => {
+            evt.stopPropagation();
+            setEdit(file.id);
+          }}
+        >
+          <SettingsIcon className="opacity-6o" />
+        </button>
+      )}
       <div className="admin-library-filename">{file.filename}</div>
     </div>
   );

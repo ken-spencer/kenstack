@@ -37,11 +37,13 @@ export default function Folders({ folders, setFolders, setConfirm }) {
     }
 
     const mouseUp = (evt) => {
+      const original = dragging.original;
+      setDragging(null);
+
       if (dragging?.active !== true) {
         return;
       }
-      const original = dragging.original;
-      setDragging(null);
+
       const change = folders.some((f, key) => {
         // check if key order matches priority order;
         return f.id !== original[key]?.id;
