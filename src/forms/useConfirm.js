@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import useForm from "./useForm";
+import { useForm } from "./context";
 
 // Restore if running from next.js
 // import Router from 'next/router';
@@ -9,7 +9,7 @@ import useForm from "./useForm";
 // specific problems with blocking page leave between submit and reqact-query completing a load
 // Should be cancelled by any action that doesn't return an error until further changes
 export default function useConfirm(message = "Exit without saving changes?") {
-  const form = useForm();
+  const changed = useForm((state) => state.changed);
   const [confirm, setConfirm] = useState(message);
 
   useEffect(() => {
@@ -20,7 +20,7 @@ export default function useConfirm(message = "Exit without saving changes?") {
     // const message = confirm;
     /* // restore this code if running from within next.js
     const routeChangeStart = (url) => {
-      if (Router.asPath !== url && form.changed && !window.confirm(message)) {
+      if (Router.asPath !== url && changed && !window.confirm(message)) {
         // Router.events.emit('routeChangeError');
         setTimeout(() => {
           Router.router.abortComponentLoad();
@@ -33,7 +33,7 @@ export default function useConfirm(message = "Exit without saving changes?") {
     */
 
     const beforeunload = (e) => {
-      if (form.changed) {
+      if (changed) {
         e.preventDefault();
         e.returnValue = confirm;
         return confirm;
@@ -51,7 +51,7 @@ export default function useConfirm(message = "Exit without saving changes?") {
       // Router.events.off('routeChangeStart', routeChangeStart);
       window.removeEventListener("beforeunload", beforeunload);
     };
-  }, [form, confirm]);
+  }, [changed, confirm]);
 
   return setConfirm;
 }

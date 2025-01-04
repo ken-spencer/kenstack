@@ -5,7 +5,8 @@ import LockClosedIcon from "./icons/LockClosedIcon";
 import IconButton from "./IconButton";
 
 import useField from "./useField";
-import useFieldSubscribe from "./useFieldSubscribe";
+// import useFieldSubscribe from "./useFieldSubscribe";
+import { useForm } from "./context";
 
 import Field from "./Field";
 import Input from "./base/Input";
@@ -31,7 +32,7 @@ const SlugField = ({ subscribe, onChange, ...props }, ref) => {
   }, []);
 
   const field = useField(props, ref);
-  const subscribedField = useFieldSubscribe(subscribe);
+  const subscribedField = useForm((state) => state.fields[subscribe]);
   const [locked, setLocked] = useState(field.initialValue ? true : false);
   const [interacted, setInteracted] = useState(false);
   // const [listen, setListen] = useState(field.initialValue ? false : true);

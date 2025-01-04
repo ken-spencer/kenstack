@@ -1,86 +1,92 @@
 "use client";
 
 // import saveAction from "./saveAction";
-import { useCallback } from "react";
+import { useMutation } from "@kenstack/query";
 
 import Form from "@kenstack/forms/Form";
 import Toolbar from "./Toolbar";
-import Notice from "./Notice";
+import NoticeList from "@kenstack/components/Notice/List";
 import AdminFields from "./Fields";
 import Confirm from "./Confirm";
 // import Login from "../LoginWindow";
 
-import FormProvider from "@kenstack/forms/Provider";
 import { useAdminEdit } from "./context";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 import apiAction from "@kenstack/client/apiAction";
 
 export default function AdminEditFormCont() {
-  const router = useRouter();
+  // const router = useRouter();
   const pathname = usePathname();
   const {
-    loaded,
-    row,
+    // row,
     // loadError,
-    setRow,
-    setLogin,
+    // setRow,
+    // setLogin,
     apiPath,
+    store,
+    id,
   } = useAdminEdit();
-
   // const arg = { isNew, id, pathName, modelName };
   // const saveActionBound = saveAction.bind(null, arg);
-  const saveActionBound = (state, formData) => {
-    return apiAction(apiPath + "/save", formData, { pathname });
-  };
+  // const saveActionBound = (state, formData) => {
+  //   return apiAction(apiPath + "/save", formData, { pathname });
+  // };
 
-  const handleResponse = useCallback(
-    (evt, form) => {
-      if (form.state?.login) {
-        setLogin(form.state.login);
-      } else if (form.state?.success && form.state?.row) {
-        setRow(form.state.row);
-      }
+  // const handleResponse = useCallback(
+  //   (evt, form) => {
+  //     if (form.state?.login) {
+  //       setLogin(form.state.login);
+  //     } else if (form.state?.success && form.state?.row) {
+  //       setRow(form.state.row);
+  //     }
 
-      if (form.state?.redirect) {
-        let path = form.state?.redirect;
-        if (pathname === path && path.endsWith("/new")) {
-          form.reset();
-        } else {
-          router.push(path);
-        }
-      }
+  //     if (form.state?.redirect) {
+  //       let path = form.state?.redirect;
+  //       if (pathname === path && path.endsWith("/new")) {
+  //         form.reset();
+  //       } else {
+  //         router.push(path);
+  //       }
+  //     }
+  //   },
+  //   [pathname, router, setRow, setLogin],
+  // );
+
+  // <FormProvider
+  //   // result="none"
+  //   values={row}
+  //   action={saveActionBound}
+  // >
+
+  const mutation = useMutation({
+    queryKey: ["admin-edit", id],
+    mutationFn: (formData) => {
+      return apiAction(apiPath + "/save", formData, { pathname });
     },
-    [pathname, router, setRow, setLogin],
-  );
-
-  /*
-  if (loadError) {
-    return (
-      <Alert severity="error" variant="outlined">
-        {loadError}
-      </Alert>
-    );
-  }
-  */
+    onSettled: ({ data }) => {
+      // console.log("setteledd", data);
+    },
+    onSuccess: ({ data }) => {
+      store.getState().setValues(data.row);
+    },
+    store,
+  });
 
   return (
-    <FormProvider
-      // result="none"
-      values={row}
-      action={saveActionBound}
-      disabled={loaded === false}
-      // fieldProps={loaded ? {} : { InputLabelProps: { shrink: true } }}
+    <Form
+      className="w-full"
+      mutation={mutation}
+      // onResponse={handleResponse}
+      store={store}
     >
-      <Form className="w-full" reset={false} onResponse={handleResponse}>
-        <Confirm />
-        {/*
+      <Confirm />
+      {/*
         <Login login={login} setLogin={setLogin} />
         */}
-        <Toolbar />
-        <Notice />
-        <AdminFields />
-      </Form>
-    </FormProvider>
+      <Toolbar />
+      <NoticeList store={store} />
+      <AdminFields />
+    </Form>
   );
 }

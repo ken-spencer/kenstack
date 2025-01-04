@@ -5,7 +5,6 @@ import escapeRegExp from "@kenstack/utils/escapeRegExp";
 export default async function load({ sortBy, keywords }, { model, admin }) {
   const list = admin.getList();
   const fields = list.map(({ name }) => name);
-
   let where = null;
   if (keywords) {
     const escaped = escapeRegExp(keywords);

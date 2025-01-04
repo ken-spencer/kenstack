@@ -1,5 +1,4 @@
 import FormFields from "./Form";
-import FormProvider from "@kenstack/forms/Provider";
 import SquareTool from "./SquareTool";
 
 import { useLibraryEditor } from "./context";
@@ -17,9 +16,7 @@ export default function Body() {
         </div>
       )}
       <div className="admin-library-details">
-        <FormProvider values={{ alt: file.alt }}>
-          <FormFields file={file} />
-        </FormProvider>
+        <FormFields file={file} values={{ alt: file.alt }} />
       </div>
     </div>
   );

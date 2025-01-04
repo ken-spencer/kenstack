@@ -2,18 +2,28 @@ import edit from "@kenstack/modules/AdminEdit/api";
 import list from "@kenstack/modules/AdminList/api";
 import { notFound } from "next/navigation";
 
+import { match } from "path-to-regexp";
+
 export default function API(props) {
-  const POST = async (request, { params: { admin: params } }) => {
-    if (params.length === 1) {
-      const { POST: listPost } = list(props);
-      const [slug] = params;
-      return listPost(request, { params: { slug } });
+  const POST = async (request, { params }) => {
+    const { admin: adminParams } = await params;
+
+    const path = adminParams.join("/");
+
+    const editMatch = match(":id/:slug", {
+      validate: {
+        id: /^[a-fA-F0-9]{24}$/, // Mongoose ObjectId
+      },
+    })(path);
+    if (editMatch) {
+      const { POST: editPost } = edit(props);
+      return editPost(request, { ...editMatch.params });
     }
 
-    if (params.length === 2) {
-      const { POST: editPost } = edit(props);
-      const [id, slug] = params;
-      return editPost(request, { params: { id, slug } });
+    if (adminParams.length === 1) {
+      const { POST: listPost } = list(props);
+      const [slug] = adminParams;
+      return listPost(request, { params: { slug } });
     }
 
     notFound();

@@ -3,6 +3,7 @@
 // .button:not(.iconButton) {
 .button {
   display: inline-flex;
+  align-items: center;
   vertical-align: middle;
   appearance: none;
   font-size: 1rem;
@@ -19,7 +20,7 @@
     opacity,
     background-color 0.3s;
 
-  &:hover {
+  &:not(:disabled):hover {
     background-color: rgb(66, 165, 245);
   }
 
@@ -27,7 +28,7 @@
     color: white;
     background-color: rgb(246, 67, 44);
 
-    &:hover {
+    &:not(:disabled):hover {
       background-color: rgb(211, 47, 47);
     }
   }
@@ -40,7 +41,7 @@
       outline: dashed 2px #adb5bd;
     }
 
-    &:hover {
+    &:not(:disabled):hover {
       background-color: #5a6268;
     }
   }
@@ -49,10 +50,13 @@
     background-color: rgb(56, 145, 225);
   }
 
-  &:disabled,
+  &:disabled:not(.pending),
   &.disabled {
     // background-color: rgb(144, 202, 249);
     opacity: 0.5;
+    cursor: default;
+  }
+  &.pending {
     cursor: default;
   }
 

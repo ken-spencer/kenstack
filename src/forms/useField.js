@@ -1,218 +1,182 @@
-import { useReducer, useMemo, useId, useRef, useEffect } from "react";
+import { useEffect, useMemo, useId, useRef } from "react";
+import { useShallow } from "zustand/react/shallow";
+
+import { twMerge } from "tailwind-merge";
+// import { useStore } from "zustand";
+import checkValue from "./validity/checkValue";
 
 import omit from "lodash/omit";
-import sentenceCase from "@kenstack/utils/sentenceCase";
-import checkInputValidity from "./validity/checkInputValidity";
-import useForm from "./useForm";
+// import useValidity from "./validity/useValidity";
+import { useForm, useFormStore } from "./context";
 
-const reducer = (count) => count + 1;
-const validities = ["required", "pattern"];
+const defaultGlobal = {
+  initialized: false,
+  lastInteraction: null,
+};
+let global = { ...defaultGlobal };
 
-export default function useField(
-  {
-    onChange,
-    onBlur,
-    containerClass = "",
-    labelClass = "",
-    // inputClass = "",
-    ...props
-  },
-  userRef = null,
-) {
-  const ref = useRef();
+export default function useField(props) {
   const { name } = props;
-  const form = useForm();
-  const id = name + "-" + useId().slice(2, -1);
-  const [change, reRender] = useReducer(reducer, 0);
-  useEffect(() => {
-    form.notifySubscribers(name);
-  }, [form, name, change]);
-
   if (!name) {
     throw Error("Name is required.");
   }
 
-  const { [name]: initial = "" } = form.initialValues || {};
-  // const [, setValue] = useState(initial);
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
+  const store = useFormStore();
+  const { field, fieldError, ...form } = useForm(
+    useShallow((s) => ({
+      initialValues: s.initialValues,
+      noValidate: s.noValidate,
+      showErrors: s.showErrors,
+      disabled: s.disabled,
+      pending: s.pending,
+      field: s.fields[name],
+      fieldError: s.fieldErrors[name] || null, // error returned from the server
+    })),
+  );
 
-  function checkValidity() {
-    return checkInputValidity(form, field, props);
+  // initialize field on first render without triggering rerender
+  if (!field.ref) {
+    field.ref = ref;
+    store.setState((state) => {
+      state.fields[name] = field;
+      return state;
+    });
   }
+  // const field = form.useFieldStore(name, props.ref || ref);
+  // const errorMessage = useValidity(field, props, props.ref || ref);
+  const rawId = useId(); // Call the hook at the top level
+  const id = useMemo(() => name + "-" + rawId.slice(2, -1), [name, rawId]);
 
-  let field;
-  if (form.fields.has(name)) {
-    field = form.fields.get(name);
-  } else {
-    field = new FieldState(reRender);
-    field.name = name;
-    field.containerClass = containerClass;
-    field.labelClass = labelClass;
-    field.ref = userRef || ref;
-    field.initialValue = initial;
-    field.interacted = false;
-    form.fields.set(name, field);
-    field.initProp("value", initial);
-    field.initProp("blurred", false);
-    field.initProp("error", "");
-  }
-  field.label =
-    props.label === undefined ? sentenceCase(props.name) : props.label;
-  field.checkValidity = checkValidity;
-
-  const fieldErrors = form.state?.fieldErrors || {};
-  let errorMessage = fieldErrors[name];
-  if (
-    !errorMessage &&
-    form.noValidate == false &&
-    ((field.blurred && field.interacted) || form.showErrors)
-  ) {
-    errorMessage = field.checkValidity();
-  }
-  field.error = errorMessage;
-
-  const disabled = form.disabled;
-  const fieldProps = form.fieldProps;
-  field.props = useMemo(() => {
-    let retval = omit(props, [
-      "label",
-      "containerClass",
-      "labelClass",
-      "message",
-      "email",
-      "unique",
-      "password",
-      "matches",
-    ]);
-
-    if (!retval.id) {
-      retval.id = id;
+  useEffect(() => {
+    if (global.initialized) {
+      return;
     }
+    global.initialized = true;
 
-    if (disabled) {
+    const handleClick = () => (global.lastInteraction = "click");
+    document.addEventListener("mousedown", handleClick);
+    const handleKeyDown = () => (global.lastInteraction = "key");
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKeyDown);
+      global = { ...defaultGlobal };
+    };
+  }, []);
+
+  // const [change, reRender] = useReducer(reducer, 0);
+  // useEffect(() => {
+  //   form.notifySubscribers(name);
+  // }, [form, name, change]);
+
+  // const { [name]: initial = "" } = form.initialValues || {};
+
+  const returnProps = useMemo(() => {
+    let retval = {
+      id,
+      ref,
+      ...omit(props, [
+        "label",
+        "message",
+        "email",
+        "unique",
+        "password",
+        "matches",
+        "containerClass",
+        "labelClass",
+        "inputClass",
+      ]),
+    };
+    if (form.disabled || form.pending) {
       retval.disabled = true;
     }
 
-    if (fieldProps) {
-      Object.assign(retval, fieldProps);
+    if (retval.required === "required") {
+      retval.required = true;
+      throw Error("This is used: required is a string");
     }
 
-    for (let check of validities) {
-      const info = retval[check];
-      if (!info || info === true) {
-        continue;
-      }
-
-      if (check === "required") {
-        retval[check] = true;
-      }
-
-      if (check === "pattern" && typeof info === "object") {
-        retval[check] = info.pattern;
-      }
+    if (typeof retval.pattern === "object") {
+      retval.pattern = retval.pattern.pattern;
     }
 
-    /*
-    if (errorMessage) {
-      retval.helperText = errorMessage;
-      retval.FormHelperTextProps = {
-        error: true,
-      };
-    }
-    */
+    return retval;
+  }, [props, form, id, ref]);
 
+  const returnEvents = useMemo(() => {
+    let retval = {};
     retval.onChange = (evt) => {
-      if (onChange) {
-        onChange(evt, field);
+      if (props.onChange) {
+        props.onChange(evt, field);
       }
       const input = evt.target;
+      // TODO move special logic to checkbox field?
       if (input.type === "checkbox") {
-        // Checkbox list
-        // if (input.name.at(-1) === "]") {
-        if (field.props.options) {
-          // const pos = input.name.indexOf("[");
-          // if (pos === -1) {
-          // throw Error("[ character expected in name");
-          // }
-          if (field.value && !Array.isArray(field.value)) {
-            throw Error("CheckboxList requires it's value to be an array");
-          }
-          const last = field.value ? [...field.value] : [];
-          // const key = input.name.slice(pos + 1, -1);
-
-          if (input.checked) {
-            if (!last.includes(input.value)) {
-              last.push(input.value);
-            }
-            field.value = last;
-            return;
-          }
-          field.value = last.filter((v) => v !== input.value);
-          return;
-        }
-
-        field.value = input.checked ? input.value : "";
+        field.setValue(input.checked ? input.value : "");
         return;
       }
 
-      field.value = input.value;
+      field.setValue(input.value);
     };
 
     retval.onBlur = (evt) => {
-      if (onBlur) {
-        onBlur(evt, field);
+      if (props.onBlur) {
+        props.onBlur(evt, field);
       }
-
+      // Dot set blur unless leving checkbox list or radio list
       if (
         !evt.relatedTarget ||
         evt.target.nodeName !== evt.relatedTarget.nodeName ||
         evt.target.name !== evt.relatedTarget.name
       ) {
-        field.blurred = true;
+        field.setBlurred(true);
+        const state = store.getState();
+        if (
+          // otherwise results in submit failing when submit button is pressed
+          (global.lastInteraction === "key" ||
+            !evt.relatedTarget ||
+            evt.relatedTarget.nodeName !== "BUTTON") &&
+          !state.noValidate &&
+          field.interacted
+        ) {
+          field.setError(
+            checkValue(field.name, field, store.getState().values),
+          );
+        }
       }
     };
 
     return retval;
-  }, [props, disabled, fieldProps, id, onBlur, onChange, field]);
+  }, [props, store, field]);
 
-  return field;
+  const fieldProps = useMemo(() => {
+    let retval = {
+      htmlFor: id,
+      containerClass: twMerge(field.containerClass, props.containerClass),
+      labelClass: twMerge(field.labelClass, props.labelClass),
+      error: fieldError || field.error,
+    };
+    return retval;
+  }, [
+    props,
+    id,
+    // containerClass,
+    field.containerClass,
+    // labelClass,
+    field.labelClass,
+    field.error,
+    fieldError, // error returned from the server
+    // errorMessage,
+  ]);
+
+  return { field, props: { ...returnProps, ...returnEvents }, fieldProps };
 }
 
-class FieldState {
-  initialValue = null;
-  #props = new Map();
-
-  constructor(reRender) {
-    this.reRender = reRender;
-  }
-
-  initProp(name, initial) {
-    this.#props.set(name, initial);
-
-    Object.defineProperty(this, name, {
-      get: function () {
-        return this.#props.get(name);
-      },
-      set: function (value) {
-        if (this.#props.get(name) === value) {
-          return;
-        }
-        this.#props.set(name, value);
-        if (name === "value") {
-          this.interacted = true;
-        }
-
-        this.reRender();
-        // hack until better idea to update error validation on password match filed
-        if (this.matchField) {
-          this.matchField.reRender();
-        }
-      },
-      enumerable: true,
-      configurable: true,
-    });
-  }
-
-  toString() {
-    return "";
-  }
-}
+// onChange,
+// onBlur,
+// containerClass = "",
+// labelClass = "",
+// inputClass = "",

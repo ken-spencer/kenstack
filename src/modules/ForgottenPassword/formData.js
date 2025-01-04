@@ -1,4 +1,6 @@
-const fields = {
+import createForm from "@kenstack/forms/formSchema";
+
+const formData = createForm({
   email: {
     sm: 12,
     required: true,
@@ -6,6 +8,6 @@ const fields = {
     placeholder: "Enter your email address",
     autoFocus: true,
   },
-};
+});
 
-export default fields;
+export default formData;

@@ -1,7 +1,5 @@
 import "server-only";
 
-import { isRedirectError } from "next/dist/client/components/redirect";
-
 import { NextResponse } from "next/server";
 import defaultError from "@kenstack/defaultError";
 
@@ -97,7 +95,7 @@ export default async function apiAction(
     retval = await action(data, options);
   } catch (e) {
     // make sure redirects still work.
-    if (isRedirectError(e)) {
+    if (typeof e.digest === "string" && e.digest.startsWith("NEXT_REDIRECT")) {
       throw e;
     }
 

@@ -1,4 +1,5 @@
 import loadAction from "./load";
+import deleteAction from "./deleteAction";
 import apiAction from "@kenstack/server/apiAction";
 
 // import Session from "@kenstack/server/Session";
@@ -16,6 +17,9 @@ const API = ({ session, admin, model }) => {
     switch (slug) {
       case "load":
         action = loadAction;
+        break;
+      case "delete":
+        action = deleteAction;
         break;
       default:
         notFound();

@@ -9,7 +9,7 @@ import pick from "lodash/pick";
 const { Schema } = mongoose;
 // import Trash from "../models/Trash";
 
-import formSchema from "@kenstack/forms/lib/formSchema";
+import formSchema from "@kenstack/forms/formSchema";
 import validity from "./validate";
 import checkServerValidity from "@kenstack/forms/validity/checkServerValidity";
 import errorLog from "../log/error";
@@ -236,21 +236,8 @@ async function checkValidity() {
 
 // Copy to Trash and then delete.
 async function trash() {
-  /*
-  const doc = new Trash({
-    modelId: this._id,
-    modelName: this.constructor.modelName,
-    document: this,
-  });
-  */
-
   this.set("meta.deleted", true);
   await this.save();
-
-  /*  
-  const model = this.constructor;
-  await model.deleteOne({ _id: this._id });
-  */
 }
 
 /*

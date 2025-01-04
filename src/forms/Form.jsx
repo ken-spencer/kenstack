@@ -1,58 +1,59 @@
-import React, { useCallback, useRef, useEffect } from "react";
-import useForm from "./useForm";
-import useConfirm from "./useConfirm";
+import React, { useCallback } from "react";
+import { FormProvider } from "./context";
+// import useConfirm from "./useConfirm";
 // import FormHelper from "./FormHelper";
 
 export default function Form({
+  store,
+  action = null,
+  mutation = null,
   confirm = false,
   onSubmit = null,
   onResponse = null,
   children = null,
-  reset: resetInitial,
   ...props
 }) {
-  const reset =
-    resetInitial === undefined ? !Boolean(onResponse) : resetInitial;
-  const form = useForm();
-
-  useConfirm(confirm);
-
-  const lastState = useRef();
-  useEffect(() => {
-    if (form.initialState !== form.state && lastState.current !== form.state) {
-      if (onResponse) {
-        const evt = new Event("response");
-        onResponse(evt, form);
-      }
-
-      if (reset && form?.state.success) {
-        form.reset();
-      }
-    }
-    lastState.current = form.state;
-  }, [form, form.initialState, form.state, onResponse, reset]);
+  // useConfirm(confirm);
 
   const handleSubmit = useCallback(
     (evt) => {
-      form.showErrors = true;
+      const state = store.getState();
 
-      if (form.noValidate == false && form.invalid) {
+      if (state.pending) {
+        evt.preventDefault();
+        return;
+      }
+
+      if (state.noValidate == false && state.invalid) {
+        state.setShowErrors(true);
         evt.preventDefault();
 
-        const input = form.ref.current.querySelector(":invalid");
-        if (input) {
-          input.focus();
+        for (let field of Object.values(state.fields)) {
+          if (field.error && field.ref?.current) {
+            field.ref.current.focus();
+            break;
+          }
         }
 
         return;
       }
-      form.showErrors = false;
 
       if (onSubmit) {
         onSubmit(evt, form);
       }
+
+      if (mutation) {
+        evt.preventDefault();
+        const formData = new FormData(evt.currentTarget);
+        // get value from submit button.
+        const { submitter } = evt.nativeEvent;
+        if (submitter?.name) {
+          formData.set(submitter.name, submitter.value);
+        }
+        mutation.mutate(formData);
+      }
     },
-    [form, onSubmit],
+    [store, onSubmit, mutation],
   );
 
   // block native form validation UX
@@ -61,16 +62,17 @@ export default function Form({
   }, []);
 
   return (
-    <form
-      noValidate
-      ref={form.ref}
-      {...props}
-      onSubmit={handleSubmit}
-      onInvalid={handleInvalid}
-      action={form.action}
-    >
-      {children}
-    </form>
+    <FormProvider store={store}>
+      <form
+        noValidate
+        {...props}
+        onSubmit={handleSubmit}
+        onInvalid={handleInvalid}
+        action={action}
+      >
+        {children}
+      </form>
+    </FormProvider>
   );
 }
 //      <FormHelper />

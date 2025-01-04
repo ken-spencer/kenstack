@@ -1,9 +1,9 @@
 import checkValue from "./checkValue";
 
-export default function checkValidity(form, field, props) {
+export default function checkInputValidity(field, props, values) {
   const message = props.message || null;
 
-  const checkMessage = checkValue(field.name, props, form);
+  const checkMessage = checkValue(field.name, props, values);
   if (checkMessage) {
     // input.setCustomValidity(checkMessage);
     return message || checkMessage;

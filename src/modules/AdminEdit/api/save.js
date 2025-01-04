@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-// import { redirect } from "next/navigation";
 
 import errorLog from "../../../log/error";
 
@@ -41,8 +40,7 @@ export default async function saveAction(
   }
 
   const basePath = pathname.replace(/\/[^/]*$/, "");
-
-  const fields = admin.getFields();
+  const fields = admin.form.getFields();
   const errors = await doc.bindFormData(fields, formData);
   if (action === "delete") {
     if (id == user._id) {

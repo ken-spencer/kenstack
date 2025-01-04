@@ -7,9 +7,10 @@ import Loading from "@kenstack/components/Loading";
 
 import Head from "./Head";
 import Body from "./Body";
+import NoticeList from "@kenstack/components/Notice/List";
 
 export default function AdminListTable() {
-  const { error, isLoading, admin } = useAdminList();
+  const { error, isLoading, admin, messageStore } = useAdminList();
 
   if (error) {
     return <Notice error={error} />;
@@ -21,6 +22,7 @@ export default function AdminListTable() {
 
   return (
     <>
+      <NoticeList store={messageStore} />
       <div className="admin-table" style={{ gridTemplateColumns }}>
         <Head />
         <Body />

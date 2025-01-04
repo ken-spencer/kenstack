@@ -1,4 +1,4 @@
-import { useAdminList } from "./context";
+import { useAdminList } from "../context";
 
 import SearchInput from "@kenstack/forms/base/Search";
 

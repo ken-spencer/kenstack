@@ -1,3 +1,4 @@
+import formSchema from "@kenstack/forms/formSchema";
 import sentenceCase from "../utils/sentenceCase";
 
 import DateRelative from "../components/Date/Relative";
@@ -9,6 +10,7 @@ export default function clientModel(data) {
   }
 
   let $list;
+  this.form = formSchema(data.fields);
 
   this.modelName = data.modelName;
   this.title = data.title || sentenceCase(this.modelName);
@@ -58,22 +60,22 @@ export default function clientModel(data) {
     return list;
   };
 
-  this.getFields = function () {
-    return this.data.fields;
-  };
+  //   this.getFields = function () {
+  //     return this.data.fields;
+  //   };
 
-  this.getAdminPaths = function () {
-    const fields = this.getFields();
-    const select = ["_id", "meta.createdAt", "meta.updatedAt"];
-    flatten(select, fields);
+  //   this.getAdminPaths = function () {
+  //     const fields = this.getFields();
+  //     const select = ["_id", "meta.createdAt", "meta.updatedAt"];
+  //     flatten(select, fields);
 
-    return select;
-  };
+  //     return select;
+  //   };
 
   this.getPaths = function () {
-    const fields = this.getFields();
-    const select = ["_id", "meta.createdAt", "meta.updatedAt"];
-    flatten(select, fields);
+    const fields = Object.keys(this.form.fields);
+    const select = ["_id", "meta.createdAt", "meta.updatedAt", ...fields];
+    // flatten(select, fields);
 
     return select;
   };
@@ -160,13 +162,13 @@ export default class clientModel {
 }
 */
 
-function flatten(retval, object) {
-  for (const [key, value] of Object.entries(object)) {
-    if (value.fields) {
-      flatten(retval, value.fields);
-    } else {
-      retval.push(key);
-    }
-  }
-  return retval;
-}
+// function flatten(retval, object) {
+//   for (const [key, value] of Object.entries(object)) {
+//     if (value.fields) {
+//       flatten(retval, value.fields);
+//     } else {
+//       retval.push(key);
+//     }
+//   }
+//   return retval;
+// }

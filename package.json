@@ -36,6 +36,7 @@
     "luxon": "^3.4.3",
     "mongoose": "^8.6.3",
     "nanoid": "^5.0.1",
+    "path-to-regexp": "^8.2.0",
     "pica": "^9.0.1",
     "postcss": "^8.4.32",
     "prettier": "^3.0.3",
@@ -46,7 +47,8 @@
     "sharp": "^0.33.4",
     "tailwind-merge": "^2.5.2",
     "tailwindcss": "^3.4.6",
-    "validator": "^13.11.0"
+    "validator": "^13.11.0",
+    "zustand": "^5.0.1"
   },
   "description": "Content management for Next.js",
   "main": "next.config.js",

@@ -7,11 +7,9 @@ import Layout from "@kenstack/forms/Layout";
 export default function AdminEditFields() {
   const { admin } = useAdminEdit();
 
-  const fields = admin.getFields();
-
   return (
     <div>
-      <Layout fields={fields} />
+      <Layout form={admin.form} />
     </div>
   );
 }

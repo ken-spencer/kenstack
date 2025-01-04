@@ -15,54 +15,76 @@ export default function useMutation({
   onError = null,
   onSuccess = null,
   onSettled = null,
+  store, // work with the zustand store,
   ...rest
 }) {
   const queryClient = useQueryClient();
 
   const mutation = useRQMutation({
     mutationFn,
-    onMutate: queryKey
-      ? async (post) => {
-          await queryClient.cancelQueries({ queryKey });
-          let previous = {};
-          const set = (setter) => {
-            previous.value = queryClient.getQueryData(queryKey);
-            queryClient.setQueryData(queryKey, setter);
-          };
+    onMutate: async (post) => {
+      if (store) {
+        store.setState({ pending: true });
+      }
 
-          let context;
-          if (onMutate) {
-            try {
-              context = await onMutate(post, {
-                set,
-                previous: queryKey ? queryClient.getQueryData(queryKey) : null,
-                queryClient,
-              });
-            } catch (e) {
-              // eslint-disable-next-line no-console
-              console.error(e);
-            }
-          }
-
-          if (context === undefined) {
-            return { previous: previous.value };
-          }
-          if (typeof context === "object") {
-            return { previous: previous.value, ...context };
-          } else {
-            return context;
-          }
+      if (!queryKey) {
+        if (onMutate) {
+          await onMutate(post, {
+            queryClient,
+            state: store ? store.getState() : null,
+          });
         }
-      : onMutate,
-    onSuccess: (data, variables, context) => {
-      // apply success side effects
-      if (onSuccess && data?.success) {
+        return;
+      }
+      await queryClient.cancelQueries({ queryKey });
+      let previous = {};
+      const set = (setter) => {
+        previous.value = queryClient.getQueryData(queryKey);
+        queryClient.setQueryData(queryKey, setter);
+      };
+
+      let context;
+      if (onMutate) {
         try {
-          onSuccess({ data, variables, context, queryClient });
+          context = await onMutate(post, {
+            set,
+            previous: queryKey ? queryClient.getQueryData(queryKey) : null,
+            queryClient,
+            state: store ? store.getState() : null,
+          });
         } catch (e) {
           // eslint-disable-next-line no-console
           console.error(e);
         }
+      }
+
+      if (context === undefined) {
+        return { previous: previous.value };
+      }
+      if (typeof context === "object") {
+        return { previous: previous.value, ...context };
+      } else {
+        return context;
+      }
+    },
+    onSuccess: (data, variables, context) => {
+      // apply success side effects
+      if (onSuccess && data?.success) {
+        try {
+          onSuccess({
+            data,
+            variables,
+            context,
+            queryClient,
+            state: store ? store.getState() : null,
+          });
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.error(e);
+        }
+      }
+      if (typeof data.success === "string" && store) {
+        store.getState().addMessage(data);
       }
 
       if (data?.success && (queryKey || successKey)) {
@@ -73,6 +95,13 @@ export default function useMutation({
         queryClient.setQueryData(queryKey, context.previous);
       }
 
+      if (data?.error && store) {
+        store.getState().addMessage(data);
+        if (data.fieldErrors) {
+          store.getState().setFieldErrors(data.fieldErrors);
+        }
+      }
+
       if (data?.error && onError) {
         try {
           onError({
@@ -80,6 +109,7 @@ export default function useMutation({
             variables,
             context,
             queryClient,
+            state: store ? store.getState() : null,
           });
         } catch (e) {
           // eslint-disable-next-line no-console
@@ -93,7 +123,13 @@ export default function useMutation({
 
       if (onError) {
         try {
-          onError({ error, variables, context, queryClient });
+          onError({
+            error,
+            variables,
+            context,
+            queryClient,
+            state: store ? store.getState() : null,
+          });
         } catch (e) {
           // eslint-disable-next-line no-console
           console.error(e);
@@ -106,9 +142,19 @@ export default function useMutation({
       }
     },
     onSettled: (data, error, variables, context) => {
+      if (store) {
+        store.setState({ pending: false });
+      }
+
       if (onSettled) {
         try {
-          onSettled({ data, error, variables, context });
+          onSettled({
+            data,
+            error,
+            variables,
+            context,
+            state: store ? store.getState() : null,
+          });
         } catch (e) {
           // eslint-disable-next-line no-console
           console.error(e);

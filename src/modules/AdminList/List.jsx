@@ -15,29 +15,23 @@ import Pagination from "./Pagination";
 
 import { useServer } from "@kenstack/server/context";
 
-import {
-  QueryClient,
-  QueryCache,
-  QueryClientProvider,
-} from "@tanstack/react-query";
-
 // Let's us pass server data to server actions
 export default function AdminList({ admin }) {
-  const queryClient = new QueryClient({
-    queryCache: new QueryCache({
-      onError: (error) => {
-        // eslint-disable-next-line no-console
-        console.error(error);
-      },
-    }),
-    defaultOptions: {
-      queries: {
-        // With SSR, we usually want to set some default staleTime
-        // above 0 to avoid refetching immediately on the client
-        staleTime: 60 * 1000,
-      },
-    },
-  });
+  // const queryClient = new QueryClient({
+  //   queryCache: new QueryCache({
+  //     onError: (error) => {
+  //       // eslint-disable-next-line no-console
+  //       console.error(error);
+  //     },
+  //   }),
+  //   defaultOptions: {
+  //     queries: {
+  //       // With SSR, we usually want to set some default staleTime
+  //       // above 0 to avoid refetching immediately on the client
+  //       staleTime: 60 * 1000,
+  //     },
+  //   },
+  // });
 
   /*
   const claims = {}; // verifyJWT();
@@ -67,20 +61,18 @@ export default function AdminList({ admin }) {
   */
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <AdminListProvider
-        sortBy={sortBy}
-        keywords={keywords}
-        initialData={initialData}
-        admin={admin}
-        userId={claims.sub}
-      >
-        <div>
-          <Toolbar />
-          <AdminListTable />
-          <Pagination />
-        </div>
-      </AdminListProvider>
-    </QueryClientProvider>
+    <AdminListProvider
+      sortBy={sortBy}
+      keywords={keywords}
+      initialData={initialData}
+      admin={admin}
+      userId={claims.sub}
+    >
+      <div>
+        <Toolbar />
+        <AdminListTable />
+        <Pagination />
+      </div>
+    </AdminListProvider>
   );
 }

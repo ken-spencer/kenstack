@@ -12,13 +12,13 @@ export default function Toolbar({ isLoading, file }) {
   return (
     <div className="admin-toolbar flex-none">
       <div className="admin-toolbar-left">
+        <AdminIcon onClick={() => setEdit(null)} tooltip="Done">
+          <ArrowBackIosIcon />
+        </AdminIcon>
         <Square isLoading={isLoading} file={file} />
       </div>
       <div className="admin-toolbar-right">
         <Delete />
-        <AdminIcon onClick={() => setEdit(null)} tooltip="Done">
-          <ArrowBackIosIcon />
-        </AdminIcon>
       </div>
     </div>
   );

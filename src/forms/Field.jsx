@@ -6,11 +6,11 @@ export default function Field({ field, ...props }) {
 
   const {
     label = props.label === undefined ? field?.label : props.label,
-    id = fp.id,
     required = fp.required,
-    error = field?.error,
-    containerClass = field?.containerClass,
-    labelClass = field?.labelClass,
+    error = "",
+    containerClass = "",
+    htmlFor,
+    labelClass = "",
     children,
   } = props;
 
@@ -27,7 +27,7 @@ export default function Field({ field, ...props }) {
   return (
     <div className={classes}>
       {label && (
-        <label htmlFor={id} className={classesLabel}>
+        <label htmlFor={htmlFor} className={classesLabel}>
           {label}
           {required && <span className="required">*</span>}
         </label>

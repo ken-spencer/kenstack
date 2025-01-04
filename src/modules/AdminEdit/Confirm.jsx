@@ -9,7 +9,7 @@ import CheckCircleOutlineIcon from "@kenstack/icons/CheckCircleOutline";
 import DeleteForeverIcon from "@kenstack/icons/DeleteForever";
 
 import { useAdminEdit } from "./context";
-import useForm from "@kenstack/forms/useForm";
+import { useFormStore } from "@kenstack/forms/context";
 // import useConfirm from "@kenstack/forms/useConfirm";
 
 export default function AdminConfirm() {
@@ -17,7 +17,7 @@ export default function AdminConfirm() {
   const router = useRouter();
   const pathName = usePathname();
   const { confirm, setConfirm } = useAdminEdit();
-  const form = useForm();
+  const store = useFormStore();
   const focusButton = useRef();
 
   useEffect(() => {
@@ -41,11 +41,17 @@ export default function AdminConfirm() {
   };
 
   const handleCorrect = () => {
-    const input = form.ref.current.querySelector(":invalid");
-    if (input) {
-      // closing the dialog sets a focus. A delay here lets us set a custom one
+    const { invalid, fields } = store.getState();
+    // const input = form.ref.current.querySelector(":invalid");
+    if (invalid) {
+      // closing the dialog sets a focus. A delay here lets us override
       setTimeout(() => {
-        input.focus();
+        for (let field of Object.values(fields)) {
+          if (field.error && field.ref?.current) {
+            field.ref.current.focus();
+            break;
+          }
+        }
       }, 100);
     }
 
@@ -54,7 +60,7 @@ export default function AdminConfirm() {
 
   const handleExit = () => {
     if (confirm === pathName && pathName.endsWith("/new")) {
-      form.reset();
+      store.getState().reset({ values: {} });
     } else {
       router.push(confirm);
     }

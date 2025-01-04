@@ -19,7 +19,7 @@ export default class GlobalFormState {
     return this.state?.success;
   }
 
-  set changedv(v) {
+  set changed(v) {
     throw Error("changed is read only");
   }
   get changed() {
@@ -69,49 +69,49 @@ export default class GlobalFormState {
     this.init(this.initialValues);
   }
 
-  initProp(name, initial) {
-    this.#props.set(name, initial);
+  // initProp(name, initial) {
+  //   this.#props.set(name, initial);
 
-    Object.defineProperty(this, name, {
-      get: function () {
-        return this.#props.get(name);
-      },
-      set: function (value) {
-        if (this.#props.get(name) !== value) {
-          this.memo++;
-          this.#props.set(name, value);
-          this.reRender();
-        }
-      },
-      enumerable: true,
-      configurable: true,
-    });
-  }
+  //   Object.defineProperty(this, name, {
+  //     get: function () {
+  //       return this.#props.get(name);
+  //     },
+  //     set: function (value) {
+  //       if (this.#props.get(name) !== value) {
+  //         this.memo++;
+  //         this.#props.set(name, value);
+  //         this.reRender();
+  //       }
+  //     },
+  //     enumerable: true,
+  //     configurable: true,
+  //   });
+  // }
 
-  subscriptions = {};
-  subscribe(fieldName, callback) {
-    let set = this.subscriptions[fieldName];
-    if (set === undefined) {
-      set = this.subscriptions[fieldName] = new Set();
-    }
-    set.add(callback);
-  }
+  // subscriptions = {};
+  // subscribe(fieldName, callback) {
+  //   let set = this.subscriptions[fieldName];
+  //   if (set === undefined) {
+  //     set = this.subscriptions[fieldName] = new Set();
+  //   }
+  //   set.add(callback);
+  // }
 
-  notifySubscribers(name) {
-    const subscriptions = this.subscriptions[name];
-    if (!subscriptions) {
-      return false;
-    }
+  // notifySubscribers(name) {
+  //   const subscriptions = this.subscriptions[name];
+  //   if (!subscriptions) {
+  //     return false;
+  //   }
 
-    subscriptions.forEach((callback) => {
-      callback();
-    });
-  }
+  //   subscriptions.forEach((callback) => {
+  //     callback();
+  //   });
+  // }
 
-  unsubscribe(fieldName, callback) {
-    let set = this.subscriptions[fieldName];
-    if (set) {
-      set.delete(callback);
-    }
-  }
+  //   unsubscribe(fieldName, callback) {
+  //     let set = this.subscriptions[fieldName];
+  //     if (set) {
+  //       set.delete(callback);
+  //     }
+  //   }
 }

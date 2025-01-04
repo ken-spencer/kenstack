@@ -1,4 +1,6 @@
-const fields = {
+import createForm from "@kenstack/forms/formSchema";
+
+const form = createForm({
   password: {
     sm: 12,
     required: true,
@@ -10,6 +12,6 @@ const fields = {
     field: "password",
     matches: "password",
   },
-};
+});
 
-export default fields;
+export default form;

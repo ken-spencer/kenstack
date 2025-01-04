@@ -1,28 +1,43 @@
-import useForm from "./useForm";
+import { useForm } from "./context";
 
 import Button from "./Button";
 import { useFormStatus } from "react-dom";
+import { useShallow } from "zustand/react/shallow";
+// import ProgressIcon from "@kenstack/icons/Progress";
 
 export default function Submit({
   disabled,
-  mode = "nonde", // valid | none
+  mode = "none", // valid | none
   // variant = "contained",
   // size = "large",
   children = "Submit",
+  className = "",
   ...props
 }) {
-  const form = useForm();
-  const { invalid } = form;
+  const state = useForm(
+    useShallow((s) => ({
+      invalid: s.invalid,
+      disabled: s.disabled,
+      pending: s.pending,
+    })),
+  );
   const { pending } = useFormStatus();
+  const isPending = state.pending || pending;
 
   if (mode === "valid") {
-    disabled = invalid;
+    disabled = state.invalid;
+  }
+
+  let classes = className;
+  if (isPending) {
+    classes += (classes ? " " : "") + "pending";
   }
 
   return (
     <Button
       type="submit"
-      disabled={form.disabled || form.pending || pending || disabled}
+      disabled={state.disabled || isPending || disabled}
+      className={classes}
       {...props}
     >
       {children}

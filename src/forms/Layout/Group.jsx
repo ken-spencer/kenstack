@@ -33,7 +33,7 @@ export default function Group(props) {
   );
 
   const classesBody = useMemo(
-    () => twMerge(card ? "px-2" : "", "grid grid-cols-12 gap-2", bodyClass),
+    () => twMerge(card ? "p-2" : "", "grid grid-cols-12 gap-2", bodyClass),
     [card, bodyClass],
   );
 

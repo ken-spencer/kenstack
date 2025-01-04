@@ -3,10 +3,13 @@ import { useMemo } from "react";
 
 import Group from "./Group";
 import Field from "./Field";
-// import formSchema from "../lib/formSchema";
+import formSchema from "@kenstack/forms/formSchema";
 
-export default function FormLayout({ gap = "16px", fields: fields = {} }) {
-  // const fields = new formSchema(fieldTree);
+export default function FormLayout({ gap = "16px", form }) {
+  if ((!form) instanceof formSchema) {
+    throw Error("Form must be an instance of @kenstack/forms/lib/formSchema");
+  }
+  const fields = form.fieldTree;
 
   const fieldArray = useMemo(
     () => Array.from(Object.entries(fields)),

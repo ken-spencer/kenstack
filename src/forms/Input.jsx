@@ -1,25 +1,16 @@
-import React, { forwardRef } from "react";
-
 import useField from "./useField";
 
 import Field from "./Field";
 import Input from "./base/Input";
 
-const InputField = ({ start, end, ...initialProps }, ref) => {
-  const field = useField(initialProps, ref);
+export default function InputField(initialProps) {
+  // Memoize this so useField doesn't internally rerender
+  const { start, end, ...rest } = initialProps;
+  const { field, props, fieldProps } = useField(rest);
 
   return (
-    <Field field={field}>
-      <Input
-        {...field.props}
-        value={field.value}
-        start={start}
-        end={end}
-        ref={field.ref}
-      />
+    <Field field={field} {...fieldProps}>
+      <Input {...props} value={field.value} start={start} end={end} />
     </Field>
   );
-};
-
-InputField.displayName = "InputField";
-export default forwardRef(InputField);
+}

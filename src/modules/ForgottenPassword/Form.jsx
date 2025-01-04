@@ -1,29 +1,33 @@
 "use client";
-import { useCallback } from "react";
 
 import AutoForm from "@kenstack/forms/AutoForm";
 import Submit from "./Submit";
-import fields from "./fields";
+import form from "./formData";
+import { useMutation } from "@kenstack/query";
 
 import apiAction from "@kenstack/client/apiAction";
 import { useForgottenPassword } from "./context";
 
+const store = form.createStore();
 export default function ForgottenPasswordForm({ action }) {
   const { apiPath } = useForgottenPassword();
-  const handleSubmit = useCallback(
-    (state, formData) => {
+
+  const mutation = useMutation({
+    store,
+    mutationFn: (formData) => {
       return apiAction(apiPath, formData);
     },
-    [apiPath],
-  );
+    onSuccess: ({ state }) => {
+      state.reset();
+    },
+  });
 
   return (
     <AutoForm
-      action={handleSubmit}
       name="forgottenPassword"
-      fields={fields}
-      // title="Reset your password"
-      // description="Enter your email below and a link will be sent to reset your password."
+      form={form}
+      store={store}
+      mutation={mutation}
       submit={Submit}
     />
   );

@@ -4,7 +4,7 @@ import CheckIcon from "../icons/CheckIcon";
 
 function Checkbox({ label, id, ...props }, ref) {
   return (
-    <div className="flex items-center flex-wrap">
+    <div className="flex items-center">
       <label className="checkbox">
         <input {...props} id={id} type="checkbox" ref={ref} />
         <CheckIcon

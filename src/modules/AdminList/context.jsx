@@ -7,7 +7,8 @@ import {
   useCallback,
   useMemo,
 } from "react";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+
+import { keepPreviousData, useQuery } from "@kenstack/query";
 
 import { usePathname } from "next/navigation";
 import Cookies from "js-cookie";
@@ -16,6 +17,10 @@ import useDebounce from "@kenstack/hooks/useDebounce";
 
 // import debounce from "lodash/debounce";
 import apiAction from "@kenstack/client/apiAction";
+
+import { createStore } from "zustand";
+import messageMixin from "@kenstack/mixins/messageStore";
+const messageStore = createStore((set) => messageMixin(set));
 
 const AdminListContext = createContext({});
 
@@ -29,7 +34,8 @@ export function AdminListProvider({
   children,
 }) {
   const path = usePathname();
-  const queryKey = "admin-list-" + admin.modelName;
+  const apiPath = path + "/api";
+  const cookieKey = "admin-list-" + admin.modelName;
 
   const [selected, setSelected] = useState(new Set());
   // const [error, setError] = useState();
@@ -51,21 +57,25 @@ export function AdminListProvider({
     [],
   );
   */
-
+  const queryKey = useMemo(
+    () => ["admin-list", sortBy, debouncedKeywords],
+    [sortBy, debouncedKeywords],
+  );
   const {
     data,
     error: queryError,
     isLoading,
     // isPreviousData,
   } = useQuery({
-    queryKey: [queryKey, sortBy, debouncedKeywords],
+    queryKey,
     queryFn: () => {
-      return apiAction(path + "/api/load", {
+      return apiAction(apiPath + "/load", {
         modelName: admin.modelName,
         sortBy,
         keywords,
       });
     },
+    // initial data must be conditional or we never query
     initialData:
       initialSortBy === sortBy && initialKeywords === keywords
         ? initialData
@@ -85,7 +95,7 @@ export function AdminListProvider({
     (sort) => {
       // cache.set("sortBy", sort);
       if (sort) {
-        Cookies.set(queryKey + "Sort", sort.join(","), {
+        Cookies.set(cookieKey + "Sort", sort.join(","), {
           sameSite: "strict",
           expires: 1 / 2,
           path,
@@ -93,12 +103,12 @@ export function AdminListProvider({
       }
       setSortByBase(sort);
     },
-    [path, queryKey],
+    [path, cookieKey],
   );
 
   const setKeywords = useCallback(
     (value) => {
-      Cookies.set(queryKey + "Keywords", value, {
+      Cookies.set(cookieKey + "Keywords", value, {
         sameSite: "strict",
         expires: 1 / 2,
         path,
@@ -106,7 +116,7 @@ export function AdminListProvider({
       setKeywordsBase(value);
       // setDebouncedKeywords(value);
     },
-    [queryKey, path, setKeywordsBase],
+    [cookieKey, path, setKeywordsBase],
   );
 
   const select = useCallback(
@@ -151,6 +161,9 @@ export function AdminListProvider({
       // error: error || queryError?.message || data?.error,
       error: queryError?.message || data?.error,
       isLoading,
+      messageStore,
+      queryKey,
+      apiPath,
     }),
     [
       admin,
@@ -167,6 +180,8 @@ export function AdminListProvider({
       //error,
       queryError,
       isLoading,
+      queryKey,
+      apiPath,
     ],
   );
 

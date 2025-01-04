@@ -1,6 +1,6 @@
 "use client";
 
-import useForm from "@kenstack/forms/useForm";
+import { useForm } from "@kenstack/forms/context";
 
 import { usePathname, useRouter } from "next/navigation";
 import { useAdminEdit } from "./context";
@@ -12,11 +12,10 @@ import AddIcon from "@kenstack/icons/Add";
 import ArrowBackIcon from "@kenstack/icons/ArrowBack";
 
 import Delete from "./Delete";
-
 export default function AdminEditToolbar() {
-  const form = useForm();
+  const changed = useForm((s) => s.changed);
 
-  const { modelName, setConfirm, loaded } = useAdminEdit();
+  const { modelName, setConfirm } = useAdminEdit();
 
   const pathName = usePathname();
   const router = useRouter();
@@ -40,7 +39,7 @@ export default function AdminEditToolbar() {
       //   }
       // }
 
-      if (form.changed && !evt.target.closest("form").checkValidity()) {
+      if (changed && !evt.target.closest("form").checkValidity()) {
         setConfirm(path);
       } else if (path) {
         router.push(path);
@@ -51,8 +50,14 @@ export default function AdminEditToolbar() {
   return (
     <div className="admin-toolbar">
       <div className="admin-toolbar-left">
-        <AdminIcon type="submit" name="adminAction" value="save" tooltip="Save">
-          <SaveIcon />
+        <AdminIcon
+          type="submit"
+          onClick={handleClick("list", basePath)}
+          // name="adminAction"
+          // value={JSON.stringify(["list", { path: basePath }])}
+          tooltip="Back to list"
+        >
+          <ArrowBackIcon />
         </AdminIcon>
         <AdminIcon
           type="submit"
@@ -63,20 +68,14 @@ export default function AdminEditToolbar() {
         >
           <AddIcon />
         </AdminIcon>
-        <Delete />
+        <AdminIcon type="submit" name="adminAction" value="save" tooltip="Save">
+          <SaveIcon />
+        </AdminIcon>
       </div>
 
-      <Title modelName={modelName} loading={loaded === false} />
+      <Title modelName={modelName} />
       <div className="admin-toolbar-right">
-        <AdminIcon
-          type="submit"
-          onClick={handleClick("list", basePath)}
-          // name="adminAction"
-          // value={JSON.stringify(["list", { path: basePath }])}
-          tooltip="Back to list"
-        >
-          <ArrowBackIcon />
-        </AdminIcon>
+        <Delete />
       </div>
     </div>
   );

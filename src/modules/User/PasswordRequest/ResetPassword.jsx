@@ -4,7 +4,7 @@ import { useAdminEdit } from "@kenstack/modules/AdminEdit/context";
 import Field from "@kenstack/forms/Field";
 
 import Button from "@kenstack/forms/Button";
-import Alert from "@kenstack/forms/Alert";
+import Notice from "@kenstack/components/Notice";
 
 // import emailAction from "./emailAction";
 import apiAction from "@kenstack/client/apiAction";
@@ -50,7 +50,7 @@ export default function ResetPasswordField({ containerClass = "", span = "" }) {
       </div>
       <div className="my-4">
         {response ? (
-          <Alert {...response} />
+          <Notice {...response} />
         ) : (
           <Button loading={loading} onClick={handleClick}>
             Send email

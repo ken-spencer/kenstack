@@ -1,5 +1,5 @@
 import checkValue from "./checkValue";
-import formSchema from "../lib/formSchema";
+import formSchema from "../formSchema";
 
 export default function validateServer(fieldTree, data) {
   const schema = new formSchema(fieldTree);

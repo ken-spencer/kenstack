@@ -10,7 +10,8 @@ const API = ({ session, admin, model }) => {
     throw Error("admin model must be an instance of clientModel");
   }
 
-  const POST = async (request, { params: { id, slug } }) => {
+  const POST = async (request, { id, slug }) => {
+    // const { id, slug } = await params;
     let isNew = false;
     if (id === "new") {
       isNew = true;

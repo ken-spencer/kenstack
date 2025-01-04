@@ -1,10 +1,12 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useMemo } from "react";
+import { createContext, useContext, useState, useMemo } from "react";
 
 const AdminEditContext = createContext({});
 import { usePathname } from "next/navigation";
 import escapeRegExp from "@kenstack/utils/escapeRegExp";
+
+// import { useQuery } from "@kenstack/query";
 
 export function AdminEditProvider({
   admin,
@@ -15,10 +17,7 @@ export function AdminEditProvider({
   userId,
 }) {
   const pathname = usePathname();
-  const [row, setRow] = useState(initialRow);
-  // const [loaded, setLoaded] = useState(isNew);
-  const [loaded, setLoaded] = useState(true);
-  // const loaded = true;
+  // const [row, setRow] = useState(initialRow);
   const [confirm, setConfirm] = useState(false);
   // const [loadError, setLoadError] = useState();
   const [login, setLogin] = useState();
@@ -31,21 +30,31 @@ export function AdminEditProvider({
     apiPath = pathname.slice(0, -3) + "api/new"; // strip 'new' from the end;
   }
 
-  useEffect(() => {
-    if (isNew || !id) {
-      // MUI was giving className mismatch errors on the Grid component. Load later to avoid
-      setLoaded(true);
-      return;
-    }
-  }, [isNew, id]);
+  const store = useMemo(
+    () => admin.form.createStore({ values: initialRow ?? {} }),
+    [initialRow, admin.form],
+  );
+
+  // Keeping this around if we want to get a query into the mix.
+  // const { data } = useQuery({
+  //   queryKey: ["edit", id],
+  //   queryFn: () => {
+  //     console.log("trigger a fetch");
+  //     return initialRow;
+  //   },
+  //   initialData: initialRow,
+  //   initialDataUpdatedAt: Date.now(), // Signal that the data is fresh
+  //   staleTime: Infinity, // Treat initial data as fresh to avoid initial fetch
+  //   // enabled: false, // we only want to trigger the query manually
+  // })
 
   const context = useMemo(
     () => ({
       // loadError,
       admin,
-      loaded,
-      row,
-      setRow,
+      store,
+      // row,
+      // setRow,
       isNew,
       id,
       confirm,
@@ -57,9 +66,9 @@ export function AdminEditProvider({
     }),
     [
       admin,
+      store,
       // loadError,
-      loaded,
-      row,
+      // row,
       isNew,
       id,
       confirm,
@@ -68,12 +77,6 @@ export function AdminEditProvider({
       apiPath,
     ],
   );
-
-  /*
-  if (!loaded) {
-    return <Loading />;
-  }
-  */
 
   return (
     <AdminEditContext.Provider value={context}>

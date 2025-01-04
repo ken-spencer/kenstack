@@ -3,13 +3,12 @@ const SvgArrowBack = (props) => (
   <svg
     aria-hidden="true"
     viewBox="0 0 24 24"
-    tabIndex={-1}
     width="24"
     height="24"
     fill="currentColor"
     {...props}
   >
-    <path d="M11.67 3.87 9.9 2.1 0 12l9.9 9.9 1.77-1.77L3.54 12z" />
+    <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z" />
   </svg>
 );
 export default SvgArrowBack;

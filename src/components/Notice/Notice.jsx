@@ -11,20 +11,30 @@ const collapseTime = 400; // ms
 
 export default function Notice({
   actionState,
-  noScroll = false, // TODO make scroll opt in with a scroll flag. Possibly redundant with components version
+  message = null, // object with cussess, information or error string.
+  removeMessage = null, // callback to remove message once collapse is complete
   error: errorProp,
   success: successProp,
   information: informationProp,
   collapse = false,
+  scroll = false,
   className = "",
 }) {
-  const error = errorProp || actionState?.error;
+  if (actionState) {
+    throw Error("actionsState has been deprecated. use message instead");
+  }
+
+  if (!collapse && removeMessage) {
+    throw Error("removeMessage only works when 'collapse' is true");
+  }
+
+  const error = errorProp || message?.error;
   const success =
     successProp ||
-    (typeof actionState?.success === "string" ? actionState?.success : null);
-  const information = informationProp || actionState?.information;
+    (typeof message?.success === "string" ? message?.success : null);
+  const information = informationProp || message?.information;
 
-  const message = error || success || information;
+  const messageText = error || success || information;
 
   const timeout = useRef();
 
@@ -33,7 +43,7 @@ export default function Notice({
   const ref = useRef();
 
   const [height, setHeight] = useState(null);
-  const [show, setShowBase] = useState(message ? true : false);
+  const [show, setShowBase] = useState(messageText ? true : false);
   const setShow = useCallback((value) => {
     if (value) {
       const style = ref.current.style;
@@ -70,14 +80,17 @@ export default function Notice({
       setShow(false);
     }
 
-    if (!message || !collapse) {
+    if (!messageText || !collapse) {
       return;
     }
 
     setShow(true);
 
-    if (ref.current && noScroll == false) {
-      ref.current.scrollIntoView({ behavior: "smooth" });
+    if (ref.current && scroll) {
+      ref.current.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest", // Scroll only as much as needed vertically
+      });
     }
 
     timeout.current = setTimeout(
@@ -86,7 +99,7 @@ export default function Notice({
       },
       error ? 5000 : 5500,
     );
-  }, [actionState, message, noScroll, setShow, collapse, error]);
+  }, [message, messageText, scroll, setShow, collapse, error]);
 
   let classes = className ? " " + className : "";
   let Icon;
@@ -104,7 +117,7 @@ export default function Notice({
   }
 
   lastRef.current = {
-    message,
+    messageText,
     classes,
     Icon,
   };
@@ -113,7 +126,9 @@ export default function Notice({
   return (
     <div
       className={
-        "notice" + (last?.classess ?? classes) + (show ? "" : " collapsed")
+        "notice scroll-mt-16" +
+        (last?.classess ?? classes) +
+        (show ? "" : " collapsed")
       }
       ref={ref}
       style={
@@ -126,7 +141,7 @@ export default function Notice({
       }
     >
       <NoticeIcon />
-      <span>{last?.message ?? message}</span>
+      <span>{last?.messageText ?? messageText}</span>
     </div>
   );
 }

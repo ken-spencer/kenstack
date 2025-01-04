@@ -7,8 +7,11 @@ import apiAction from "@kenstack/client/apiAction";
 import useMutation from "@kenstack/hooks/useMutation";
 import { useQueryClient } from "@tanstack/react-query";
 
+import formData from "./formData";
+
 export default function EditForm({ file }) {
   const { id, apiPath, addMessage } = useLibraryEditor();
+  const store = formData.createStore({ values: file });
 
   const queryClient = useQueryClient();
   const mutation = useMutation({
@@ -30,19 +33,23 @@ export default function EditForm({ file }) {
 
   return (
     <section className="admin-border h-full p-2" header="Details">
-      <Form className="flex flex-wrap gap-4" values={file}>
-        <Input
-          name="alt"
-          label="Alternate text"
-          //defaultValue={file.alt}
-          onBlur={(evt) => {
+      <Form
+        className="flex flex-wrap gap-4"
+        store={store}
+        onBlur={(evt) => {
+          const input = evt.target;
+          const { name, value } = input;
+          const changed = store.getState().changed;
+          if (changed) {
             mutation.mutate({
               action: "field",
-              name: "alt",
-              value: evt.target.value,
+              name,
+              value,
             });
-          }}
-        />
+          }
+        }}
+      >
+        <Input name="alt" label="Alternate text" />
       </Form>
     </section>
   );
