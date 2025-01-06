@@ -4,7 +4,8 @@ import EditServer from "@kenstack/modules/AdminEdit/Server";
 import { notFound } from "next/navigation";
 
 export default async function AdminRouter({
-  ListClient,
+  client: Client,
+  // ListClient,
   EditClient,
   params,
   ...props
@@ -13,7 +14,7 @@ export default async function AdminRouter({
   if (!adminParams) {
     return (
       <ListServer {...props}>
-        <ListClient />
+        <Client />
       </ListServer>
     );
   }
@@ -22,7 +23,7 @@ export default async function AdminRouter({
   if (id === "new" || id.match(/^[0-9a-fA-F]{24}$/)) {
     return (
       <EditServer id={id} {...props}>
-        <EditClient />
+        <Client />
       </EditServer>
     );
   }

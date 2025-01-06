@@ -56,6 +56,8 @@ async function Query({ session, model, admin, children }) {
 
   return (
     <ServerProvider
+      list={true}
+      name={model.modelName}
       claims={claims}
       sortBy={sortBy}
       keywords={keywords}

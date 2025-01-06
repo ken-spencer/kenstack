@@ -70,7 +70,13 @@ async function Query({ session, id, model, admin, children }) {
   }
 
   return (
-    <ServerProvider isNew={isNew} id={id} row={dto} userId={claims.sub}>
+    <ServerProvider
+      edit={true}
+      isNew={isNew}
+      id={id}
+      row={dto}
+      userId={claims.sub}
+    >
       {children}
     </ServerProvider>
   );

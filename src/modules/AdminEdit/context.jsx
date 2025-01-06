@@ -97,3 +97,5 @@ export function useAdminEdit() {
 
   return context;
 }
+
+export { AdminEditContext };

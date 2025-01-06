@@ -25,17 +25,19 @@ const messageStore = createStore((set) => messageMixin(set));
 const AdminListContext = createContext({});
 
 export function AdminListProvider({
+  name: modelName,
   admin,
-  userId,
+  // userId,
   initialData,
-  //rows: initialRows,
+  claims,
   sortBy: initialSortBy,
   keywords: initialKeywords,
   children,
 }) {
+  const userId = claims.sub;
   const path = usePathname();
   const apiPath = path + "/api";
-  const cookieKey = "admin-list-" + admin.modelName;
+  const cookieKey = "admin-list-" + modelName;
 
   const [selected, setSelected] = useState(new Set());
   // const [error, setError] = useState();
@@ -58,8 +60,8 @@ export function AdminListProvider({
   );
   */
   const queryKey = useMemo(
-    () => ["admin-list", sortBy, debouncedKeywords],
-    [sortBy, debouncedKeywords],
+    () => ["admin-list", modelName, sortBy, debouncedKeywords],
+    [modelName, sortBy, debouncedKeywords],
   );
   const {
     data,
@@ -70,7 +72,7 @@ export function AdminListProvider({
     queryKey,
     queryFn: () => {
       return apiAction(apiPath + "/load", {
-        modelName: admin.modelName,
+        modelName,
         sortBy,
         keywords,
       });
@@ -204,3 +206,5 @@ export function useAdminList() {
 
   return context;
 }
+
+export { AdminListContext };
