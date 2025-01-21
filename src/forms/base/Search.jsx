@@ -1,17 +1,11 @@
-import React, {
-  forwardRef,
-  useCallback,
-  useRef,
-  useEffect,
-  useState,
-} from "react";
+import React, { useCallback, useRef, useEffect, useState } from "react";
 
 import Input from "./Input";
 import IconButton from "../IconButton";
-import MagnifyingGlassIcon from "../icons/MagnifyingGlassIcon";
+import MagnifyingGlassIcon from "@kenstack/icons/Search";
 import XCircleIcon from "../icons/XCircleIcon";
 
-const Search = ({ handleClear, clear, ...props }, refProp) => {
+export default function Search({ handleClear, clear, ref: refProp, ...props }) {
   if (handleClear) {
     throw Error("handleclear is now just clear");
   }
@@ -29,7 +23,7 @@ const Search = ({ handleClear, clear, ...props }, refProp) => {
       ref={ref}
     />
   );
-};
+}
 
 function ClearButton({ value, inputRef, handleClear }) {
   const [visible, setVisible] = useState(false);
@@ -94,6 +88,3 @@ function ClearButton({ value, inputRef, handleClear }) {
     </IconButton>
   );
 }
-
-Search.displayName = "Search";
-export default forwardRef(Search);
