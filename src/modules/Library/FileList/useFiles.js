@@ -7,15 +7,16 @@ import useLibrary from "../useLibrary";
 const defaultFiles = [];
 
 export default function useFiles() {
-  const { activeFolder, trash, apiPath } = useLibrary();
+  const { activeFolder, keywords, trash, apiPath } = useLibrary();
 
   const {
     data,
     isLoading: isLoadingFiles,
     refetch,
   } = useQuery({
-    queryKey: ["files", activeFolder, trash],
-    queryFn: () => apiAction(apiPath + "/list", { activeFolder, trash }),
+    queryKey: ["files", activeFolder, keywords, trash],
+    queryFn: () =>
+      apiAction(apiPath + "/list", { activeFolder, keywords, trash }),
     // initialData: [],
     staleTime: 5 * 60 * 1000,
     cacheTime: 60 * 1000,
