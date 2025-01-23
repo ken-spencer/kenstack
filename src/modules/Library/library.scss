@@ -33,7 +33,7 @@
     flex-direction: column;
     align-items: center;
 
-    cursor: pointer;
+    /* cursor: pointer; */
     border: solid 1px transparent;
     transition:
       border-color 0.2s,
@@ -88,38 +88,38 @@
       object-fit: cover;
     }
 
-    .admin-library-filename {
-      opacity: 0.6;
-      background: black;
-      color: white;
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      padding: 0 0.25rem;
+    /* .admin-library-filename { */
+    /* opacity: 0.6; */
+    /* background: black; */
+    /* color: white; */
+    /* position: absolute; */
+    /* bottom: 0; */
+    /* left: 0; */
+    /* right: 0; */
+    /* padding: 0 0.25rem; */
 
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .admin-library-progress {
-      position: absolute;
-      bottom: 4px;
-      left: 4px;
-      right: 5px;
-      height: 8px;
-      padding: 0 0.25rem;
+    /* white-space: nowrap; */
+    /* overflow: hidden; */
+    /* text-overflow: ellipsis; */
+    /* } */
+    /* .admin-library-progress { */
+    /* position: absolute; */
+    /* bottom: 4px; */
+    /* left: 4px; */
+    /* right: 5px; */
+    /* height: 8px; */
+    /* padding: 0 0.25rem; */
 
-      background: rgba(255, 255, 255, 0.5);
+    /* background: rgba(255, 255, 255, 0.5); */
 
-      .admin-library-progress-indicator {
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        left: 0;
-        background: rgba(30, 144, 255, 0.5);
-      }
-    }
+    /* .admin-library-progress-indicator { */
+    /* position: absolute; */
+    /* top: 0; */
+    /* bottom: 0; */
+    /* left: 0; */
+    /* background: rgba(30, 144, 255, 0.5); */
+    /* } */
+    /* } */
   }
 
   + .files {

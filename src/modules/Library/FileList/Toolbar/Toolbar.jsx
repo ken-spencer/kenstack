@@ -33,8 +33,8 @@ export default function Toolbar() {
   } = useLibrary();
 
   return (
-    <div className="admin-toolbar">
-      <div className="admin-toolbar-left">
+    <div className="flex px-2 py-0.5 admin-border">
+      <div className="flex flex-1">
         {selecting === false && trash === false ? (
           <>
             <Browse />
@@ -70,7 +70,7 @@ export default function Toolbar() {
           </>
         )}
       </div>
-      <div className="admin-toolbar-right">
+      <div className="flex">
         <Search />
         {selecting === false && trash === false ? (
           <AdminIcon

@@ -45,7 +45,7 @@ export default function FileList() {
   );
 
   return (
-    <main className="h-full">
+    <main className="flex flex-col gap-2 h-full">
       <Toolbar />
 
       {(() => {

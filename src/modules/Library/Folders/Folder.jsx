@@ -94,7 +94,7 @@ export default function Folder({
       <button
         type="button"
         className={
-          "library-folder truncate border border-red-500 " +
+          "library-folder truncate border " +
           (dragging?.active ? "cursor-ns-resize" : "cursor-pointer")
         }
         data-id={folder.id}

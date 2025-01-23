@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 
 import { useLibrary } from "../context";
 
@@ -7,10 +7,12 @@ import EXIF from "exif-js";
 
 import useFiles from "./useFiles";
 
+import ProgressIcon from "@kenstack/icons/Progress";
+
 const orientations = {
-  3: "rotate-180",
-  6: "-rotate-90",
-  8: "rotate-90",
+  // 3: "rotate-180",
+  // 6: "-rotate-90",
+  // 8: "rotate-90",
 };
 
 async function uploadToPresigned({ uploadUrl, fields }, file, addMessage) {
@@ -37,10 +39,10 @@ export default function Upload({ file }) {
     useLibrary();
   const { refetchFiles } = useFiles(activeFolder, trash);
 
-  const progressRef = useRef();
+  // const progressRef = useRef();
   const [src, setSrc] = useState(null);
   const [orientationClass, setOrientationClass] = useState("");
-  const [progress, setProgress] = useState(0);
+  // const [progress, setProgress] = useState(0);
 
   const dequeue = React.useCallback(() => {
     setUploadQueue((files) => {
@@ -75,6 +77,7 @@ export default function Upload({ file }) {
   }, [file.ref]);
 
   useEffect(() => {
+    return;
     if (file.status !== "uploading") {
       return;
     }
@@ -94,7 +97,7 @@ export default function Upload({ file }) {
       }
 
       const onProgress = (value) => {
-        setProgress(value);
+        // setProgress(value);
       };
       let uploadRes;
       try {
@@ -163,7 +166,23 @@ export default function Upload({ file }) {
 
   return (
     <div className="admin-library-file">
-      <img src={src} alt="" className={orientationClass} />
+      <img
+        src={src}
+        alt=""
+        className={
+          "admin-library-thumbnail" +
+          (orientationClass ? " " + orientationClass : "")
+        }
+      />
+      {file.status === "uploading" && (
+        <div className="flex items-center justify-center absolute top-0 left-0 right-0 bottom-0 bg-gray-800 bg-opacity-20">
+          <ProgressIcon
+            className="w-24 h-24 text-gray-100 animate-spin"
+            style={{ animationDuration: "2s" }}
+          />
+        </div>
+      )}
+      {/*
       <div className="admin-library-progress" ref={progressRef}>
         <div
           className="admin-library-progress-indicator"
@@ -172,6 +191,7 @@ export default function Upload({ file }) {
           }}
         />
       </div>
+      */}
     </div>
   );
 }

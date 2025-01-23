@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect, forwardRef } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 
 import LockOpenIcon from "./icons/LockOpenIcon";
 import LockClosedIcon from "./icons/LockClosedIcon";
@@ -11,31 +11,33 @@ import { useForm } from "./context";
 import Field from "./Field";
 import Input from "./base/Input";
 
-const SlugField = ({ subscribe, onChange, ...props }, ref) => {
-  props.onChange = useCallback(
+export default function SlugField({
+  subscribe,
+  onChange,
+  ref,
+  ...initialProps
+}) {
+  initialProps.onChange = useCallback(
     (evt) => {
-      evt.target.value = evt.target.value
-        .toLowerCase()
-        .replace(/\s+/g, "-") // replace spaces
-        .replace(/[^\w-]+/g, "") // remove not word characters
-        .replace(/--+/g, "-"); // ensure only single hyphens
+      evt.target.value = strToSlug(evt.target.value, true);
       if (onChange) {
         onChange(evt);
       }
+
       setInteracted(true);
     },
     [onChange],
   );
 
-  props.onBlur = useCallback((evt, slugField) => {
-    slugField.value = strToSlug(slugField.value);
+  initialProps.onBlur = useCallback((evt, thisField) => {
+    thisField.setValue(strToSlug(thisField.value));
   }, []);
 
-  const field = useField(props, ref);
+  const { field, props, fieldProps } = useField(initialProps);
+
   const subscribedField = useForm((state) => state.fields[subscribe]);
   const [locked, setLocked] = useState(field.initialValue ? true : false);
   const [interacted, setInteracted] = useState(false);
-  // const [listen, setListen] = useState(field.initialValue ? false : true);
 
   useEffect(() => {
     if (interacted || field.initialValue) {
@@ -43,7 +45,7 @@ const SlugField = ({ subscribe, onChange, ...props }, ref) => {
     }
 
     const title = subscribe ? subscribedField?.value || "" : "";
-    field.value = strToSlug(title);
+    field.setValue(strToSlug(title));
   }, [
     interacted,
     field.initialValue,
@@ -54,9 +56,9 @@ const SlugField = ({ subscribe, onChange, ...props }, ref) => {
   ]);
 
   return (
-    <Field field={field}>
+    <Field field={field} {...fieldProps}>
       <Input
-        {...field.props}
+        {...props}
         value={field.value}
         readOnly={locked}
         end={<LockButton locked={locked} setLocked={setLocked} />}
@@ -64,7 +66,7 @@ const SlugField = ({ subscribe, onChange, ...props }, ref) => {
       />
     </Field>
   );
-};
+}
 
 function LockButton({ locked, setLocked }) {
   if (locked) {
@@ -82,15 +84,18 @@ function LockButton({ locked, setLocked }) {
   );
 }
 
-function strToSlug(value) {
-  return value
-    .trim()
+function strToSlug(value, interacting = false) {
+  let retval = value
+    // .trim()
     .toLowerCase()
     .replace(/\s+/g, "-") // replace spaces
     .replace(/[^\w-]+/g, "") // remove not word characters
-    .replace(/--+/g, "-") // ensure only single hyphens
-    .replace(/^-+|-+$/g, ""); // remove hypen from start and end.
-}
+    .replace(/--+/g, "-"); // ensure only single hyphens
 
-SlugField.displayName = "SlugField";
-export default forwardRef(SlugField);
+  // we need to limit some rules if manually editing to allow space to convert to -
+  if (interacting === false) {
+    retval = retval.replace(/^-+|-+$/g, ""); // remove hypen from start and end.
+  }
+
+  return retval;
+}
