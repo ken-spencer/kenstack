@@ -5,10 +5,11 @@ import {
   useContext,
   useState,
   useCallback,
-  useEffect,
   useMemo,
 } from "react";
+
 import { createStore } from "zustand";
+import { useStore } from "zustand";
 import messageMixin from "@kenstack/mixins/messageStore";
 
 // import defaultFile from "./FileList/defaultFile";
@@ -19,71 +20,39 @@ const accept = ["image/jpeg", "image/gif", "image/png", "image/webp"];
 const LibraryContext = createContext({});
 const messageStore = createStore((set) => messageMixin(set));
 
-const LibraryProvider = ({
-  mode = "image", // image | file
-  edit: editDefault = null,
-  children,
-  apiPath,
-}) => {
-  // const [folders, setFolders] = useState([]);
+const store = createStore((set) => ({
+  activeFolder: null,
+  edit: null,
+  trash: false,
+  selected: [],
+  keywords: "",
+  uploadQueue: [],
 
-  const [dragData, setDragData] = useState({});
-  const [uploadQueue, setUploadQueue] = useState([]);
-  const [keywords, setKeywords] = useState("");
-  const [edit, setEdit] = useState(editDefault);
-  const [selecting, setSelectingBase] = useState(false);
-  const [error, setError] = useState("");
+  setActiveFolder: (activeFolder) =>
+    set({
+      activeFolder,
+      edit: null,
+      trash: false,
+      selected: [],
+      keywords: "",
+    }),
+  setEdit: (edit) => set({ edit }),
+  setTrash: (trash) =>
+    set({
+      trash,
+      edit: null,
+      keywords: "",
+    }),
+  setSelected: (selected) => set({ selected }),
+  setKeywords: (keywords) =>
+    set({
+      keywords,
+      activeFolder: null,
+    }),
 
-  const addMessage = messageStore.getState().addMessage;
-
-  // const [messages, setMessages] = useState([]);
-  // const addMessage = useCallback(
-  //   (message) => {
-  //     if (
-  //       typeof message.success !== "string" &&
-  //       typeof message.error !== "string"
-  //     ) {
-  //       return;
-  //     }
-
-  //     message._key = Date.now();
-  //     setMessages([...messages, message]);
-
-  //     setTimeout(() => {
-  //       setMessages((current) => current.filter((m) => m !== message));
-  //     }, 10000);
-  //   },
-  //   [messages],
-  // );
-
-  const [trash, setTrashBase] = useState(false);
-  const setTrash = useCallback((value) => {
-    setTrashBase(value);
-    setEdit(null);
-  }, []);
-
-  const [activeFolder, setActiveFolderBase] = useState(null);
-  const setActiveFolder = useCallback(
-    (folder) => {
-      setActiveFolderBase(folder);
-      setEdit(null);
-      setTrash(false);
-      setSelected([]);
-    },
-    [setTrash],
-  );
-
-  const [selected, setSelected] = useState([]);
-  const [clipboard, setClipboard] = useState([]);
-  const setSelecting = useCallback((value) => {
-    setSelectingBase(value);
-    setSelected([]);
-  }, []);
-
-  // const { files, isLoadingFiles, setFiles } = useFiles(activeFolder, trash);
-
-  const prepareUpload = useCallback(
-    (filesToUpload) => {
+  setUploadQueue: (uploadQueue) => set({ uploadQueue }),
+  prepareUpload: (filesToUpload) =>
+    set((state) => {
       if (filesToUpload.length === 0) {
         return;
       }
@@ -106,82 +75,68 @@ const LibraryProvider = ({
         list.push(data);
       }
 
-      const queue = [...uploadQueue, ...list];
+      const queue = [...state.uploadQueue, ...list];
       queue[0].status = "uploading";
-      setUploadQueue(queue);
-    },
-    [uploadQueue, activeFolder],
-  );
+      return { ietUploadQueue: queue };
+    }),
+}));
 
-  useEffect(() => {
-    if (uploadQueue.length === 0) {
-      return;
-    }
-  }, [uploadQueue]);
+const LibraryProvider = ({
+  mode = "image", // image | file
+  edit: editDefault = null,
+  children,
+  apiPath,
+}) => {
+  // const [folders, setFolders] = useState([]);
+
+  const [dragData, setDragData] = useState({});
+  const [selecting, setSelectingBase] = useState(false);
+  const [error, setError] = useState("");
+
+  const addMessage = messageStore.getState().addMessage;
+
+  const [clipboard, setClipboard] = useState([]);
+  const setSelecting = useCallback((value) => {
+    setSelectingBase(value);
+    setSelected([]);
+  }, []);
+
+  // const { files, isLoadingFiles, setFiles } = useFiles(activeFolder, trash);
 
   const context = useMemo(
     () => ({
-      /*
-      folders,
-      setFolders,
-      */
-      activeFolder,
-      setActiveFolder,
-      /*
-      files,
-      setFiles,
-      isLoadingFiles,
-      */
+      // activeFolder,
+      // setActiveFolder,
       dragData,
       setDragData,
-      uploadQueue,
-      setUploadQueue,
-      keywords,
-      setKeywords,
-      edit,
-      setEdit,
+      // keywords,
+      // setKeywords,
+      // edit,
+      // setEdit,
       type: "image", // image | file
       selecting,
-      selected,
-      setSelected,
+      // selected,
+      // setSelected,
       setSelecting,
       clipboard,
       setClipboard,
       accept,
-      trash,
-      setTrash,
+      // trash,
+      // setTrash,
       error,
       setError,
-      // messages,
       addMessage,
-      prepareUpload,
       mode,
       apiPath,
       messageStore,
     }),
     [
-      // folders,
-      activeFolder,
-      setActiveFolder,
-      /*
-      files,
-      setFiles,
-      isLoadingFiles,
-      */
       dragData,
-      uploadQueue,
-      keywords,
-      edit,
       selecting,
       setSelecting,
-      selected,
       clipboard,
-      trash,
-      setTrash,
       error,
-      // messages,
       addMessage,
-      prepareUpload,
       mode,
       apiPath,
     ],
@@ -194,7 +149,7 @@ const LibraryProvider = ({
   );
 };
 
-const useLibrary = () => {
+const useLibrary = (selector = undefined) => {
   const context = useContext(LibraryContext);
 
   const keys = Object.keys(context);
@@ -204,7 +159,8 @@ const useLibrary = () => {
     );
   }
 
-  return context;
+  const state = useStore(store, selector);
+  return { ...context, ...state };
 };
 
 export { LibraryContext, useLibrary, LibraryProvider };
