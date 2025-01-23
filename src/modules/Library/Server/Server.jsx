@@ -4,7 +4,7 @@ import Session from "@kenstack/server/Session";
 import Authenticate from "@kenstack/server/Authenticate";
 
 import QueryProvider from "../QueryProvider";
-import Provider from "../Provider";
+import { LibraryProvider } from "../context";
 import Library from "../Library";
 
 export default async function Server({
@@ -19,9 +19,9 @@ export default async function Server({
   return (
     <Authenticate session={session} roles={["ADMIN"]}>
       <QueryProvider>
-        <Provider mode="image" apiPath={apiPath}>
+        <LibraryProvider mode="image" apiPath={apiPath}>
           <Library />
-        </Provider>
+        </LibraryProvider>
       </QueryProvider>
     </Authenticate>
   );

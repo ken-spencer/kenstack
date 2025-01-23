@@ -9,7 +9,7 @@ import Notice from "@kenstack/components/Notice";
 // var fileToken = null;
 // var { actions, context } = store;
 
-import useLibrary from "../useLibrary";
+import { useLibrary } from "../context";
 import useFiles from "./useFiles";
 // import Filler from "./Filler";
 
@@ -54,7 +54,7 @@ export default function FileList() {
         }
 
         if (data.error) {
-          return <Notice actionState={data} noScroll />;
+          return <Notice message={data} />;
         }
 
         if (files.length === 0 && keywords.length) {

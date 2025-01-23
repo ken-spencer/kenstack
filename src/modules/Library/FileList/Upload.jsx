@@ -1,11 +1,10 @@
 import React, { useRef, useState, useEffect } from "react";
 
-import useLibrary from "../useLibrary";
+import { useLibrary } from "../context";
 
 import apiAction from "@kenstack/client/apiAction";
 import EXIF from "exif-js";
 
-// import uploadCompleteAction from "./api/uploadCompleteAction";
 import useFiles from "./useFiles";
 
 const orientations = {
@@ -14,40 +13,23 @@ const orientations = {
   8: "rotate-90",
 };
 
-async function uploadToPresigned(uploadUrl, file, onProgress = null) {
-  await new Promise((success, fail) => {
-    const xhr = new XMLHttpRequest();
+async function uploadToPresigned({ uploadUrl, fields }, file, addMessage) {
+  const formData = new FormData();
+  Object.entries(fields).forEach(([key, value]) => formData.append(key, value));
+  formData.append("file", file);
 
-    xhr.upload.addEventListener("progress", (event) => {
-      if (event.lengthComputable) {
-        const percentCompleted = Math.round((event.loaded * 100) / event.total);
-        if (onProgress) {
-          onProgress(percentCompleted);
-        }
-      }
-    });
-
-    xhr.addEventListener("load", () => {
-      if (xhr.status === 200) {
-        success();
-      } else {
-        fail(
-          new Error(
-            `Was unable to upload file. status: ${xhr.status} ${xhr.responseText} `,
-          ),
-        );
-      }
-    });
-
-    xhr.addEventListener("error", () => {
-      fail(new Error("Failed to upload file: " + xhr.responseText));
-    });
-
-    xhr.open("PUT", uploadUrl);
-    xhr.setRequestHeader("Content-Type", file.type);
-    xhr.setRequestHeader("Accept", "application/json"); // Request JSON responses
-    xhr.send(file);
+  const res = await fetch(uploadUrl, {
+    method: "POST",
+    headers: {
+      Accept: "application/json", // Request a JSON response from Cloudinary
+    },
+    body: formData,
   });
+
+  // const contentType = res.headers.get("content-type");
+  const json = await res.json();
+
+  return json;
 }
 
 export default function Upload({ file }) {
@@ -114,8 +96,14 @@ export default function Upload({ file }) {
       const onProgress = (value) => {
         setProgress(value);
       };
+      let uploadRes;
       try {
-        await uploadToPresigned(res.uploadUrl, file.ref, onProgress);
+        uploadRes = await uploadToPresigned(
+          res,
+          file.ref,
+          onProgress,
+          addMessage,
+        );
       } catch (e) {
         // eslint-disable-next-line no-console
         console.error(e.message);
@@ -126,10 +114,19 @@ export default function Upload({ file }) {
         return;
       }
 
+      if (uploadRes.error) {
+        addMessage({
+          error: `There was an unexpected problem loading ${filename}:  ${uploadRes.error.message}`,
+        });
+        dequeue();
+        return;
+      }
+
       const completeRes = await apiAction(apiPath + "/upload-complete", {
-        tmpName: res.tmpName,
-        filename: res.filename,
+        // tmpName: res.tmpName,
+        filename,
         folder: activeFolder,
+        data: uploadRes,
       });
 
       dequeue();

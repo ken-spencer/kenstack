@@ -3,7 +3,7 @@ import { useState } from "react";
 import DeleteForeverIcon from "@kenstack/icons/DeleteForever";
 import AdminIcon from "@kenstack/components/AdminIcon";
 
-import useLibrary from "../../useLibrary";
+import { useLibrary } from "../../context";
 
 import Confirm from "../../Confirm";
 

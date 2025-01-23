@@ -2,7 +2,7 @@ import React from "react";
 
 // import apiAction from "@kenstack/client/apiAction";
 import Body from "./Body";
-// import useLibrary from "../useLibrary";
+// import { useLibrary } from "../context";
 import Notice from "@kenstack/components/Notice";
 
 import { useLibraryEditor } from "./context";
@@ -20,7 +20,7 @@ export default function Editor() {
       {isLoading ? (
         <Spinner />
       ) : error || data?.error ? (
-        <Notice actionState={data} />
+        <Notice message={data} />
       ) : (
         <Body />
       )}

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback } from "react";
 
-import useLibrary from "../useLibrary";
+import { useLibrary } from "../context";
 import useFiles from "./useFiles";
 import useMutation from "@kenstack/hooks/useMutation";
 
@@ -153,7 +153,7 @@ export default function File({ file }) {
   if (mode === "file") {
     //src = getIcon(file);
   } else {
-    src = file.path;
+    src = file.url;
   }
 
   var events = {};

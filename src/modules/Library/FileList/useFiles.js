@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import apiAction from "@kenstack/client/apiAction";
-import useLibrary from "../useLibrary";
+import { useLibrary } from "../context";
 
 const defaultFiles = [];
 

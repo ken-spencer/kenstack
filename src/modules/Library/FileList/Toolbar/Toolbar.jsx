@@ -16,7 +16,7 @@ import CutIcon from "@kenstack/icons/Cut";
 import SelectAllIcon from "@kenstack/icons/SelectAll";
 import DeselectAllIcon from "@kenstack/icons/CheckboxBlank";
 
-import useLibrary from "../../useLibrary";
+import { useLibrary } from "../../context";
 import useFiles from "../useFiles";
 
 export default function Toolbar() {

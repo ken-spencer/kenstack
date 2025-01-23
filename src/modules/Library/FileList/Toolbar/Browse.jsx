@@ -3,7 +3,7 @@ import React, { useCallback } from "react";
 import Button from "@kenstack/components/AdminIcon";
 import UploadIcon from "@kenstack/icons/Upload";
 
-import useLibrary from "../../useLibrary";
+import { useLibrary } from "../../context";
 
 export default function FileUpload() {
   const { accept, trash, prepareUpload } = useLibrary();

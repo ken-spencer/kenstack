@@ -5,7 +5,7 @@ import useMutation from "@kenstack/hooks/useMutation";
 import Input from "@kenstack/forms/base/Input";
 
 import apiAction from "@kenstack/client/apiAction";
-import useLibrary from "../useLibrary";
+import { useLibrary } from "../context";
 
 export default function FolderEdit({ folder }) {
   const ref = useRef();

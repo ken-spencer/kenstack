@@ -5,7 +5,7 @@ const LibraryEditorContext = createContext({});
 
 import apiAction from "@kenstack/client/apiAction";
 import { useQuery } from "@tanstack/react-query";
-import useLibrary from "../useLibrary";
+import { useLibrary } from "../context";
 
 export function LibraryEditProvider({ children }) {
   const { apiPath, edit: id, addMessage } = useLibrary();

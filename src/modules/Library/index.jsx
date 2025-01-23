@@ -7,7 +7,7 @@ import dynamic from "next/dynamic";
 import Dialog from "@kenstack/components/Dialog";
 
 import QueryProvider from "./QueryProvider";
-import Provider from "./Provider";
+import { LibraryProvider } from "./context";
 
 const Library = dynamic(
   () =>
@@ -40,7 +40,7 @@ export default function LibraryIndex() {
       // actions={buttons}
     >
       <QueryProvider>
-        <Provider mode="image">
+        <LibraryProvider mode="image">
           <Library
             library={null}
             edit={false}
@@ -53,7 +53,7 @@ export default function LibraryIndex() {
             choose={() => {}}
             chooseFolder={() => {}}
           />
-        </Provider>
+        </LibraryProvider>
       </QueryProvider>
     </Dialog>
   );

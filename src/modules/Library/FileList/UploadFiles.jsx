@@ -1,5 +1,5 @@
 import Upload from "./Upload";
-import useLibrary from "../useLibrary";
+import { useLibrary } from "../context";
 
 export default function UploadFiles() {
   const { uploadQueue } = useLibrary();

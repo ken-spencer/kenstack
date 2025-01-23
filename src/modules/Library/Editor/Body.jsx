@@ -12,7 +12,7 @@ export default function Body() {
         <SquareTool file={file} />
       ) : (
         <div className="admin-library-image">
-          <img alt="" src={file.path} />
+          <img alt="" src={file.url} />
         </div>
       )}
       <div className="admin-library-details">

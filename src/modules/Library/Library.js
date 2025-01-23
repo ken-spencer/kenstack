@@ -2,25 +2,23 @@
 
 import React from "react";
 
-import Notice from "@kenstack/components/Notice";
+import NoticeList from "@kenstack/components/Notice/List";
 
 import FileList from "./FileList";
 import FolderList from "./Folders/List";
 import Editor from "./Editor";
 
-import useLibrary from "./useLibrary";
+import { useLibrary } from "./context";
 
 import "./library.scss";
 
 export default function Library() {
   // set container class based on image or file type library
 
-  const { edit, messages } = useLibrary();
+  const { edit, messageStore } = useLibrary();
   return (
     <div className="admin-library">
-      {messages.map((message) => (
-        <Notice key={message._key} actionState={message} scroll />
-      ))}
+      <NoticeList store={messageStore} />
 
       <div className="flex flex-grow overflow-hidden">
         <div className="w-1/4 flex flex-col mr-2 h-full overflow-hidden">

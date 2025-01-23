@@ -1,7 +1,7 @@
 import PasteIcon from "@kenstack/icons/Paste";
 import Button from "@kenstack/components/AdminIcon";
 
-import useLibrary from "../../useLibrary";
+import { useLibrary } from "../../context";
 import useChangeFolder from "../../Folders/useChangeFolder";
 
 export default function PasteButton() {

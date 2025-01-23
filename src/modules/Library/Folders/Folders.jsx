@@ -5,7 +5,7 @@ import FolderEdit from "./Edit";
 import Folder from "./Folder";
 // import FolderIcon from "@kenstack/icons/Folder";
 
-import useLibrary from "../useLibrary";
+import { useLibrary } from "../context";
 
 // import saveOrderAction from "./api/saveOrderAction";
 import apiAction from "@kenstack/client/apiAction";

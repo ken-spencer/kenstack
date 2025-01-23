@@ -1,6 +1,6 @@
 "use server";
 
-import Image from "../../db/Image";
+import Image from "@kenstack/modules/Library/db/Image";
 
 import {
   S3Client,

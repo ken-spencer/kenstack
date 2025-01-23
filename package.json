@@ -25,6 +25,7 @@
     "autoprefixer": "^10.4.16",
     "aws-crt": "^1.18.0",
     "bcrypt": "^5.1.1",
+    "cloudinary": "^2.5.1",
     "exif-js": "^2.3.0",
     "exif-reader": "^2.0.1",
     "gsap": "^3.12.5",

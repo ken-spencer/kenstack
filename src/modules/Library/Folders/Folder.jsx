@@ -9,7 +9,7 @@ import FolderIcon from "@kenstack/icons/Folder";
 import DriveFileMoveIcon from "@kenstack/icons/DriveFileMove";
 import DeleteIcon from "@kenstack/icons/Delete";
 
-import useLibrary from "../useLibrary";
+import { useLibrary } from "../context";
 import apiAction from "@kenstack/client/apiAction";
 import useMutation from "@kenstack/hooks/useMutation";
 

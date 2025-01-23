@@ -1,7 +1,7 @@
 import AdminIcon from "@kenstack/components/AdminIcon";
 import DeleteIcon from "@kenstack/icons/Delete";
 
-import useLibrary from "../../useLibrary";
+import { useLibrary } from "../../context";
 
 import useMutation from "@kenstack/hooks/useMutation";
 // import deleteAction from "../../FileList/api/deleteAction";

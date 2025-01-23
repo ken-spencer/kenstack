@@ -1,4 +1,4 @@
-import useLibrary from "../useLibrary";
+import { useLibrary } from "../context";
 
 import AdminIcon from "@kenstack/components/AdminIcon";
 import ArrowBackIosIcon from "@kenstack/icons/ArrowBack";

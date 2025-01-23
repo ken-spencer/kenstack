@@ -7,8 +7,8 @@ import deleteAction from "./list/deleteAction";
 import deleteForeverAction from "./list/deleteForeverAction";
 import saveMoveAction from "./list/saveMoveAction";
 
-import presignedUrlAction from "./upload/presignedUrlAction";
-import uploadCompleteAction from "./upload/uploadCompleteAction";
+import presignedUrlAction from "./upload/cloudinary/presignedUrl";
+import uploadCompleteAction from "./upload/cloudinary/uploadComplete";
 
 // Folders
 

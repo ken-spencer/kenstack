@@ -1,6 +1,6 @@
 import React from "react";
 
-import useLibrary from "../../useLibrary";
+import { useLibrary } from "../../context";
 import RecycleIcon from "@kenstack/icons/Recycle";
 import ArrowBackIcon from "@kenstack/icons/ArrowBack";
 import AdminIcon from "@kenstack/components/AdminIcon";

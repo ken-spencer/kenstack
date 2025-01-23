@@ -1,7 +1,7 @@
 import React from "react";
 
 import SearchInput from "@kenstack/forms/base/Search";
-import useLibrary from "../../useLibrary";
+import { useLibrary } from "../../context";
 
 export default function Search() {
   const { keywords, setKeywords } = useLibrary();
