@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useState,
-  useCallback,
-  useMemo,
-} from "react";
+import { createContext, useContext, useMemo } from "react";
 
 import { createStore } from "zustand";
 import { useStore } from "zustand";
@@ -18,138 +12,107 @@ import messageMixin from "@kenstack/mixins/messageStore";
 const accept = ["image/jpeg", "image/gif", "image/png", "image/webp"];
 
 const LibraryContext = createContext({});
-const messageStore = createStore((set) => messageMixin(set));
 
-const store = createStore((set) => ({
-  activeFolder: null,
-  edit: null,
-  trash: false,
-  selected: [],
-  keywords: "",
-  uploadQueue: [],
+const createLibraryStore = (props) =>
+  createStore((set) => ({
+    type: "image", // image | file
+    mode: "image", // figure out why we have both this and type
+    accept,
+    activeFolder: null,
+    edit: null,
+    trash: false,
+    selected: [],
+    selecting: false,
+    keywords: "",
+    uploadQueue: [],
+    error: "",
+    dragData: {},
+    clipboard: [],
+    ...props,
+    setActiveFolder: (activeFolder) =>
+      set({
+        activeFolder,
+        edit: null,
+        trash: false,
+        selected: [],
+        keywords: "",
+      }),
+    setEdit: (edit) => set({ edit }),
+    setTrash: (trash) =>
+      set({
+        trash,
+        edit: null,
+        keywords: "",
+      }),
+    setSelected: (selected) => set({ selected }),
+    setSelecting: (selecting) =>
+      set({
+        selecting,
+        selected: [],
+      }),
+    setKeywords: (keywords) =>
+      set({
+        keywords,
+        activeFolder: null,
+      }),
 
-  setActiveFolder: (activeFolder) =>
-    set({
-      activeFolder,
-      edit: null,
-      trash: false,
-      selected: [],
-      keywords: "",
-    }),
-  setEdit: (edit) => set({ edit }),
-  setTrash: (trash) =>
-    set({
-      trash,
-      edit: null,
-      keywords: "",
-    }),
-  setSelected: (selected) => set({ selected }),
-  setKeywords: (keywords) =>
-    set({
-      keywords,
-      activeFolder: null,
-    }),
+    setUploadQueue: (uploadQueue) => set({ uploadQueue }),
+    prepareUpload: (filesToUpload) =>
+      set((state) => {
+        if (filesToUpload.length === 0) {
+          return;
+        }
 
-  setUploadQueue: (uploadQueue) => set({ uploadQueue }),
-  prepareUpload: (filesToUpload) =>
-    set((state) => {
-      if (filesToUpload.length === 0) {
-        return;
-      }
+        let list = [];
+        for (let i = 0, file; (file = filesToUpload[i]); i++) {
+          const data = {
+            ref: file,
+            key: [
+              Date.now(),
+              file.name.replace(/[^0-9a-zA-Z-_]+/g, ""),
+              file.lastModified,
+              file.size,
+            ].join(":"),
+            status: "queued",
+            progress: 0,
+            folder: activeFolder,
+          };
 
-      let list = [];
-      for (let i = 0, file; (file = filesToUpload[i]); i++) {
-        const data = {
-          ref: file,
-          key: [
-            Date.now(),
-            file.name.replace(/[^0-9a-zA-Z-_]+/g, ""),
-            file.lastModified,
-            file.size,
-          ].join(":"),
-          status: "queued",
-          progress: 0,
-          folder: activeFolder,
-        };
+          list.push(data);
+        }
 
-        list.push(data);
-      }
-
-      const queue = [...state.uploadQueue, ...list];
-      queue[0].status = "uploading";
-      return { ietUploadQueue: queue };
-    }),
-}));
+        const queue = [...state.uploadQueue, ...list];
+        queue[0].status = "uploading";
+        return { ietUploadQueue: queue };
+      }),
+    setError: (error) => set({ error }),
+    setDragData: (setDragData) => set({ setDragData }),
+    setClipboard: (clipboard) => set({ clipboard }),
+    ...messageMixin(set),
+  }));
 
 const LibraryProvider = ({
   mode = "image", // image | file
-  edit: editDefault = null,
+  edit = null,
   children,
   apiPath,
 }) => {
-  // const [folders, setFolders] = useState([]);
-
-  const [dragData, setDragData] = useState({});
-  const [selecting, setSelectingBase] = useState(false);
-  const [error, setError] = useState("");
-
-  const addMessage = messageStore.getState().addMessage;
-
-  const [clipboard, setClipboard] = useState([]);
-  const setSelecting = useCallback((value) => {
-    setSelectingBase(value);
-    setSelected([]);
-  }, []);
-
-  // const { files, isLoadingFiles, setFiles } = useFiles(activeFolder, trash);
-
-  const context = useMemo(
-    () => ({
-      // activeFolder,
-      // setActiveFolder,
-      dragData,
-      setDragData,
-      // keywords,
-      // setKeywords,
-      // edit,
-      // setEdit,
-      type: "image", // image | file
-      selecting,
-      // selected,
-      // setSelected,
-      setSelecting,
-      clipboard,
-      setClipboard,
-      accept,
-      // trash,
-      // setTrash,
-      error,
-      setError,
-      addMessage,
-      mode,
-      apiPath,
-      messageStore,
-    }),
-    [
-      dragData,
-      selecting,
-      setSelecting,
-      clipboard,
-      error,
-      addMessage,
-      mode,
-      apiPath,
-    ],
+  const store = useMemo(
+    () =>
+      createLibraryStore({
+        apiPath,
+        mode,
+        edit,
+      }),
+    [apiPath, mode, edit],
   );
 
   return (
-    <LibraryContext.Provider value={context}>
-      {children}
-    </LibraryContext.Provider>
+    <LibraryContext.Provider value={store}>{children}</LibraryContext.Provider>
   );
 };
 
-const useLibrary = (selector = undefined) => {
+const useLibraryStore = () => {
   const context = useContext(LibraryContext);
 
   const keys = Object.keys(context);
@@ -159,8 +122,13 @@ const useLibrary = (selector = undefined) => {
     );
   }
 
-  const state = useStore(store, selector);
-  return { ...context, ...state };
+  return context;
 };
 
-export { LibraryContext, useLibrary, LibraryProvider };
+const useLibrary = (selector = undefined) => {
+  const store = useLibraryStore();
+  const state = useStore(store, selector);
+  return state;
+};
+
+export { LibraryContext, useLibrary, useLibraryStore, LibraryProvider };

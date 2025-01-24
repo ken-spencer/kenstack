@@ -160,13 +160,11 @@ export default function File({ file }) {
   if (selecting || trash) {
     events = {
       onClick: () => {
-        setSelected(() => {
-          if (selected.includes(file.id)) {
-            return selected.filter((s) => s !== file.id);
-          } else {
-            return [...selected, file.id];
-          }
-        });
+        if (selected.includes(file.id)) {
+          setSelected(selected.filter((s) => s !== file.id));
+        } else {
+          setSelected([...selected, file.id]);
+        }
       },
     };
   } else {

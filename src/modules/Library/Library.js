@@ -8,17 +8,18 @@ import FileList from "./FileList";
 import FolderList from "./Folders/List";
 import Editor from "./Editor";
 
-import { useLibrary } from "./context";
+import { useLibrary, useLibraryStore } from "./context";
 
 import "./library.scss";
 
 export default function Library() {
   // set container class based on image or file type library
 
-  const { edit, messageStore } = useLibrary();
+  const store = useLibraryStore();
+  const { edit } = useLibrary();
   return (
     <div className="admin-library">
-      <NoticeList store={messageStore} />
+      <NoticeList store={store} />
 
       <div className="flex flex-grow overflow-hidden">
         <div className="w-1/4 flex flex-col mr-2 h-full overflow-hidden">
