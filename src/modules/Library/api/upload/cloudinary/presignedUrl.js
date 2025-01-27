@@ -41,7 +41,6 @@ export default async function presignedUrlAction({ filename, type }) {
 
   const eager = [
     "f_webp", // Original dimensions as WebP
-    // 'w_200,h_200,c_thumb,g_face|g_center,f_webp',  // Thumbnail as WebP
     "w_200,h_200,c_thumb,g_center,f_webp", // Thumbnail as WebP
   ].join("|");
 

@@ -26,12 +26,15 @@ export default function File({ file }) {
     setEdit,
     addMessage,
     apiPath,
+    getQueryKey,
   } = useLibrary();
+
   const ref = useRef();
   const imgRef = useRef();
 
   const saveMoveMutation = useMutation({
-    queryKey: ["files", activeFolder, false],
+    queryKey: getQueryKey(),
+    successKey: ["files", activeFolder, false],
     mutationFn: (post) => apiAction(apiPath + "/save-move", post),
     onError: ({ error }) => {
       addMessage({ error: error.message });

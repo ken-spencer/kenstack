@@ -7,14 +7,13 @@ import { useLibrary } from "../context";
 const defaultFiles = [];
 
 export default function useFiles() {
-  const { activeFolder, keywords, trash, apiPath } = useLibrary();
-
+  const { getQueryKey, activeFolder, keywords, trash, apiPath } = useLibrary();
   const {
     data,
     isLoading: isLoadingFiles,
     refetch,
   } = useQuery({
-    queryKey: ["files", activeFolder, keywords, trash],
+    queryKey: getQueryKey(),
     queryFn: () =>
       apiAction(apiPath + "/list", { activeFolder, keywords, trash }),
     // initialData: [],
@@ -27,17 +26,12 @@ export default function useFiles() {
   const queryClient = useQueryClient();
   const setFiles = useCallback(
     (value) => {
-      if (typeof value === "function") {
-        queryClient.setQueryData(["files", activeFolder, trash], {
-          files: value(files),
-        });
-      } else {
-        queryClient.setQueryData(["files", activeFolder, trash], {
-          files: value,
-        });
-      }
+      const queryKey = getQueryKey();
+      queryClient.setQueryData(queryKey, {
+        files: typeof value === "function" ? value(files) : value,
+      });
     },
-    [queryClient, activeFolder, trash, files],
+    [queryClient, files, getQueryKey],
   );
 
   return { data, files, isLoadingFiles, setFiles, refetchFiles: refetch };

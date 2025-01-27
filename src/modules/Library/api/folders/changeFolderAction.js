@@ -17,7 +17,7 @@ export default async function changeFolderAction({ idArray, folder }) {
     errorLog(e, "Problem calculating max library priority");
     return defaultError;
   }
-  const max = rows[0] ? rows[0].priority : 0;
+  const max = rows[0] ? (rows[0].priority ?? rows.length) : 0;
 
   let count = max;
   const query = idArray.map((id) => {

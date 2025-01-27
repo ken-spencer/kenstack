@@ -11,10 +11,10 @@ import DeleteForever from "./DeleteForever";
 import ToggleTrash from "./ToggleTrash";
 
 import CheckboxBlankIcon from "@kenstack/icons/CheckboxBlank";
-import IndeterminateIcon from "@kenstack/icons/Indeterminate";
+import CancelIcon from "@kenstack/icons/Cancel";
 import CutIcon from "@kenstack/icons/Cut";
 import SelectAllIcon from "@kenstack/icons/SelectAll";
-import DeselectAllIcon from "@kenstack/icons/CheckboxBlank";
+import DeselectAllIcon from "@kenstack/icons/Indeterminate";
 
 import { useLibrary } from "../../context";
 import useFiles from "../useFiles";
@@ -122,7 +122,7 @@ export default function Toolbar() {
                 onClick={() => setSelecting(false)}
                 tooltip="Done selecting"
               >
-                <IndeterminateIcon />
+                <CancelIcon />
               </AdminIcon>
             )}
           </>

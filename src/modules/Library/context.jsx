@@ -6,90 +6,104 @@ import { createStore } from "zustand";
 import { useStore } from "zustand";
 import messageMixin from "@kenstack/mixins/messageStore";
 
-// import defaultFile from "./FileList/defaultFile";
-// import useFiles from "./FileList/useFiles";
-
 const accept = ["image/jpeg", "image/gif", "image/png", "image/webp"];
 
 const LibraryContext = createContext({});
 
 const createLibraryStore = (props) =>
-  createStore((set) => ({
-    type: "image", // image | file
-    mode: "image", // figure out why we have both this and type
-    accept,
-    activeFolder: null,
-    edit: null,
-    trash: false,
-    selected: [],
-    selecting: false,
-    keywords: "",
-    uploadQueue: [],
-    error: "",
-    dragData: {},
-    clipboard: [],
-    ...props,
-    setActiveFolder: (activeFolder) =>
-      set({
-        activeFolder,
-        edit: null,
-        trash: false,
-        selected: [],
-        keywords: "",
-      }),
-    setEdit: (edit) => set({ edit }),
-    setTrash: (trash) =>
-      set({
-        trash,
-        edit: null,
-        keywords: "",
-      }),
-    setSelected: (selected) => set({ selected }),
-    setSelecting: (selecting) =>
-      set({
-        selecting,
-        selected: [],
-      }),
-    setKeywords: (keywords) =>
-      set({
-        keywords,
-        activeFolder: null,
-      }),
-
-    setUploadQueue: (uploadQueue) => set({ uploadQueue }),
-    prepareUpload: (filesToUpload) =>
+  createStore((set, get) => {
+    const createSetter = (key) => (valueOrUpdater) => {
       set((state) => {
-        if (filesToUpload.length === 0) {
-          return;
-        }
+        const currentValue = state[key];
+        const newValue =
+          typeof valueOrUpdater === "function"
+            ? valueOrUpdater(currentValue)
+            : valueOrUpdater;
+        return { [key]: newValue };
+      });
+    };
 
-        let list = [];
-        for (let i = 0, file; (file = filesToUpload[i]); i++) {
-          const data = {
-            ref: file,
-            key: [
-              Date.now(),
-              file.name.replace(/[^0-9a-zA-Z-_]+/g, ""),
-              file.lastModified,
-              file.size,
-            ].join(":"),
-            status: "queued",
-            progress: 0,
-            folder: activeFolder,
-          };
+    return {
+      type: "image", // image | file
+      mode: "image", // figure out why we have both this and type
+      accept,
+      activeFolder: null,
+      edit: null,
+      trash: false,
+      selected: [],
+      selecting: false,
+      keywords: "",
+      uploadQueue: [],
+      error: "",
+      dragData: {},
+      clipboard: [],
+      ...props,
+      setActiveFolder: (activeFolder) =>
+        set({
+          activeFolder,
+          edit: null,
+          trash: false,
+          selected: [],
+          keywords: "",
+        }),
+      setEdit: createSetter("edit"),
+      setTrash: (trash) =>
+        set({
+          trash,
+          edit: null,
+          keywords: "",
+        }),
+      setSelected: createSetter("selected"),
+      setSelecting: (selecting) =>
+        set({
+          selecting,
+          selected: [],
+        }),
+      setKeywords: (keywords) =>
+        set({
+          keywords,
+          activeFolder: null,
+        }),
 
-          list.push(data);
-        }
+      setUploadQueue: createSetter("uploadQueue"),
+      prepareUpload: (filesToUpload) =>
+        set((state) => {
+          if (filesToUpload.length === 0) {
+            return state;
+          }
 
-        const queue = [...state.uploadQueue, ...list];
-        queue[0].status = "uploading";
-        return { ietUploadQueue: queue };
-      }),
-    setError: (error) => set({ error }),
-    setDragData: (setDragData) => set({ setDragData }),
-    setClipboard: (clipboard) => set({ clipboard }),
-    ...messageMixin(set),
-  }));
+          let list = [];
+          for (let i = 0, file; (file = filesToUpload[i]); i++) {
+            const data = {
+              ref: file,
+              key: [
+                Date.now(),
+                file.name.replace(/[^0-9a-zA-Z-_]+/g, ""),
+                file.lastModified,
+                file.size,
+              ].join(":"),
+              status: "queued",
+              progress: 0,
+              folder: state.activeFolder,
+            };
+
+            list.push(data);
+          }
+
+          const queue = [...state.uploadQueue, ...list];
+          queue[0].status = "uploading";
+          return { uploadQueue: queue };
+        }),
+      setError: createSetter("error"),
+      setDragData: createSetter("dragData"),
+      setClipboard: createSetter("clipboard"),
+      getQueryKey: () => {
+        const { activeFolder, trash, keywords } = get();
+        return ["files", activeFolder, trash, keywords];
+      },
+      ...messageMixin(set),
+    };
+  });
 
 const LibraryProvider = ({
   mode = "image", // image | file

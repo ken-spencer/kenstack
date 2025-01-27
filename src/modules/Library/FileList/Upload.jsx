@@ -63,6 +63,7 @@ export default function Upload({ file }) {
       // Change orientation of rotated images.
       img.src = reader.result;
       img.onload = () => {
+        // TODO this is not currently doing anything. Remove soon if not needed
         EXIF.getData(img, function () {
           const orientation = EXIF.getTag(this, "Orientation");
           setOrientationClass(orientations[orientation] || "");
@@ -77,7 +78,6 @@ export default function Upload({ file }) {
   }, [file.ref]);
 
   useEffect(() => {
-    return;
     if (file.status !== "uploading") {
       return;
     }

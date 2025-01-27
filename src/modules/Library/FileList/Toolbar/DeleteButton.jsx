@@ -8,11 +8,19 @@ import useMutation from "@kenstack/hooks/useMutation";
 import apiAction from "@kenstack/client/apiAction";
 
 export default function Delete() {
-  const { apiPath, addMessage, selected, setSelected, activeFolder, trash } =
-    useLibrary();
+  const {
+    apiPath,
+    addMessage,
+    selected,
+    setSelected,
+    getQueryKey,
+    activeFolder,
+    trash,
+  } = useLibrary();
 
   const deleteMutation = useMutation({
-    queryKey: ["files", activeFolder, trash],
+    queryKey: getQueryKey(),
+    successKey: ["files", activeFolder, trash],
     mutationFn: (post) => apiAction(apiPath + "/delete-files", post),
     onMutate: async ({ idArray }, { set, previous }) => {
       set((data) => data.files.filter((f) => !idArray.includes(f.id)));

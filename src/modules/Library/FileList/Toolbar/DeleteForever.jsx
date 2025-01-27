@@ -12,11 +12,13 @@ import apiAction from "@kenstack/client/apiAction";
 import useMutation from "@kenstack/hooks/useMutation";
 
 export default function DeleteForever() {
-  const { selected, setSelected, addMessage, apiPath } = useLibrary();
+  const { selected, setSelected, addMessage, getQueryKey, apiPath } =
+    useLibrary();
   const [confirm, setConfirm] = useState(false);
 
   const mutation = useMutation({
-    queryKey: ["files", null, true],
+    queryKey: getQueryKey(),
+    successKey: ["files", null, true],
     mutationFn: (post) => apiAction(apiPath + "/delete-forever", post),
     onMutate: async ({ idArray }, { set, previous }) => {
       set((data) => {

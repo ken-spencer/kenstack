@@ -4,7 +4,7 @@ import { useLibrary } from "../context";
 export default function UploadFiles() {
   const { uploadQueue } = useLibrary();
 
-  if (uploadQueue.map.length === 0) {
+  if (uploadQueue.length === 0) {
     return null;
   }
 

@@ -32,6 +32,7 @@ const config = [
       'react-compiler': reactCompiler,
     },
     rules: {
+      "no-unreachable": "error",
       "@typescript-eslint/no-unused-vars": ["error", { "args": "none" }],
       "no-unused-vars": "off",
       "@typescript-eslint/no-shadow": ["error", { "hoist": "all", "builtinGlobals": false }],

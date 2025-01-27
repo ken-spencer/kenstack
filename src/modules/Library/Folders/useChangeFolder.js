@@ -15,11 +15,14 @@ export default function useDrop(folder, paste = false) {
     clipboard,
     setClipboard,
     trash,
+    getQueryKey,
   } = useLibrary();
   const [isDragOver, setIsDragOver] = useState(false);
 
   const saveChangeFolderMutation = useMutation({
-    queryKey: ["files", activeFolder, trash],
+    queryKey: getQueryKey(),
+    successKey: ["files", activeFolder, trash],
+    successKey: ["files"],
     // changeFolderAction,
     mutationFn: (post) => apiAction(apiPath + "/change-folder", post),
     onMutate: async ({ idArray }, { set, previous }) => {
