@@ -11,7 +11,7 @@ import Submit from "../Submit";
 
 const empty = {};
 export default function AutoForm({
-  action,
+  action: userAction,
   store,
   mutation,
   // values = empty,
@@ -22,12 +22,36 @@ export default function AutoForm({
   submitClass = "",
   onSubmit = null,
   onChange = null,
-  onResponse = null,
+  // onResponse = null,
   // reset: resetInitial = null,
   gap = "16px",
   state = empty,
   children = null,
 }) {
+  const action = React.useMemo(() => {
+    if (userAction) {
+      return async (...args) => {
+      if (store) {
+        store.setState({ pending: true });
+      }
+
+        const data = await userAction(...args);
+        if (store) {
+          store.setState({ pending: false });
+          if (data?.error || typeof data.success === "string") {
+            store.getState().addMessage(data);
+  
+            if (data.fieldErrors) {
+              store.getState().setFieldErrors(data.fieldErrors);
+            }
+          }
+        }
+        return data;
+      }
+    }
+    
+  }, [userAction, store]);
+  
   // const messages = useStore(store, (state) => state.messages);
   // const removeMessage = useStore(store, (state) => state.removeMessage);
 
@@ -38,7 +62,7 @@ export default function AutoForm({
       mutation={mutation}
       onSubmit={onSubmit}
       onChange={onChange}
-      onResponse={onResponse}
+      // onResponse={onResponse}
       // reset={reset}
     >
       <RefererNotice className="mb-4" name={name} />

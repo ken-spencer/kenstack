@@ -9,7 +9,7 @@ export default function Form({
   mutation = null,
   confirm = false,
   onSubmit = null,
-  onResponse = null,
+  // onResponse = null,
   children = null,
   ...props
 }) {
