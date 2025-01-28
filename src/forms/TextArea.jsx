@@ -1,23 +1,20 @@
-import React, { forwardRef } from "react";
+import React from "react";
 
 import useField from "./useField";
 
 import Field from "./Field";
 
-const TextArea = (props, ref) => {
-  const field = useField(props, ref);
+export default function TextArea(initialProps) {
+  const { field, props, fieldProps } = useField(initialProps);
 
   return (
-    <Field field={field}>
+    <Field field={field} {...fieldProps}>
       <textarea
-        {...field.props}
+        {...props}
         className="textarea"
         value={field.value}
-        ref={field.ref}
+        // ref={field.ref}
       />
     </Field>
   );
-};
-
-TextArea.displayName = "TextArea";
-export default forwardRef(TextArea);
+}

@@ -138,7 +138,7 @@ export default function createFormStore(
             return {};
           }
 
-          const values = state.getValues();
+          const values = state.values;
           // let invalid = {invalidFields: state.invalidFields};
           for (let field of Object.values(state.fields)) {
             let error = "";

@@ -28,12 +28,18 @@ export default function Form({
         state.setShowErrors(true);
         evt.preventDefault();
 
-        for (let field of Object.values(state.fields)) {
-          if (field.error && field.ref?.current) {
-            field.ref.current.focus();
-            break;
+        // wait for side effects in setShowErrors. There is probably a cleaner way.
+        setTimeout(() => {
+          // get state again to reflect new value;
+          const { fields } = store.getState();
+
+          for (let field of Object.values(fields)) {
+            if (field.error && field.ref?.current) {
+              field.ref.current.focus();
+              break;
+            }
           }
-        }
+        }, 50);
 
         return;
       }
