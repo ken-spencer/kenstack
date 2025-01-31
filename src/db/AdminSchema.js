@@ -1,3 +1,4 @@
+import "server-only";
 import mongoose from "../db";
 
 // import DateRelative from "../components/Date/Relative";
