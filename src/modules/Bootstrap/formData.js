@@ -1,4 +1,7 @@
-const fields = {
+import createForm from "@kenstack/forms/formSchema";
+
+
+const fields = createForm({
   contact: {
     label: "Contact",
     fields: {
@@ -36,6 +39,6 @@ const fields = {
       },
     },
   },
-};
+});
 
 export default fields;

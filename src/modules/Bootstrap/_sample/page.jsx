@@ -1,7 +1,12 @@
 import Bootstrap from "@kenstack/modules/Bootstrap";
-import session from "@/session";
-import save from "./save";
+import { session } from "@/config/server";
 
-export default async function Page() {
-  return <Bootstrap session={session} saveAction={save} />;
+import action from "./save";
+
+export default async function BootstrapPage() {
+  return (
+    <div className="max-w-2xl mx-auto">
+      <Bootstrap session={session} action={action} />
+    </div>
+  );
 }

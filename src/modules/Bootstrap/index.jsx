@@ -8,7 +8,7 @@
 import Form from "./Form";
 import Notice from "@kenstack/components/Notice";
 
-export default async function AdminSetup({ session, saveAction }) {
+export default async function AdminSetup({ session, action }) {
   const User = session.userModel;
   const user = await User.findOne();
 
@@ -18,5 +18,5 @@ export default async function AdminSetup({ session, saveAction }) {
     );
   }
 
-  return <Form saveAction={saveAction} />;
+  return <Form action={action} />;
 }

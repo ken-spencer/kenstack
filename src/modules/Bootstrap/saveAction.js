@@ -1,9 +1,10 @@
-"user server";
+"use server";
 
 import errorLog from "@kenstack/log/error";
 import auditLog from "@kenstack/log/audit";
 
-import fields from "./fields";
+import form from "./formData";
+const fields = form.getFields();
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
