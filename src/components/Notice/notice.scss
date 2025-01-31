@@ -1,5 +1,7 @@
 .notice {
   display: flex;
+  interpolate-size: allow-keywords;
+  
   align-items: center;
 
   padding: 0.5rem;
@@ -8,7 +10,7 @@
   border-radius: 0.25rem;
 
   overflow: hidden;
-  // transition: all 2500ms ease;
+  transition: all 500ms ease;
 
   height: var(--notice-height, auto);
   opacity: 1;

@@ -6,7 +6,7 @@ import Session from "@kenstack/server/Session";
 
 export default function ResetPassword({
   session,
-  apiPath = "/api/reset-password",
+  apiPath = "/reset-password/api",
 }) {
   if (!(session instanceof Session)) {
     throw Error("A valid session must be specified");

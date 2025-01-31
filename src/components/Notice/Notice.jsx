@@ -1,5 +1,4 @@
-"use client";
-
+"use client"
 import { useEffect, useCallback, useState, useRef } from "react";
 
 import "./notice.scss";
@@ -39,40 +38,10 @@ export default function Notice({
   const timeout = useRef();
 
   const [last, setLast] = useState();
-  const lastRef = useRef();
   const ref = useRef();
 
-  const [height, setHeight] = useState(null);
-  const [show, setShowBase] = useState(messageText ? true : false);
-  const setShow = useCallback((value) => {
-    if (value) {
-      const style = ref.current.style;
-      style.height = "auto";
-      // style.transition = "none";
-      const hasCollapse = ref.current.classList.contains("collapsed");
-      ref.current.classList.remove("collapsed");
-      setHeight(ref.current.offsetHeight);
-      style.height = "";
-      // style.transition = "";
-      if (hasCollapse) {
-        ref.current.classList.add("collapsed");
-      }
-
-      // give height time to set
-      setTimeout(() => {
-        setShowBase(true);
-        setLast(lastRef.current);
-      }, collapseTime);
-    } else {
-      setShowBase(false);
-      // collapse is over
-      setTimeout(() => {
-        setLast(null);
-        setHeight(0);
-      }, collapseTime);
-    }
-  }, []);
-
+  const [show, setShow] = useState(false);
+  // const [height, setHeight] = useState(null);
   useEffect(() => {
     if (timeout.current) {
       clearTimeout(timeout.current);
@@ -116,12 +85,6 @@ export default function Notice({
     return null;
   }
 
-  lastRef.current = {
-    messageText,
-    classes,
-    Icon,
-  };
-
   const NoticeIcon = last?.Icon ?? Icon;
   return (
     <div
@@ -132,10 +95,9 @@ export default function Notice({
       }
       ref={ref}
       style={
-        height
+        collapse 
           ? {
-              "--notice-height": height + "px",
-              transition: `all ${collapseTime}ms ease`,
+              "--notice-height": show ?  "auto" : 0,
             }
           : {}
       }

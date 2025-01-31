@@ -5,11 +5,11 @@ import Form from "./Form";
 import Session from "@kenstack/server/Session";
 import { LoginProvider } from "./context";
 
-export default function Login({ session, apiPath = "/api/login" }) {
+export default function Login({ session, apiPath = "/login/api" }) {
   if (!(session instanceof Session)) {
     throw Error("A valid session must be specified");
   }
-
+  
   return (
     <div>
       <LoginProvider
