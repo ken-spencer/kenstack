@@ -115,7 +115,7 @@
   }
 
   & .admin-row:hover > * {
-    @apply bg-gray-200;
+    @apply bg-gray-200 dark:bg-gray-700 transition;
   }
 
   .sortable {

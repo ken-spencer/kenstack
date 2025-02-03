@@ -31,27 +31,26 @@ export default function AutoForm({
   const action = React.useMemo(() => {
     if (userAction) {
       return async (...args) => {
-      if (store) {
-        store.setState({ pending: true });
-      }
+        if (store) {
+          store.setState({ pending: true });
+        }
 
         const data = await userAction(...args);
         if (store) {
           store.setState({ pending: false });
           if (data?.error || typeof data.success === "string") {
             store.getState().addMessage(data);
-  
+
             if (data.fieldErrors) {
               store.getState().setFieldErrors(data.fieldErrors);
             }
           }
         }
         return data;
-      }
+      };
     }
-    
   }, [userAction, store]);
-  
+
   // const messages = useStore(store, (state) => state.messages);
   // const removeMessage = useStore(store, (state) => state.removeMessage);
 

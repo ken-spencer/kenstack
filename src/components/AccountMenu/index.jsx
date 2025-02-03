@@ -3,14 +3,18 @@ import Link from "next/link";
 
 import "./account-menu.scss";
 
-export default async function DropmenuServer({ session, children }) {
+export default async function DropmenuServer({
+  session,
+  className = "",
+  children,
+}) {
   const claims = await session.getClaims();
 
   if (claims === false) {
-    return <Link href="/login">Sign in</Link>;
+    return <Link href="/login">Log in</Link>;
   }
 
   // const roles = claims.roles;
 
-  return <AccountMenu>{children}</AccountMenu>;
+  return <AccountMenu className={className}>{children}</AccountMenu>;
 }

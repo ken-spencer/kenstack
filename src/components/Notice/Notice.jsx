@@ -1,12 +1,10 @@
-"use client"
-import { useEffect, useCallback, useState, useRef } from "react";
+"use client";
+import { useEffect, useState, useRef } from "react";
 
 import "./notice.scss";
 import ErrorIcon from "@kenstack/icons/Error";
 import SuccessIcon from "@kenstack/icons/CheckCircleOutline";
 import InformationIcon from "@heroicons/react/24/outline/InformationCircleIcon";
-
-const collapseTime = 400; // ms
 
 export default function Notice({
   actionState,
@@ -37,7 +35,7 @@ export default function Notice({
 
   const timeout = useRef();
 
-  const [last, setLast] = useState();
+  // const [last, setLast] = useState();
   const ref = useRef();
 
   const [show, setShow] = useState(false);
@@ -81,11 +79,12 @@ export default function Notice({
   } else if (information) {
     Icon = InformationIcon;
     classes += " notice-information";
-  } else if (!last) {
-    return null;
   }
+  //  else if (!last) {
+  //   return null;
+  // }
 
-  const NoticeIcon = last?.Icon ?? Icon;
+  // const NoticeIcon = last?.Icon ?? Icon;
   return (
     <div
       className={
@@ -95,15 +94,15 @@ export default function Notice({
       }
       ref={ref}
       style={
-        collapse 
+        collapse
           ? {
-              "--notice-height": show ?  "auto" : 0,
+              "--notice-height": show ? "auto" : 0,
             }
           : {}
       }
     >
-      <NoticeIcon />
-      <span>{last?.messageText ?? messageText}</span>
+      <Icon />
+      <span>{/* last?.messageText ?? */ messageText}</span>
     </div>
   );
 }

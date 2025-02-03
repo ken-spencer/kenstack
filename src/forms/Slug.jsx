@@ -7,6 +7,7 @@ import IconButton from "./IconButton";
 import useField from "./useField";
 // import useFieldSubscribe from "./useFieldSubscribe";
 import { useForm } from "./context";
+import { useShallow } from "zustand/shallow";
 
 import Field from "./Field";
 import Input from "./base/Input";
@@ -35,7 +36,17 @@ export default function SlugField({
 
   const { field, props, fieldProps } = useField(initialProps);
 
-  const subscribedField = useForm((state) => state.fields[subscribe]);
+  const subscribedValue = useForm(
+    useShallow((state) => {
+      if (Array.isArray(subscribe)) {
+        return subscribe
+          .map((subName) => state.fields[subName]?.value ?? "")
+          .join(" ");
+      }
+      return state.fields[subscribe]?.value ?? "";
+    }),
+  );
+
   const [locked, setLocked] = useState(field.initialValue ? true : false);
   const [interacted, setInteracted] = useState(false);
 
@@ -44,7 +55,7 @@ export default function SlugField({
       return;
     }
 
-    const title = subscribe ? subscribedField?.value || "" : "";
+    const title = subscribe ? subscribedValue : "";
     field.setValue(strToSlug(title));
   }, [
     interacted,
@@ -52,7 +63,7 @@ export default function SlugField({
     locked,
     field,
     subscribe,
-    subscribedField?.value,
+    subscribedValue,
   ]);
 
   return (

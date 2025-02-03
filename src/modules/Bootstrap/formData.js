@@ -1,6 +1,5 @@
 import createForm from "@kenstack/forms/formSchema";
 
-
 const fields = createForm({
   contact: {
     label: "Contact",

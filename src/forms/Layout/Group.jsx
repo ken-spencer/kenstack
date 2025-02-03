@@ -51,7 +51,7 @@ export default function Group(props) {
 
   return (
     <section className={classesContainer}>
-      {title && <h1 className={classesTitle}>{title}</h1>}
+      {title && <h3 className={classesTitle}>{title}</h3>}
       <div className={classesBody}>
         <Fields fields={fields} />
       </div>

@@ -9,7 +9,7 @@ export default function Login({ session, apiPath = "/login/api" }) {
   if (!(session instanceof Session)) {
     throw Error("A valid session must be specified");
   }
-  
+
   return (
     <div>
       <LoginProvider
