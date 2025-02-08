@@ -38,7 +38,7 @@ const fields = {
       lg: 6,
       fields: {
         roles: {
-          field: "checkboxList",
+          field: "checkbox-list",
           options: [["ADMIN", "Administrator"]],
         },
         resetPassword: {

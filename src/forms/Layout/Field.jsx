@@ -9,6 +9,7 @@ import Checkbox from "../Checkbox";
 import CheckboxList from "../CheckboxList";
 import Radio from "../Radio";
 import Select from "../Select";
+import MultiSelect from "../MultiSelect";
 import Slug from "../Slug";
 
 function Field({ field = "text", span = "", containerClass = "", ...props }) {
@@ -47,12 +48,14 @@ function Field({ field = "text", span = "", containerClass = "", ...props }) {
             return <Password {...fieldProps} />;
           case "checkbox":
             return <Checkbox {...fieldProps} />;
-          case "checkboxlist":
+          case "checkbox-list":
             return <CheckboxList {...fieldProps} />;
           case "radio":
             return <Radio {...fieldProps} />;
           case "select":
             return <Select {...fieldProps} />;
+          case "multi-select":
+            return <MultiSelect {...fieldProps} />;
           case "slug":
             return <Slug {...fieldProps} />;
           default:

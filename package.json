@@ -52,6 +52,9 @@
     "validator": "^13.11.0",
     "zustand": "^5.0.1"
   },
+  "peerDependencies": {
+    "next-themes": "^0.4"
+  },  
   "description": "Content management for Next.js",
   "main": "next.config.js",
   "repository": {

@@ -203,7 +203,7 @@ async function bindFormData(fieldTree, formData) {
       continue;
     }
 
-    if (field.field === "checkboxList") {
+    if (field.field === "checkbox-list" || field.field === "multi-select") {
       // get the values of a checkbox list as an array.
       this.set(name, formData.getAll(name));
     } else if (field.field === "checkbox") {

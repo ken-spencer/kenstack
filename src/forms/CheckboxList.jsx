@@ -45,7 +45,13 @@ export default function CheckboxList({ onChange, ...initialProps }) {
   return (
     <Field field={field} {...fieldProps}>
       <ul className={listClass ? listClass : "radio-list" + classes}>
-        {options.map(([value, label], key) => {
+        {options.map((option, key) => {
+          let value, label;
+          if (Array.isArray(option)) {
+            [value, label] = option;
+          } else if (typeof option === "string") {
+            value = label = option;
+          }
           const id = props.id + "-" + value;
           value = String(value);
           return (
