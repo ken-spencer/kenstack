@@ -38,7 +38,7 @@ function Field({ field = "text", span = "", containerClass = "", ...props }) {
           return <FunctionField {...fieldProps} />;
         }
 
-        switch (field.toLowerCase()) {
+        switch (field) {
           case "text":
           case "input":
             return <InputField {...fieldProps} />;

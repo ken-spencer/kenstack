@@ -21,9 +21,9 @@ export default function Search({
       className="flex items-center px-1"
       onClick={() => ref.current.focus()}
     >
-      <SearchIcon />
+      <SearchIcon className="dark:text-white" />
       <input
-        className="appearance-none border-none focus:outline-none focus:ring-0  bg-transparent focus:outline-none flex-1 w-full px-1"
+        className="flex-1 w-full px-1 appearance-none border-none focus:outline-none focus:ring-0  bg-transparent focus:outline-none dark:text-white"
         placeholder={placeholder}
         value={keywords}
         onChange={(evt) => {
@@ -40,7 +40,7 @@ export default function Search({
         }}
         
       >
-        <ClearIcon />
+        <ClearIcon className="dark:text-white"/>
       </button>
     </div>
   )

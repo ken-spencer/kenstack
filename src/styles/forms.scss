@@ -394,3 +394,13 @@ $breakpoints: (
     }
   }
 }
+
+
+.multi-select-dialog {
+
+  @apply absolute m-0;
+  @apply bg-white dark:bg-black dark:text-white shadow-md;
+  &::backdrop {
+    @apply bg-black bg-opacity-80;
+  }
+}

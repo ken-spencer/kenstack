@@ -63,16 +63,18 @@ export default async function saveAction(
     if (errors) {
       return errors;
     }
+    
+    await doc.save();
 
-    try {
-      await doc.save();
-    } catch (e) {
-      errorLog(e, "Problem saving model");
-      return {
-        error:
-          "There was an unexpected problem saving your data. Please try again later.",
-      };
-    }
+    // try {
+    //   await doc.save();
+    // } catch (e) {
+    //   errorLog(e, "Problem saving model");
+    //   return {
+    //     error:
+    //       "There was an unexpected problem saving your data. Please try again later.",
+    //   };
+    // }
   }
 
   if (isNew && action === "save") {

@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from "react";
 
 import debounce from "lodash/debounce";
 
-export default function useDebounce(initialValue, delay = 300) {
+export default function useDebounce(initialValue = "", delay = 300) {
   const [value, setValueBase] = useState(initialValue);
   const [debouncedValue, setDebouncedValueBase] = useState(initialValue);
 

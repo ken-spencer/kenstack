@@ -197,6 +197,13 @@ async function bindFormData(fieldTree, formData) {
   const fields = schema.getFields();
 
   for (let name in fields) {
+    if (!this.constructor.schema.path(name)) {
+      // TODO this should be an error, but we need a way to identify
+      // certain fields to be ignored (confirm password etc) l
+      continue;
+      // throw Error(`Field ${ name } has not been declared in model ${ this.constructor.modelName }`);
+    }
+
     let field = fields[name];
 
     if (name.readOnly) {
