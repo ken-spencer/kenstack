@@ -1,4 +1,4 @@
-import edit from "@kenstack/modules/AdminEdit/api";
+// import edit from "@kenstack/modules/AdminEdit/api";
 import list from "@kenstack/modules/AdminList/api";
 import { notFound } from "next/navigation";
 
@@ -7,7 +7,7 @@ import { match } from "path-to-regexp";
 export default function API(props) {
   const POST = async (request, { params }) => {
     const { admin: adminParams } = await params;
-
+  
     const path = adminParams.join("/");
 
     const editMatch = match(":id/:slug", {

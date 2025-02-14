@@ -40,6 +40,7 @@
     "nanoid": "^5.0.9",
     "path-to-regexp": "^8.2.0",
     "pica": "^9.0.1",
+    "pluralize": "^8.0.0",
     "postcss": "^8.4.32",
     "prettier": "^3.0.3",
     "remark": "^15.0.1",
@@ -54,7 +55,7 @@
   },
   "peerDependencies": {
     "next-themes": "^0.4"
-  },  
+  },
   "description": "Content management for Next.js",
   "main": "next.config.js",
   "repository": {

@@ -17,6 +17,7 @@ export default async function Server({ children, session, admin, model }) {
   if (!(session instanceof Session)) {
     throw Error("Authenticate request a session to be specified");
   }
+  console.log('bah', admin.constructor.name);
 
   if (!(admin instanceof clientModel)) {
     throw Error("admin model must be an instance of clientModel");

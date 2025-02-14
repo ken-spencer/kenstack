@@ -1,5 +1,7 @@
 "use client";
 
+import { use, useMemo } from "react";
+
 import dynamic from "next/dynamic";
 // import Loading from "@kenstack/components/Loading";
 
@@ -8,7 +10,12 @@ const EditClient = dynamic(() => import("@kenstack/modules/AdminEdit"));
 
 import { useServer } from "@kenstack/server/context";
 
-export default function AdminClient({ admin }) {
+
+export default function AdminClientLoad({ modelName, adminConfig }) {
+  // const { default: admin } = useMemo(() =>  use(adminImport()), []);
+  const adminImport = adminConfig.get(modelName);
+  const importPromise = useMemo(() => adminImport(), []);
+  const { default: admin } = use(importPromise);
   const { list, edit } = useServer();
 
   if (list === true) {

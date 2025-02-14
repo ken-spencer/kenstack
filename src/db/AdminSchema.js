@@ -134,6 +134,11 @@ class AdminSchema extends Schema {
     return this._admin;
   }
   */
+
+  static fromClientModel(admin) {
+    const fields = admin.getFields();
+    
+  }
 }
 
 /*
@@ -303,3 +308,4 @@ function flatten(retval, object) {
 */
 
 export default AdminSchema;
+
