@@ -89,7 +89,7 @@ export default function Notice({
     <div
       className={
         "notice scroll-mt-16" +
-        (/*last?.classess ??*/ classes) +
+        /*last?.classess ??*/ classes +
         (show || !collapse ? "" : " collapsed")
       }
       ref={ref}

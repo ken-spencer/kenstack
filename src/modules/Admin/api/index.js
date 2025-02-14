@@ -7,7 +7,7 @@ import { match } from "path-to-regexp";
 export default function API(props) {
   const POST = async (request, { params }) => {
     const { admin: adminParams } = await params;
-  
+
     const path = adminParams.join("/");
 
     const editMatch = match(":id/:slug", {

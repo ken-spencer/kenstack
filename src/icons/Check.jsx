@@ -13,4 +13,3 @@ const SvgCheck = (props) => (
   </svg>
 );
 export default SvgCheck;
-

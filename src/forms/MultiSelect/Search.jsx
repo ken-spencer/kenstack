@@ -6,7 +6,7 @@ import ClearIcon from "@kenstack/icons/Clear";
 export default function Search({
   keywords,
   setKeywords,
-  placeholder="Enter search",
+  placeholder = "Enter search",
   autofocus = false,
 }) {
   const ref = useRef();
@@ -15,12 +15,9 @@ export default function Search({
       ref.current.focus();
     }
   }, [autofocus]);
-  
+
   return (
-    <div
-      className="flex items-center px-1"
-      onClick={() => ref.current.focus()}
-    >
+    <div className="flex items-center px-1" onClick={() => ref.current.focus()}>
       <SearchIcon className="dark:text-white" />
       <input
         className="flex-1 w-full px-1 appearance-none border-none focus:outline-none focus:ring-0  bg-transparent focus:outline-none dark:text-white"
@@ -35,13 +32,12 @@ export default function Search({
         type="button"
         className={keywords.length ? "" : "invisible"}
         onClick={() => {
-          setKeywords("")
+          setKeywords("");
           ref.current.focus();
         }}
-        
       >
-        <ClearIcon className="dark:text-white"/>
+        <ClearIcon className="dark:text-white" />
       </button>
     </div>
-  )
+  );
 }

@@ -19,10 +19,7 @@ export default function Field({ field, ...props }) {
     [required, containerClass],
   );
 
-  let classesLabel = useMemo(
-    () => twMerge("label", labelClass),
-    [labelClass],
-  );
+  let classesLabel = useMemo(() => twMerge("label", labelClass), [labelClass]);
 
   return (
     <div className={classes}>

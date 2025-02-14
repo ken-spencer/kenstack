@@ -5,11 +5,9 @@ import { notFound } from "next/navigation";
 
 function isId(param) {
   if (param === "new" || param.match(/^[a-fA-F0-9]{24}$/)) {
-    return true;      
+    return true;
   }
-
 }
-
 
 export default async function AdminRouter({
   client: Client,
@@ -21,66 +19,62 @@ export default async function AdminRouter({
   const { admin: adminParams } = await params;
   const routes = adminConfig.getRoutes();
 
-let path = null, id;
-
+  let path = null,
+    id;
 
   if (!adminParams) {
-    // index path, do nothing. 
+    // index path, do nothing.
   } else if (adminParams.length === 1) {
     const [param] = adminParams;
     if (isId(param)) {
       id = param;
     } else {
-      path = param;    
+      path = param;
     }
   } else if (adminParams.length === 2) {
-    const [param1, param2 ] = adminParams;
+    const [param1, param2] = adminParams;
     path = param1;
     if (isId(param2)) {
       id = param2;
     } else {
-      notFound()
+      notFound();
     }
   } else {
-    notFound()
+    notFound();
   }
 
-  let config
+  let config;
   for (const options of routes) {
     if (options.path === path) {
       config = options;
       break;
-    }    
+    }
   }
-    if (!config) {
-      notFound();
-    }
+  if (!config) {
+    notFound();
+  }
 
-    const { admin: adminImport, modelName } = config;
-    const modelImport = props.models.get(modelName);
-    const { default: admin } = await adminImport();
-    const { default: model } = await modelImport();
+  const { admin: adminImport, modelName } = config;
+  const modelImport = props.models.get(modelName);
+  const { default: admin } = await adminImport();
+  const { default: model } = await modelImport();
 
-    if (!model) {
-      throw Error(`Unable to find model ${ modelName }`);
-    }
+  if (!model) {
+    throw Error(`Unable to find model ${modelName}`);
+  }
 
-
-    console.log(id)
- // const id = adminParams[0];
+  // const id = adminParams[0];
   if (id) {
     return (
-      <EditServer  {...props} admin={admin} model={model} id={id}>
-        <Client modelName={modelName}/>
+      <EditServer {...props} admin={admin} model={model} id={id}>
+        <Client modelName={modelName} />
       </EditServer>
     );
   }
 
-    
   return (
     <ListServer {...props} admin={admin} model={model}>
-      <Client modelName={modelName}/>
+      <Client modelName={modelName} />
     </ListServer>
   );
-
 }

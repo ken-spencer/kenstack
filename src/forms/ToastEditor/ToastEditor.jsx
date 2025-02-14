@@ -3,17 +3,16 @@ import useField from "../useField";
 import Field from "../Field";
 
 import { Editor } from "@toast-ui/react-editor";
-import { useTheme } from 'next-themes'
-
+import { useTheme } from "next-themes";
 
 const toolbarItems = [
-  ['heading', 'bold', 'italic', /*'strike'*/],
+  ["heading", "bold", "italic" /*'strike'*/],
   // ['hr', 'quote'],
-  ['ul', 'ol', /*'task', 'indent', 'outdent'*/],
-  [/*'table'*/, /*'image',*/ 'link'],
+  ["ul", "ol" /*'task', 'indent', 'outdent'*/],
+  [, /*'table'*/ /*'image',*/ "link"],
   // ['code', 'codeblock'],
   // ['scrollSync'],
-]
+];
 
 export default function ToastEditor(initialProps) {
   const { field, props, fieldProps } = useField(initialProps);
@@ -21,19 +20,18 @@ export default function ToastEditor(initialProps) {
   const { theme } = useTheme();
 
   useEffect(() => {
-    // if we initialize with initialValue we end up with 
-    //unwanted default text. Hack to fix. 
+    // if we initialize with initialValue we end up with
+    //unwanted default text. Hack to fix.
     const instance = ref.current.getInstance();
 
-    // seem to need a hack to prevent the editor from scrolling and focusing. 
+    // seem to need a hack to prevent the editor from scrolling and focusing.
     const { scrollX, scrollY } = window;
     instance.setMarkdown(field.value);
     setTimeout(() => {
       instance.blur();
-      window.scrollTo(scrollX, scrollY);      
+      window.scrollTo(scrollX, scrollY);
     }, 0);
-  }, [])
-
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Field field={field} {...fieldProps}>
@@ -51,7 +49,7 @@ export default function ToastEditor(initialProps) {
         toolbarItems={toolbarItems}
         onChange={() => {
           const instance = ref.current.getInstance();
-          field.setValue(instance.getMarkdown())
+          field.setValue(instance.getMarkdown());
         }}
         hideModeSwitch={true}
       />
