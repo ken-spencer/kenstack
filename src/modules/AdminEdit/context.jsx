@@ -3,8 +3,7 @@
 import { createContext, useContext, useState, useMemo } from "react";
 
 const AdminEditContext = createContext({});
-import { usePathname } from "next/navigation";
-import escapeRegExp from "@kenstack/utils/escapeRegExp";
+import { usePathname, useParams } from "next/navigation";
 
 // import { useQuery } from "@kenstack/query";
 
@@ -17,18 +16,25 @@ export function AdminEditProvider({
   userId,
 }) {
   const pathname = usePathname();
+  const params = useParams();
+  const apiPath = useMemo(() => {
+    const suffix = params.admin ? params.admin.join("/") : "";
+    return pathname.slice(0, -suffix.length) + "api/" + suffix;
+  }, [params, pathname]);
+
   // const [row, setRow] = useState(initialRow);
   const [confirm, setConfirm] = useState(false);
   // const [loadError, setLoadError] = useState();
   const [login, setLogin] = useState();
 
-  let apiPath;
-  if (id) {
-    const exp = new RegExp(`/${escapeRegExp(id)}($|/.+})`);
-    apiPath = pathname.replace(exp, "") + `/api/${id}`;
-  } else {
-    apiPath = pathname.slice(0, -3) + "api/new"; // strip 'new' from the end;
-  }
+  // let apiPath;
+  // if (id) {
+  //   const exp = new RegExp(`/${escapeRegExp(id)}($|/.+})`);
+  //   apiPath = pathname.replace(exp, "") + `/api/${id}`;
+  // } else {
+  //   apiPath = pathname.slice(0, -3) + "api/new"; // strip 'new' from the end;
+  //   console.log(apiPath, isNew, id);
+  // }
 
   const store = useMemo(
     () => admin.form.createStore({ values: initialRow ?? {} }),

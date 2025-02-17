@@ -10,7 +10,7 @@ import {
 
 import { keepPreviousData, useQuery } from "@kenstack/query";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useParams } from "next/navigation";
 import Cookies from "js-cookie";
 
 import useDebounce from "@kenstack/hooks/useDebounce";
@@ -35,9 +35,15 @@ export function AdminListProvider({
   children,
 }) {
   const userId = claims.sub;
-  const path = usePathname();
-  const apiPath = path + "/api";
+  const pathname = usePathname();
+  const params = useParams();
+  // const apiPath = path + "/api";
   const cookieKey = "admin-list-" + modelName;
+
+  const apiPath = useMemo(() => {
+    const suffix = params.admin ? params.admin.join("/") : "";
+    return pathname.slice(0, -suffix.length) + "api/" + suffix;
+  }, [pathname, params]);
 
   const [selected, setSelected] = useState(new Set());
   // const [error, setError] = useState();
@@ -100,12 +106,12 @@ export function AdminListProvider({
         Cookies.set(cookieKey + "Sort", sort.join(","), {
           sameSite: "strict",
           expires: 1 / 2,
-          path,
+          pathname,
         });
       }
       setSortByBase(sort);
     },
-    [path, cookieKey],
+    [pathname, cookieKey],
   );
 
   const setKeywords = useCallback(
@@ -113,12 +119,12 @@ export function AdminListProvider({
       Cookies.set(cookieKey + "Keywords", value, {
         sameSite: "strict",
         expires: 1 / 2,
-        path,
+        pathname,
       });
       setKeywordsBase(value);
       // setDebouncedKeywords(value);
     },
-    [cookieKey, path, setKeywordsBase],
+    [cookieKey, pathname, setKeywordsBase],
   );
 
   const select = useCallback(

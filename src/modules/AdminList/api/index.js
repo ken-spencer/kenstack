@@ -12,7 +12,7 @@ const API = ({ session, admin, model }) => {
     throw Error("admin model must be an instance of clientModel");
   }
 
-  const POST = async (request, { params: { slug } }) => {
+  const POST = async (request, { slug }) => {
     let action;
     switch (slug) {
       case "load":

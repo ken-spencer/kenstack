@@ -33,20 +33,25 @@ export default function Dialog({
     }
   }, [open]);
 
+  let queryFn;
+  if (loadOptions) {
+    queryFn = () => loadOptions({ keywords });
+  } else if (options) {
+    queryFn = () => {
+      return {
+        options: keywords
+          ? options.filter(([key, label]) => {
+              const k = keywords.toLowerCase();
+              return label.toLowerCase().includes(k);
+            })
+          : options,
+      };
+    };
+  }
+
   const { data, error, isLoading } = useQuery({
     queryKey: ["multi-select", field.name, debouncedKeywords],
-    queryFn: () => {
-      if (options) {
-        return {
-          options: keywords
-            ? options.filter(([key, label]) => {
-                const k = keywords.toLowerCase();
-                return label.toLowerCase().includes(k);
-              })
-            : options,
-        };
-      }
-    },
+    queryFn,
     enabled: open,
     placeholderData: keepPreviousData,
   });

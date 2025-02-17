@@ -67,7 +67,8 @@ export default function AdminEditFormCont() {
     onSettled: ({ data }) => {
       // console.log("setteledd", data);
     },
-    onSuccess: ({ data }) => {
+    onSuccess: ({ data, queryClient }) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-list"] });
       store.getState().setValues(data.row);
     },
     store,

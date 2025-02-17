@@ -14,7 +14,7 @@ export default class AdminClientConfig {
         path: pluralize(kebabCase(modelName)),
         title: pluralize(sentenceCase(modelName)),
         ...options,
-        Icon: dynamic(options.icon),
+        Icon: dynamic(() => options.icon),
       },
     ]);
   }
@@ -29,7 +29,7 @@ export default class AdminClientConfig {
 
   getLinks({ pathPrefix = "/admin" } = []) {
     return this.#data.map(([modelName, , { Icon, title, path }]) => [
-      pathPrefix + "/" + path,
+      pathPrefix + (path ? "/" + path : ""),
       title,
       Icon,
     ]);
@@ -39,6 +39,22 @@ export default class AdminClientConfig {
     for (const [modelName, adminImport] of this.#data) {
       if (modelName === name) {
         return adminImport;
+      }
+    }
+  }
+
+  getIndex() {
+    for (const [modelName, adminImport, options] of this.#data) {
+      if (options.path === null) {
+        return { modelName, adminImport, options };
+      }
+    }
+  }
+
+  getFromPath(path) {
+    for (const [modelName, adminImport, options] of this.#data) {
+      if (options.path === path) {
+        return { modelName, adminImport, options };
       }
     }
   }

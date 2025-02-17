@@ -15,5 +15,9 @@ import { useTheme } from "next-themes";
 export default function ToastEditorWrapper(props) {
   const { theme } = useTheme();
   // use key to destroy the editor on theme change. Otherwise not applie
-  return <ToastEditor key={theme} {...props} />;
+  return (
+    <div className={props.containerClass}>
+      <ToastEditor ey={theme} {...props} />
+    </div>
+  );
 }

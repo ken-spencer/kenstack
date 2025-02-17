@@ -136,7 +136,18 @@ class AdminSchema extends Schema {
   */
 
   static fromClientModel(admin) {
-    const fields = admin.getFields();
+    const fields = admin.form.getFields();
+
+    const data = {};
+    for (let [name, field] of Object.entries(fields)) {
+      let type = String;
+      if (field.field === "checkbox-list" || field.field === "multi-select") {
+        type = [String];
+      }
+      data[name] = type;
+    }
+
+    return new this(data);
   }
 }
 
