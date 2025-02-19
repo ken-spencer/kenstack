@@ -83,7 +83,6 @@ async function Query({ session, id, model, admin, children }) {
 
   /*
   return React.Children.map(children, child => {
-    console.log('foo bar', id);
     return React.cloneElement(child, { 
       hasAdminEditServer: true,
       row: dto,

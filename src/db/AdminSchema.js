@@ -141,7 +141,11 @@ class AdminSchema extends Schema {
     const data = {};
     for (let [name, field] of Object.entries(fields)) {
       let type = String;
-      if (field.field === "checkbox-list" || field.field === "multi-select") {
+      if (
+        field.field === "checkbox-list" ||
+        field.field === "multi-select" ||
+        field.field === "tags"
+      ) {
         type = [String];
       }
       data[name] = type;
@@ -225,7 +229,11 @@ async function bindFormData(fieldTree, formData) {
       continue;
     }
 
-    if (field.field === "checkbox-list" || field.field === "multi-select") {
+    if (
+      field.field === "checkbox-list" ||
+      field.field === "multi-select" ||
+      field.field === "tags"
+    ) {
       // get the values of a checkbox list as an array.
       this.set(name, formData.getAll(name));
     } else if (field.field === "checkbox") {

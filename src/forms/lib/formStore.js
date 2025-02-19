@@ -75,7 +75,8 @@ export default function createFormStore(
     const errorValues = {};
     const valueStore = {};
     for (const [name, field] of Object.entries(form.fields)) {
-      const initialValue = (errorValues[name] = initialValues[name] || "");
+      const initialValue = (errorValues[name] =
+        initialValues[name] || field.default || "");
       valueStore[name] = initialValue;
       fieldStore[name] = {
         value: initialValue,

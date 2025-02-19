@@ -18,9 +18,9 @@
     "@aws-sdk/s3-request-presigner": "^3.654.0",
     "@aws-sdk/util-stream-node": "^3",
     "@heroicons/react": "^2.1.5",
-    "@react-email/components": "^0.0.28",
+    "@react-email/components": "^0.0.33",
     "@tanstack/react-query": "^5.51.9",
-    "@toast-ui/react-editor": "^3.2.3",
+    "@toast-ui/editor": "^3.2.2",
     "@typescript-eslint/eslint-plugin": "^8.6.0",
     "async": "^3.2.5",
     "autoprefixer": "^10.4.16",
@@ -43,12 +43,14 @@
     "pluralize": "^8.0.0",
     "postcss": "^8.4.32",
     "prettier": "^3.0.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "remark": "^15.0.1",
     "remark-gfm": "^4.0.0",
     "remark-html": "^16.0.1",
     "server-only": "^0.0.1",
     "sharp": "^0.33.4",
-    "tailwind-merge": "^2.5.2",
+    "tailwind-merge": "^3.0.1",
     "tailwindcss": "^3.4.6",
     "validator": "^13.11.0",
     "zustand": "^5.0.1"
@@ -76,14 +78,19 @@
     "@types/node": "^22.5.5",
     "@typescript-eslint/parser": "^8.6.0",
     "eslint": "^9.13.0",
-    "eslint-config": "^0.2.1",
+    "eslint-config": "^0.3.0",
     "eslint-config-next": "^15.0.0",
-    "eslint-config-prettier": "^9.1.0",
+    "eslint-config-prettier": "^10.0.1",
     "eslint-import-resolver-alias": "^1.1.2",
     "eslint-plugin-import": "^2.29.1",
     "eslint-plugin-react-compiler": "^19.0.0-beta-0dec889-20241115",
     "eslint-plugin-react-hooks": "^5.0.0",
     "sass": "^1.79.1",
     "typescript": "^5.6.3"
+  },
+  "overrides": {
+    "@toast-ui/react-editor": {
+      "react": "19.0"
+    }
   }
 }

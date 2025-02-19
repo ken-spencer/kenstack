@@ -11,6 +11,7 @@ import Radio from "../Radio";
 import Select from "../Select";
 import MultiSelect from "../MultiSelect";
 import Slug from "../Slug";
+import Tags from "../Tags";
 
 function Field({ field = "text", span = "", containerClass = "", ...props }) {
   props.containerClass = useMemo(
@@ -58,6 +59,8 @@ function Field({ field = "text", span = "", containerClass = "", ...props }) {
             return <MultiSelect {...fieldProps} />;
           case "slug":
             return <Slug {...fieldProps} />;
+          case "tags":
+            return <Tags {...fieldProps} />;
           default:
             throw Error("unknown field type: " + field);
         }

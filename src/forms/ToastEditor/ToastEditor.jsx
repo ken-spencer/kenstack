@@ -2,8 +2,9 @@ import { useRef, useEffect } from "react";
 import useField from "../useField";
 import Field from "../Field";
 
-import { Editor } from "@toast-ui/react-editor";
+// import Editor from "./Editor";
 import { useTheme } from "next-themes";
+import Editor from "@toast-ui/editor";
 
 const toolbarItems = [
   ["heading", "bold", "italic" /*'strike'*/],
@@ -20,39 +21,39 @@ export default function ToastEditor(initialProps) {
   const { theme } = useTheme();
 
   useEffect(() => {
+    const editor = new Editor({
+      el: ref.current,
+      theme: theme,
+      autofocus: false,
+      usageStatistics: false,
+      initialValue: "",
+      previewStyle: "tab",
+      height: "400px",
+      initialEditType: "markdown",
+      useCommandShortcut: true,
+      toolbarItems: toolbarItems,
+      hideModeSwitch: true,
+      events: {
+        change: () => {
+          field.setValue(editor.getMarkdown());
+        },
+      },
+    });
+
     // if we initialize with initialValue we end up with
     //unwanted default text. Hack to fix.
-    const instance = ref.current.getInstance();
-
-    // seem to need a hack to prevent the editor from scrolling and focusing.
+    // slso eem to need a hack to prevent the editor from scrolling and focusing.
     const { scrollX, scrollY } = window;
-    instance.setMarkdown(field.value);
+    editor.setMarkdown(field.value);
     setTimeout(() => {
-      instance.blur();
+      editor.blur();
       window.scrollTo(scrollX, scrollY);
     }, 0);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Field field={field} {...fieldProps}>
-      <Editor
-        autofocus={false}
-        ref={ref}
-        usageStatistics={false}
-        // initialValue={field.value}
-        initialValue={""}
-        previewStyle="tab"
-        height="600px"
-        initialEditType="markdown"
-        useCommandShortcut={true}
-        theme={theme}
-        toolbarItems={toolbarItems}
-        onChange={() => {
-          const instance = ref.current.getInstance();
-          field.setValue(instance.getMarkdown());
-        }}
-        hideModeSwitch={true}
-      />
+      <div ref={ref} />
       <input type="hidden" name={props.name} value={field.value} />
     </Field>
   );

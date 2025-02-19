@@ -1,9 +1,10 @@
-import saveAction from "./save";
 import apiAction from "@kenstack/server/apiAction";
 
 import clientModel from "@kenstack/client/Model";
-
 import { notFound } from "next/navigation";
+
+import saveAction from "./save";
+import loadTags from "./loadTags";
 
 const API = ({ session, admin, model }) => {
   if (!(admin instanceof clientModel)) {
@@ -24,6 +25,9 @@ const API = ({ session, admin, model }) => {
     switch (slug) {
       case "save":
         action = saveAction;
+        break;
+      case "load-tags":
+        action = loadTags;
         break;
       default:
         notFound();

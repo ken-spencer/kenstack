@@ -113,12 +113,6 @@ export default function useField(props) {
         props.onChange(evt, field);
       }
       const input = evt.target;
-      // TODO move special logic to checkbox field?
-      if (input.type === "checkbox") {
-        field.setValue(input.checked ? input.value : "");
-        return;
-      }
-
       field.setValue(input.value);
     };
 

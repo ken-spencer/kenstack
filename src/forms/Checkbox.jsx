@@ -1,18 +1,33 @@
-import React from "react";
+import { useCallback } from "react";
 
-import Field from "./Field";
 import Checkbox from "./base/Checkbox";
 
 import useField from "./useField";
 
-export default function CheckboxField(props) {
-  const inputRef = React.useRef();
-  const field = useField(props, inputRef);
+export default function CheckboxField({ onChange, ...initialProps }) {
+  // const inputRef = React.useRef();
+  const { field, props, fieldProps } = useField(initialProps);
   // let { name, label, helperText } = field.props;
 
+  const handleChange = useCallback(
+    (evt) => {
+      if (onChange) {
+        onChange(evt);
+      }
+      const input = evt.target;
+      field.setValue(input.checked);
+    },
+    [onChange, field],
+  );
+
   return (
-    <Field field={field} label={null}>
-      <Checkbox {...field.props} label={field.label} />
-    </Field>
+    <div className={fieldProps.containerClass}>
+      <Checkbox
+        {...props}
+        checked={field.value}
+        label={field.label}
+        onChange={handleChange}
+      />
+    </div>
   );
 }
