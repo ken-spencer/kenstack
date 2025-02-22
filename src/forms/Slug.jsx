@@ -47,7 +47,7 @@ export default function SlugField({
     }),
   );
 
-  const [locked, setLocked] = useState(field.initialValue ? true : false);
+  const [locked, setLocked] = useState(field.getInitialValue() ? true : false);
   const [interacted, setInteracted] = useState(false);
 
   useEffect(() => {

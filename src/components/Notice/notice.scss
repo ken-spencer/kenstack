@@ -18,12 +18,15 @@
   &.notice-error {
     @apply bg-red-100 dark:bg-red-900  border-red-400 text-red-700 dark:text-red-200;
   }
+  
   &.notice-success {
-    @apply bg-green-100 border-green-400 text-green-700;
+    @apply bg-green-100  border-green-400 text-green-700 ;
+    @apply dark:bg-green-900 dark:text-green-300;
   }
 
   &.notice-information {
-    @apply bg-blue-100 border-blue-400 text-blue-700;
+    @apply bg-blue-100  border-blue-400 text-blue-700;
+    @apply dark:bg-blue-900;
   }
 
   &.collapsed {
