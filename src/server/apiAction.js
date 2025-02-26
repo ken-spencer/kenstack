@@ -15,6 +15,10 @@ export default async function apiAction(
   let data;
   if (contentType === "application/json") {
     data = await request.json();
+    if (data._api_props) {
+      props = { ...data._api_props, ...props };
+      delete data._api_props;
+    }
   } else if (contentType.startsWith("multipart/form-data")) {
     data = await request.formData();
 

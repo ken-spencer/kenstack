@@ -12,6 +12,7 @@ import Select from "../Select";
 import MultiSelect from "../MultiSelect";
 import Slug from "../Slug";
 import Tags from "../Tags";
+import ImageField from "../Image";
 
 function Field({ field = "text", span = "", containerClass = "", ...props }) {
   props.containerClass = useMemo(
@@ -61,6 +62,8 @@ function Field({ field = "text", span = "", containerClass = "", ...props }) {
             return <Slug {...fieldProps} />;
           case "tags":
             return <Tags {...fieldProps} />;
+          case "image":
+            return <ImageField {...fieldProps} />;
           default:
             throw Error("unknown field type: " + field);
         }

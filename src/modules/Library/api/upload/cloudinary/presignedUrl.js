@@ -1,6 +1,6 @@
 "use server";
 
-import { basename, extname } from "path";
+// import { basename, extname } from "path";
 
 import { v2 as cloudinary } from "cloudinary";
 cloudinary.config({
@@ -10,34 +10,33 @@ cloudinary.config({
   secure: true,
 });
 
-import { customAlphabet } from "nanoid/non-secure";
-const nanoid = customAlphabet("1234567890abcdefghijklmnopqrstuvwxyz", 15);
+// import { customAlphabet } from "nanoid/non-secure";
+// const nanoid = customAlphabet("1234567890abcdefghijklmnopqrstuvwxyz", 15);
 
-function normalizeFilename(filename) {
-  let retval = basename(filename, extname(filename))
-    .trim()
-    .replace(/[\s\._]+/g, "-") // remove spaces
-    .replace(/[^\w\-.]/g, "") // remove any non word characters
-    // .replace(/^-+|-+$/g, "") // remove dash from beginning or end
-    .replace(/^\W+|\W+$/g, "") // trim non word characters from beginning | end
-    .replace(/--{2,}/g, "-") // remove any double dashes
-    .toLowerCase();
+import uniqueId from "@kenstack/utils/unsecureId";
+import normalizeFilename from "@kenstack/utils/normalizeFilename";
+// function normalizeFilename(filename) {
+//   let retval = basename(filename, extname(filename))
+//     .trim()
+//     .replace(/[\s\._]+/g, "-") // remove spaces
+//     .replace(/[^\w\-.]/g, "") // remove any non word characters
+//     // .replace(/^-+|-+$/g, "") // remove dash from beginning or end
+//     .replace(/^\W+|\W+$/g, "") // trim non word characters from beginning | end
+//     .replace(/--{2,}/g, "-") // remove any double dashes
+//     .toLowerCase();
 
-  if (retval.length === 0) {
-    return nanoid();
-  }
+//   if (retval.length === 0) {
+//     return nanoid();
+//   }
 
-  return retval;
-}
+//   return retval;
+// }
 
 export default async function presignedUrlAction({ filename, type }) {
   const timestamp = Math.floor(Date.now() / 1000);
-  const folder = "test/images/" + nanoid();
+  const folder = process.env.SITE_NAME + "/images/" + uniqueId();
 
   const public_id = normalizeFilename(filename);
-
-  // console.log(filename,  public_id);
-  // return {error: "bah"};
 
   const eager = [
     "f_webp", // Original dimensions as WebP
@@ -52,6 +51,7 @@ export default async function presignedUrlAction({ filename, type }) {
     unique_filename: false,
     overwrite: true,
     eager,
+    tags: "provisional",
   };
 
   const signature = cloudinary.utils.api_sign_request(

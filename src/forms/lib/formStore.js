@@ -74,7 +74,8 @@ export default function createFormStore(
     const fieldStore = {};
     const valueStore = {};
     for (const [name, field] of Object.entries(form.fields)) {
-      const initialValue = initialValues[name] || field.default || "";
+      // const initialValue = initialValues[name] || field.default || "";
+      const initialValue = getInitialValue(initialValues, name, field);
       valueStore[name] = initialValue;
       fieldStore[name] = {
         value: initialValue,
@@ -131,6 +132,12 @@ export default function createFormStore(
       setDisabled: (disabled) => set({ disabled }),
       pending: false,
       setPending: (pending) => set({ pending }),
+      uploading: new Set(), // list of fields that are uploading
+      setUploading: (update) =>
+        set((state) => ({
+          uploading:
+            typeof update === "function" ? update(state.uploading) : update,
+        })),
       showErrors: false,
       setShowErrors: (showErrors) =>
         set((state) => {
@@ -224,7 +231,7 @@ export default function createFormStore(
           for (const [name, f] of Object.entries(state.fields)) {
             const field = {
               ...f,
-              value: values[name] || "",
+              value: getInitialValue(values, name, form.fields[name]), //values[name] || "",
             };
             fields[name] = field;
             values[name] = field.value;
@@ -284,4 +291,28 @@ export default function createFormStore(
       ...messageStore(set),
     };
   });
+}
+
+// Note that we some fields are null in the database, but have to be an empty string to work with forms
+function getInitialValue(initialValues, name, field) {
+  if (initialValues[name]) {
+    return initialValues[name];
+  }
+
+  if (field.default) {
+    return field.default;
+  }
+
+  switch (field.field) {
+    case "multi-select":
+      return [];
+    case "checkbox-list":
+      return [];
+    case "tags":
+      return [];
+    case "image":
+      return null;
+  }
+
+  return "";
 }

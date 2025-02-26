@@ -24,6 +24,14 @@ export default function Form({
         return;
       }
 
+      if (state.uploading.size) {
+        evt.preventDefault();
+        state.addMessage({
+          error: "Unable to submit while upload is in progress.",
+        });
+        return;
+      }
+
       if (state.noValidate == false && state.invalid) {
         state.setShowErrors(true);
         evt.preventDefault();
@@ -56,7 +64,11 @@ export default function Form({
         if (submitter?.name) {
           formData.set(submitter.name, submitter.value);
         }
-        mutation.mutate(formData);
+        let values = { ...state.values };
+        if (submitter?.name) {
+          values[submitter.name] = submitter.value;
+        }
+        mutation.mutate({ formData, values, submitter });
       }
     },
     [store, onSubmit, mutation],

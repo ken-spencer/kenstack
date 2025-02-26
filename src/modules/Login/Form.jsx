@@ -12,7 +12,7 @@ const store = form.createStore();
 export default function LoginForm() {
   const { apiPath } = useLogin();
   const mutation = useMutation({
-    mutationFn: (formData) => {
+    mutationFn: ({ formData }) => {
       return apiAction(apiPath, formData);
     },
     store,

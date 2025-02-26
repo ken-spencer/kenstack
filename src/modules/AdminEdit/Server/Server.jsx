@@ -66,8 +66,10 @@ async function Query({ session, id, model, admin, children }) {
       notFound();
     }
 
-    dto = row.toAdminDTO(select);
+    dto = row.toAdminDTO(admin);
   }
+
+  const modelPaths = Object.keys(model.schema.paths);
 
   return (
     <ServerProvider
@@ -76,6 +78,7 @@ async function Query({ session, id, model, admin, children }) {
       id={id}
       row={dto}
       userId={claims.sub}
+      modelPaths={modelPaths}
     >
       {children}
     </ServerProvider>

@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import errorLog from "../../../log/error";
 
 export default async function saveAction(
-  formData,
+  { adminAction: action, ...values },
   { session, model, admin, id, isNew, pathname },
 ) {
   const user = await session.getAuthenticatedUser();
@@ -31,8 +31,8 @@ export default async function saveAction(
     };
   }
 
-  let action = formData.get("adminAction");
-  formData.delete("adminAction");
+  // formData.delete("adminAction");
+  // TODO Ensure this is working.
   let actionInfo = {};
   if (action && action.match(/^\[/)) {
     const json = JSON.parse(action);
@@ -41,7 +41,8 @@ export default async function saveAction(
 
   const basePath = pathname.replace(/\/[^/]*$/, "");
   const fields = admin.form.getFields();
-  const errors = await doc.bindFormData(fields, formData);
+  // const errors = await doc.bindFormData(fields, formData);
+  const errors = await doc.bindValues(fields, values);
   if (action === "delete") {
     if (id == user._id) {
       return {
@@ -97,6 +98,6 @@ export default async function saveAction(
   revalidatePath(basePath);
   return {
     success: "Changes saved successfully",
-    row: doc.toAdminDTO(admin.getPaths()),
+    row: doc.toAdminDTO(admin),
   };
 }

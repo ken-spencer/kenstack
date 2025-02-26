@@ -15,6 +15,9 @@ export default async function apiAction(
     body = data;
   } else {
     headers["Content-Type"] = "application/json";
+    if (Object.keys(props).length) {
+      data._api_props = props;
+    }
     body = JSON.stringify(data) || "{}";
   }
   if (action) {

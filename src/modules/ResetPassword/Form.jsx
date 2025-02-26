@@ -10,7 +10,7 @@ const store = form.createStore();
 export default function ResetPasswordForm({ apiPath }) {
   const mutation = useMutation({
     store,
-    mutationFn: (formData) => {
+    mutationFn: ({ formData }) => {
       return apiAction(apiPath, formData);
     },
     onSuccess({ state }) {

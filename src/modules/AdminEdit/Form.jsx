@@ -61,8 +61,8 @@ export default function AdminEditFormCont() {
 
   const mutation = useMutation({
     queryKey: ["admin-edit", id],
-    mutationFn: (formData) => {
-      return apiAction(apiPath + "/save", formData, { pathname });
+    mutationFn: ({ formData, values }) => {
+      return apiAction(apiPath + "/save", values, { pathname });
     },
     onSettled: ({ data }) => {
       // console.log("setteledd", data);

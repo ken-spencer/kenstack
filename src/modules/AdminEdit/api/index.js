@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 
 import saveAction from "./save";
 import loadTags from "./loadTags";
+import getPresignedUrl from "@kenstack/forms/Image/api/cloudinary/presignedUrl";
 
 const API = ({ session, admin, model }) => {
   if (!(admin instanceof clientModel)) {
@@ -28,6 +29,9 @@ const API = ({ session, admin, model }) => {
         break;
       case "load-tags":
         action = loadTags;
+        break;
+      case "get-presigned-url":
+        action = getPresignedUrl;
         break;
       default:
         notFound();

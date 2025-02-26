@@ -44,6 +44,7 @@ class AdminSchema extends Schema {
 
     // this.statics.getAdminData = getAdminData;
     this.methods.bindFormData = bindFormData;
+    this.methods.bindValues = bindValues;
     this.methods.checkValidity = checkValidity;
     this.methods.trash = trash;
     // this.statics.trashMany = trashMany;
@@ -188,14 +189,88 @@ function getAdminPaths() {
 }
 */
 
-function toAdminDTO(paths = null) {
+function toAdminDTO(admin, paths = null) {
+  if (!paths) {
+    paths = admin.getPaths();
+  }
   const json = this.toJSON();
   // const paths = this.constructor.getAdminPaths();
   const obj = paths ? pick(json, ["_id", ...paths]) : json;
+  // const fields = admin.form.getFields();
+
+  const values = {
+    _id: obj._id.toString(),
+  };
+  for (let name of paths) {
+    // const field = fields[name];
+
+    const options = this.schema.path(name);
+    if (!options) {
+      continue;
+    }
+
+    const fieldOptions = options.options;
+
+    const value = obj[name];
+    if (fieldOptions.onAdminDTO) {
+      values[name] = fieldOptions.onAdminDTO(value);
+    } else {
+      values[name] = value;
+    }
+  }
 
   // There has to be a better way to do this.
-  const retval = JSON.parse(JSON.stringify(obj));
+  const retval = JSON.parse(JSON.stringify(values));
   return retval;
+}
+
+async function bindValues(fields, values) {
+  let fieldErrors = checkServerValidity(fields, values);
+  if (fieldErrors) {
+    return {
+      error:
+        "We couldn't process your request. See the errors marked in red below.",
+      fieldErrors,
+    };
+  }
+  for (let name in fields) {
+    const field = fields[name];
+    if (field.transient || field.readOnly || values[name] === undefined) {
+      continue;
+    }
+
+    const options = this.schema.path(name);
+
+    if (!options) {
+      return { error: `Unable to save.Missing ${name} from db schema` };
+    }
+
+    const fieldOptions = options.options;
+
+    if (fieldOptions.onBind) {
+      this.set(
+        name,
+        fieldOptions.onBind(values[name], {
+          path: name,
+          field,
+          options,
+          previous: this.get(name),
+        }),
+      );
+    } else {
+      this.set(name, values[name]);
+    }
+  }
+
+  fieldErrors = await this.checkValidity();
+
+  if (fieldErrors) {
+    return {
+      error:
+        "We couldn't process your request. See the errors marked in red below.",
+      fieldErrors,
+    };
+  }
 }
 
 async function bindFormData(fieldTree, formData) {

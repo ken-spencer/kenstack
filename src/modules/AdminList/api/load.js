@@ -38,7 +38,7 @@ export default async function load({ sortBy, keywords }, { model, admin }) {
 
   const rows = await query.exec();
 
-  const DTO = rows.map((row) => row.toAdminDTO(fields));
+  const DTO = rows.map((row) => row.toAdminDTO(admin, fields));
 
   return {
     rows: DTO,
