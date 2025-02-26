@@ -1,3 +1,5 @@
+import sentenceCase from "@kenstack/utils/sentenceCase";
+
 export default async function loadTags(
   { field, exclude, keywords },
   { admin, model },
@@ -12,19 +14,21 @@ export default async function loadTags(
 
   const pipeline = [
     { $unwind: `$${field}` },
-    { $match: { [field]: { $exists: true, $ne: "" } } },
+    { $match: { [field + ".name"]: { $exists: true, $ne: "" } } },
   ];
 
   if (Array.isArray(exclude) && exclude.length) {
-    pipeline.push({ $match: { [field]: { $nin: exclude } } });
+    pipeline.push({ $match: { [field + ".name"]: { $nin: exclude } } });
   }
 
   if (keywords) {
-    pipeline.push({ $match: { [field]: { $regex: keywords, $options: "i" } } });
+    pipeline.push({
+      $match: { [field + ".name"]: { $regex: keywords, $options: "i" } },
+    });
   }
 
   pipeline.push(
-    { $group: { _id: `$${field}`, count: { $sum: 1 } } },
+    { $group: { _id: `$${field}.name`, count: { $sum: 1 } } },
     { $sort: { count: -1, _id: 1 } },
     { $limit: 5 },
     { $project: { tag: "$_id", count: 1, _id: 0 } },
@@ -34,6 +38,6 @@ export default async function loadTags(
 
   return {
     success: true,
-    tags: result ? result.map(({ tag }) => tag) : [],
+    tags: result ? result.map(({ tag }) => sentenceCase(tag)) : [],
   };
 }

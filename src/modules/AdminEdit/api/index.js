@@ -4,7 +4,7 @@ import clientModel from "@kenstack/client/Model";
 import { notFound } from "next/navigation";
 
 import saveAction from "./save";
-import loadTags from "./loadTags";
+import loadTags from "@kenstack/forms/tags/api/loadTags";
 import getPresignedUrl from "@kenstack/forms/Image/api/cloudinary/presignedUrl";
 
 const API = ({ session, admin, model }) => {

@@ -50,6 +50,7 @@ export default function Tags(initialProps) {
           placeholder="Enter tag"
           value={value}
           ref={inputRef}
+          autoComplete="off"
           onKeyDown={(evt) => {
             if (evt.key === "Enter" && value.length > 1) {
               evt.preventDefault();
