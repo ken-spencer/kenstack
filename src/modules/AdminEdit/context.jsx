@@ -37,8 +37,8 @@ export function AdminEditProvider({
   // }
 
   const store = useMemo(
-    () => admin.form.createStore({ values: initialRow ?? {} }),
-    [initialRow, admin.form],
+    () => admin.form.createStore({ values: initialRow ?? {}, apiPath }),
+    [initialRow, admin.form, apiPath],
   );
 
   // Keeping this around if we want to get a query into the mix.

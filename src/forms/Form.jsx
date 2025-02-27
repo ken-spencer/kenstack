@@ -53,7 +53,7 @@ export default function Form({
       }
 
       if (onSubmit) {
-        onSubmit(evt, form);
+        onSubmit(evt, state);
       }
 
       if (mutation) {

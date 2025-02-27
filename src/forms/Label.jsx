@@ -5,7 +5,7 @@ export default function Label({ field, className, ...props }) {
   return (
     <label className={classes} htmlFor={id} {...props}>
       {field.label}
-      {required && <span className={styles.required}>*</span>}
+      {required && <span className="required">*</span>}
     </label>
   );
 }

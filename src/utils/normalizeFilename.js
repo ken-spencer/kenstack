@@ -1,5 +1,7 @@
 import { basename, extname } from "path";
 
+import unsecureId from "@kenstack/utils/unsecureId";
+
 export default function normalizeFilename(filename) {
   let retval = basename(filename, extname(filename))
     .trim()
@@ -11,7 +13,7 @@ export default function normalizeFilename(filename) {
     .toLowerCase();
 
   if (retval.length === 0) {
-    return nanoid();
+    return unsecureId();
   }
 
   return retval;

@@ -37,6 +37,7 @@ const config = [
       "no-unused-vars": "off",
       "@typescript-eslint/no-shadow": ["error", { "hoist": "all", "builtinGlobals": false }],
       "no-console": "error",
+      "no-undef": "error",
       // "import/no-unresolved": "error",
 
     }

@@ -10,7 +10,7 @@ import messageStore from "@kenstack/mixins/messageStore";
 const empty = {};
 export default function createFormStore(
   form,
-  { values: initialValues = empty },
+  { values: initialValues = empty, apiPath = null },
 ) {
   return createStore((set, get) => {
     const setField = (name, ...args) => {
@@ -125,6 +125,7 @@ export default function createFormStore(
     const initialInvalid = getInitialInvalid(valueStore);
 
     const initialState = {
+      apiPath,
       noValidate: false,
       setNoValidate: (noValidate) => set({ noValidate }),
       ...initialInvalid,
