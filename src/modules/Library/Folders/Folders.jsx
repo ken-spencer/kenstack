@@ -13,7 +13,7 @@ import useMutation from "@kenstack/hooks/useMutation";
 
 export default function Folders({ folders, setFolders, setConfirm }) {
   const [dragging, setDragging] = useState(null);
-  const { apiPath } = useLibrary();
+  const { apiPath, addMessage } = useLibrary();
 
   const reorderMutation = useMutation({
     queryKey: ["folders"],
@@ -22,11 +22,11 @@ export default function Folders({ folders, setFolders, setConfirm }) {
       return { previous: post.original };
     },
     onError: ({ error, variables }) => {
-      setError(error.message);
+      addMessage({ error: error.message });
     },
     onSuccess: ({ data }) => {
       if (data.error) {
-        setError(data.error);
+        addMessage({ error: data.error });
       }
     },
   });
