@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 
+import Field from "./Field";
 import Checkbox from "./base/Checkbox";
 
 import useField from "./useField";
@@ -21,13 +22,13 @@ export default function CheckboxField({ onChange, ...initialProps }) {
   );
 
   return (
-    <div className={fieldProps.containerClass}>
+    <Field {...fieldProps} label={false}>
       <Checkbox
         {...props}
         checked={field.value}
         label={field.label}
         onChange={handleChange}
       />
-    </div>
+    </Field>
   );
 }

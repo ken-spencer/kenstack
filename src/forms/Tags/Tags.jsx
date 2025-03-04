@@ -19,7 +19,7 @@ export default function Tags(initialProps) {
   const tags = Array.isArray(field.value) ? field.value : [];
 
   return (
-    <Field field={field} {...fieldProps}>
+    <Field {...fieldProps}>
       <div className="flex flex-wrap gap-x-4 gap-y-2 items-center">
         {tags.map((tag) => {
           return (

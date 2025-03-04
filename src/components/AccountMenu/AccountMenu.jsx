@@ -4,7 +4,11 @@ import React, { useState, useEffect } from "react";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 
-export default function AccountMenu({ className = "", children }) {
+export default function AccountMenu({
+  className = "",
+  buttonClass = "",
+  children,
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -54,6 +58,7 @@ export default function AccountMenu({ className = "", children }) {
       }
     >
       <button
+        className={buttonClass}
         onClick={toggleMenu}
         aria-haspopup="true"
         aria-expanded={isOpen ? "true" : "false"}

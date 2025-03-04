@@ -11,7 +11,7 @@ cloudinary.config({
 
 export default async function presignedUrlAction({ filename, type }) {
   const timestamp = Math.floor(Date.now() / 1000);
-  const folder = "test/images/" + unsecureId();
+  const folder = process.env.SITE_NAME + "/images/" + unsecureId();
 
   const public_id = normalizeFilename(filename);
 

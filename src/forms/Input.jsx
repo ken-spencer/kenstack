@@ -9,7 +9,7 @@ export default function InputField(initialProps) {
   const { field, props, fieldProps } = useField(rest);
 
   return (
-    <Field field={field} {...fieldProps}>
+    <Field {...fieldProps}>
       <Input {...props} value={field.value} start={start} end={end} />
     </Field>
   );

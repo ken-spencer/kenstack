@@ -300,11 +300,13 @@ function getInitialValue(initialValues, name, field) {
     return initialValues[name];
   }
 
-  if (field.default) {
+  if (field.default !== undefined) {
     return field.default;
   }
 
   switch (field.field) {
+    case "checkbox":
+      return false;
     case "multi-select":
       return [];
     case "checkbox-list":

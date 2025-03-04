@@ -6,6 +6,7 @@ import "./account-menu.scss";
 export default async function DropmenuServer({
   session,
   className = "",
+  buttonClass = "",
   children,
 }) {
   const claims = await session.getClaims();
@@ -16,5 +17,9 @@ export default async function DropmenuServer({
 
   // const roles = claims.roles;
 
-  return <AccountMenu className={className}>{children}</AccountMenu>;
+  return (
+    <AccountMenu className={className} buttonClass={buttonClass}>
+      {children}
+    </AccountMenu>
+  );
 }

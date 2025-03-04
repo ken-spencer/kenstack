@@ -50,6 +50,7 @@ export default function useUpload(field) {
         filename: file.name,
         type: file.type,
       });
+
       if (res.error) {
         addMessage({
           error: `There was an unexpected problem uploading ${file.name}:  ${res.error}`,

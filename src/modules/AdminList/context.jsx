@@ -42,7 +42,11 @@ export function AdminListProvider({
 
   const apiPath = useMemo(() => {
     const suffix = params.admin ? params.admin.join("/") : "";
-    return pathname.slice(0, -suffix.length) + "api/" + suffix;
+    if (suffix.length) {
+      return pathname.slice(0, -suffix.length) + "api/" + suffix;
+    } else {
+      return pathname + "/api/" + suffix;
+    }
   }, [pathname, params]);
 
   const [selected, setSelected] = useState(new Set());

@@ -42,7 +42,7 @@ export default function ImageField(initialProps) {
     />
   );
   return (
-    <Field field={field} {...fieldProps}>
+    <Field {...fieldProps}>
       {(() => {
         if (uploading.has(field.name)) {
           return (

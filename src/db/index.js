@@ -4,6 +4,12 @@ import "server-only";
 import mongoose from "mongoose";
 
 function connect() {
+  if (!process.env.MONGO_URI) {
+    throw Error(
+      "MONGO_URI environment variable is required to connect to Mongodb",
+    );
+  }
+
   return mongoose
     .connect(process.env.MONGO_URI, {
       autoIndex: true, // Toggle automatic index creation

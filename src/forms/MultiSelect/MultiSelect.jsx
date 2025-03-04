@@ -3,6 +3,7 @@ import { useRef, useState, useMemo } from "react";
 import useField from "../useField";
 import Dialog from "./Dialog";
 
+import Field from "@kenstack/forms/Field";
 import AddIcon from "@kenstack/icons/Add";
 import Inner from "./Inner";
 
@@ -30,7 +31,7 @@ export default function MultiSelect({
   );
 
   return (
-    <div className={fieldProps.containerClass}>
+    <Field {...fieldProps} label={false}>
       <div className="label flex items-center gap-2">
         {field.label}
         <button
@@ -51,6 +52,6 @@ export default function MultiSelect({
         />
       </div>
       <Inner field={field} options={options} loadOptions={loadOptions} />
-    </div>
+    </Field>
   );
 }
