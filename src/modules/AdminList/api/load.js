@@ -30,17 +30,19 @@ export default async function load({ sortBy, keywords }, { model, admin }) {
   if (sortBy) {
     let [path, order] = sortBy;
     if (fields.includes(path)) {
-      query = query.sort({ [path]: order === "asc" ? 1 : -1 });
+      query = query.sort({ [path]: order === "asc" ? 1 : -1, _id: -1 });
     }
   }
 
   // query = query.lean();
 
-  const rows = await query.exec();
+  const result = await Promise.all([query.exec(), model.countDocuments(where)]);
+  const [rows, total] = result;
 
   const DTO = rows.map((row) => row.toAdminDTO(admin, fields));
 
   return {
     rows: DTO,
+    total,
   };
 }

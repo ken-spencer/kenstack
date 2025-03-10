@@ -6,6 +6,7 @@ import sentenceCase from "@kenstack/utils/sentenceCase";
 import checkValue from "../validity/checkValue";
 // import { nanoid } from "nanoid";
 import messageStore from "@kenstack/mixins/messageStore";
+import getField from "@kenstack/forms/lib/getField";
 
 const empty = {};
 export default function createFormStore(
@@ -294,9 +295,21 @@ export default function createFormStore(
   });
 }
 
-// Note that we some fields are null in the database, but have to be an empty string to work with forms
+// Note that some fields are null in the database, but have to be an empty string to work with forms
 function getInitialValue(initialValues, name, field) {
-  if (initialValues[name]) {
+  const Field = getField(field.field ?? "text");
+
+  if (!Field) {
+    // throw Error(`Unknown field type ${field.name} for ${ name }`);
+    return;
+  }
+
+  // console.log(name, typeof(nitialValues));
+  const iv = initialValues[name];
+  if (iv || iv === false) {
+    if (Field.initializeValue) {
+      return Field.initializeValue(iv);
+    }
     return initialValues[name];
   }
 
@@ -304,18 +317,22 @@ function getInitialValue(initialValues, name, field) {
     return field.default;
   }
 
-  switch (field.field) {
-    case "checkbox":
-      return false;
-    case "multi-select":
-      return [];
-    case "checkbox-list":
-      return [];
-    case "tags":
-      return [];
-    case "image":
-      return null;
+  if (Field.defaultValue !== undefined) {
+    return Field.defaultValue;
   }
 
   return "";
+
+  // switch (field.field) {
+  //   case "checkbox":
+  //     return false;
+  //   case "multi-select":
+  //     return [];
+  //   case "checkbox-list":
+  //     return [];
+  //   case "tags":
+  //     return [];
+  //   case "image":
+  //     return null;
+  // }
 }

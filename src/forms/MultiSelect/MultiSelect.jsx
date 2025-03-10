@@ -55,3 +55,5 @@ export default function MultiSelect({
     </Field>
   );
 }
+
+MultiSelect.defaultValue = [];

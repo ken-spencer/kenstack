@@ -1,21 +1,24 @@
-import { useState, useCallback, forwardRef } from "react";
+import { useState, useCallback } from "react";
 
-import TextField from "./Input";
+// import TextField from "../Text";
+import useField from "../useField";
+import Field from "../Field";
+import Input from "../base/Input";
 
-import Visibility from "./icons/EyeIcon";
-import VisibilityOff from "./icons/EyeSlashIcon";
+import Visibility from "../icons/EyeIcon";
+import VisibilityOff from "../icons/EyeSlashIcon";
 
-import IconButton from "./IconButton";
+import IconButton from "../IconButton";
 
-const Password = (initialProps, ref) => {
-  const props = {
+export default function Password(initialProps) {
+  const { field, props, fieldProps } = useField({
     pattern: {
       pattern: "(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[\\S]{8,}",
       message:
         "Must be at least 8 characters; include both big and small letters and a number.",
     },
     ...initialProps,
-  };
+  });
 
   const [showPassword, setShowPassword] = useState(false);
 
@@ -39,14 +42,22 @@ const Password = (initialProps, ref) => {
   );
 
   return (
-    <TextField
-      {...props}
-      type={showPassword ? "text" : "password"}
-      ref={ref}
-      end={button}
-    />
+    <Field {...fieldProps}>
+      <Input
+        {...props}
+        value={field.value}
+        type={showPassword ? "text" : "password"}
+        end={button}
+      />
+    </Field>
   );
-};
 
-Password.displayName = "PasswordField";
-export default forwardRef(Password);
+  // return (
+  //   <TextField
+  //     {...props}
+  //     type={showPassword ? "text" : "password"}
+  //     ref={ref}
+  //     end={button}
+  //   />
+  // );
+}

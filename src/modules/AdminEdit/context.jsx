@@ -4,55 +4,61 @@ import { createContext, useContext, useState, useMemo } from "react";
 
 const AdminEditContext = createContext({});
 import { usePathname, useParams } from "next/navigation";
+import Notice from "@kenstack/components/Notice";
 
-// import { useQuery } from "@kenstack/query";
+import { useQuery } from "@kenstack/query";
+import apiAction from "@kenstack/client/apiAction";
 
 export function AdminEditProvider({
   admin,
   isNew,
   row: initialRow,
+  previous: initialPrevious,
+  next: initialNext,
   id,
   children,
   userId,
 }) {
   const pathname = usePathname();
+  const basePathname = useMemo(
+    () => pathname.replace(/\/(new|[0-9a-fA-F]{24})$/, ""),
+    [pathname],
+  );
+
   const params = useParams();
   const apiPath = useMemo(() => {
     const suffix = params.admin ? params.admin.join("/") : "";
     return pathname.slice(0, -suffix.length) + "api/" + suffix;
   }, [params, pathname]);
 
-  // const [row, setRow] = useState(initialRow);
   const [confirm, setConfirm] = useState(false);
   // const [loadError, setLoadError] = useState();
   const [login, setLogin] = useState();
-
-  // let apiPath;
-  // if (id) {
-  //   const exp = new RegExp(`/${escapeRegExp(id)}($|/.+})`);
-  //   apiPath = pathname.replace(exp, "") + `/api/${id}`;
-  // } else {
-  //   apiPath = pathname.slice(0, -3) + "api/new"; // strip 'new' from the end;
-  //   console.log(apiPath, isNew, id);
-  // }
 
   const store = useMemo(
     () => admin.form.createStore({ values: initialRow ?? {}, apiPath }),
     [initialRow, admin.form, apiPath],
   );
 
-  // Keeping this around if we want to get a query into the mix.
-  // const { data } = useQuery({
-  //   queryKey: ["edit", id],
-  //   queryFn: () => {
-  //     console.log("trigger a fetch");
-  //     return initialRow;
-  //   },
-  //   initialData: initialRow,
-  //   initialDataUpdatedAt: Date.now(), // Signal that the data is fresh
-  //   staleTime: Infinity, // Treat initial data as fresh to avoid initial fetch
-  //   // enabled: false, // we only want to trigger the query manually
-  // })
+  const { data, error } = useQuery({
+    queryKey: ["admin-edit", id],
+    queryFn: async () => {
+      // console.log("trigger a fetch");
+      const res = await apiAction(apiPath + "/load");
+      if (res.success && res.doc) {
+        // store.getState().setValues(res.doc);
+      }
+      return res;
+    },
+    initialData: {
+      doc: initialRow,
+      previous: initialPrevious,
+      next: initialNext,
+    },
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    enabled: isNew === false,
+  });
 
   const context = useMemo(
     () => ({
@@ -69,6 +75,10 @@ export function AdminEditProvider({
       setLogin,
       userId,
       apiPath,
+      basePathname,
+      doc: data?.doc,
+      previous: data?.previous,
+      next: data?.next,
     }),
     [
       admin,
@@ -81,8 +91,14 @@ export function AdminEditProvider({
       login,
       userId,
       apiPath,
+      basePathname,
+      data,
     ],
   );
+
+  if (data?.error || error) {
+    return <Notice error={data?.error ?? error.message} />;
+  }
 
   return (
     <AdminEditContext.Provider value={context}>

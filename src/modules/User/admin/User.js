@@ -28,7 +28,7 @@ const fields = {
         },
         email: {
           required: true,
-          type: "email",
+          field: "email",
         },
       },
     },

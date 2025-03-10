@@ -1,9 +1,9 @@
 import React from "react";
 
-import useField from "./useField";
+import useField from "../useField";
 
-import Checkbox from "./base/Checkbox";
-import Field from "./Field";
+import Checkbox from "../base/Checkbox";
+import Field from "../Field";
 
 export default function CheckboxList({ onChange, ...initialProps }) {
   const inputRef = React.useRef();
@@ -74,3 +74,5 @@ export default function CheckboxList({ onChange, ...initialProps }) {
     </Field>
   );
 }
+
+CheckboxList.defaultValue = [];

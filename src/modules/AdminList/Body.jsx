@@ -58,10 +58,16 @@ export default function AdminListBody() {
           if (cell.component) {
             let Component = cell.component;
             value = <Component value={value} />;
+          } else if (value === true) {
+            value = <Checkbox checked readOnly />;
           }
 
           return (
-            <Link key={cell.name} href={pathName + "/" + row._id}>
+            <Link
+              className={cell.className}
+              key={cell.name}
+              href={pathName + "/" + row._id}
+            >
               {value}
             </Link>
           );

@@ -4,6 +4,7 @@ import clientModel from "@kenstack/client/Model";
 import { notFound } from "next/navigation";
 
 import saveAction from "./save";
+import { loadAction } from "./load";
 import loadTags from "@kenstack/forms/tags/api/loadTags";
 import getPresignedUrl from "@kenstack/forms/Image/api/cloudinary/presignedUrl";
 
@@ -26,6 +27,9 @@ const API = ({ session, admin, model }) => {
     switch (slug) {
       case "save":
         action = saveAction;
+        break;
+      case "load":
+        action = loadAction;
         break;
       case "load-tags":
         action = loadTags;

@@ -121,3 +121,5 @@ export default function ImageField(initialProps) {
     </Field>
   );
 }
+
+ImageField.defaultValue = null;

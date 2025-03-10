@@ -2,17 +2,19 @@ import React, { memo, useMemo } from "react";
 import sentenceCase from "@kenstack/utils/sentenceCase";
 import { twMerge } from "tailwind-merge";
 
-import InputField from "../Input";
-import TextArea from "../TextArea";
-import Password from "../Password";
-import Checkbox from "../Checkbox";
-import CheckboxList from "../CheckboxList";
-import Radio from "../Radio";
-import Select from "../Select";
-import MultiSelect from "../MultiSelect";
-import Slug from "../Slug";
-import Tags from "../Tags";
-import ImageField from "../Image";
+import getField from "@kenstack/forms/lib/getField";
+
+// import InputField from "../Input";
+// import TextArea from "../TextArea";
+// import Password from "../Password";
+// import Checkbox from "../Checkbox";
+// import CheckboxList from "../CheckboxList";
+// import Radio from "../Radio";
+// import Select from "../Select";
+// import MultiSelect from "../MultiSelect";
+// import Slug from "../Slug";
+// import Tags from "../Tags";
+// import ImageField from "../Image";
 
 function Field({ field = "text", span = "", containerClass = "", ...props }) {
   props.containerClass = useMemo(
@@ -33,40 +35,43 @@ function Field({ field = "text", span = "", containerClass = "", ...props }) {
   return (
     <>
       {(() => {
-        if (typeof field === "function" || typeof field === "object") {
-          // const Lazy = React.lazy(field);
-          // return <Suspense><Lazy {...fieldProps}/></Suspense>;
-          const FunctionField = field;
-          return <FunctionField {...fieldProps} />;
+        const InputField = getField(field);
+        if (!InputField) {
+          throw Error("unknown field type: " + field);
         }
+        return <InputField {...fieldProps} />;
+        // if (typeof field === "function" || typeof field === "object") {
+        //   const FunctionField = field;
+        //   return <FunctionField {...fieldProps} />;
+        // }
 
-        switch (field) {
-          case "text":
-          case "input":
-            return <InputField {...fieldProps} />;
-          case "textarea":
-            return <TextArea {...fieldProps} />;
-          case "password":
-            return <Password {...fieldProps} />;
-          case "checkbox":
-            return <Checkbox {...fieldProps} />;
-          case "checkbox-list":
-            return <CheckboxList {...fieldProps} />;
-          case "radio":
-            return <Radio {...fieldProps} />;
-          case "select":
-            return <Select {...fieldProps} />;
-          case "multi-select":
-            return <MultiSelect {...fieldProps} />;
-          case "slug":
-            return <Slug {...fieldProps} />;
-          case "tags":
-            return <Tags {...fieldProps} />;
-          case "image":
-            return <ImageField {...fieldProps} />;
-          default:
-            throw Error("unknown field type: " + field);
-        }
+        // switch (field) {
+        //   case "text":
+        //   case "input":
+        //     return <InputField {...fieldProps} />;
+        //   case "textarea":
+        //     return <TextArea {...fieldProps} />;
+        //   case "password":
+        //     return <Password {...fieldProps} />;
+        //   case "checkbox":
+        //     return <Checkbox {...fieldProps} />;
+        //   case "checkbox-list":
+        //     return <CheckboxList {...fieldProps} />;
+        //   case "radio":
+        //     return <Radio {...fieldProps} />;
+        //   case "select":
+        //     return <Select {...fieldProps} />;
+        //   case "multi-select":
+        //     return <MultiSelect {...fieldProps} />;
+        //   case "slug":
+        //     return <Slug {...fieldProps} />;
+        //   case "tags":
+        //     return <Tags {...fieldProps} />;
+        //   case "image":
+        //     return <ImageField {...fieldProps} />;
+        //   default:
+        //     throw Error("unknown field type: " + field);
+        // }
       })()}
     </>
   );

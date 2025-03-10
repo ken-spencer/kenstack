@@ -151,6 +151,7 @@ export default function useField(props) {
       htmlFor: id,
       containerClass: twMerge(field.containerClass, props.containerClass),
       labelClass: twMerge(field.labelClass, props.labelClass),
+      label: field.label,
       error: fieldError || field.error,
     };
     return retval;
@@ -161,6 +162,7 @@ export default function useField(props) {
     field.containerClass,
     // labelClass,
     field.labelClass,
+    field.label,
     field.error,
     fieldError, // error returned from the server
     // errorMessage,

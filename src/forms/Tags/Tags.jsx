@@ -93,3 +93,5 @@ export default function Tags(initialProps) {
     </Field>
   );
 }
+
+Tags.defaultValue = [];

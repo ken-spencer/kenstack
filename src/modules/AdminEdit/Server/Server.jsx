@@ -11,6 +11,7 @@ import Notice from "@kenstack/components/Notice";
 import { notFound } from "next/navigation";
 
 import { ServerProvider } from "@kenstack/server/context";
+import load from "../api/load";
 
 export default async function Server({
   children,
@@ -49,24 +50,27 @@ async function Query({ session, id, model, admin, children }) {
     notFound();
   }
 
-  let row, dto;
-  const select = admin.getPaths();
+  let doc, previous, next;
+  // const select = admin.getPaths();
   if (isNew == false) {
+    let result;
     try {
-      row = await model.findById(id).select(select);
-      // leanRow = await model.findById(id).select(select).lean();
+      result = await load({ admin, model, id });
+      // row = await model.findById(id).select(select);
     } catch (e) {
       errorLog(e, "Problem loading admin row");
       return (
-        <Notice message="There was an unexpected problem loading admin data. Please try again later." />
+        <Notice error="There was an unexpected problem loading admin data. Please try again later." />
       );
     }
 
-    if (!row) {
+    ({ doc, previous, next } = result);
+
+    if (!doc) {
       notFound();
     }
 
-    dto = row.toAdminDTO(admin);
+    // dto = doc.toAdminDTO(admin);
   }
 
   const modelPaths = Object.keys(model.schema.paths);
@@ -76,7 +80,9 @@ async function Query({ session, id, model, admin, children }) {
       edit={true}
       isNew={isNew}
       id={id}
-      row={dto}
+      row={doc}
+      previous={previous}
+      next={next}
       userId={claims.sub}
       modelPaths={modelPaths}
     >

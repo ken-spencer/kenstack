@@ -40,8 +40,8 @@ async function Query({ session, model, admin, children }) {
   const keywordsCookie = cookieStore.get(key + "Keywords") || "";
 
   const sortBy = sortCookie
-    ? sortCookie.value.split(",")
-    : ["meta.createdAt", "desc"];
+    ? [...sortCookie.value.split(","), "_id", "desc"]
+    : ["meta.createdAt", "desc", "_id", "desc"];
   const keywords = keywordsCookie ? keywordsCookie.value : "";
 
   let initialData;

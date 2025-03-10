@@ -1,9 +1,11 @@
+"use client";
+
 import { useCallback } from "react";
 
-import Field from "./Field";
-import Checkbox from "./base/Checkbox";
+import Field from "../Field";
+import Checkbox from "../base/Checkbox";
 
-import useField from "./useField";
+import useField from "../useField";
 
 export default function CheckboxField({ onChange, ...initialProps }) {
   // const inputRef = React.useRef();
@@ -32,3 +34,5 @@ export default function CheckboxField({ onChange, ...initialProps }) {
     </Field>
   );
 }
+
+Checkbox.defaultValue = false;

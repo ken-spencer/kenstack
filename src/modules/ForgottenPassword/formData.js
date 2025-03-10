@@ -4,7 +4,7 @@ const formData = createForm({
   email: {
     sm: 12,
     required: true,
-    type: "email",
+    field: "email",
     placeholder: "Enter your email address",
     autoFocus: true,
   },

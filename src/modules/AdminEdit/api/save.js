@@ -1,5 +1,6 @@
 "use server";
 
+// import load from "./load";
 import { revalidatePath } from "next/cache";
 
 import errorLog from "../../../log/error";
@@ -15,6 +16,7 @@ export default async function saveAction(
     doc = new model();
   } else {
     try {
+      // result = await load({admin, model, id});
       doc = await model.findById(id);
     } catch (e) {
       errorLog(e, "Problem loading model in admin edit");
@@ -24,6 +26,7 @@ export default async function saveAction(
       };
     }
   }
+  // const { doc, previous, next } = result;
 
   if (!doc) {
     return {
@@ -98,6 +101,8 @@ export default async function saveAction(
   revalidatePath(basePath);
   return {
     success: "Changes saved successfully",
-    row: doc.toAdminDTO(admin),
+    // row: doc.toAdminDTO(admin),
+    // previous,
+    // next,
   };
 }

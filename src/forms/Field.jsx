@@ -5,7 +5,7 @@ export default function Field({ field, ...props }) {
   const fp = field?.props || {};
 
   const {
-    label = props.label === undefined ? field?.label : props.label,
+    label,
     required = fp.required,
     error = "",
     containerClass = "",

@@ -52,4 +52,6 @@ const TagFieldOptions = {
   },
 };
 
-export { TagSchema, TagFieldOptions };
+export { TagSchema };
+
+export default TagFieldOptions;

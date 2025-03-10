@@ -145,4 +145,5 @@ const ImageFieldOptions = {
 //   });
 // }
 
-export { ImageSchema, ImageFieldOptions };
+export { ImageSchema };
+export default ImageFieldOptions;

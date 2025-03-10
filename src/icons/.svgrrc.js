@@ -1,5 +1,5 @@
 // svgr.config.js
-module.exports = {
+const config = {
   jsx: true, // Ensures output is JSX
   svgProps: {
     width: "24",
@@ -25,3 +25,4 @@ module.exports = {
     ],
   },
 };
+export default config;

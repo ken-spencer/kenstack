@@ -2,25 +2,25 @@
 
 import { useForm } from "@kenstack/forms/context";
 
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useAdminEdit } from "./context";
 
-import Title from "@kenstack/components/Title";
+// import Title from "@kenstack/components/Title";
 import AdminIcon from "@kenstack/components/AdminIcon";
 import SaveIcon from "@kenstack/icons/Save";
 import AddIcon from "@kenstack/icons/Add";
 import ArrowBackIcon from "@kenstack/icons/ArrowBack";
+import PreviousIcon from "@kenstack/icons/Previous";
+import NextIcon from "@kenstack/icons/Next";
 
 import Delete from "./Delete";
 export default function AdminEditToolbar() {
   const changed = useForm((s) => s.changed);
+  const invalid = useForm((s) => s.invalid);
 
-  const { modelName, setConfirm } = useAdminEdit();
+  const { admin, setConfirm, basePathname, previous, next } = useAdminEdit();
 
-  const pathName = usePathname();
   const router = useRouter();
-
-  const basePath = pathName.replace(/\/[^/]*$/, "");
 
   const handleClick =
     (type, path = null) =>
@@ -39,44 +39,54 @@ export default function AdminEditToolbar() {
       //   }
       // }
 
-      if (changed && !evt.target.closest("form").checkValidity()) {
+      if (changed && invalid === true) {
         setConfirm(path);
       } else if (path) {
-        router.push(path);
         evt.preventDefault();
+        router.push(path);
       }
     };
 
   return (
     <div className="admin-toolbar">
-      <div className="admin-toolbar-left">
-        <AdminIcon
-          type="submit"
-          onClick={handleClick("list", basePath)}
-          // name="adminAction"
-          // value={JSON.stringify(["list", { path: basePath }])}
-          tooltip="Back to list"
-        >
-          <ArrowBackIcon />
-        </AdminIcon>
-        <AdminIcon
-          type="submit"
-          onClick={handleClick("new", basePath + "/new")}
-          // name="adminAction"
-          // value={JSON.stringify(["new", { path: basePath + "/new" }])}
-          tooltip="New entry"
-        >
-          <AddIcon />
-        </AdminIcon>
-        <AdminIcon type="submit" name="adminAction" value="save" tooltip="Save">
-          <SaveIcon />
-        </AdminIcon>
-      </div>
+      <AdminIcon
+        type="submit"
+        onClick={handleClick("list", basePathname)}
+        tooltip="Back to list"
+      >
+        <ArrowBackIcon />
+      </AdminIcon>
+      <AdminIcon
+        type="submit"
+        tooltip="Previous"
+        onClick={handleClick("list", basePathname + "/" + previous)}
+        disabled={!previous}
+      >
+        <PreviousIcon />
+      </AdminIcon>
+      <AdminIcon
+        type="submit"
+        tooltip="Next"
+        onClick={handleClick("list", basePathname + "/" + next)}
+        disabled={!next}
+      >
+        <NextIcon />
+      </AdminIcon>
 
-      <Title modelName={modelName} />
-      <div className="admin-toolbar-right">
-        <Delete />
-      </div>
+      <AdminIcon
+        type="submit"
+        onClick={handleClick("new", basePathname + "/new")}
+        tooltip="New entry"
+      >
+        <AddIcon />
+      </AdminIcon>
+      <AdminIcon type="submit" name="adminAction" value="save" tooltip="Save">
+        <SaveIcon />
+      </AdminIcon>
+
+      <div className="flex-grow text-center">{admin.title}</div>
+
+      <Delete />
     </div>
   );
 }

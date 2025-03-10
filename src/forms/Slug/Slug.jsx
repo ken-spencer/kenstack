@@ -1,16 +1,15 @@
 import React, { useCallback, useState, useEffect } from "react";
 
-import LockOpenIcon from "./icons/LockOpenIcon";
-import LockClosedIcon from "./icons/LockClosedIcon";
-import IconButton from "./IconButton";
+import LockOpenIcon from "../icons/LockOpenIcon";
+import LockClosedIcon from "../icons/LockClosedIcon";
+import IconButton from "../IconButton";
 
-import useField from "./useField";
-// import useFieldSubscribe from "./useFieldSubscribe";
-import { useForm } from "./context";
+import useField from "../useField";
+import { useForm } from "../context";
 import { useShallow } from "zustand/shallow";
 
-import Field from "./Field";
-import Input from "./base/Input";
+import Field from "../Field";
+import Input from "../base/Input";
 
 export default function SlugField({
   subscribe,

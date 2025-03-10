@@ -5,6 +5,7 @@ import { useMutation } from "@kenstack/query";
 
 import Form from "@kenstack/forms/Form";
 import Toolbar from "./Toolbar";
+import SecondaryToolbar from "./SecondaryToolbar";
 import NoticeList from "@kenstack/components/Notice/List";
 import AdminFields from "./Fields";
 import Confirm from "./Confirm";
@@ -69,14 +70,14 @@ export default function AdminEditFormCont() {
     },
     onSuccess: ({ data, queryClient }) => {
       queryClient.invalidateQueries({ queryKey: ["admin-list"] });
-      store.getState().setValues(data.row);
+      // store.getState().setValues(data.row);
     },
     store,
   });
 
   return (
     <Form
-      className="w-full"
+      className="flex flex-col gap-1 w-full"
       mutation={mutation}
       // onResponse={handleResponse}
       store={store}
@@ -88,6 +89,7 @@ export default function AdminEditFormCont() {
       <Toolbar />
       <NoticeList store={store} />
       <AdminFields />
+      <SecondaryToolbar />
     </Form>
   );
 }

@@ -1,8 +1,8 @@
 import React from "react";
 
-import useField from "./useField";
+import useField from "../useField";
 
-import Field from "./Field";
+import Field from "../Field";
 
 export default function TextArea(initialProps) {
   const { field, props, fieldProps } = useField(initialProps);

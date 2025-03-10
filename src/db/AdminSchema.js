@@ -1,25 +1,18 @@
 import "server-only";
 import mongoose from "../db";
 
-// import DateRelative from "../components/Date/Relative";
-
-//import merge from "lodash/merge";
-import pick from "lodash/pick";
-// import get from "lodash/get";
+import pick from "lodash-es/pick";
+import get from "lodash-es/get";
 
 const { Schema } = mongoose;
-// import Trash from "../models/Trash";
 
-import formSchema from "@kenstack/forms/formSchema";
+// import formSchema from "@kenstack/forms/formSchema";
 import validity from "./validate";
 import checkServerValidity from "@kenstack/forms/validity/checkServerValidity";
 import errorLog from "../log/error";
-// import auditLog from "../log/audit";
 import audit from "./audit";
 
 class AdminSchema extends Schema {
-  // _admin = null;
-
   constructor(inputSchema, inputOptions = {}) {
     const schema = {
       meta: {
@@ -211,7 +204,7 @@ function toAdminDTO(admin, paths = null) {
 
     const fieldOptions = options.options;
 
-    const value = obj[name];
+    const value = get(obj, name);
     if (fieldOptions.onAdminDTO) {
       values[name] = fieldOptions.onAdminDTO(value);
     } else {
@@ -273,12 +266,12 @@ async function bindValues(fields, values) {
   }
 }
 
-async function bindFormData(fieldTree, formData) {
+async function bindFormData(fields, formData) {
   if (!(formData instanceof FormData)) {
     throw Error("invalid FormData supplied to bindFormData() ");
   }
 
-  let fieldErrors = checkServerValidity(fieldTree, formData);
+  let fieldErrors = checkServerValidity(fields, formData);
   if (fieldErrors) {
     return {
       error:
@@ -287,8 +280,8 @@ async function bindFormData(fieldTree, formData) {
     };
   }
 
-  const schema = new formSchema(fieldTree);
-  const fields = schema.getFields();
+  // const schema = new formSchema(fieldTree);
+  // const fields = schema.getFields();
 
   for (let name in fields) {
     if (!this.constructor.schema.path(name)) {

@@ -3,7 +3,7 @@ import createForm from "@kenstack/forms/formSchema";
 const fields = createForm({
   email: {
     required: true,
-    type: "email",
+    field: "email",
     placeholder: "example@3example.com",
     autoFocus: true,
   },

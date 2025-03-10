@@ -47,7 +47,8 @@ export default function ListHead() {
           <div
             key={cell.name}
             className={
-              "font-boldk group " +
+              "font-bold group " +
+              cell.className +
               (cell.sortable ? " sortable cursor-pointer" : "")
             }
             onClick={cell.sortable && handleSortClick(cell.name)}

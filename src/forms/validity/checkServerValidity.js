@@ -1,9 +1,9 @@
 import checkValue from "./checkValue";
-import formSchema from "../formSchema";
+// import formSchema from "../formSchema";
 
-export default function validateServer(fieldTree, data) {
-  const schema = new formSchema(fieldTree);
-  const fields = schema.getFields();
+export default function validateServer(fields, data) {
+  // const schema = new formSchema(fieldTree);
+  // const fields = schema.getFields();
 
   const fieldErrors = {};
 

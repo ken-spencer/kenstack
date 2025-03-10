@@ -1,12 +1,12 @@
-import React from "react";
+import { useRef } from "react";
 
-import useField from "./useField";
+import useField from "../useField";
 
-import Radio from "./base/Radio";
-import Field from "./Field";
+import Radio from "../base/Radio";
+import Field from "../Field";
 
 export default function RadioField(props) {
-  const inputRef = React.useRef();
+  const inputRef = useRef();
   const field = useField(props, inputRef);
 
   let { row = false, options = [], ...rest } = field.props;
