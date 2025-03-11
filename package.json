@@ -1,13 +1,9 @@
 {
   "name": "kenstack",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "scripts": {
-    "dev": "NODE_OPTIONS=--enable-source-maps next dev -p 3001",
     "trace": "node --trace-deprecation node_modules/next/dist/bin/next dev -p 3001",
-    "build": "next build",
-    "start": "next start -p 3001",
     "lint": "eslint .",
     "prettier": "npx prettier src --check",
     "prettier:fix": "npm run prettier -- --write",
