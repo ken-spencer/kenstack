@@ -1,5 +1,5 @@
 import Form from "@kenstack/forms/Form";
-import Input from "@kenstack/forms/Input";
+import Input from "@kenstack/forms/Text";
 
 import { useLibraryEditor } from "./context";
 import apiAction from "@kenstack/client/apiAction";

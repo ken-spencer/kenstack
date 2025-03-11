@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 
 import saveAction from "./save";
 import { loadAction } from "./load";
-import loadTags from "@kenstack/forms/tags/api/loadTags";
+import loadTags from "@kenstack/forms/Tags/api/loadTags";
 import getPresignedUrl from "@kenstack/forms/Image/api/cloudinary/presignedUrl";
 
 const API = ({ session, admin, model }) => {

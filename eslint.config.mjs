@@ -31,6 +31,14 @@ const config = [
     plugins: {
       'react-compiler': reactCompiler,
     },
+    settings: {
+      "import/resolver": {
+        alias: {
+          map: [["@kenstack", "./src"]],
+          extensions: [".js", ".jsx", ".ts", ".tsx", ".json"],
+        },
+      },
+    },    
     rules: {
       "no-unreachable": "error",
       "@typescript-eslint/no-unused-vars": ["error", { "args": "none" }],
@@ -38,9 +46,11 @@ const config = [
       "@typescript-eslint/no-shadow": ["error", { "hoist": "all", "builtinGlobals": false }],
       "no-console": "error",
       "no-undef": "error",
-      // "import/no-unresolved": "error",
+      "import/no-unresolved": "error",
 
     }
-  }
+  },
+
+
 ];
 export default config;
