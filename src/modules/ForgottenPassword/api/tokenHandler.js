@@ -11,7 +11,8 @@ export default function API(session) {
     throw Error("A valid session must be specified");
   }
 
-  const GET = async (request, { params: { token } }) => {
+  const GET = async (request, { params }) => {
+    const { token } = await params;
     const origin = request.nextUrl.protocol + request.headers.get("host");
 
     if (!token || !token.match(/^[A-Za-z0-9_-]{21}$/)) {
