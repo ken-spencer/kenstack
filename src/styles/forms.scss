@@ -1,5 +1,7 @@
 @use "dark";
 
+@import "tailwindcss/index.css";
+
 $breakpoints: (
   "xs": 0px,
   "sm": 600px,
@@ -399,6 +401,6 @@ $breakpoints: (
   @apply absolute m-0;
   @apply bg-white dark:bg-black dark:text-white shadow-md;
   &::backdrop {
-    @apply bg-black bg-opacity-80;
+    @apply bg-black/80;
   }
 }

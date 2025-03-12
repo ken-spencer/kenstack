@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import "./notice.scss";
 import ErrorIcon from "@kenstack/icons/Error";
 import SuccessIcon from "@kenstack/icons/CheckCircleOutline";
-import InformationIcon from "@heroicons/react/24/outline/InformationCircleIcon";
+import InformationIcon from "@kenstack/icons/Info";
 
 export default function Notice({
   actionState,

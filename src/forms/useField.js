@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useEffect, useMemo, useId, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";

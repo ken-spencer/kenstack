@@ -150,7 +150,7 @@ export default class Session {
     const claims = {
       sub: user._id.toString(), // The UID of the user in your system
       sid: session._id.toString(),
-      roles: user.roles,
+      roles: user?.roles.join(",") || "",
     };
 
     const token = await new SignJWT(claims)
