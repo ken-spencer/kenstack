@@ -1,6 +1,6 @@
 "use client";
 
-import merge from "lodash/merge";
+import merge from "lodash-es/merge";
 import useMutation from "@kenstack/hooks/useMutation";
 
 import {

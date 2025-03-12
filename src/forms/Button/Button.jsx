@@ -1,6 +1,6 @@
 import { lazy, Suspense, forwardRef } from "react";
 
-import omit from "lodash/omit";
+import omit from "lodash-es/omit";
 
 //const Spinner = lazy(() => import("./Spinner"));
 const Spinner = lazy(() => import("@kenstack/icons/Progress"));

@@ -1,8 +1,8 @@
 import { ObjectId } from "mongodb";
 import util from "util";
-import omit from "lodash/omit";
-import pickBy from "lodash/pickBy";
-import pick from "lodash/pick";
+import omit from "lodash-es/omit";
+import pickBy from "lodash-es/pickBy";
+import pick from "lodash-es/pick";
 
 export default class Entity {
   #changes = new Set();

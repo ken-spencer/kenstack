@@ -7,7 +7,7 @@ import { twMerge } from "tailwind-merge";
 // import { useStore } from "zustand";
 import checkValue from "./validity/checkValue";
 
-import omit from "lodash/omit";
+import omit from "lodash-es/omit";
 // import useValidity from "./validity/useValidity";
 import { useForm, useFormStore } from "./context";
 

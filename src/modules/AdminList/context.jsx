@@ -15,7 +15,7 @@ import Cookies from "js-cookie";
 
 import useDebounce from "@kenstack/hooks/useDebounce";
 
-// import debounce from "lodash/debounce";
+// import debounce from "lodash-es/debounce";
 import apiAction from "@kenstack/client/apiAction";
 
 import { createStore } from "zustand";

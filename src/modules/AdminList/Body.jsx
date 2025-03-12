@@ -1,6 +1,6 @@
 "use client";
 
-import get from "lodash/get";
+import get from "lodash-es/get";
 import React, { useCallback } from "react";
 // import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
