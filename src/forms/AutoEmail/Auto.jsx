@@ -5,12 +5,13 @@ import { Section, Row, Column } from "@react-email/components";
 
 import Field from "./Field";
 
-export default function Auto({ fields, formData }) {
+export default function Auto({ fields, values }) {
   return (
     <Section>
       {Object.entries(fields).map(([key, field]) => {
         const label = field.label || sentenceCase(key);
 
+        /*
         if (field.fields) {
           return (
             <Section
@@ -22,7 +23,7 @@ export default function Auto({ fields, formData }) {
             >
               <div
                 style={{
-                  padding: "8px",
+                  paddingTop: "8px",
                   background: "rgba(128, 128, 128, .2)",
                   borderBottom: "1px solid #eaeaea",
                   fontSize: "20px",
@@ -32,25 +33,27 @@ export default function Auto({ fields, formData }) {
                 {label}
               </div>
               <div style={{ padding: "8px" }}>
-                <Auto fields={field.fields} formData={formData} />
+                <Auto fields={field.fields} values={values} />
               </div>
             </Section>
           );
         }
+        */
 
         return (
-          <React.Fragment key={key}>
-            <Row style={{ paddingTop: "10px" }}>
-              <Column style={{ fontSize: "18px", fontWeight: "500" }}>
+          <Row style={{ paddingBottom: "12px" }} key={key}>
+            <Column>
+              <div
+                style={{
+                  fontSize: "20px",
+                  fontWeight: "bold",
+                }}
+              >
                 {label}
-              </Column>
-            </Row>
-            <Row>
-              <Column>
-                <Field name={key} {...field} formData={formData} />
-              </Column>
-            </Row>
-          </React.Fragment>
+              </div>
+              <Field name={key} {...field} values={values} />
+            </Column>
+          </Row>
         );
       })}
     </Section>

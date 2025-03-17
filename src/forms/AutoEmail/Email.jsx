@@ -9,7 +9,7 @@ import {
 
 import Auto from "./Auto";
 
-export default function Email({ fields, formData }) {
+export default function Email({ fields, values }) {
   return (
     <Html lang="en">
       <Body
@@ -31,7 +31,7 @@ export default function Email({ fields, formData }) {
             width: "465px",
           }}
         >
-          <Auto fields={fields} formData={formData} />
+          <Auto fields={fields} values={values} />
         </Container>
       </Body>
     </Html>

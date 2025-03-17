@@ -5,7 +5,12 @@ import Form from "./Form";
 import Session from "@kenstack/server/Session";
 import { LoginProvider } from "./context";
 
-export default function Login({ session, apiPath = "/login/api" }) {
+export default function Login({
+  session,
+  apiPath = "/login/api",
+  className,
+  children,
+}) {
   if (!(session instanceof Session)) {
     throw Error("A valid session must be specified");
   }
@@ -16,7 +21,7 @@ export default function Login({ session, apiPath = "/login/api" }) {
         forgottenPasswordPath={session.forgottenPasswordPath}
         apiPath={apiPath}
       >
-        <Form />
+        <Form className={className}>{children}</Form>
       </LoginProvider>
     </div>
   );

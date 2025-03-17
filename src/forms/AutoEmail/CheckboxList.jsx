@@ -1,7 +1,11 @@
 import { Row, Column } from "@react-email/components";
 
-export default function CheckboxList({ name, options = [], formData }) {
-  const values = formData.getAll(name);
+export default function CheckboxList({
+  name,
+  options = [],
+  values: formValues,
+}) {
+  const values = formValues[name];
 
   if (values.length === 0) {
     return "-";

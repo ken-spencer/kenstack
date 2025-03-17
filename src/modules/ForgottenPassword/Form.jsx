@@ -9,7 +9,7 @@ import apiAction from "@kenstack/client/apiAction";
 import { useForgottenPassword } from "./context";
 
 const store = form.createStore();
-export default function ForgottenPasswordForm({ action }) {
+export default function ForgottenPasswordForm({ action, className, children }) {
   const { apiPath } = useForgottenPassword();
 
   const mutation = useMutation({
@@ -28,7 +28,9 @@ export default function ForgottenPasswordForm({ action }) {
       form={form}
       store={store}
       mutation={mutation}
-      submit={Submit}
-    />
+      className={className}
+    >
+      {children || Submit}
+    </AutoForm>
   );
 }

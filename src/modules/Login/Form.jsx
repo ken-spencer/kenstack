@@ -9,7 +9,7 @@ import apiAction from "@kenstack/client/apiAction";
 import { useLogin } from "./context";
 
 const store = form.createStore();
-export default function LoginForm() {
+export default function LoginForm({ className, children }) {
   const { apiPath } = useLogin();
   const mutation = useMutation({
     mutationFn: ({ formData }) => {
@@ -19,14 +19,14 @@ export default function LoginForm() {
   });
 
   return (
-    <div style={{ maxWidth: "500px", width: "100%" }}>
-      <AutoForm
-        name="loginError"
-        form={form}
-        store={store}
-        mutation={mutation}
-        submit={Submit}
-      />
-    </div>
+    <AutoForm
+      name="loginError"
+      form={form}
+      store={store}
+      mutation={mutation}
+      className={className}
+    >
+      {children || Submit}
+    </AutoForm>
   );
 }

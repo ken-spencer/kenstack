@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-
+import { twMerge } from "tailwind-merge";
 import Form from "../Form";
 import Layout from "../Layout";
 import RefererNotice from "@kenstack/components/Notice/RefererNotice";
@@ -26,6 +26,7 @@ export default function AutoForm({
   // reset: resetInitial = null,
   gap = "16px",
   state = empty,
+  className,
   children = null,
 }) {
   const action = React.useMemo(() => {
@@ -61,44 +62,32 @@ export default function AutoForm({
       mutation={mutation}
       onSubmit={onSubmit}
       onChange={onChange}
+      className={twMerge("flex flex-col gap-4", className)}
       // onResponse={onResponse}
       // reset={reset}
     >
       <RefererNotice className="mb-4" name={name} />
       <NoticeList store={store} />
-      <div>{children || <Layout gap={gap} form={form} />}</div>
+      <Layout gap={gap} form={form} />
 
-      <div className="mt-4">
-        {(() => {
-          /*
-            if (buttons) {
-              if (typeof buttons === "function") {
-                return buttons();
-              } else {
-                return buttons;
-              }
+      {children || (
+        <div>
+          {(() => {
+            let submitOptions = {};
+            if (typeof submit === "string") {
+              submitOptions.children = submit;
+            } else if (typeof submit === "function") {
+              return submit();
+            } else if (React.isValidElement(submit)) {
+              return submit;
+            } else if (typeof submit === "object") {
+              submitOptions = submit;
             }
-          */
 
-          let submitOptions = {};
-          if (typeof submit === "string") {
-            submitOptions.children = submit;
-          } else if (typeof submit === "function") {
-            return submit();
-          } else if (React.isValidElement(submit)) {
-            return submit;
-          } else if (typeof submit === "object") {
-            submitOptions = submit;
-          }
-
-          return <Submit {...submitOptions} />;
-        })()}
-      </div>
+            return <Submit {...submitOptions} />;
+          })()}
+        </div>
+      )}
     </Form>
   );
 }
-
-/*
-        <Grid gap={gap}>
-        </Grid>
-      */

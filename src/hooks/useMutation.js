@@ -24,7 +24,7 @@ export default function useMutation({
     mutationFn,
     onMutate: async (post) => {
       if (store) {
-        store.setState({ pending: true });
+        store.setState({ pending: true, disabled: false });
       }
 
       if (!queryKey) {
@@ -143,7 +143,7 @@ export default function useMutation({
     },
     onSettled: (data, error, variables, context) => {
       if (store) {
-        store.setState({ pending: false });
+        store.setState({ pending: false, disabled: false });
       }
 
       if (onSettled) {

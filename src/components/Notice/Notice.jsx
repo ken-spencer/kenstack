@@ -63,10 +63,15 @@ export default function Notice({
     timeout.current = setTimeout(
       () => {
         setShow(false);
+        setTimeout(() => {
+          if (removeMessage) {
+            removeMessage(message);
+          }
+        }, 1000);
       },
       error ? 5000 : 5500,
     );
-  }, [message, messageText, scroll, setShow, collapse, error]);
+  }, [message, messageText, scroll, setShow, collapse, removeMessage, error]);
 
   let classes = className ? " " + className : "";
   let Icon;

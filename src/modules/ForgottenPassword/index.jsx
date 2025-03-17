@@ -5,7 +5,7 @@ import { ForgottenPasswordProvider } from "./context";
 
 import Session from "@kenstack/server/Session";
 
-export default function ForgottenPassword({ session }) {
+export default function ForgottenPassword({ session, className, children }) {
   if (!(session instanceof Session)) {
     throw Error("A valid session must be specified");
   }
@@ -15,7 +15,7 @@ export default function ForgottenPassword({ session }) {
       loginPath={session.loginPath}
       apiPath={session.forgottenPasswordPath + "/api"}
     >
-      <Form />
+      <Form className={className}>{children}</Form>
     </ForgottenPasswordProvider>
   );
 }

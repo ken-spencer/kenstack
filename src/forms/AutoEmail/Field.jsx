@@ -4,33 +4,38 @@ import Radio from "./Radio";
 import CheckboxList from "./CheckboxList";
 
 export default function Field(props) {
-  const { name, field = "input", formData, options = [] } = props;
+  const { name, field = "input", values, options = [] } = props;
+  const value = values[name] || "";
 
   if (typeof field === "function" || typeof field === "object") {
-    return (
-      <Text>{formData.get(name) ? formData.getAll().join("\n") : "-"}</Text>
-    );
+    return <Text>{value}</Text>;
   }
 
   switch (field.toLowerCase()) {
     default:
-      return <Text>{formData.get(name) || "-"}</Text>;
+      return (
+        <Text>
+          <pre style={{ padding: 0, margin: 0, whiteSpace: "pre-wrap" }}>
+            {value || "-"}
+          </pre>
+        </Text>
+      );
     case "password":
-      return <Text>{formData.get(name) ? "* * * * * * * *" : "-"}</Text>;
+      return <Text>{value ? "* * * * * * * *" : "-"}</Text>;
     case "checkbox":
       return (
         <span style={{ display: "inline-block", fontSize: "24px" }}>
-          {formData.get(name) ? "\u2611" : "\u2610"}
+          {value ? "\u2611" : "\u2610"}
         </span>
       );
     case "select": {
-      const option = options.reduce((acc, [key, value]) => {
-        if (formData.get(name) === key) {
-          acc = value;
+      const option = options.reduce((acc, [key, optione]) => {
+        if (value === key) {
+          acc = option;
         }
         return acc;
       }, "");
-      return <Text>{option || formData.get(name) || "-"}</Text>;
+      return <Text>{option || value || "-"}</Text>;
     }
     case "checkboxlist":
       return <CheckboxList {...props} />;
