@@ -1,4 +1,5 @@
-@import "tailwindcss/index.css";
+@import "tailwindcss";
+@custom-variant dark (&:is(.dark *));
 
 .admin-icon {
   cursor: pointer;
@@ -19,14 +20,14 @@
 .admin-icon-tooltip {
   z-index: 9999;
   @apply absolute;
-  // @apply  transform  -translate-x-1/2;
+  /* @apply  transform  -translate-x-1/2; */
 
   @apply mt-1 px-2 py-0 rounded text-sm;
 
   @apply text-white bg-gray-800;
   @apply opacity-0 invisible transition-opacity duration-300;
 
-  // @apply opacity-0 invisible transition-opacity duration-300 delay-300;
+  /* @apply opacity-0 invisible transition-opacity duration-300 delay-300; */
 
   opacity: 0;
   visibility: hidden;

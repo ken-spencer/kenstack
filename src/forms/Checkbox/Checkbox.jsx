@@ -35,4 +35,4 @@ export default function CheckboxField({ onChange, ...initialProps }) {
   );
 }
 
-Checkbox.defaultValue = false;
+CheckboxField.defaultValue = false;

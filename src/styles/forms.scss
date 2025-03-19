@@ -1,6 +1,7 @@
 @use "dark";
 
 @import "tailwindcss/index.css";
+@custom-variant dark (&:is(.dark *));
 
 $breakpoints: (
   "xs": 0px,

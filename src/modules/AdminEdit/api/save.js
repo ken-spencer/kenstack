@@ -90,6 +90,17 @@ export default async function saveAction(
     };
   }
 
+  if (admin.preview) {
+    revalidatePath(admin.preview);
+  }
+
+  // model.schema.options.revalidates.forEach((path) => {
+  admin.revalidates.forEach((path) => {
+    revalidatePath(path);
+  });
+  revalidatePath(pathname);
+  revalidatePath(basePath);
+
   if (actionInfo.path) {
     return {
       success: "Saved",
@@ -97,8 +108,6 @@ export default async function saveAction(
     };
   }
 
-  revalidatePath(pathname);
-  revalidatePath(basePath);
   return {
     success: "Changes saved successfully",
     // row: doc.toAdminDTO(admin),
