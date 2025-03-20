@@ -29,6 +29,12 @@ export default async function Server({
     throw Error("admin model must be an instance of clientModel");
   }
 
+  if (admin.modelName !== model.modelName) {
+    throw Error(
+      `Model name mismatch client: ""${admin.modelName}"",  server: ""${model.modelName}""`,
+    );
+  }
+
   return (
     <Authenticate session={session} roles={["ADMIN"]}>
       <Query id={id} model={model} admin={admin} session={session}>
