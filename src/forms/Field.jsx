@@ -2,11 +2,10 @@ import { twMerge } from "tailwind-merge";
 import { useMemo } from "react";
 
 export default function Field({ field, ...props }) {
-  const fp = field?.props || {};
 
   const {
     label,
-    required = fp.required,
+    required = false,
     error = "",
     containerClass = "",
     htmlFor,
