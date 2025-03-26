@@ -96,11 +96,6 @@ export default function useField(props) {
       retval.disabled = true;
     }
 
-    if (retval.required === "required") {
-      retval.required = true;
-      throw Error("This is used: required is a string");
-    }
-
     if (typeof retval.pattern === "object") {
       retval.pattern = retval.pattern.pattern;
     }
@@ -155,6 +150,7 @@ export default function useField(props) {
       labelClass: twMerge(field.labelClass, props.labelClass),
       label: field.label,
       error: fieldError || field.error,
+      required: props.required,
     };
     return retval;
   }, [

@@ -14,7 +14,7 @@ export default class AdminClientConfig {
         path: pluralize(kebabCase(modelName)),
         title: pluralize(sentenceCase(modelName)),
         ...options,
-        Icon: dynamic(() => options.icon),
+        Icon: options.icon?.then ? dynamic(() => options.icon) : options.icon,
       },
     ]);
   }

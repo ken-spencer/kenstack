@@ -24,20 +24,22 @@ export default async function load({ admin, model, id }) {
     return { doc: false, previous: null, next: null };
   }
 
+  const prevOp = order === "asc" ? "$lt" : "$gt";
   const prevQuery = model
     .findOne({
       $or: [
-        { [path]: { $lt: doc.get(path) } },
-        { [path]: doc.get(path), _id: { $lt: doc._id } },
+        { [path]: { [prevOp]: doc.get(path) } },
+        { [path]: doc.get(path), _id: { [prevOp]: doc._id } },
       ],
     })
     .sort({ [path]: order === "asc" ? -1 : 1, _id: 1 });
 
+  const nextOp = order === "asc" ? "$gt" : "$lt";
   const nextQuery = model
     .findOne({
       $or: [
-        { [path]: { $gt: doc.get(path) } },
-        { [path]: doc.get(path), _id: { $gt: doc._id } },
+        { [path]: { [nextOp]: doc.get(path) } },
+        { [path]: doc.get(path), _id: { [nextOp]: doc._id } },
       ],
     })
     .sort({ [path]: order === "asc" ? 1 : -1, _id: -1 });

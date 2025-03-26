@@ -41,7 +41,7 @@ export default function AdminEditToolbar() {
 
       if (changed && invalid === true) {
         setConfirm(path);
-      } else if (path) {
+      } else if (changed === false && path) {
         evt.preventDefault();
         router.push(path);
       }

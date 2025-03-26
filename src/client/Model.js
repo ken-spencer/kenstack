@@ -15,6 +15,8 @@ export default function clientModel(data) {
   this.modelName = data.modelName;
   this.title = data.title || sentenceCase(this.modelName);
   this.icon = data.icon || DocumentIcon;
+  this.preview = data.preview || null;
+  this.revalidates = data.revalidates || [];
   this.data = data;
 
   this.getList = function () {

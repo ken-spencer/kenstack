@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 
-import "./admin-icon.scss";
+import "./admin-icon.css";
 
 export default function AdminIcon({
   className = "",

@@ -30,6 +30,7 @@ class AdminSchema extends Schema {
         createdAt: "meta.createdAt",
         updatedAt: "meta.updatedAt",
       },
+      // revalidates: [], // list of site pages to revalidate on save
       ...inputOptions,
     };
 
