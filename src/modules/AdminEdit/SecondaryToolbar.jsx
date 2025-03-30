@@ -27,7 +27,7 @@ function DateFormat({ date: dateStr, title }) {
   return (
     <div className="flex gap-2">
       <strong>{title}</strong>
-      <span>{format}</span>
+      <span suppressHydrationWarning>{format}</span>
     </div>
   );
 }

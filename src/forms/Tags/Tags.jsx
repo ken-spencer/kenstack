@@ -52,7 +52,7 @@ export default function Tags(initialProps) {
           ref={inputRef}
           autoComplete="off"
           onKeyDown={(evt) => {
-            if (evt.key === "Enter" && value.length > 1) {
+            if (evt.key === "Enter" && value.length) {
               evt.preventDefault();
               // avoid duplication
               if (Array.isArray(field.value) && field.value.includes(value)) {

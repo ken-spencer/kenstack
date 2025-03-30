@@ -1,5 +1,6 @@
 import TextField from "../Text";
 import DateField from "../Date";
+import DateTimeField from "../DateTime";
 import EmailField from "../Email";
 import UrlField from "../Url";
 import TextArea from "../TextArea";
@@ -25,6 +26,8 @@ export default function getFIeld(field) {
       return EmailField;
     case "date":
       return DateField;
+    case "datetime":
+      return DateTimeField;
     case "url":
       return UrlField;
     case "textarea":

@@ -2,6 +2,13 @@ import mongoose from "@kenstack/db";
 const Schema = mongoose.Schema;
 
 import cloudinaryToImage from "./utils/cloudinaryToImage";
+import { v2 as cloudinary } from "cloudinary";
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true,
+});
 
 const SizeSchema = new Schema({
   format: String,
@@ -145,5 +152,87 @@ const ImageFieldOptions = {
 //   });
 // }
 
-export { ImageSchema };
-export default ImageFieldOptions;
+export function imagePlugin(
+  schema,
+  { field = "image", transformations: localTransformations = null } = {},
+) {
+  let transformations = new Map([
+    ["original", "f_webp"], // Original dimensions as WebP
+    ["squareThumbnail", "w_200,h_200,c_thumb,g_center,f_webp"], // Thumbnail as WebP
+  ]);
+
+  if (localTransformations) {
+    transformations = new Map([...transformations, ...localTransformations]);
+  }
+
+  schema.add({
+    [field]: {
+      ...ImageFieldOptions,
+    },
+  });
+
+  schema.methods.getImage = async function (sizeName) {
+    const data = this.get(field);
+
+    if (!data) {
+      return;
+    }
+
+    const transformation = transformations.get(sizeName);
+
+    const size = data.sizes.get(sizeName);
+
+    // cloudinary.api.resource("giveround/images/8j89ooj49a3amll/featured", function(error, result) {
+    //   if (error) {
+    //     console.error("Error fetching resource:", error);
+    //   } else {
+    //     console.log("Resource found:", result);
+    //   }
+    // });
+
+    if (size && size.transformation === transformation) {
+      return size;
+    }
+
+    let result;
+    try {
+      result = await cloudinary.uploader.explicit(data.public_id, {
+        type: "upload",
+        eager: [transformation],
+        eager_async: false,
+      });
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error("Cloudinary error: ", e);
+      return null;
+    }
+
+    const [img] = result.eager;
+    const retval = {
+      width: img.width,
+      height: img.height,
+      format: img.format,
+      bytes: img.bytes,
+      url: img.secure_url,
+      transformation: img.transformation,
+    };
+
+    data.sizes.set(sizeName, retval);
+    const newData = { ...data };
+    this.set(field, newData);
+    await this.save();
+    return retval;
+
+    //   // console.log(data);
+    //     const url = cloudinary.url(data.public_id, {
+    //       transformation,
+    //       // transformation: [{ width: 300, height: 300, crop: "fill" }],
+    //       sign_url: true,
+    //       secure: true,
+    //     });
+
+    // console.log('url', url);
+  };
+}
+
+export { ImageSchema, ImageFieldOptions };

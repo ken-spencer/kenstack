@@ -1,3 +1,4 @@
+import { visit } from "unist-util-visit";
 import { remark } from "remark";
 // import toHtml from "remark-html";
 import remarkGfm from "remark-gfm";
@@ -14,6 +15,17 @@ const customSchema = {
   tagNames: [...defaultSchema.tagNames, "u"],
 };
 
+function shiftHeadings() {
+  return (tree) => {
+    visit(tree, "heading", (node) => {
+      // Only shift if the resulting level doesn't exceed 6.
+      if (node.depth < 6) {
+        node.depth += 1;
+      }
+    });
+  };
+}
+
 export async function mdToHtml(content) {
   if (!content) {
     return "";
@@ -25,6 +37,7 @@ export async function mdToHtml(content) {
   );
 
   const processedContent = await remark()
+    .use(shiftHeadings)
     .use(remarkGfm)
     .use(remarkBreaks) // Convert single newline to <br />    // .use(toHtml)
     .use(remarkRehype, { allowDangerousHtml: true })

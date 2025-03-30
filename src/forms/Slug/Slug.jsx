@@ -50,20 +50,13 @@ export default function SlugField({
   const [interacted, setInteracted] = useState(false);
 
   useEffect(() => {
-    if (interacted || field.initialValue) {
+    if (interacted || locked || field.getInitialValue()) {
       return;
     }
 
     const title = subscribe ? subscribedValue : "";
     field.setValue(strToSlug(title));
-  }, [
-    interacted,
-    field.initialValue,
-    locked,
-    field,
-    subscribe,
-    subscribedValue,
-  ]);
+  }, [interacted, locked, field, subscribe, subscribedValue]);
 
   return (
     <Field field={field} {...fieldProps}>

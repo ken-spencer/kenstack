@@ -51,23 +51,20 @@ export default function AdminListBody() {
         </label>
 
         {list.map((cell, key) => {
+          const href = pathName + "/" + row._id;
+
           let value = get(row, cell.name);
-          if (cell.filter) {
-            value = cell.filter(value);
-          }
           if (cell.component) {
             let Component = cell.component;
-            value = <Component value={value} />;
+            return (
+              <Component key={cell.name} href={href} value={value} {...row} />
+            );
           } else if (value === true) {
             value = <Checkbox checked readOnly />;
           }
 
           return (
-            <Link
-              className={cell.className}
-              key={cell.name}
-              href={pathName + "/" + row._id}
-            >
+            <Link className={cell.className} key={cell.name} href={href}>
               {value}
             </Link>
           );
