@@ -1,18 +1,16 @@
 import Link from "next/link";
 import Submit from "@kenstack/forms/Submit";
 
-import styles from "./form.module.css";
-
 import { useForgottenPassword } from "./context";
 
 export default function LoginSubmit() {
   const { loginPath } = useForgottenPassword();
   return (
-    <div className={styles.buttonContainer}>
-      <div className={styles.submit}>
+    <div className="flex gap-4">
+      <div className="">
         <Submit>Request link</Submit>
       </div>
-      <div className={styles.forgottenPassword}>
+      <div className="flex-grow text-right">
         <Link href={loginPath}>Return to login</Link>
       </div>
     </div>

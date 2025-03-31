@@ -26,7 +26,7 @@ export default function LoginForm({ className, children }) {
       mutation={mutation}
       className={className}
     >
-      {children || Submit}
+      {children || <Submit />}
     </AutoForm>
   );
 }

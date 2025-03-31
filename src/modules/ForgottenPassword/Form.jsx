@@ -30,7 +30,7 @@ export default function ForgottenPasswordForm({ action, className, children }) {
       mutation={mutation}
       className={className}
     >
-      {children || Submit}
+      {children || <Submit />}
     </AutoForm>
   );
 }

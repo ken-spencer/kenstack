@@ -33,6 +33,7 @@
     "katex": "^0.16.9",
     "lodash-es": "^4.17.21",
     "luxon": "^3.4.3",
+    "mongoose": "^8.13.1",
     "nanoid": "^5.0.9",
     "path-to-regexp": "^8.2.0",
     "pica": "^9.0.1",
