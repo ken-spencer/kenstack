@@ -158,6 +158,7 @@ export function AdminListProvider({
   const context = useMemo(
     () => ({
       rows: data?.rows ?? [],
+      total: data?.total ?? null,
       // setRows,
       admin,
       userId,

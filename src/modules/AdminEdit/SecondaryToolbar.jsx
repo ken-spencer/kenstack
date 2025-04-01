@@ -9,7 +9,7 @@ export default function SecondaryToolbar() {
   }
 
   return (
-    <div className="flex items-center gap-4 p-2 admin-border g-gray-100 dark:bg-gray-900 text-sm">
+    <div className="flex items-center gap-4 p-2 admin-border bg-gray-100 dark:bg-gray-900 text-sm">
       <DateFormat date={doc["meta.createdAt"]} title="Created:" />
       <DateFormat date={doc["meta.updatedAt"]} title="Updated:" />
     </div>

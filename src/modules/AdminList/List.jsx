@@ -29,7 +29,7 @@ export default function AdminList({ admin }) {
       admin={admin}
       // userId={claims.sub}
     >
-      <div>
+      <div className="flex flex-col gap-1">
         <Toolbar />
         <AdminListTable />
         <Pagination />

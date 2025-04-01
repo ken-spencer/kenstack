@@ -1,8 +1,21 @@
 "use client";
+import { useAdminList } from "./context";
 
-// TODO implement pagination
 export default function Pagination() {
-  return null;
+  const { total } = useAdminList();
+
+  if (total === null || total === 0) {
+    return null;
+  }
+
+  return (
+    <div className="flex items-center gap-4 p-2 admin-border bg-gray-100 dark:bg-gray-900 text-sm">
+      <div className="">
+        {total} Record{total > 1 ? "s" : ""}
+      </div>
+    </div>
+  );
+
   /*
   const handleChangePage = () => {};
   const handleChangeRowsPerPage = () => {};

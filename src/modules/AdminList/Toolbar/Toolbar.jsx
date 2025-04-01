@@ -22,7 +22,7 @@ export default function AdminListToolbar() {
 
   return (
     <>
-      <div className="flex items-center admin-border p-1 mb-2">
+      <div className="flex items-center admin-border p-1">
         <div className="">
           <AdminIcon
             component={Link}
