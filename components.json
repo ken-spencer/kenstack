@@ -1,0 +1,22 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "new-york",
+  "rsc": true,
+  "tsx": false,
+  "tailwind": {
+    "config": "",
+    "css": "src/styles/globals.css",
+    "baseColor": "neutral",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "aliases": {
+    "components": "@kenstack/components",
+    "utils": "@kenstack/lib/utils",
+    "ui": "@kenstack/components/ui",
+    "lib": "@kenstack/lib",
+    "hooks": "@kenstack/hooks"
+  },
+  "iconLibrary": "lucide"
+}
+

@@ -1,9 +1,17 @@
 import { twMerge } from "tailwind-merge";
 import { useMemo } from "react";
 
+import HelpIcon from "@kenstack/icons/Help";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@kenstack/components/ui/popover";
+
 export default function Field({ field, ...props }) {
   const {
     label,
+    help,
     required = false,
     error = "",
     containerClass = "",
@@ -13,7 +21,12 @@ export default function Field({ field, ...props }) {
   } = props;
 
   let classes = useMemo(
-    () => twMerge("field", required && "required", containerClass),
+    () =>
+      twMerge(
+        "field flex flex-col gap-[1px]",
+        required && "required",
+        containerClass,
+      ),
     [required, containerClass],
   );
 
@@ -22,10 +35,20 @@ export default function Field({ field, ...props }) {
   return (
     <div className={classes}>
       {label && (
-        <label htmlFor={htmlFor} className={classesLabel}>
-          {label}
+        <div className="flex gap-2 items-center">
+          <label htmlFor={htmlFor} className={classesLabel}>
+            {label}
+          </label>
           {required && <span className="required">*</span>}
-        </label>
+          {help && (
+            <Popover>
+              <PopoverTrigger className="cursor-pointer">
+                <HelpIcon />
+              </PopoverTrigger>
+              <PopoverContent>{help}</PopoverContent>
+            </Popover>
+          )}
+        </div>
       )}
       {children}
       {error && <div className="field-error">{error}</div>}

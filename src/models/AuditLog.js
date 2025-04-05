@@ -1,4 +1,6 @@
-import mongoose from "../db";
+import mongoose from "mongoose";
+
+import { dbConnect } from "../db";
 
 const { Schema } = mongoose;
 
@@ -24,7 +26,8 @@ const AuditLogSchema = new Schema(
   { timestamps: true },
 );
 
-const AuditLog = mongoose.addModel("AuditLog", AuditLogSchema, {
+const con = await dbConnect();
+const AuditLog = con.addModel("AuditLog", AuditLogSchema, {
   saveLog: false,
 });
 

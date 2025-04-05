@@ -1,5 +1,5 @@
 import "server-only";
-import mongoose from "../db";
+import mongoose from "mongoose";
 
 import pick from "lodash-es/pick";
 import get from "lodash-es/get";

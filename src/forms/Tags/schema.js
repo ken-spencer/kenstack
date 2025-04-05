@@ -1,4 +1,4 @@
-import mongoose from "@kenstack/db";
+import mongoose from "mongoose";
 const Schema = mongoose.Schema;
 
 import isEqual from "lodash-es/isEqual";

@@ -31,11 +31,12 @@ export default async function matchParams(params, adminConfig) {
     config = adminConfig.getFromPath(param1);
     let slug = param3;
     if (!config) {
-      if (params.length > 1) {
-        return false;
-      } else {
-        slug = param1;
-      }
+      return false;
+      // if (params.length > 1) {
+      //   return false;
+      // } else {
+      //   slug = param1;
+      // }
     } else {
       ({ modelName, adminImport } = config);
     }

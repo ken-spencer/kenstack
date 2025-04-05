@@ -1,4 +1,4 @@
-import mongoose from "@kenstack/db";
+import mongoose from "mongoose";
 const Schema = mongoose.Schema;
 
 import cloudinaryToImage from "./utils/cloudinaryToImage";
@@ -154,7 +154,7 @@ const ImageFieldOptions = {
 
 export function imagePlugin(
   schema,
-  { field = "image", transformations: localTransformations = null } = {},
+  { path = "image", transformations: localTransformations = null } = {},
 ) {
   let transformations = new Map([
     ["original", "f_webp"], // Original dimensions as WebP
@@ -166,13 +166,13 @@ export function imagePlugin(
   }
 
   schema.add({
-    [field]: {
+    [path]: {
       ...ImageFieldOptions,
     },
   });
 
   schema.methods.getImage = async function (sizeName) {
-    const data = this.get(field);
+    const data = this.get(path);
 
     if (!data) {
       return;
@@ -219,7 +219,7 @@ export function imagePlugin(
 
     data.sizes.set(sizeName, retval);
     const newData = { ...data };
-    this.set(field, newData);
+    this.set(path, newData);
     await this.save();
     return retval;
 

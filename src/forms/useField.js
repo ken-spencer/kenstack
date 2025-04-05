@@ -82,6 +82,7 @@ export default function useField(props) {
       ref,
       ...omit(props, [
         "label",
+        "help",
         "message",
         "email",
         "unique",
@@ -149,6 +150,7 @@ export default function useField(props) {
       containerClass: twMerge(field.containerClass, props.containerClass),
       labelClass: twMerge(field.labelClass, props.labelClass),
       label: field.label,
+      help: field.help,
       error: fieldError || field.error,
       required: props.required,
     };
@@ -161,6 +163,7 @@ export default function useField(props) {
     // labelClass,
     field.labelClass,
     field.label,
+    field.help,
     field.error,
     fieldError, // error returned from the server
     // errorMessage,

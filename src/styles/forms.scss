@@ -44,28 +44,13 @@ $breakpoints: (
   align-items: center;
 }
 */
-/*
-.flexWrap {
-  flex-wrap: wrap;
-}
-*/
-
-.field {
-  display: block;
-}
 
 .label {
-  display: inline-block;
   cursor: pointer;
   @include text;
-  margin: 0;
 
   @include dark.dark {
     @include text-dark;
-  }
-
-  .required {
-    padding-left: 0.25rem;
   }
 }
 

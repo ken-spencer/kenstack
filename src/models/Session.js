@@ -1,4 +1,5 @@
-import mongoose from "../db";
+import mongoose from "mongoose";
+import { dbConnect } from "@kenstack/db";
 
 const { Schema } = mongoose;
 
@@ -25,6 +26,7 @@ const SessionSchema = new Schema(
   { timestamps: true },
 );
 
-const Session = mongoose.addModel("Session", SessionSchema);
+const con = await dbConnect();
+const Session = con.addModel("Session", SessionSchema);
 
 export default Session;
