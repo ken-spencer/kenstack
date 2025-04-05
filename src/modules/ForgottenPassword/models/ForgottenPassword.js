@@ -1,4 +1,6 @@
-import mongoose from "@kenstack/db";
+import mongoose from "mongoose";
+import { dbConnect } from "@kenstack/db";
+
 import { nanoid } from "nanoid";
 
 import audit from "@kenstack/db/audit";
@@ -37,7 +39,8 @@ const ForgottenPasswordSchema = new Schema(
 
 audit(ForgottenPasswordSchema);
 
-const ForgottenPassword = mongoose.addModel(
+const con = await dbConnect();
+const ForgottenPassword = con.addModel(
   "ForgottenPassword",
   ForgottenPasswordSchema,
 );

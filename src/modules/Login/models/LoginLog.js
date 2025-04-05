@@ -1,4 +1,5 @@
-import mongoose from "@kenstack/db";
+import mongoose from "mongoose";
+import { dbConnect } from "@kenstack/db";
 import isEmail from "validator/es/lib/isEmail";
 
 const { Schema } = mongoose;
@@ -23,6 +24,7 @@ const LoginLogSchema = new Schema(
 
 LoginLogSchema.index({ createdAt: -1 });
 
-const LoginLog = mongoose.addModel("LoginLog", LoginLogSchema);
+const con = await dbConnect();
+const LoginLog = con.addModel("LoginLog", LoginLogSchema);
 
 export default LoginLog;
