@@ -118,7 +118,7 @@ export default class Session {
     const session = new SessionModel({ user, expiresAt });
     await session.save();
 
-    const resCookies = response ? response.cookies : cookies();
+    const resCookies = response ? response.cookies : await cookies();
     await this.#sessionCookies(resCookies, session, user);
   }
 
@@ -129,17 +129,18 @@ export default class Session {
       return false;
     }
 
-    cookies().delete("auth", {
+    const cookieStore = await cookies();
+    cookieStore.delete("auth", {
       domain: this.domain,
     });
 
-    cookies().set("auth", "", {
-      httpOnly: true,
-      domain: this.domain,
-      secure: !process.env.DEVELOPMENT && process.env.NODE_ENV === "production", // Safair won't allow this cookie otherwise
-      sameSite: "Strict",
-      expires: new Date(0),
-    });
+    // cookies().set("auth", "", {
+    //   httpOnly: true,
+    //   domain: this.domain,
+    //   secure: !process.env.DEVELOPMENT && process.env.NODE_ENV === "production", // Safair won't allow this cookie otherwise
+    //   sameSite: "Strict",
+    //   expires: new Date(0),
+    // });
 
     await SessionModel.deleteOne({ _id: claims.sid });
 
@@ -215,7 +216,7 @@ export default class Session {
     session.expiresAt = date;
     await session.save();
 
-    const resCookies = response ? response.cookies : cookies();
+    const resCookies = response ? response.cookies : await cookies();
     await this.#sessionCookies(resCookies, session, user);
 
     auditLog("revalidate", null, {}, session.user);
