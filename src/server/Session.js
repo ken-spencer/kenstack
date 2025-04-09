@@ -166,10 +166,9 @@ export default class Session {
       httpOnly: true,
       domain: this.domain,
       secure: !process.env.DEVELOPMENT && process.env.NODE_ENV === "production", // Safair won't allow this cookie otherwise
-      sameSite: "Strict",
+      sameSite: "Lax", // Strict can fail when doing a password request link from Gmail. ,
       expires: session.expiresAt.getTime(),
     });
-
     return true;
   }
 

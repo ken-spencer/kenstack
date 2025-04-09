@@ -23,6 +23,7 @@ const ForgottenPasswordSchema = new Schema(
       required: true,
       ref: "User",
     },
+    usedAt: Date,
     expiry: {
       type: Date,
       required: true,

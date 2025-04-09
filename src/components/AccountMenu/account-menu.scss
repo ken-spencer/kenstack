@@ -1,4 +1,4 @@
-@import "tailwindcss/index.css";
+@reference "../../../../src/app/globals.css";
 
 .account-menu-cont {
   @apply relative inline-block text-left;

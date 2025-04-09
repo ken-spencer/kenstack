@@ -6,9 +6,10 @@ import {
   useState,
   useCallback,
   useMemo,
+  useEffect,
 } from "react";
 
-import { keepPreviousData, useQuery } from "@kenstack/query";
+import { keepPreviousData, useQuery, useQueryClient } from "@kenstack/query";
 
 import { usePathname, useParams } from "next/navigation";
 import Cookies from "js-cookie";
@@ -73,10 +74,21 @@ export function AdminListProvider({
     () => ["admin-list", modelName, sortBy, debouncedKeywords],
     [modelName, sortBy, debouncedKeywords],
   );
+
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    queryClient.prefetchQuery({
+      queryKey,
+      queryFn: () => initialData,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryClient]);
+
   const {
     data,
     error: queryError,
     isLoading,
+    refetch,
     // isPreviousData,
   } = useQuery({
     queryKey,
@@ -88,13 +100,19 @@ export function AdminListProvider({
       });
     },
     // initial data must be conditional or we never query
-    initialData:
-      initialSortBy === sortBy && initialKeywords === keywords
-        ? initialData
-        : undefined,
+    // initialData:
+    //   initialSortBy === sortBy && initialKeywords === keywords
+    //     ? initialData
+    //     : undefined,
     // staleTime: typeof(window) ? Infinity : 0,
-    initialDataUpdatedAt: Date.now(),
+    // initialDataUpdatedAt: Date.now(),
     placeholderData: keepPreviousData,
+    // placeholderData: (previousData) => {
+    //   if (previousData) return previousData;
+
+    //   return initialData;
+    // },
+    // keepPreviousData: true,
   });
 
   /*
@@ -173,6 +191,7 @@ export function AdminListProvider({
       setSelected,
       // error: error || queryError?.message || data?.error,
       error: queryError?.message || data?.error,
+      refetch,
       isLoading,
       messageStore,
       queryKey,
@@ -192,6 +211,7 @@ export function AdminListProvider({
       data,
       //error,
       queryError,
+      refetch,
       isLoading,
       queryKey,
       apiPath,

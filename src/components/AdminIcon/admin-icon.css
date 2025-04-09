@@ -1,12 +1,10 @@
-@import "tailwindcss";
-@custom-variant dark (&:is(.dark *));
+@reference "../../../../src/app/globals.css";
 
 .admin-icon {
   cursor: pointer;
 
   transition: opacity 300ms;
 
-  @apply text-gray-800 dark:text-gray-200;
   &.active {
     @apply text-black dark:text-white;
   }

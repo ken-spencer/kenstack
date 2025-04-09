@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
+import { twMerge } from "tailwind-merge";
 
 import "./admin-icon.css";
 
@@ -123,7 +124,10 @@ export default function AdminIcon({
   return (
     <>
       <Component
-        className={"admin-icon" + (className ? " " + className : "")}
+        className={twMerge(
+          "admin-icon text-gray-800 dark:text-gray-200",
+          className,
+        )}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onMouseDown={handleMouseDown}

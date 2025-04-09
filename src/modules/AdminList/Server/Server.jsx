@@ -1,6 +1,7 @@
 import "server-only";
 
 import Authenticate from "@kenstack/server/Authenticate";
+import { notFound } from "next/navigation";
 
 import Session from "@kenstack/server/Session";
 import clientModel from "@kenstack/client/Model";
@@ -13,7 +14,13 @@ import { cookies } from "next/headers";
 import Notice from "@kenstack/components/Notice";
 import errorLog from "@kenstack/log/error";
 
-export default async function Server({ children, session, admin, model }) {
+export default async function Server({
+  children,
+  session,
+  admin,
+  model,
+  slug,
+}) {
   if (!(session instanceof Session)) {
     throw Error("Authenticate request a session to be specified");
   }
@@ -24,14 +31,19 @@ export default async function Server({ children, session, admin, model }) {
 
   return (
     <Authenticate session={session} roles={["ADMIN"]}>
-      <Query session={session} admin={admin} model={model}>
+      <Query session={session} admin={admin} model={model} slug={slug}>
         {children}
       </Query>
     </Authenticate>
   );
 }
 
-async function Query({ session, model, admin, children }) {
+async function Query({ session, model, admin, slug, children }) {
+  // we may use slug later for pagination or some other link. 404 for now.
+  if (slug) {
+    notFound();
+  }
+
   const claims = await session.getClaims();
 
   const cookieStore = await cookies();

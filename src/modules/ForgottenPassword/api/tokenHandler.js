@@ -13,7 +13,8 @@ export default function API(session) {
 
   const GET = async (request, { params }) => {
     const { token } = await params;
-    const origin = request.nextUrl.protocol + request.headers.get("host");
+    const origin =
+      request.nextUrl.protocol + "//" + request.headers.get("host");
 
     if (!token || !token.match(/^[A-Za-z0-9_-]{21}$/)) {
       return await notFound(request);
@@ -24,6 +25,7 @@ export default function API(session) {
         origin + session.forgottenPasswordPath,
       );
       redirect.cookies.set("forgottenPassword", message);
+
       return redirect;
     };
 
@@ -39,11 +41,15 @@ export default function API(session) {
     }
 
     const now = new Date();
-    if (fp.expiry < now) {
+    if (fp.expiry < now || fp.usedAt) {
       return errorResponse(
         "Your link has expired. Please request an updated email and try again.",
       );
     }
+
+    // insecure if can be used more than once.
+    fp.usedAt = new Date();
+    await fp.save();
 
     const response = NextResponse.redirect(origin + session.resetPasswordPath);
 

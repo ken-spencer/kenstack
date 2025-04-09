@@ -115,6 +115,7 @@ export default async function forgottenPasswordAction(
 
   const url =
     request.nextUrl.protocol +
+    "//" +
     request.headers.get("host") +
     session.forgottenPasswordPath +
     "/" +

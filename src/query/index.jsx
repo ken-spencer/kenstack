@@ -9,7 +9,11 @@ import {
   QueryClientProvider,
 } from "@tanstack/react-query";
 
-export { keepPreviousData, useQuery } from "@tanstack/react-query";
+export {
+  keepPreviousData,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 function queryClient(props = {}) {
   const params = merge(

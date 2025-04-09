@@ -1,5 +1,5 @@
-@import "tailwindcss/index.css";
-@custom-variant dark (&:is(.dark *));
+/* @reference "@site/app/globals.css"; */
+@reference "../../../src/app/globals.css";
 
 @mixin dark() {
   .dark & {

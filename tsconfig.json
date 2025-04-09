@@ -25,9 +25,6 @@
       }
     ],
     "paths": {
-      "@site/*": [
-        "./site/*"
-      ],
       "@kenstack/*": [
         "./src/*"
       ]

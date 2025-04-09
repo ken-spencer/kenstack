@@ -1,7 +1,7 @@
 @use "dark";
 
-@import "tailwindcss/index.css";
-@custom-variant dark (&:is(.dark *));
+/* @reference "@/app/global.css"; */
+@reference "../../../src/app/globals.css";
 
 $breakpoints: (
   "xs": 0px,

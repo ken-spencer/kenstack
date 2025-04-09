@@ -28,15 +28,14 @@ export default async function matchParams(params, adminConfig) {
       admin,
     };
   } else if (params.length === 1 || isId(param2)) {
-    config = adminConfig.getFromPath(param1);
     let slug = param3;
+    config = adminConfig.getFromPath(param1);
     if (!config) {
-      return false;
-      // if (params.length > 1) {
-      //   return false;
-      // } else {
-      //   slug = param1;
-      // }
+      if (params.length > 1) {
+        return false;
+      } else {
+        slug = param1;
+      }
     } else {
       ({ modelName, adminImport } = config);
     }

@@ -11,7 +11,6 @@ export function remarkShiftHeadings() {
   };
 }
 
-
 // Note this function is moot because it strips out underlines
 // export function remarkUnderline() {
 //   return (tree, file) => {

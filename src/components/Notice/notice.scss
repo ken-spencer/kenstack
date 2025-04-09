@@ -1,51 +1,44 @@
-@import "tailwindcss/index.css";
-@custom-variant dark (&:is(.dark *));
-
 .notice {
-  display: flex;
+  /* display: flex; */
+  /* align-items: center; */
+  /* padding: 0.5rem; */
+  /* border: solid 1px; */
+  /* border-radius: 0.25rem; */
+  /* transition: all 500ms ease; */
+
   interpolate-size: allow-keywords;
-
-  align-items: center;
-
-  padding: 0.5rem;
-
-  border: solid 1px;
-  border-radius: 0.25rem;
-
   overflow: hidden;
-  transition: all 500ms ease;
-
   height: var(--notice-height, auto);
   opacity: 1;
 
-  &.notice-error {
-    @apply bg-red-100 dark:bg-red-900  border-red-400 text-red-700 dark:text-red-200;
-  }
+  /* &.notice-error { */
+  /* @apply bg-red-100 dark:bg-red-900  border-red-400 text-red-700 dark:text-red-200; */
+  /* } */
 
-  &.notice-success {
-    @apply bg-green-100  border-green-400 text-green-700;
-    @apply dark:bg-green-900 dark:text-green-300;
-  }
+  /* &.notice-success { */
+  /* @apply bg-green-100  border-green-400 text-green-700; */
+  /* @apply dark:bg-green-900 dark:text-green-300; */
+  /* } */
 
-  &.notice-information {
-    @apply bg-blue-100  border-blue-400 text-blue-700;
-    @apply dark:bg-blue-900;
-  }
+  /* &.notice-information { */
+  /* @apply bg-blue-100  border-blue-400 text-blue-700; */
+  /* @apply dark:bg-blue-900; */
+  /* } */
 
-  &.collapsed {
-    height: 0;
-    @apply my-0 py-0;
-    opacity: 0;
-  }
+  /* &.collapsed { */
+  /* height: 0; */
+  /* @apply my-0 py-0; */
+  /* opacity: 0; */
+  /* } */
 
-  svg {
-    width: 2rem;
-    height: 2rem;
-    margin-right: 0.5rem;
-    flex-shrink: 0;
-  }
+  /* svg { */
+  /* width: 2rem; */
+  /* height: 2rem; */
+  /* margin-right: 0.5rem; */
+  /* flex-shrink: 0; */
+  /* } */
 
-  span {
-    flex-grow: 1;
-  }
+  /* span { */
+  /* flex-grow: 1; */
+  /* } */
 }

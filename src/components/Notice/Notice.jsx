@@ -2,9 +2,7 @@
 import { useEffect, useState, useRef } from "react";
 
 import "./notice.scss";
-import ErrorIcon from "@kenstack/icons/Error";
-import SuccessIcon from "@kenstack/icons/CheckCircleOutline";
-import InformationIcon from "@kenstack/icons/Info";
+import NoticeBase from "./Base";
 
 export default function Notice({
   actionState,
@@ -74,29 +72,23 @@ export default function Notice({
   }, [message, messageText, scroll, setShow, collapse, removeMessage, error]);
 
   let classes = className ? " " + className : "";
-  let Icon;
+  let type;
   if (error) {
-    Icon = ErrorIcon;
-    classes += " notice-error";
+    type = "error";
   } else if (success) {
-    Icon = SuccessIcon;
-    classes += " notice-success";
+    type = "success";
   } else if (information) {
-    Icon = InformationIcon;
-    classes += " notice-information";
+    type = "information";
   }
-  //  else if (!last) {
-  //   return null;
-  // }
 
-  // const NoticeIcon = last?.Icon ?? Icon;
   return (
-    <div
+    <NoticeBase
       className={
         "notice scroll-mt-16" +
         /*last?.classess ??*/ classes +
         (show || !collapse ? "" : " collapsed")
       }
+      type={type}
       ref={ref}
       style={
         collapse
@@ -106,8 +98,7 @@ export default function Notice({
           : {}
       }
     >
-      <Icon />
-      <span>{/* last?.messageText ?? */ messageText}</span>
-    </div>
+      {messageText}
+    </NoticeBase>
   );
 }

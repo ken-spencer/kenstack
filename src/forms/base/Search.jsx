@@ -1,7 +1,7 @@
 import React, { useCallback, useRef, useEffect, useState } from "react";
 
 import Input from "./Input";
-import IconButton from "../IconButton";
+import IconButton from "@kenstack/components/AdminIcon";
 import MagnifyingGlassIcon from "@kenstack/icons/Search";
 import XCircleIcon from "../icons/XCircleIcon";
 
@@ -62,29 +62,16 @@ function ClearButton({ value, inputRef, handleClear }) {
   return (
     <IconButton
       type="button"
+      tooltip="Clear Search"
       onClick={handleClick}
       className={
-        (typeof value === "string" ? value.length : visible)
-          ? "opacity-1"
-          : "opacity-0"
+        "text-gray-600 dark:text-gray-400 transition " +
+        ((typeof value === "string" ? value.length : visible)
+          ? "opacity-100"
+          : "opacity-0")
       }
     >
-      <XCircleIcon width="1.25rem" height="1.25rem" />
-      {/*
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill="currentColor"
-        width="1.25rem"
-        height="1.25rem"
-      >
-        <path
-          fillRule="evenodd"
-          d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm-1.72 6.97a.75.75 0 1 0-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 1 0 1.06 1.06L12 13.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L13.06 12l1.72-1.72a.75.75 0 1 0-1.06-1.06L12 10.94l-1.72-1.72Z"
-          clipRule="evenodd"
-        />
-      </svg>
-    */}
+      <XCircleIcon className="w-4 h-4" />
     </IconButton>
   );
 }
