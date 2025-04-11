@@ -2,7 +2,7 @@
 
 import escapeRegExp from "@kenstack/utils/escapeRegExp";
 
-export default async function load({ sortBy, keywords }, { model, admin }) {
+export default async function load({ sortBy, keywords }, { model, admin, session, roles }) {
   const list = admin.getList();
   const fields = list.map(({ name }) => name);
   let where = null;
@@ -40,6 +40,12 @@ export default async function load({ sortBy, keywords }, { model, admin }) {
   const [rows, total] = result;
 
   const DTO = rows.map((row) => row.toAdminDTO(admin, fields));
+
+  const keyGen = (key) => `admin-${key }-${admin.modelName}`;
+
+  session.set(keyGen('keywords'), keywords || null, "1d");
+  session.set(keyGen('sortBy'), sortBy || null, "1d");
+
 
   return {
     rows: DTO,

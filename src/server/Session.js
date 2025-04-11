@@ -1,11 +1,16 @@
+// import redis from "@kenstack/db/redis";
+import mongoose from "mongoose";
+const { Types } = mongoose;
+
 import { cookies } from "next/headers";
 // import { URLSearchParams } from "url";
 import { cache } from "react";
+import ms from "ms";
 
 import { jwtVerify, SignJWT } from "jose";
 
 import auditLog from "../log/audit";
-import SessionModel from "@kenstack/models/Session";
+import SessionModel, { SessionStore } from "@kenstack/models/Session";
 
 const secret = new TextEncoder().encode(process.env.SECRET);
 const alg = "HS256";
@@ -220,6 +225,88 @@ export default class Session {
 
     auditLog("revalidate", null, {}, session.user);
     return true;
+  }
+
+  // Retrieve from session Store.
+  async get(keys) {
+    const claims = await this.getClaims();
+
+    if (!claims) {
+      return false;
+    }
+
+    // if (redis) {
+    //   if (Array.isArray(keys)) {
+    //     const names = keys.map((k) => k + "-" + claims.sub);
+    //     return await redis.mget(...names);
+    //   }
+    //   const name = keys + "-" + claims.sub
+    //   return await redis.get(name);     
+    // }
+
+    if (Array.isArray(keys)) {
+      const docs = await SessionStore.find({
+        user: new Types.ObjectId(claims.sub),
+        key: { $in: keys },        
+      }, { _id: 0, key: 1, value: 1 });
+      return keys.map((key) => {
+        const d = docs.find(x => x.key === key)
+        return d?.value ?? null;        
+      })
+      
+    }
+
+    const doc = await SessionStore.findOne({
+      user: new Types.ObjectId(claims.sub),
+      key: keys,
+    }, { _id: 0, value: 1 });
+
+    return doc ? doc.value : false;
+  }
+
+  async set(key, value, ttl = null) {
+    const claims = await this.getClaims();
+
+    if (!claims) {
+      return false;
+    }
+
+
+    // if (redis) {
+    //   const name = key + "-" + claims.sub
+    //   if (ttl) {
+    //     const ex = typeof(ttl) === "number" ? ttl :  Math.round(ms(ttl) / 1000);
+      
+    //     return await redis.set(name, value, { ex });
+    //   }
+    //   return await redis.set(name, value)
+    // }
+
+    let expiresAt = null;
+    if (ttl) {
+      const ttlOffset = typeof(ttl) === "number" ? (ttl * 1000) : ms(ttl);
+      if (ttlOffset === undefined) {
+        throw Error(`Invalid ttl ${ttl}`);
+      }
+      expiresAt = new Date(Date.now() + ttlOffset);
+
+    }
+    
+    return await SessionStore.findOneAndUpdate(
+      { user: new Types.ObjectId(claims.sub), key },
+      {
+        $set: {
+          value,
+          expiresAt,
+          updatedAt: new Date(),
+        },
+      },
+      {
+        upsert: true,
+        // new: true,
+        setDefaultsOnInsert: true,
+      },
+    );
   }
 
   // this is async as it will often be extended

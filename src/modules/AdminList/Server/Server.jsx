@@ -9,7 +9,7 @@ import clientModel from "@kenstack/client/Model";
 import { ServerProvider } from "@kenstack/server/context";
 import load from "../api/load";
 
-import { cookies } from "next/headers";
+// import { cookies } from "next/headers";
 
 import Notice from "@kenstack/components/Notice";
 import errorLog from "@kenstack/log/error";
@@ -46,19 +46,32 @@ async function Query({ session, model, admin, slug, children }) {
 
   const claims = await session.getClaims();
 
-  const cookieStore = await cookies();
-  const key = "admin-list-" + admin.modelName;
-  const sortCookie = cookieStore.get(key + "Sort");
-  const keywordsCookie = cookieStore.get(key + "Keywords") || "";
+  // const cookieStore = await cookies();
+  // const key = "admin-list-" + admin.modelName;
+  // const sortCookie = cookieStore.get(key + "Sort");
+  // const keywordsCookie = cookieStore.get(key + "Keywords") || "";
 
-  const sortBy = sortCookie
-    ? [...sortCookie.value.split(","), "_id", "desc"]
-    : ["meta.createdAt", "desc", "_id", "desc"];
-  const keywords = keywordsCookie ? keywordsCookie.value : "";
+
+
+  // const sortBy = sortCookie
+  //   ? [...sortCookie.value.split(","), "_id", "desc"]
+  //   : ["meta.createdAt", "desc", "_id", "desc"];
+  // const keywords = keywordsCookie ? keywordsCookie.value : "";
+
+  
+  const keyGen = (key) => `admin-${key }-${admin.modelName}`;
+  let [keywords, sortBy] = await session.get([
+      keyGen("keywords"),
+      keyGen("sortBy"),
+    
+  ])
+
+  keywords = keywords ?? "";
+  sortBy = sortBy ?? ["meta.createdAt", "desc", "_id", "desc"];
 
   let initialData;
   try {
-    initialData = await load({ sortBy, keywords }, { model, admin });
+    initialData = await load({ sortBy, keywords }, { model, admin, session });
   } catch (e) {
     errorLog(e, "Problem loading admin list");
     return (

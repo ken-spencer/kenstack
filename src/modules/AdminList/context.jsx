@@ -12,7 +12,7 @@ import {
 import { keepPreviousData, useQuery, useQueryClient } from "@kenstack/query";
 
 import { usePathname, useParams } from "next/navigation";
-import Cookies from "js-cookie";
+// import Cookies from "js-cookie";
 
 import useDebounce from "@kenstack/hooks/useDebounce";
 
@@ -39,7 +39,7 @@ export function AdminListProvider({
   const pathname = usePathname();
   const params = useParams();
   // const apiPath = path + "/api";
-  const cookieKey = "admin-list-" + modelName;
+  // const cookieKey = "admin-list-" + modelName;
 
   const apiPath = useMemo(() => {
     const suffix = params.admin ? params.admin.join("/") : "";
@@ -53,9 +53,9 @@ export function AdminListProvider({
   const [selected, setSelected] = useState(new Set());
   // const [error, setError] = useState();
 
-  const [sortBy, setSortByBase] = useState(initialSortBy);
+  const [sortBy, setSortBy] = useState(initialSortBy);
 
-  const [keywords, debouncedKeywords, setKeywordsBase] = useDebounce(
+  const [keywords, debouncedKeywords, setKeywords] = useDebounce(
     initialKeywords,
     300,
   );
@@ -121,33 +121,33 @@ export function AdminListProvider({
   }, []);
   */
 
-  const setSortBy = useCallback(
-    (sort) => {
-      // cache.set("sortBy", sort);
-      if (sort) {
-        Cookies.set(cookieKey + "Sort", sort.join(","), {
-          sameSite: "strict",
-          expires: 1 / 2,
-          pathname,
-        });
-      }
-      setSortByBase(sort);
-    },
-    [pathname, cookieKey],
-  );
+  // const setSortBy = useCallback(
+  //   (sort) => {
+  //     // cache.set("sortBy", sort);
+  //     if (sort) {
+  //       Cookies.set(cookieKey + "Sort", sort.join(","), {
+  //         sameSite: "strict",
+  //         expires: 1 / 2,
+  //         pathname,
+  //       });
+  //     }
+  //     setSortByBase(sort);
+  //   },
+  //   [pathname, cookieKey],
+  // );
 
-  const setKeywords = useCallback(
-    (value) => {
-      Cookies.set(cookieKey + "Keywords", value, {
-        sameSite: "strict",
-        expires: 1 / 2,
-        pathname,
-      });
-      setKeywordsBase(value);
-      // setDebouncedKeywords(value);
-    },
-    [cookieKey, pathname, setKeywordsBase],
-  );
+  // const setKeywords = useCallback(
+  //   (value) => {
+  //     Cookies.set(cookieKey + "Keywords", value, {
+  //       sameSite: "strict",
+  //       expires: 1 / 2,
+  //       pathname,
+  //     });
+  //     setKeywordsBase(value);
+  //     // setDebouncedKeywords(value);
+  //   },
+  //   [cookieKey, pathname, setKeywordsBase],
+  // );
 
   const select = useCallback(
     (arg) => {

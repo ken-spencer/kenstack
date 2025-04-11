@@ -54,6 +54,7 @@ export default async function apiAction(
 
   const options = {
     ...props,
+    roles,
     session,
     request,
     response,
