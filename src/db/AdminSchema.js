@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 
 import pick from "lodash-es/pick";
 import get from "lodash-es/get";
+import isPlainObject from "lodash-es/isPlainObject";
 
 const { Schema } = mongoose;
 
@@ -43,6 +44,7 @@ class AdminSchema extends Schema {
     this.methods.trash = trash;
     // this.statics.trashMany = trashMany;
     this.methods.toAdminDTO = toAdminDTO;
+    this.methods.toDTO = toDTO;
 
     const query = function () {
       const filter = this.getFilter();
@@ -182,6 +184,35 @@ function getAdminPaths() {
   return select;
 }
 */
+
+function transformValue(val) {
+  // arrays → recurse each element
+  if (Array.isArray(val)) {
+    return val.map(transformValue);
+  }
+
+  // plain JS object → recurse its properties
+  if (isPlainObject(val)) {
+    return Object.fromEntries(
+      Object.entries(val).map(([key, v]) => [key, transformValue(v)]),
+    );
+  }
+
+  if (val && typeof val.toDTO === "function") {
+    return val.toDTO();
+  }
+
+  if (val && typeof val.toString === "function") {
+    return val.toString();
+  }
+
+  return val;
+}
+
+function toDTO() {
+  const obj = this.toObject({ depopulate: true, virtuals: false });
+  return transformValue(obj);
+}
 
 function toAdminDTO(admin, paths = null) {
   if (!paths) {

@@ -241,25 +241,30 @@ export default class Session {
     //     return await redis.mget(...names);
     //   }
     //   const name = keys + "-" + claims.sub
-    //   return await redis.get(name);     
+    //   return await redis.get(name);
     // }
 
     if (Array.isArray(keys)) {
-      const docs = await SessionStore.find({
-        user: new Types.ObjectId(claims.sub),
-        key: { $in: keys },        
-      }, { _id: 0, key: 1, value: 1 });
+      const docs = await SessionStore.find(
+        {
+          user: new Types.ObjectId(claims.sub),
+          key: { $in: keys },
+        },
+        { _id: 0, key: 1, value: 1 },
+      );
       return keys.map((key) => {
-        const d = docs.find(x => x.key === key)
-        return d?.value ?? null;        
-      })
-      
+        const d = docs.find((x) => x.key === key);
+        return d?.value ?? null;
+      });
     }
 
-    const doc = await SessionStore.findOne({
-      user: new Types.ObjectId(claims.sub),
-      key: keys,
-    }, { _id: 0, value: 1 });
+    const doc = await SessionStore.findOne(
+      {
+        user: new Types.ObjectId(claims.sub),
+        key: keys,
+      },
+      { _id: 0, value: 1 },
+    );
 
     return doc ? doc.value : false;
   }
@@ -271,12 +276,11 @@ export default class Session {
       return false;
     }
 
-
     // if (redis) {
     //   const name = key + "-" + claims.sub
     //   if (ttl) {
     //     const ex = typeof(ttl) === "number" ? ttl :  Math.round(ms(ttl) / 1000);
-      
+
     //     return await redis.set(name, value, { ex });
     //   }
     //   return await redis.set(name, value)
@@ -284,14 +288,13 @@ export default class Session {
 
     let expiresAt = null;
     if (ttl) {
-      const ttlOffset = typeof(ttl) === "number" ? (ttl * 1000) : ms(ttl);
+      const ttlOffset = typeof ttl === "number" ? ttl * 1000 : ms(ttl);
       if (ttlOffset === undefined) {
         throw Error(`Invalid ttl ${ttl}`);
       }
       expiresAt = new Date(Date.now() + ttlOffset);
-
     }
-    
+
     return await SessionStore.findOneAndUpdate(
       { user: new Types.ObjectId(claims.sub), key },
       {

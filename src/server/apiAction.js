@@ -1,4 +1,5 @@
 import "server-only";
+import { geolocation } from "@vercel/functions";
 
 import { NextResponse } from "next/server";
 import defaultError from "@kenstack/defaultError";
@@ -33,7 +34,7 @@ export default async function apiAction(
   const meta = {
     href: request.nextUrl.href,
     referer: request.headers.get("referer"),
-    geo: request.geo,
+    geo: geolocation(request),
     ip: request.ip || "127.0.0.1",
   };
 

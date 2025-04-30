@@ -13,12 +13,17 @@ export default async function validate(doc) {
       errors[pathName] = error.errors[pathName].message;
     }
 
+    if (pathName === "_id") {
+      continue;
+    }
+
     const isUnique = await hasUniqueIndex(doc, pathName);
     if (isUnique) {
       const modelName = doc.constructor.modelName;
       const model = doc.model(modelName);
 
       let duplicate;
+
       try {
         duplicate = await model.findOne({
           _id: { $ne: doc._id },

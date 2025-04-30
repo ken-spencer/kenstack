@@ -51,20 +51,16 @@ async function Query({ session, model, admin, slug, children }) {
   // const sortCookie = cookieStore.get(key + "Sort");
   // const keywordsCookie = cookieStore.get(key + "Keywords") || "";
 
-
-
   // const sortBy = sortCookie
   //   ? [...sortCookie.value.split(","), "_id", "desc"]
   //   : ["meta.createdAt", "desc", "_id", "desc"];
   // const keywords = keywordsCookie ? keywordsCookie.value : "";
 
-  
-  const keyGen = (key) => `admin-${key }-${admin.modelName}`;
+  const keyGen = (key) => `admin-${key}-${admin.modelName}`;
   let [keywords, sortBy] = await session.get([
-      keyGen("keywords"),
-      keyGen("sortBy"),
-    
-  ])
+    keyGen("keywords"),
+    keyGen("sortBy"),
+  ]);
 
   keywords = keywords ?? "";
   sortBy = sortBy ?? ["meta.createdAt", "desc", "_id", "desc"];

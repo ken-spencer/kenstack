@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
+import { geolocation } from "@vercel/functions";
 
 import defaultError from "@kenstack/defaultError";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 
-export { default as authenticatee } from "./authenticate";
+export { default as authenticate } from "./authenticate";
 export { default as recaptcha } from "./recaptcha";
 export { default as validate } from "./validate";
+export { default as loader } from "./loader";
 
-export async function apiPipeline(request, arg, actions = []) {
+export async function apiPipeline(request, arg, actions = [], options = {}) {
   const contentType = request.headers.get("content-type");
 
   if (contentType !== "application/json") {
@@ -16,16 +18,22 @@ export async function apiPipeline(request, arg, actions = []) {
 
   const res = new NextResponse();
   let context = {
+    ...options,
     request,
     json: await request.json(),
     cookies: res.cookies,
     headers: res.headers,
   };
 
+  if (context.json._api_props) {
+    context = { ...context.json._api_props, ...context };
+    delete context.json._api_props;
+  }
+
   const meta = {
     href: request.nextUrl.href,
     referer: request.headers.get("referer"),
-    geo: request.geo,
+    geo: geolocation(request),
     ip: request.ip || "127.0.0.1",
   };
 
@@ -55,8 +63,8 @@ export async function apiPipeline(request, arg, actions = []) {
       return result;
     }
 
-    if (result) {
-      context = result;
+    if (typeof result === "object") {
+      context = { ...context, ...result };
     }
   }
 

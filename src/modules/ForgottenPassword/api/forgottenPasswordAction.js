@@ -1,8 +1,8 @@
 "use server";
 
 // import { headers } from "next/headers";
+import { geolocation } from "@vercel/functions";
 
-import meta from "../../../log/meta";
 // import DefaultEmail from "./Email";
 
 import mailer from "../../../utils/mailer";
@@ -102,8 +102,8 @@ export default async function forgottenPasswordAction(
 
   const fp = new ForgottenPassword({
     user,
-    ip: meta.ip,
-    geo: meta.geo,
+    ip: request.ip || "127.0.0.1",
+    geo: geolocation(request),
   });
 
   try {
@@ -126,9 +126,9 @@ export default async function forgottenPasswordAction(
     {
       name: user.getFullName(),
       url,
-      ip: meta.ip,
+      ip: request.ip || "127.0.0.1",
+      ...geolocation(request),
       admin: administrator ? {} : null,
-      ...meta.geo,
     },
     null,
   );
