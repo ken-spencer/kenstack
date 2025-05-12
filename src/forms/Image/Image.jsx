@@ -21,13 +21,16 @@ const accept = [
 ];
 const acceptStr = accept.join(", ");
 
-export default function ImageField(initialProps) {
+export default function ImageField({ square = true, ...initialProps }) {
   const { field, fieldProps } = useField(initialProps);
   const uploading = useForm((state) => state.uploading);
 
   const { uploadFile, dragEvents, reset, src } = useUpload(field);
-  const imageClass =
+  const contClass =
     "relative flex items-center justify-center w-24 h-24 bg-gray-300 overflow-hidden dark:bg-gray-600";
+  const imgClass = square
+    ? "object-cover object-center w-full h-full"
+    : "object-scale-down object-center w-full h-full";
 
   const input = (
     <input
@@ -46,14 +49,8 @@ export default function ImageField(initialProps) {
       {(() => {
         if (uploading.has(field.name)) {
           return (
-            <div className={imageClass}>
-              {src && (
-                <img
-                  className="object-cover object-center w-full h-full"
-                  src={src}
-                  alt=""
-                />
-              )}
+            <div className={contClass}>
+              {src && <img className={imgClass} src={src} alt="" />}
               <Button
                 className="absolute right-1 top-1"
                 tooltip="Cancel"
@@ -75,7 +72,7 @@ export default function ImageField(initialProps) {
 
         if (field.value) {
           return (
-            <div className={imageClass + " cursor-pointer"} {...dragEvents}>
+            <div className={contClass + " cursor-pointer"} {...dragEvents}>
               <Button
                 className="absolute right-1 top-1"
                 tooltip="Delete image"
@@ -100,11 +97,13 @@ export default function ImageField(initialProps) {
               </Button>
               <img
                 alt=""
-                className="object-cover object-center w-full h-full"
+                className={imgClass}
                 src={
                   field.value.format === "svg"
                     ? field.value.url
-                    : field.value.thumbnailUrl
+                    : square
+                      ? field.value.sizes.squareThumbnail?.url
+                      : field.value.sizes.thumbnail?.url
                 }
               />
             </div>
@@ -112,7 +111,7 @@ export default function ImageField(initialProps) {
         }
 
         return (
-          <label className={imageClass + " cursor-pointer"} {...dragEvents}>
+          <label className={contClass + " cursor-pointer"} {...dragEvents}>
             <AddImageIcon className="w-16 h-16" />
             {input}
           </label>

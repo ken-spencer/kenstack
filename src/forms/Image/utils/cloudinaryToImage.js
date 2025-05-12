@@ -1,4 +1,4 @@
-export default function cloudinaryToImage(data, filename) {
+export default function cloudinaryToImage(data, filename, transformations) {
   const retval = {
     filename,
     asset_id: data.asset_id,
@@ -16,34 +16,62 @@ export default function cloudinaryToImage(data, filename) {
   };
 
   if (data.format !== "svg") {
-    const [og, square] = data.eager;
+    let index = 0;
+    retval.sizes = [];
+    for (let [name, transformation] of transformations) {
+      let size = data.eager[index];
+      index++;
+      if (!size) {
+        break;
+      }
 
-    retval.sizes = [
-      [
-        "original",
-        {
-          width: og.width,
-          height: og.height,
-          format: og.format,
-          bytes: og.bytes,
-          url: og.secure_url,
-          transformation: og.transformation,
-        },
-      ],
+      if (size.transformation !== transformation) {
+        throw Error(
+          `Image transformation mispatch on size ${name} ${size.transformation} !=  ${transformation}`,
+        );
+      }
 
-      [
-        "squareThumbnail",
+      retval.sizes.push([
+        name,
         {
-          square: true,
-          width: square.width,
-          height: square.height,
-          format: square.format,
-          bytes: square.bytes,
-          url: square.secure_url,
-          transformation: square.transformation,
+          width: size.width,
+          height: size.height,
+          format: size.format,
+          bytes: size.bytes,
+          url: size.secure_url,
+          transformation: size.transformation,
         },
-      ],
-    ];
+      ]);
+    }
+
+    // const [og, square] = data.eager;
+
+    // retval.sizes = [
+    //   [
+    //     "original",
+    //     {
+    //       width: og.width,
+    //       height: og.height,
+    //       format: og.format,
+    //       bytes: og.bytes,
+    //       url: og.secure_url,
+    //       transformation: og.transformation,
+    //     },
+    //   ],
+
+    //   [
+    //     "squareThumbnail",
+    //     {
+    //       square: true,
+    //       width: square.width,
+    //       height: square.height,
+    //       format: square.format,
+    //       bytes: square.bytes,
+    //       url: square.secure_url,
+    //       transformation: square.transformation,
+    //     },
+    //   ],
+    // ];
   }
 
   return retval;

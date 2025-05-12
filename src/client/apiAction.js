@@ -3,7 +3,7 @@
 export default async function apiAction(
   path,
   data,
-  { invalidateQueries, action, ...props } = {},
+  { invalidateQueries, action, signal, ...props } = {},
 ) {
   let headers = {},
     body;
@@ -28,16 +28,18 @@ export default async function apiAction(
     method: "POST",
     cache: "no-store",
     headers,
+    signal,
     body,
   });
 
   if (response.status === 404) {
     return { error: "Page not found: " + path };
-  } else if (!response.ok) {
-    return {
-      error: "Request to server failed with status: " + response.status,
-    };
   }
+  //  else if (!response.ok) {
+  //   return {
+  //     error: "Request to server failed with status: " + response.status,
+  //   };
+  // }
 
   if (response.headers.get("content-type") !== "application/json") {
     return {

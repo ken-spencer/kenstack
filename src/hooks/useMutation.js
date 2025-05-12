@@ -97,7 +97,7 @@ export default function useMutation({
 
       if (data?.error && store) {
         store.getState().addMessage(data);
-        if (data.fieldErrors) {
+        if (data.fieldErrors && store.getState().setFieldErrors) {
           store.getState().setFieldErrors(data.fieldErrors);
         }
       }
@@ -106,6 +106,7 @@ export default function useMutation({
         try {
           onError({
             error: new Error(data.error),
+            data,
             variables,
             context,
             queryClient,

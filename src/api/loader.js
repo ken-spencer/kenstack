@@ -1,11 +1,21 @@
 const loader =
-  ({ select = null } = {}) =>
+  ({ canCreate = false, select = null } = {}) =>
   async ({ form, json, id, model }) => {
     let doc;
     if (!id) {
+      if (canCreate !== true) {
+        return Response.json({
+          error: "Was unable to find the requested document.",
+        });
+      }
       doc = new model();
     } else {
-      doc = await model.findById(id, select);
+      let query = model.findById(id);
+      if (select) {
+        query = query.select(select);
+      }
+
+      doc = await query.exec();
     }
 
     if (!doc) {

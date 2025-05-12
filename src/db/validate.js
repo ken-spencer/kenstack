@@ -50,13 +50,18 @@ export default async function validate(doc) {
   return false;
 }
 
-async function hasUniqueIndex(model, path) {
-  const indexes = await model.schema.indexes();
+// async function hasUniqueIndex(model, path) {
+//   const indexes = await model.schema.indexes();
 
-  for (let i = 0; i < indexes.length; i++) {
-    const [fields, info] = indexes[i];
-    if (fields[path] && info.unique) {
-      return true;
-    }
-  }
+//   for (let i = 0; i < indexes.length; i++) {
+//     const [fields, info] = indexes[i];
+//     if (fields[path] && info.unique) {
+//       return true;
+//     }
+//   }
+// }
+
+async function hasUniqueIndex(model, path) {
+  const indexes = await model.collection.indexes();
+  return indexes.some((idx) => idx.unique && Object.hasOwn(idx.key, path));
 }

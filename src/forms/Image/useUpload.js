@@ -42,18 +42,20 @@ export default function useUpload(field) {
         setSrc(reader.result);
       };
       reader.onerror = () => {
-        addMessage({ error: reader.error });
+        addMessage({ error: "Reader error:" + reader.error });
       };
       reader.readAsDataURL(file);
 
       const res = await apiAction(apiPath + "/get-presigned-url", {
         filename: file.name,
         type: file.type,
+        name: field.name,
       });
 
       if (res.error) {
         addMessage({
-          error: `There was an unexpected problem uploading ${file.name}:  ${res.error}`,
+          // error: `There was an unexpected problem uploading ${file.name}:  ${res.error}`,
+          error: res.error,
         });
         reset();
         return;
@@ -90,19 +92,32 @@ export default function useUpload(field) {
       }
 
       let url = data.secure_url,
-        thumbnailUrl;
+        sizes = {};
+      // thumbnailUrl, squareUrl;
       if (data.format !== "svg") {
-        const [og, thumb] = data.eager;
-        url = og.secure_url;
-        thumbnailUrl = thumb.secure_url;
+        // note, if this is unreliable, we are can return the order fro the presigned api
+        ["original", "thumbnail", "squareThumbnail"].forEach((name, key) => {
+          let size = data.eager[key];
+          sizes[name] = {
+            url: size.secure_url,
+            width: size.width,
+            height: size.height,
+          };
+        });
+
+        // const [og, thumb, square] = data.eager;
+        // url = og.secure_url;
+        // thumbnailUrl = square.secure_url;
+        // squareUrl = thumb.secure_url;
       }
 
       field.setValue({
         upload: true,
-        formata: data.format,
+        format: data.format,
         filename: file.name,
         url,
-        thumbnailUrl,
+        sizes,
+        // thumbnailUrl,
         data,
       });
 

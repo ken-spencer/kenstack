@@ -186,9 +186,35 @@ function getAdminPaths() {
 */
 
 function transformValue(val) {
+  if (val == null) return val;
+  const t = typeof val;
+
+  if (
+    t === "string" ||
+    t === "number" ||
+    t === "boolean" ||
+    t === "bigint" ||
+    t === "symbol" ||
+    t === "undefined"
+  ) {
+    return val;
+  }
+
+  if (val && typeof val.toJSON === "function") {
+    val = val.toJSON(); // ← now a plain JS array or object
+  }
+
+  if (val && typeof val.toObject === "function") {
+    val = val.toObject(); // ← now a plain JS array or object
+  }
+
   // arrays → recurse each element
   if (Array.isArray(val)) {
     return val.map(transformValue);
+  }
+
+  if (val && typeof val.toDTO === "function") {
+    return val.toDTO();
   }
 
   // plain JS object → recurse its properties
@@ -196,10 +222,6 @@ function transformValue(val) {
     return Object.fromEntries(
       Object.entries(val).map(([key, v]) => [key, transformValue(v)]),
     );
-  }
-
-  if (val && typeof val.toDTO === "function") {
-    return val.toDTO();
   }
 
   if (val && typeof val.toString === "function") {
@@ -210,8 +232,16 @@ function transformValue(val) {
 }
 
 function toDTO() {
-  const obj = this.toObject({ depopulate: true, virtuals: false });
-  return transformValue(obj);
+  const result = {};
+  for (let key of Object.keys(this.schema.paths)) {
+    if (key === "__v" || !this.isSelected(key)) {
+      continue;
+    }
+    const val = this.get(key);
+
+    result[key] = transformValue(val);
+  }
+  return result;
 }
 
 function toAdminDTO(admin, paths = null) {
@@ -278,7 +308,7 @@ async function bindValues(fields, values) {
         fieldOptions.onBind(values[name], {
           path: name,
           field,
-          options,
+          options: fieldOptions,
           previous: this.get(name),
         }),
       );

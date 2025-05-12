@@ -10,52 +10,91 @@ cloudinary.config({
   secure: true,
 });
 
-const SizeSchema = new Schema({
-  format: String,
-  square: { type: Boolean, default: false },
-  bytes: Number,
-  url: { type: String /*required: true*/ },
-  width: { type: Number /*required: true */ },
-  height: { type: Number /*required: true */ },
-  transformation: String,
-});
-
-const ImageSchema = new Schema({
-  filename: { type: String /*required: true*/ },
-  asset_id: String,
-  public_id: String,
-  version: String,
-  version_id: String,
-  width: Number,
-  height: Number,
-  format: String,
-  bytes: Number,
-  url: { type: String /*required: true*/ },
-  asset_folder: String,
-  display_name: String,
-  original_filename: String,
-  alt: { type: String, default: "" },
-  sizes: {
-    type: Map,
-    of: SizeSchema,
+const SizeSchema = new Schema(
+  {
+    format: String,
+    square: { type: Boolean, default: false },
+    bytes: Number,
+    url: { type: String /*required: true*/ },
+    width: { type: Number /*required: true */ },
+    height: { type: Number /*required: true */ },
+    transformation: String,
   },
-  square: {
+  { _id: false },
+);
+
+const SquareSchema = new Schema(
+  {
     zoom: {
       type: Number,
-      default: 0,
+      // default: 0,
       min: [0, "Zoom must be at least 0"],
       max: [100, "Zoom must be at most 100"],
     },
     cropX: {
       type: Number,
-      default: 0,
+      // default: 0,
     },
     cropY: {
       type: Number,
-      default: 0,
+      // default: 0,
     },
   },
-});
+  { _id: false },
+);
+
+const ImageSchema = new Schema(
+  {
+    filename: { type: String /*required: true*/ },
+    asset_id: String,
+    public_id: String,
+    version: Number,
+    version_id: String,
+    width: Number,
+    height: Number,
+    format: String,
+    bytes: Number,
+    url: { type: String /*required: true*/ },
+    asset_folder: String,
+    display_name: String,
+    original_filename: String,
+    alt: { type: String, default: "" },
+    sizes: {
+      type: Map,
+      of: SizeSchema,
+    },
+    square: {
+      type: SquareSchema,
+      default: null,
+    },
+  },
+  { _id: false },
+);
+
+ImageSchema.methods.toDTO = function () {
+  const retval = {
+    filename: this.filename,
+    format: this.format,
+    url: this.url,
+    sizes: {},
+  };
+
+  if (this.sizes) {
+    for (const [name, size] of this.sizes) {
+      retval.sizes[name] = {
+        url: size.url,
+        width: size.width,
+        height: size.height,
+      };
+    }
+    // const og = this.sizes.get('original');
+    // const thumb = this.sizes.get('squareThumbnail');
+    // retval.url = og.url;
+    // retval.thumbnailUrl = thumb.url;
+  }
+
+  return retval;
+};
 
 const ImageFieldOptions = {
   type: ImageSchema,
@@ -79,8 +118,13 @@ const ImageFieldOptions = {
 
     return retval;
   },
-  onBind: (value, { previous }) => {
+  onBind: (value, { previous, path, options }) => {
     if (!value) {
+      if (previous) {
+        // mongoose won't delete subdoc by just setting to null
+        previous.remove();
+        // previous.ownerDocument.markModified(path)
+      }
       return null;
     }
 
@@ -89,56 +133,7 @@ const ImageFieldOptions = {
     }
 
     const { data, filename } = value;
-    return cloudinaryToImage(data, filename);
-
-    // const retval = {
-    //   filename,
-    //   asset_id: data.asset_id,
-    //   public_id: data.public_id,
-    //   version: data.version,
-    //   version_id: data.version_id,
-    //   width: data.width,
-    //   height: data.height,
-    //   format: data.format,
-    //   bytes: data.bytes,
-    //   url: data.secure_url,
-    //   asset_folder: data.asset_folder,
-    //   display_name: data.display_name,
-    //   original_filename: data.original_filename,
-    // };
-
-    // if (data.format !== "svg") {
-    //   const [og, square] = data.eager;
-
-    //   retval.sizes = [
-    //     [
-    //       "original",
-    //       {
-    //         width: og.width,
-    //         height: og.height,
-    //         format: og.format,
-    //         bytes: og.bytes,
-    //         url: og.secure_url,
-    //         transformation: og.transformation,
-    //       },
-    //     ],
-
-    //     [
-    //       "squareThumbnail",
-    //       {
-    //         square: true,
-    //         width: square.width,
-    //         height: square.height,
-    //         format: square.format,
-    //         bytes: square.bytes,
-    //         url: square.secure_url,
-    //         transformation: square.transformation,
-    //       },
-    //     ],
-    //   ];
-    // }
-
-    // return retval;
+    return cloudinaryToImage(data, filename, options.transformations);
   },
 };
 
@@ -158,6 +153,7 @@ export function imagePlugin(
 ) {
   let transformations = new Map([
     ["original", "f_webp"], // Original dimensions as WebP
+    ["thumbnail", "w_200,h_200,c_limit,f_webp"], // original dimension thumbnail
     ["squareThumbnail", "w_200,h_200,c_thumb,g_center,f_webp"], // Thumbnail as WebP
   ]);
 
@@ -168,6 +164,7 @@ export function imagePlugin(
   schema.add({
     [path]: {
       ...ImageFieldOptions,
+      transformations,
     },
   });
 

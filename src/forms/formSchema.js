@@ -18,6 +18,11 @@ class formSchema {
     return this.fields;
   }
 
+  getPaths() {
+    const fields = Object.keys(this.fields);
+    return fields;
+  }
+
   #flattenFields(object, retval = {}) {
     for (const [key, value] of Object.entries(object)) {
       if (value.fields) {

@@ -35,7 +35,7 @@ const API = ({ session, admin, model }) => {
         action = loadTags;
         break;
       case "get-presigned-url":
-        action = getPresignedUrl;
+        action = getPresignedUrl();
         break;
       default:
         notFound();
@@ -47,6 +47,7 @@ const API = ({ session, admin, model }) => {
       isNew,
       session,
       admin,
+      form: admin.form,
       model,
       roles: ["ADMIN"],
     });

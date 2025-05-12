@@ -11,7 +11,7 @@ export default function Button({
   const classes = useMemo(
     () =>
       twMerge(
-        "bg-black/40  hover:bg-black/60 rounded-full transition",
+        "bg-gray-200/60  hover:bg-gray-300/60 border z-50 rounded-full transition",
         className,
       ),
     [className],

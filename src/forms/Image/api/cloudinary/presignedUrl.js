@@ -9,43 +9,65 @@ cloudinary.config({
   secure: true,
 });
 
-export default async function presignedUrlAction({ filename, type }) {
-  const timestamp = Math.floor(Date.now() / 1000);
-  const folder = process.env.SITE_NAME + "/images/" + unsecureId();
+const presignedUrlAction =
+  ({ folder: folderSegment = "/images" } = {}) =>
+  async ({ model, filename, type, name, json }) => {
+    // transitioning to api pipeline
+    if (json) {
+      ({ filename, type, name } = json);
+    }
 
-  const public_id = normalizeFilename(filename);
+    let path;
+    if (!name || !(path = model.schema.path(name))) {
+      return Response.json({ error: `Unknown field ${name}` });
+    }
 
-  const eager =
-    type === "image/svg+xml"
-      ? undefined
-      : [
-          "f_webp", // Original dimensions as WebP
-          "w_200,h_200,c_thumb,g_center,f_webp", // Thumbnail as WebP
-        ].join("|");
+    const timestamp = Math.floor(Date.now() / 1000);
+    const folder = process.env.SITE_NAME + folderSegment + "/" + unsecureId();
 
-  const options = {
-    timestamp,
-    folder,
-    public_id,
-    use_filename: true,
-    unique_filename: false,
-    overwrite: true,
-    eager,
-    // tags: "provisional",
+    const public_id = normalizeFilename(filename);
+
+    const transformations = [];
+    for (const t of path.options.transformations.values()) {
+      transformations.push(t);
+    }
+
+    // [
+    //   "f_webp", // Original dimensions as WebP
+    //   "w_200,h_200,c_limit,f_webp", // original dimension thumbnail
+    //   "w_200,h_200,c_thumb,g_center,f_webp", // Thumbnail as WebP
+    // ]
+
+    const eager =
+      type === "image/svg+xml" ? undefined : transformations.join("|");
+
+    const options = {
+      timestamp,
+      folder,
+      public_id,
+      use_filename: true,
+      unique_filename: false,
+      overwrite: true,
+      eager,
+      // tags: "provisional",
+    };
+
+    const signature = cloudinary.utils.api_sign_request(
+      options,
+      process.env.CLOUDINARY_API_SECRET,
+    );
+
+    return Response.json({
+      success: true,
+      uploadUrl: cloudinary.utils.api_url("upload"),
+      fields: {
+        ...options,
+        api_key: process.env.CLOUDINARY_API_KEY,
+        signature,
+      },
+      // could use this to help use the data client side. Might only need the names though.
+      transformations: [...path.options.transformations.keys()],
+    });
   };
 
-  const signature = cloudinary.utils.api_sign_request(
-    options,
-    process.env.CLOUDINARY_API_SECRET,
-  );
-
-  return {
-    success: true,
-    uploadUrl: cloudinary.utils.api_url("upload"),
-    fields: {
-      ...options,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      signature,
-    },
-  };
-}
+export default presignedUrlAction;
