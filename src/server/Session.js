@@ -40,36 +40,37 @@ export default class Session {
   }
 
   async getClaims() {
-    const cookieStore = await cookies();
-    const cookie = cookieStore.get("auth");
+    return await getClaims();
+    // const cookieStore = await cookies();
+    // const cookie = cookieStore.get("auth");
 
-    if (!cookie || !cookie.value) {
-      return false;
-    }
+    // if (!cookie || !cookie.value) {
+    //   return false;
+    // }
 
-    const { value: token } = cookie;
+    // const { value: token } = cookie;
 
-    let jwt;
-    try {
-      jwt = await jwtVerify(token, secret);
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.error(e.message);
-      return false;
-    }
+    // let jwt;
+    // try {
+    //   jwt = await jwtVerify(token, secret);
+    // } catch (e) {
+    //   // eslint-disable-next-line no-console
+    //   console.error(e.message);
+    //   return false;
+    // }
 
-    if (!jwt) {
-      return false;
-    }
+    // if (!jwt) {
+    //   return false;
+    // }
 
-    const { payload: claims } = jwt;
+    // const { payload: claims } = jwt;
 
-    const now = Math.round(Date.now() / 1000);
-    if (!claims || now > claims.exp) {
-      return false;
-    }
+    // const now = Math.round(Date.now() / 1000);
+    // if (!claims || now > claims.exp) {
+    //   return false;
+    // }
 
-    return claims;
+    // return claims;
   }
 
   async getAuthenticatedUser() {
@@ -317,6 +318,39 @@ export default class Session {
     return this.homePath;
   }
 }
+
+const getClaims = cache(async () => {
+  const cookieStore = await cookies();
+  const cookie = cookieStore.get("auth");
+
+  if (!cookie || !cookie.value) {
+    return false;
+  }
+
+  const { value: token } = cookie;
+
+  let jwt;
+  try {
+    jwt = await jwtVerify(token, secret);
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error(e.message);
+    return false;
+  }
+
+  if (!jwt) {
+    return false;
+  }
+
+  const { payload: claims } = jwt;
+
+  const now = Math.round(Date.now() / 1000);
+  if (!claims || now > claims.exp) {
+    return false;
+  }
+
+  return claims;
+});
 
 const loadUserById = cache(async (User, userId, sessionId) => {
   const session = await SessionModel.findById(sessionId).populate({
