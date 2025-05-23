@@ -36,7 +36,7 @@ export default class Session {
     this.domain = domain; // do,main to set cookies on.
 
     // session expires in 24 hours
-    this.ttl = 3600 * 24;
+    this.ttl = 3600 * 24 * 30;
   }
 
   async getClaims() {
@@ -111,7 +111,7 @@ export default class Session {
     return false;
   }
 
-  async login(user, response) {
+  async login(user, response, extraClaims = {}) {
     auditLog("login", null, {}, user);
 
     if (!(user instanceof this.userModel)) {
@@ -125,7 +125,7 @@ export default class Session {
     await session.save();
 
     const resCookies = response ? response.cookies : await cookies();
-    await this.#sessionCookies(resCookies, session, user);
+    await this.#sessionCookies(resCookies, session, user, extraClaims);
   }
 
   async logout() {
@@ -153,11 +153,12 @@ export default class Session {
     return true;
   }
 
-  async #sessionCookies(_cookies, session, user) {
+  async #sessionCookies(_cookies, session, user, extraClaims = {}) {
     const claims = {
       sub: user._id.toString(), // The UID of the user in your system
       sid: session._id.toString(),
       roles: user?.roles.join(",") || "",
+      ...extraClaims,
     };
 
     const token = await new SignJWT(claims)
