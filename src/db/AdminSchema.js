@@ -3,7 +3,8 @@ import mongoose from "mongoose";
 
 import pick from "lodash-es/pick";
 import get from "lodash-es/get";
-import isPlainObject from "lodash-es/isPlainObject";
+// import isPlainObject from "lodash-es/isPlainObject";
+import createDTO from "./createDTO";
 
 const { Schema } = mongoose;
 
@@ -45,6 +46,7 @@ class AdminSchema extends Schema {
     // this.statics.trashMany = trashMany;
     this.methods.toAdminDTO = toAdminDTO;
     this.methods.toDTO = toDTO;
+    this.methods.getDTO = getDTO;
 
     const query = function () {
       const filter = this.getFilter();
@@ -66,72 +68,6 @@ class AdminSchema extends Schema {
     audit(this);
   }
 
-  /*
-  #adminDefaults = {
-    label: null,
-    fields: [],
-    list: null,
-  };
-  */
-
-  /*
-  admin(userOptions = {}) {
-    this._admin = merge({}, this.adminDefaults, userOptions);
-
-    return this;
-  }
-  */
-
-  /*
-  adminList(listArray, configs = {}) {
-    if (this._admin === null) {
-      throw Error(".admin() must be called prior to .adminList()");
-    }
-
-    listArray.push([
-      "meta.createdAt", 
-      { 
-        label: "Created",
-        // component: DateRelative,
-      }
-    ]);
-
-    const list = new AdminList(configs);
-    listArray.forEach(([field_name, options = {}]) => {
-      options = {
-        name: null,
-        label: null,
-        sortable: true,
-        wrap: false,
-        ...options,
-      };
-
-      if (!options.label) {
-        options.label = sentenceCase(field_name);
-      }
-
-      options.name = field_name;
-      list.push(options);
-    });
-
-    this._admin.list = list;
-    return this;
-  }
-  */
-
-  /*
-  adminFields(configs) {
-    this._admin.fields = configs;
-    return this;
-  }
-  */
-
-  /*
-  getAdmin() {
-    return this._admin;
-  }
-  */
-
   static fromClientModel(admin) {
     const fields = admin.form.getFields();
 
@@ -152,84 +88,55 @@ class AdminSchema extends Schema {
   }
 }
 
-/*
-class AdminList extends Array {
-  sortBy = ["createdAt", "asc"];
-
-  constructor(options) {
-    super();
-    options = pick(options, ["sortBy"]);
-    merge(this, options);
-  }
-  l;
+function getDTO(path) {
+  return createDTO(this.get(path));
 }
-*/
-/*
-function getAdminData() {
-  const admin = this.schema.getAdmin();
-  const data = {
-    modelName: this.modelName,
-  };
-  merge(data, admin);
-  return data;
-}
-*/
 
-/*
-function getAdminPaths() {
-  const { fields } = this.schema.getAdmin();
-  const select = ["_id", "meta.createdAt", "meta.updatedAt"];
-  flatten(select, fields);
+// export function createDTO(val) {
+//   if (val == null) return val;
+//   const t = typeof val;
 
-  return select;
-}
-*/
+//   if (
+//     t === "string" ||
+//     t === "number" ||
+//     t === "boolean" ||
+//     t === "bigint" ||
+//     t === "symbol" ||
+//     t === "undefined"
+//   ) {
+//     return val;
+//   }
 
-function transformValue(val) {
-  if (val == null) return val;
-  const t = typeof val;
+//   if (val && typeof val.toJSON === "function") {
+//     val = val.toJSON(); // ← now a plain JS array or object
+//   }
 
-  if (
-    t === "string" ||
-    t === "number" ||
-    t === "boolean" ||
-    t === "bigint" ||
-    t === "symbol" ||
-    t === "undefined"
-  ) {
-    return val;
-  }
+//   if (val && typeof val.toObject === "function") {
+//     val = val.toObject(); // ← now a plain JS array or object
+//   }
 
-  if (val && typeof val.toJSON === "function") {
-    val = val.toJSON(); // ← now a plain JS array or object
-  }
+//   // arrays → recurse each element
+//   if (Array.isArray(val)) {
+//     return val.map(createDTO);
+//   }
 
-  if (val && typeof val.toObject === "function") {
-    val = val.toObject(); // ← now a plain JS array or object
-  }
+//   if (val && typeof val.toDTO === "function") {
+//     return val.toDTO();
+//   }
 
-  // arrays → recurse each element
-  if (Array.isArray(val)) {
-    return val.map(transformValue);
-  }
+//   // plain JS object → recurse its properties
+//   if (isPlainObject(val)) {
+//     return Object.fromEntries(
+//       Object.entries(val).map(([key, v]) => [key, createDTO(v)]),
+//     );
+//   }
 
-  if (val && typeof val.toDTO === "function") {
-    return val.toDTO();
-  }
+//   if (val && typeof val.toString === "function") {
+//     return val.toString();
+//   }
 
-  // plain JS object → recurse its properties
-  if (isPlainObject(val)) {
-    return Object.fromEntries(
-      Object.entries(val).map(([key, v]) => [key, transformValue(v)]),
-    );
-  }
-
-  if (val && typeof val.toString === "function") {
-    return val.toString();
-  }
-
-  return val;
-}
+//   return val;
+// }
 
 function toDTO() {
   const result = {};
@@ -239,7 +146,7 @@ function toDTO() {
     }
     const val = this.get(key);
 
-    result[key] = transformValue(val);
+    result[key] = createDTO(val);
   }
   return result;
 }
