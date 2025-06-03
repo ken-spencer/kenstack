@@ -1,6 +1,6 @@
 const loader =
   ({ canCreate = false, select = null } = {}) =>
-  async ({ form, json, id, model }) => {
+  async ({ form, data, id, model }) => {
     let doc;
     if (!id) {
       if (canCreate !== true) {

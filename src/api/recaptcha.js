@@ -1,20 +1,20 @@
 const recaptcha =
   ({ field = "recaptchaToken" } = {}) =>
-  async ({ json }) => {
+  async ({ data }) => {
     const secretKey = process.env.RECAPTCHA_SECRET_KEY;
 
     if (!secretKey) {
       throw Error("RECAPTCHA_SECRET_KEY environment variable is not set");
     }
 
-    const token = json[field];
+    const token = data[field];
     if (!token) {
       return Response.json({
         error: `Recaptcha token field ${field} is required`,
       });
     }
 
-    delete json[field];
+    delete data[field];
 
     const verificationRes = await fetch(
       "https://www.google.com/recaptcha/api/siteverify",
@@ -32,7 +32,7 @@ const recaptcha =
     const verification = await verificationRes.json();
     if (!verification.success || verification.score < 0.5) {
       // eslint-disable-next-line no-console
-      console.log("Contact captcha failed with: ", verification, json);
+      console.log("Contact captcha failed with: ", verification, data);
       return Request.json({ success: "Thank you for your submission" });
     }
   };

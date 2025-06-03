@@ -2,7 +2,7 @@ import checkServerValidity from "@kenstack/forms/validity/checkServerValidity";
 
 const validate =
   () =>
-  async ({ form, json, id, doc, model }) => {
+  async ({ form, data, id, doc, model }) => {
     if (!form) {
       throw Error("Form is required for validity");
     }
@@ -24,7 +24,7 @@ const validate =
       //   });
       // }
 
-      const errors = await doc.bindValues(fields, json);
+      const errors = await doc.bindValues(fields, data);
       if (errors) {
         return Response.json(errors);
       }
@@ -33,7 +33,7 @@ const validate =
       return;
     }
 
-    const fieldErrors = checkServerValidity(fields, json);
+    const fieldErrors = checkServerValidity(fields, data);
     if (fieldErrors) {
       return Response.json({
         error:

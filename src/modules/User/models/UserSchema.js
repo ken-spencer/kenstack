@@ -76,7 +76,11 @@ UserSchema.methods.getFullName = function () {
 
 UserSchema.index(
   { email: 1 },
-  { unique: true, partialFilterExpression: { "meta.deleted": false } },
+  {
+    unique: true,
+    partialFilterExpression: { "meta.deleted": false },
+    message: "A user with this email already exists.",
+  },
 );
 
 export default UserSchema;

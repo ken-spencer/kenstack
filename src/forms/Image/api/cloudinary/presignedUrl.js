@@ -9,12 +9,26 @@ cloudinary.config({
   secure: true,
 });
 
+const acceptDefault = [
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+  "image/svg+xml",
+  "image/heic",
+  "image/heif",
+];
+
 const presignedUrlAction =
-  ({ folder: folderSegment = "/images" } = {}) =>
-  async ({ model, filename, type, name, json }) => {
+  ({ accept = acceptDefault, folder: folderSegment = "/images" } = {}) =>
+  async ({ model, filename, type, name, data }) => {
     // transitioning to api pipeline
-    if (json) {
-      ({ filename, type, name } = json);
+    if (data) {
+      ({ filename, type, name } = data);
+    }
+
+    if (!accept.includes(type)) {
+      return Response.json({ error: `Invalid file type ${type}` });
     }
 
     let path;

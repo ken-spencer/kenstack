@@ -20,14 +20,14 @@ export async function apiPipeline(request, arg, actions = [], options = {}) {
   let context = {
     ...options,
     request,
-    json: await request.json(),
+    data: await request.json(),
     cookies: res.cookies,
     headers: res.headers,
   };
 
-  if (context.json._api_props) {
-    context = { ...context.json._api_props, ...context };
-    delete context.json._api_props;
+  if (context.data._api_props) {
+    context = { ...context.data._api_props, ...context };
+    delete context.data._api_props;
   }
 
   const meta = {

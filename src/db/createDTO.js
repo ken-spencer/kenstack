@@ -1,7 +1,9 @@
 import isPlainObject from "lodash-es/isPlainObject";
 
 export default function createDTO(val) {
-  if (val == null) return val;
+  if (val == null) {
+    return val;
+  }
   const t = typeof val;
 
   if (

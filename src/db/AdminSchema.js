@@ -138,10 +138,13 @@ function getDTO(path) {
 //   return val;
 // }
 
-function toDTO() {
+function toDTO(paths = null) {
   const result = {};
   for (let key of Object.keys(this.schema.paths)) {
     if (key === "__v" || !this.isSelected(key)) {
+      continue;
+    }
+    if (paths && !paths.includes(key)) {
       continue;
     }
     const val = this.get(key);
