@@ -135,9 +135,13 @@ export default class Session {
     }
 
     const cookieStore = await cookies();
-    cookieStore.delete("auth", {
-      domain: this.domain,
-    });
+    cookieStore.delete("auth");
+
+    if (this.doain) {
+      cookieStore.delete("auth", {
+        domain: this.domain,
+      });
+    }
 
     // cookies().set("auth", "", {
     //   httpOnly: true,
