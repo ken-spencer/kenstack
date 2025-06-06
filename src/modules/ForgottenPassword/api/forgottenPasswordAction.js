@@ -1,11 +1,8 @@
 "use server";
 
-// import { headers } from "next/headers";
 import { geolocation } from "@vercel/functions";
 
-// import DefaultEmail from "./Email";
-
-import mailer from "../../../utils/mailer";
+import mailer from "@kenstack/lib/mailer";
 
 import errorLog from "../../../log/error";
 import auditLog from "../../../log/audit";
@@ -21,7 +18,7 @@ const errorResponse = {
 
 export default async function forgottenPasswordAction(
   formData,
-  { Email, from = "nobody@nowhere.com", session, request } = {},
+  { Email, attachments, from = "nobody@nowhere.com", session, request } = {},
 ) {
   const User = session.userModel;
   // const Email = CustomEmail || DefaultEmail;
@@ -140,6 +137,7 @@ export default async function forgottenPasswordAction(
       from: from,
       subject: "Forgotten password request",
       html: emailHtml,
+      attachments,
     });
   } catch (e) {
     errorLog(e, "Problem sending forgotten password request email");
