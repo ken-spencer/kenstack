@@ -3,6 +3,16 @@ import { createMimeMessage } from "mimetext";
 
 const ses = new SESClient();
 
+function isRateLimitError(err) {
+  // SES can return error.name = "Throttling" or "ThrottlingException"
+  return (
+    err.name === "Throttling" ||
+    err.name === "ThrottlingException" ||
+    err.name === "TooManyRequestsException" ||
+    err.name === "TooManyRequests"
+  );
+}
+
 export default async function rawMailer({
   to,
   cc,
@@ -32,7 +42,7 @@ export default async function rawMailer({
     data: html,
   });
 
-  attachments?.forEach(
+  attachments.forEach(
     ({ inline = false, filename, contentType, data, headers }) => {
       msg.addAttachment({
         inline,
@@ -44,18 +54,33 @@ export default async function rawMailer({
     },
   );
 
-  const raw = msg.asRaw(); // produces a multipart/related envelope
+  const raw = msg.asRaw();
   const buffer = Buffer.from(raw, "utf8");
+  const cmd = new SendRawEmailCommand({ RawMessage: { Data: buffer } });
 
-  const cmd = new SendRawEmailCommand({
-    RawMessage: { Data: buffer },
-  });
-  try {
-    await ses.send(cmd);
-    // const { MessageId } = await ses.send(cmd);
-    // console.log("Email sent, Message ID:", MessageId);
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.error("Failed to send email:", e);
+  const maxRetries = 3;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await ses.send(cmd);
+    } catch (err) {
+      if (!isRateLimitError(err)) {
+        // eslint-disable-next-line no-console
+        console.error("There was a problem sending email to", to, "\n", err);
+        return false;
+      }
+
+      if (attempt === maxRetries) {
+        // eslint-disable-next-line no-console
+        console.error(
+          `Exceeded ${maxRetries} rate-limit retries. Giving up.`,
+          err,
+        );
+      } else {
+        // eslint-disable-next-line no-console
+        console.error(`SES Rate limit hit (attempt ${attempt}):`, err);
+      }
+
+      await new Promise((res) => setTimeout(res, 1000));
+    }
   }
 }
