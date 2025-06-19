@@ -33,7 +33,7 @@ const recaptcha =
     if (!verification.success || verification.score < 0.5) {
       // eslint-disable-next-line no-console
       console.log("Contact captcha failed with: ", verification, data);
-      return Request.json({ success: "Thank you for your submission" });
+      return Response.json({ error: "Couldn’t verify you’re human. Please try again." });
     }
   };
 
