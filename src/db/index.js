@@ -4,12 +4,6 @@
 // import { auditLog } from "logger";
 import mongoose from "mongoose";
 
-if (!process.env.MONGO_URI) {
-  throw Error(
-    "MONGO_URI environment variable is required to connect to Mongodb"
-  );
-}
-
 let cached = global.mongoose;
 if (!cached) {
   cached = global.mongoose = { conn: null, promise: null };
@@ -21,6 +15,12 @@ export async function dbConnect() {
   }
 
   if (!cached.promise) {
+    if (!process.env.MONGO_URI) {
+      throw Error(
+        "MONGO_URI environment variable is required to connect to Mongodb"
+      );
+    }
+
     const opts = {
       bufferCommands: false,
       autoIndex: true, // Toggle automatic index creation
