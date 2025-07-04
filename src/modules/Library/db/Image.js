@@ -125,7 +125,7 @@ ImageSchema.pre(
   { document: true, query: false },
   async function () {
     await s3Delete(this);
-  },
+  }
 );
 
 ImageSchema.pre(
@@ -138,7 +138,7 @@ ImageSchema.pre(
     if (doc) {
       await s3Delete(doc);
     }
-  },
+  }
 );
 
 ImageSchema.pre("deleteMany", async function () {

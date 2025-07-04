@@ -12,7 +12,7 @@ export default async function deleteAction(id) {
       {
         folder: id,
       },
-      { $set: { "meta.deleted": true, folder: null } },
+      { $set: { "meta.deleted": true, folder: null } }
     );
   } catch (e) {
     errorLog(e, "Problem deleting library folder (images): " + id);

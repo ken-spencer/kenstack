@@ -14,7 +14,7 @@ export default function FormLayout({ gap = "16px", form }) {
   const fieldArray = useMemo(
     () => Array.from(Object.entries(fields)),
     // () => Array.from(fields),
-    [fields],
+    [fields]
   );
 
   return (

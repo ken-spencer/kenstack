@@ -15,7 +15,7 @@ export default async function deleteAction({ idArray, trash }) {
         _id: { $in: idArray.map((id) => new mongoose.Types.ObjectId(id)) },
       },
       { $set: { "meta.deleted": !trash } },
-      { trash: false },
+      { trash: false }
     );
   } catch (e) {
     errorLog(e, `Problem ${trash ? "" : "Un"}deleting library images: `, {

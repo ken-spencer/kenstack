@@ -96,7 +96,7 @@ export default async function uploadCompleteAction({
     "original",
     "webp",
     metadata.width,
-    metadata.height,
+    metadata.height
   );
 
   await uploadImage(imagePath, imageBuffer, "image/webp");
@@ -118,7 +118,7 @@ export default async function uploadCompleteAction({
     "libraryThumbnail",
     "webp",
     thumbnailData.width,
-    thumbnailData.height,
+    thumbnailData.height
   );
 
   /*

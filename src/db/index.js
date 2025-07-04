@@ -1,11 +1,12 @@
-import "server-only";
-
+// if (process.env.NEXT_RUNTIME) {
+// import "server-only";
+// }
 // import { auditLog } from "logger";
 import mongoose from "mongoose";
 
 if (!process.env.MONGO_URI) {
   throw Error(
-    "MONGO_URI environment variable is required to connect to Mongodb",
+    "MONGO_URI environment variable is required to connect to Mongodb"
   );
 }
 

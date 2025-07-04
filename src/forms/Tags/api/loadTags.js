@@ -2,7 +2,7 @@ import sentenceCase from "@kenstack/utils/sentenceCase";
 
 export default async function loadTags(
   { field, exclude, keywords },
-  { admin, model },
+  { admin, model }
 ) {
   // const data = admin.form.get(field);
 
@@ -31,7 +31,7 @@ export default async function loadTags(
     { $group: { _id: `$${field}.name`, count: { $sum: 1 } } },
     { $sort: { count: -1, _id: 1 } },
     { $limit: 5 },
-    { $project: { tag: "$_id", count: 1, _id: 0 } },
+    { $project: { tag: "$_id", count: 1, _id: 0 } }
   );
 
   const result = await model.aggregate(pipeline);

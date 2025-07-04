@@ -5,7 +5,7 @@ export default async function auditLog(
   key,
   message = null,
   data = null,
-  user = null,
+  user = null
 ) {
   const meta = await getLogMeta();
 

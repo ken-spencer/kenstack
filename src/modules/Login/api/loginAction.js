@@ -10,7 +10,7 @@ import LoginLog from "../models/LoginLog";
 
 export default async function loginAction(
   formData,
-  { session, request, response, logMeta },
+  { session, request, response, logMeta }
 ) {
   let email = formData.get("email");
   email = email.trim().toLowerCase();

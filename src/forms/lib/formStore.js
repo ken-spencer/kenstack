@@ -11,7 +11,7 @@ import getField from "@kenstack/forms/lib/getField";
 const empty = {};
 export default function createFormStore(
   form,
-  { values: initialValues = empty, apiPath = null },
+  { values: initialValues = empty, apiPath = null }
 ) {
   return createStore((set, get) => {
     const setField = (name, ...args) => {

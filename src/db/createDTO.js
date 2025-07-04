@@ -37,7 +37,7 @@ export default function createDTO(val) {
   // plain JS object → recurse its properties
   if (isPlainObject(val)) {
     return Object.fromEntries(
-      Object.entries(val).map(([key, v]) => [key, createDTO(v)]),
+      Object.entries(val).map(([key, v]) => [key, createDTO(v)])
     );
   }
 

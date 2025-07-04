@@ -25,9 +25,9 @@ export default function Field({ field, ...props }) {
       twMerge(
         "field flex flex-col gap-[1px]",
         required && "required",
-        containerClass,
+        containerClass
       ),
-    [required, containerClass],
+    [required, containerClass]
   );
 
   let classesLabel = useMemo(() => twMerge("label", labelClass), [labelClass]);

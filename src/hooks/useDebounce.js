@@ -8,7 +8,7 @@ export default function useDebounce(initialValue = "", delay = 300) {
 
   const debouncedFunction = useMemo(
     () => debounce((newValue) => setDebouncedValueBase(newValue), delay),
-    [delay],
+    [delay]
   );
 
   const setDebouncedValue = useCallback(
@@ -16,7 +16,7 @@ export default function useDebounce(initialValue = "", delay = 300) {
       setValueBase(newValue);
       debouncedFunction(newValue);
     },
-    [debouncedFunction],
+    [debouncedFunction]
   );
 
   /*
@@ -30,7 +30,7 @@ export default function useDebounce(initialValue = "", delay = 300) {
       setValueBase(newValue);
       setDebouncedValue(newValue);
     },
-    [setDebouncedValue],
+    [setDebouncedValue]
   );
 
   return [value, debouncedValue, setValue];

@@ -28,7 +28,7 @@ export default function SearchInput({
       });
       setOptions(newOptions);
     },
-    [field.props.options, setOptions],
+    [field.props.options, setOptions]
   );
 
   const handleFocus = useCallback(() => {

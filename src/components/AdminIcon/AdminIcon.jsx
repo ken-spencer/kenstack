@@ -47,7 +47,7 @@ export default function AdminIcon({
         onMouseDown(evt);
       }
     },
-    [onMouseDown],
+    [onMouseDown]
   );
 
   const handleMouseUp = useCallback(
@@ -68,7 +68,7 @@ export default function AdminIcon({
         onMouseUp(evt);
       }
     },
-    [onMouseUp, onClick],
+    [onMouseUp, onClick]
   );
 
   const handleMouseEnter = useCallback(
@@ -94,7 +94,7 @@ export default function AdminIcon({
         onMouseEnter(evt);
       }
     },
-    [onMouseEnter],
+    [onMouseEnter]
   );
 
   const handleMouseLeave = useCallback(
@@ -114,7 +114,7 @@ export default function AdminIcon({
         onMouseLeave(evt);
       }
     },
-    [onMouseLeave],
+    [onMouseLeave]
   );
 
   if (Component === "button" && type === undefined) {
@@ -126,7 +126,7 @@ export default function AdminIcon({
       <Component
         className={twMerge(
           "admin-icon text-gray-800 dark:text-gray-200",
-          className,
+          className
         )}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
@@ -145,7 +145,7 @@ export default function AdminIcon({
           <span className="admin-icon-tooltip" ref={tooltipRef}>
             {tooltip}
           </span>,
-          document.body,
+          document.body
         )}
     </>
   );

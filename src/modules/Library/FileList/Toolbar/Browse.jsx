@@ -13,7 +13,7 @@ export default function FileUpload() {
       let input = evt.currentTarget;
       prepareUpload(input.files);
     },
-    [prepareUpload],
+    [prepareUpload]
   );
 
   return (

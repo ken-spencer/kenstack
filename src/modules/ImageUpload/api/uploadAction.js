@@ -26,7 +26,7 @@ function getUploadBasename(filename) {
 
 export default async function uploadACtion(
   formData,
-  { document, prefix = nanoid() },
+  { document, prefix = nanoid() }
 ) {
   if (!document) {
     throw Error("Document is required for image upload");

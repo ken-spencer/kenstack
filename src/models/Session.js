@@ -18,7 +18,7 @@ const SessionSchema = new Schema(
       index: { expires: "60m" }, // expire 60 minutes aftrer expiresAt is reached
     },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 const SessionStoreSchema = new Schema(
@@ -45,7 +45,7 @@ const SessionStoreSchema = new Schema(
   },
   {
     timestamps: true, // for createdAt/updatedAt if needed
-  },
+  }
 );
 
 SessionStoreSchema.index({ user: 1, key: 1 }, { unique: true });

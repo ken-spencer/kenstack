@@ -67,7 +67,7 @@ export default function Notice({
           }
         }, 1000);
       },
-      error ? 5000 : 5500,
+      error ? 5000 : 5500
     );
   }, [message, messageText, scroll, setShow, collapse, removeMessage, error]);
 

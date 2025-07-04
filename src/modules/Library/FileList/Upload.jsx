@@ -105,7 +105,7 @@ export default function Upload({ file }) {
           res,
           file.ref,
           onProgress,
-          addMessage,
+          addMessage
         );
       } catch (e) {
         // eslint-disable-next-line no-console

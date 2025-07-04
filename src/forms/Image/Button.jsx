@@ -12,9 +12,9 @@ export default function Button({
     () =>
       twMerge(
         "bg-gray-200/60  hover:bg-gray-300/60 border z-50 rounded-full transition",
-        className,
+        className
       ),
-    [className],
+    [className]
   );
 
   if (component === "button" && !props.type) {

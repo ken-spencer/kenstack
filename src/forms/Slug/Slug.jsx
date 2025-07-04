@@ -27,7 +27,7 @@ export default function SlugField({
 
       setInteracted(true);
     },
-    [onChange],
+    [onChange]
   );
 
   initialProps.onBlur = useCallback((evt, thisField) => {
@@ -44,7 +44,7 @@ export default function SlugField({
           .join(" ");
       }
       return state.fields[subscribe]?.value ?? "";
-    }),
+    })
   );
 
   const [locked, setLocked] = useState(field.getInitialValue() ? true : false);

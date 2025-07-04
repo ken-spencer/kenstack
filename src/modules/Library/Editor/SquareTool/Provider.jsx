@@ -45,7 +45,7 @@ export default function SquareToolProvider({ file, children }) {
       reset,
       changed,
     }),
-    [file, zoom, setZoom, cropX, setCropX, cropY, setCropY, reset, changed],
+    [file, zoom, setZoom, cropX, setCropX, cropY, setCropY, reset, changed]
   );
 
   return <Context.Provider value={context}>{children}</Context.Provider>;
@@ -57,7 +57,7 @@ function useSquareTool() {
   const keys = Object.keys(context);
   if (!keys.length) {
     throw Error(
-      "Unable to fetch SquareTool  context. Please ensure that the Provider is present",
+      "Unable to fetch SquareTool  context. Please ensure that the Provider is present"
     );
   }
 

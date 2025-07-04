@@ -12,7 +12,7 @@ export { default as loader } from "./loader";
 export async function apiPipeline(request, arg, actions = [], options = {}) {
   const contentType = request.headers.get("content-type");
 
-  if (contentType !== "application/json") {
+  if (!contentType?.startsWith("application/json")) {
     return Response.json({ error: "Invalid request. Only JSON is accepted." });
   }
 

@@ -18,7 +18,7 @@ const errorResponse = {
 
 export default async function forgottenPasswordAction(
   formData,
-  { Email, attachments, from = "nobody@nowhere.com", session, request } = {},
+  { Email, attachments, from = "nobody@nowhere.com", session, request } = {}
 ) {
   const User = session.userModel;
   // const Email = CustomEmail || DefaultEmail;
@@ -60,7 +60,7 @@ export default async function forgottenPasswordAction(
     auditLog(
       "forgottenPasswordMiss",
       `Forgotten Password; No user found with email: ${email}`,
-      { email },
+      { email }
     );
 
     let response = {
@@ -87,7 +87,7 @@ export default async function forgottenPasswordAction(
     auditLog(
       "forgottenPasswordFlood",
       `Forgotten Password; Too many requests`,
-      { user },
+      { user }
     );
 
     let response = {
@@ -127,7 +127,7 @@ export default async function forgottenPasswordAction(
       ...geolocation(request),
       admin: administrator ? {} : null,
     },
-    null,
+    null
   );
   const emailHtml = await render(emailElement);
 

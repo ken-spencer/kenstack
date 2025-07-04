@@ -19,7 +19,7 @@ import getField from "@kenstack/forms/lib/getField";
 function Field({ field = "text", span = "", containerClass = "", ...props }) {
   props.containerClass = useMemo(
     () => twMerge("col-span-12", span, containerClass),
-    [containerClass, span],
+    [containerClass, span]
   );
 
   const fieldProps = useMemo(() => {

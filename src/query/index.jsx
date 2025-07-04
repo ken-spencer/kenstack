@@ -33,7 +33,7 @@ function queryClient(props = {}) {
         },
       },
     },
-    props,
+    props
   );
 
   return new QueryClient(params);

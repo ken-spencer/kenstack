@@ -56,7 +56,7 @@ export default async function presignedUrlAction({ filename, type }) {
 
   const signature = cloudinary.utils.api_sign_request(
     options,
-    process.env.CLOUDINARY_API_SECRET,
+    process.env.CLOUDINARY_API_SECRET
   );
 
   return {

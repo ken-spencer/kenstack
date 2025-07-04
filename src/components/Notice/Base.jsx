@@ -37,7 +37,7 @@ export default function NOtice({
       className={twMerge(
         "notice flex items-center gap-2 transition p-2 border rounded",
         classes,
-        className,
+        className
       )}
     >
       <Icon className="w-8 h-8" />

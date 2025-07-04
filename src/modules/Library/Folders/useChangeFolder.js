@@ -100,7 +100,7 @@ export default function useDrop(folder, paste = false) {
         }
       },
     }),
-    [folder, dragData, saveChangeFolderMutation, activeFolder],
+    [folder, dragData, saveChangeFolderMutation, activeFolder]
   );
 
   return {

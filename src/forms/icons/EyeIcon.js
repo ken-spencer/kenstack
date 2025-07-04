@@ -15,7 +15,7 @@ function EyeIcon({ title, titleId, ...props }, svgRef) {
         ref: svgRef,
         "aria-labelledby": titleId,
       },
-      props,
+      props
     ),
     title
       ? /*#__PURE__*/ React.createElement(
@@ -23,7 +23,7 @@ function EyeIcon({ title, titleId, ...props }, svgRef) {
           {
             id: titleId,
           },
-          title,
+          title
         )
       : null,
     /*#__PURE__*/ React.createElement("path", {
@@ -35,7 +35,7 @@ function EyeIcon({ title, titleId, ...props }, svgRef) {
       strokeLinecap: "round",
       strokeLinejoin: "round",
       d: "M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z",
-    }),
+    })
   );
 }
 const ForwardRef = React.forwardRef(EyeIcon);

@@ -28,7 +28,7 @@ export function LibraryEditProvider({ children }) {
       file: data?.file ?? null,
       data,
     }),
-    [id, apiPath, addMessage, mode, isLoading, error, data],
+    [id, apiPath, addMessage, mode, isLoading, error, data]
   );
 
   return (
@@ -44,7 +44,7 @@ export function useLibraryEditor() {
   const keys = Object.keys(context);
   if (!keys.length) {
     throw Error(
-      "Unable to fetch LibraryEditorContext. Please ensure that the provider is present",
+      "Unable to fetch LibraryEditorContext. Please ensure that the provider is present"
     );
   }
 

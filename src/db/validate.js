@@ -32,7 +32,7 @@ export default async function validate(doc) {
       } catch (e) {
         errorLog(e, "Problem querying for duplicates");
         throw Error(
-          "There was an unexpected validation problem. Please try again later",
+          "There was an unexpected validation problem. Please try again later"
         );
       }
 

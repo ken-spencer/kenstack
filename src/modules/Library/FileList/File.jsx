@@ -85,7 +85,7 @@ export default function File({ file }) {
 
       return true;
     },
-    [file, files, setDragData],
+    [file, files, setDragData]
   );
 
   const handleDragEnter = useCallback(
@@ -124,7 +124,7 @@ export default function File({ file }) {
         return newFiles;
       });
     },
-    [file, dragData, files, setFiles],
+    [file, dragData, files, setFiles]
   );
 
   const handleDragEnd = useCallback(
@@ -149,7 +149,7 @@ export default function File({ file }) {
 
       globals.initialOrder = "";
     },
-    [activeFolder, files, saveMoveMutation, setDragData],
+    [activeFolder, files, saveMoveMutation, setDragData]
   );
 
   let src = null;

@@ -104,7 +104,7 @@ export default function Select(props) {
       // evt.stopPropagation();
       setVisible(toVisible);
     },
-    [visible, field.props.options],
+    [visible, field.props.options]
   );
 
   /*

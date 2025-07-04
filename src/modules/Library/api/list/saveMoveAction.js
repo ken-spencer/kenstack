@@ -15,7 +15,7 @@ export default async function saveMoveAction({ idArray, activeFolder }) {
         folder: activeFolder,
         _id: { $nin: idArray.map((id) => new mongoose.Types.ObjectId(id)) },
       },
-      ["_id"],
+      ["_id"]
     ).sort({ priority: 1 });
   } catch (e) {
     errorLog(e, "Problem querying library image list");

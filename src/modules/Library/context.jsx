@@ -118,7 +118,7 @@ const LibraryProvider = ({
         mode,
         edit,
       }),
-    [apiPath, mode, edit],
+    [apiPath, mode, edit]
   );
 
   return (
@@ -132,7 +132,7 @@ const useLibraryStore = () => {
   const keys = Object.keys(context);
   if (!keys.length) {
     throw Error(
-      "Unable to fetch library  context. Please ensure that the Provider is present",
+      "Unable to fetch library  context. Please ensure that the Provider is present"
     );
   }
 

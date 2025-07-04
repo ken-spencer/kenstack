@@ -4,7 +4,7 @@ import escapeRegExp from "@kenstack/utils/escapeRegExp";
 
 export default async function load(
   { sortBy, keywords },
-  { model, admin, session, roles },
+  { model, admin, session, roles }
 ) {
   const list = admin.getList();
   const fields = list.map(({ name }) => name);

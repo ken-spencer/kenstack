@@ -71,7 +71,7 @@ export default function Form({
         mutation.mutate({ formData, values, submitter });
       }
     },
-    [store, onSubmit, mutation],
+    [store, onSubmit, mutation]
   );
 
   // block native form validation UX

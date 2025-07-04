@@ -27,7 +27,7 @@ export default function cloudinaryToImage(data, filename, transformations) {
 
       if (size.transformation !== transformation) {
         throw Error(
-          `Image transformation mispatch on size ${name} ${size.transformation} !=  ${transformation}`,
+          `Image transformation mispatch on size ${name} ${size.transformation} !=  ${transformation}`
         );
       }
 

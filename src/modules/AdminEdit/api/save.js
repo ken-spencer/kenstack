@@ -7,7 +7,7 @@ import errorLog from "../../../log/error";
 
 export default async function saveAction(
   { adminAction: action, ...values },
-  { session, model, admin, id, isNew, pathname },
+  { session, model, admin, id, isNew, pathname }
 ) {
   const user = await session.getAuthenticatedUser();
 
@@ -44,7 +44,6 @@ export default async function saveAction(
 
   const basePath = pathname.replace(/\/[^/]*$/, "");
   const fields = admin.form.getFields();
-  // const errors = await doc.bindFormData(fields, formData);
   const errors = await doc.bindValues(fields, values);
   if (action === "delete") {
     if (id == user._id) {

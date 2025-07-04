@@ -7,7 +7,7 @@ export default async function deleteAction(idArray, { model }) {
       _id: { $in: idArray.map((id) => new mongoose.Types.ObjectId(id)) },
     },
     { $set: { "meta.deleted": true } },
-    { trash: false }, // need this if we want to undelete with this code
+    { trash: false } // need this if we want to undelete with this code
   );
 
   const count = result.matchedCount;

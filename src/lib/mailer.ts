@@ -13,6 +13,30 @@ function isRateLimitError(err) {
   );
 }
 
+interface Attachment {
+  /** Whether the attachment should be included inline */
+  inline?: boolean;
+  /** Filename as it will appear in the email */
+  filename: string;
+  /** MIME type of the attachment */
+  contentType: string;
+  /** Raw data (Buffer, Uint8Array, or base64 string) */
+  // data: Buffer | Uint8Array | string;
+  data: string;
+  /** Optional additional headers for the attachment */
+  headers?: Record<string, string>;
+}
+
+interface Options {
+  to: string;
+  cc?: string;
+  bcc?: string;
+  from: string | { name: string; addr: string };
+  subject: string;
+  html: string;
+  attachments: Attachment[];
+}
+
 export default async function rawMailer({
   to,
   cc,
@@ -21,7 +45,7 @@ export default async function rawMailer({
   subject = "",
   html = "",
   attachments = [],
-}) {
+}: Options) {
   const msg = createMimeMessage();
   msg.setSender(from);
 
@@ -51,7 +75,7 @@ export default async function rawMailer({
         data,
         headers,
       });
-    },
+    }
   );
 
   const raw = msg.asRaw();
@@ -73,7 +97,7 @@ export default async function rawMailer({
         // eslint-disable-next-line no-console
         console.error(
           `Exceeded ${maxRetries} rate-limit retries. Giving up.`,
-          err,
+          err
         );
       } else {
         // eslint-disable-next-line no-console

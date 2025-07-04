@@ -23,7 +23,7 @@ const AuditLogSchema = new Schema(
     userAgent: String,
     data: {},
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 const con = await dbConnect();

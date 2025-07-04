@@ -80,7 +80,7 @@ UserSchema.index(
     unique: true,
     partialFilterExpression: { "meta.deleted": false },
     message: "A user with this email already exists.",
-  },
+  }
 );
 
 export default UserSchema;

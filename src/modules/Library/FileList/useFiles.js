@@ -31,7 +31,7 @@ export default function useFiles() {
         files: typeof value === "function" ? value(files) : value,
       });
     },
-    [queryClient, files, getQueryKey],
+    [queryClient, files, getQueryKey]
   );
 
   return { data, files, isLoadingFiles, setFiles, refetchFiles: refetch };

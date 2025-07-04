@@ -35,7 +35,7 @@ export default function useField(props) {
       pending: s.pending,
       field: s.fields[name],
       fieldError: s.fieldErrors[name] || null, // error returned from the server
-    })),
+    }))
   );
 
   // initialize field on first render without triggering rerender
@@ -135,7 +135,7 @@ export default function useField(props) {
           field.interacted
         ) {
           field.setError(
-            checkValue(field.name, field, store.getState().values),
+            checkValue(field.name, field, store.getState().values)
           );
         }
       }

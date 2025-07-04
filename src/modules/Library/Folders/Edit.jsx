@@ -41,7 +41,7 @@ export default function FolderEdit({ folder }) {
       set({ folders: copy });
 
       const previousCopy = previous.folders.map((f) =>
-        f.id === folder.id ? { ...folder, title: post.title } : f,
+        f.id === folder.id ? { ...folder, title: post.title } : f
       );
 
       return { previous: { folders: previousCopy } };

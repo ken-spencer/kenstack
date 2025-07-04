@@ -27,7 +27,7 @@ export default function FolderList(props) {
     (value) => {
       queryClient.setQueryData(["folders"], { folders: value });
     },
-    [queryClient],
+    [queryClient]
   );
 
   const closeConfirm = useCallback(() => {

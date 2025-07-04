@@ -57,7 +57,7 @@ export function AdminListProvider({
 
   const [keywords, debouncedKeywords, setKeywords] = useDebounce(
     initialKeywords,
-    300,
+    300
   );
 
   /*
@@ -72,7 +72,7 @@ export function AdminListProvider({
   */
   const queryKey = useMemo(
     () => ["admin-list", modelName, sortBy, debouncedKeywords],
-    [modelName, sortBy, debouncedKeywords],
+    [modelName, sortBy, debouncedKeywords]
   );
 
   const queryClient = useQueryClient();
@@ -161,7 +161,7 @@ export function AdminListProvider({
         setSelected(newSelected);
       }
     },
-    [selected, userId],
+    [selected, userId]
   );
 
   const deselect = useCallback(
@@ -170,7 +170,7 @@ export function AdminListProvider({
       newSelected.delete(id);
       setSelected(newSelected);
     },
-    [selected],
+    [selected]
   );
 
   const context = useMemo(
@@ -215,7 +215,7 @@ export function AdminListProvider({
       isLoading,
       queryKey,
       apiPath,
-    ],
+    ]
   );
 
   return (
@@ -231,7 +231,7 @@ export function useAdminList() {
   const keys = Object.keys(context);
   if (!keys.length) {
     throw Error(
-      "Unable to fetch admin  context. Please ensure that the admin list Provider is present",
+      "Unable to fetch admin  context. Please ensure that the admin list Provider is present"
     );
   }
 

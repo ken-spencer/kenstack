@@ -20,7 +20,7 @@ const SizeSchema = new Schema(
     height: { type: Number /*required: true */ },
     transformation: String,
   },
-  { _id: false },
+  { _id: false }
 );
 
 const SquareSchema = new Schema(
@@ -40,7 +40,7 @@ const SquareSchema = new Schema(
       // default: 0,
     },
   },
-  { _id: false },
+  { _id: false }
 );
 
 const ImageSchema = new Schema(
@@ -68,7 +68,7 @@ const ImageSchema = new Schema(
       default: null,
     },
   },
-  { _id: false },
+  { _id: false }
 );
 
 ImageSchema.methods.toDTO = function () {
@@ -149,7 +149,7 @@ const ImageFieldOptions = {
 
 export function imagePlugin(
   schema,
-  { path = "image", transformations: localTransformations = null } = {},
+  { path = "image", transformations: localTransformations = null } = {}
 ) {
   let transformations = new Map([
     ["original", "f_webp"], // Original dimensions as WebP

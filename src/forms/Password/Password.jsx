@@ -28,7 +28,7 @@ export default function Password(initialProps) {
       evt.preventDefault();
       setShowPassword(showPassword ? false : true);
     },
-    [showPassword],
+    [showPassword]
   );
 
   const button = (

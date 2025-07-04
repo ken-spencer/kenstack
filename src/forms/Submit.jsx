@@ -19,7 +19,7 @@ export default function Submit({
       invalid: s.invalid,
       disabled: s.disabled,
       pending: s.pending,
-    })),
+    }))
   );
   const { pending } = useFormStatus();
   const isPending = state.pending || pending;

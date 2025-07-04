@@ -20,7 +20,7 @@ export default function CheckboxField({ onChange, ...initialProps }) {
       const input = evt.target;
       field.setValue(input.checked);
     },
-    [onChange, field],
+    [onChange, field]
   );
 
   return (

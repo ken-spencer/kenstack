@@ -28,7 +28,7 @@ export default function ResetPasswordField({ containerClass = "", span = "" }) {
           setResponse({
             error: "There was an unexpected Problem: " + e.message,
           });
-        },
+        }
       )
       .finally(() => {
         setLoading(false);

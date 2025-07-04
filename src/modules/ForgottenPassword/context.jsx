@@ -10,7 +10,7 @@ export function ForgottenPasswordProvider({ loginPath, apiPath, children }) {
       loginPath,
       apiPath,
     }),
-    [loginPath, apiPath],
+    [loginPath, apiPath]
   );
 
   return (
@@ -24,7 +24,7 @@ export function useForgottenPassword() {
   const context = useContext(ForgottenPasswordContext);
   if (context === null) {
     throw new Error(
-      "useForgottenPassword must be used within an ForgottenPasswordProvider",
+      "useForgottenPassword must be used within an ForgottenPasswordProvider"
     );
   }
   return context;

@@ -31,7 +31,7 @@ export default function CheckboxList({ onChange, ...initialProps }) {
         setValue(value.filter((v) => v !== input.value));
       }
     },
-    [setValue, field, onChange],
+    [setValue, field, onChange]
   );
 
   // } fix client side validation as not designed to work with lists of checkboxes.

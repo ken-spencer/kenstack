@@ -14,7 +14,7 @@ function CheckIcon({ title, titleId, ...props }, svgRef) {
         ref: svgRef,
         "aria-labelledby": titleId,
       },
-      props,
+      props
     ),
     title
       ? /*#__PURE__*/ React.createElement(
@@ -22,14 +22,14 @@ function CheckIcon({ title, titleId, ...props }, svgRef) {
           {
             id: titleId,
           },
-          title,
+          title
         )
       : null,
     /*#__PURE__*/ React.createElement("path", {
       strokeLinecap: "round",
       strokeLinejoin: "round",
       d: "m4.5 12.75 6 6 9-13.5",
-    }),
+    })
   );
 }
 const ForwardRef = React.forwardRef(CheckIcon);

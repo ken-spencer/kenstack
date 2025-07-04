@@ -22,7 +22,7 @@ const recaptcha =
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: `secret=${secretKey}&response=${token}`,
-      },
+      }
     );
 
     if (!verificationRes.ok) {
@@ -33,7 +33,9 @@ const recaptcha =
     if (!verification.success || verification.score < 0.5) {
       // eslint-disable-next-line no-console
       console.log("Contact captcha failed with: ", verification, data);
-      return Response.json({ error: "Couldn’t verify you’re human. Please try again." });
+      return Response.json({
+        error: "Couldn’t verify you’re human. Please try again.",
+      });
     }
   };
 

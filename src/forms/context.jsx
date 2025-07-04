@@ -20,7 +20,7 @@ function useForm(selector) {
   const keys = Object.keys(context);
   if (!keys.length) {
     const error = Error(
-      "Unable to fetch form context. Please ensure that the form is wrapped with the <Provider>",
+      "Unable to fetch form context. Please ensure that the form is wrapped with the <Provider>"
     );
     error.stack = error.stack.replace(/^.*\n/, "");
     throw error;
@@ -35,7 +35,7 @@ function useFormStore() {
   const keys = Object.keys(context);
   if (!keys.length) {
     const error = Error(
-      "Unable to fetch form context. Please ensure that the form is wrapped with the <Provider>",
+      "Unable to fetch form context. Please ensure that the form is wrapped with the <Provider>"
     );
 
     error.stack = error.stack.replace(/^.*\n/, "");

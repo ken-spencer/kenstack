@@ -14,7 +14,7 @@ export default function debugLog(...args) {
       console.log(
         "\x1b[34m%s\x1b[0m",
         match[1].replace(/.+\(rsc\)\/\./, ""),
-        match[2] + ":" + match[3],
+        match[2] + ":" + match[3]
       );
     }
   }

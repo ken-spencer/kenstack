@@ -31,7 +31,7 @@ export default async function Server({
 
   if (admin.modelName !== model.modelName) {
     throw Error(
-      `Model name mismatch client: ""${admin.modelName}"",  server: ""${model.modelName}""`,
+      `Model name mismatch client: ""${admin.modelName}"",  server: ""${model.modelName}""`
     );
   }
 

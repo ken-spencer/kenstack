@@ -44,7 +44,7 @@ export default function FileUpload({
         });
       });
     },
-    [invalidateQueries, name, apiPath],
+    [invalidateQueries, name, apiPath]
   );
 
   return (

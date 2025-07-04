@@ -27,7 +27,7 @@ export default function MultiSelect({
         }
       }),
 
-    [initialOptions],
+    [initialOptions]
   );
 
   return (

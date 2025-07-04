@@ -35,7 +35,7 @@ const ForgottenPasswordSchema = new Schema(
       },
     },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 audit(ForgottenPasswordSchema);
@@ -43,7 +43,7 @@ audit(ForgottenPasswordSchema);
 const con = await dbConnect();
 const ForgottenPassword = con.addModel(
   "ForgottenPassword",
-  ForgottenPasswordSchema,
+  ForgottenPasswordSchema
 );
 
 export default ForgottenPassword;

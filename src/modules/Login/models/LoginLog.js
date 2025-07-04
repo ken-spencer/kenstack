@@ -19,7 +19,7 @@ const LoginLogSchema = new Schema(
     ip: String,
     geo: {},
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 LoginLogSchema.index({ createdAt: -1 });

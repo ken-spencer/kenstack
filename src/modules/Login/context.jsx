@@ -10,7 +10,7 @@ export function LoginProvider({ forgottenPasswordPath, apiPath, children }) {
       forgottenPasswordPath,
       apiPath,
     }),
-    [forgottenPasswordPath, apiPath],
+    [forgottenPasswordPath, apiPath]
   );
 
   return (

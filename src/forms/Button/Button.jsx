@@ -17,7 +17,7 @@ const Button = (
     component: Component = "button",
     ...props
   },
-  ref,
+  ref
 ) => {
   let classes = "button";
 

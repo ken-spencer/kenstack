@@ -64,7 +64,7 @@ export default function useUpload(field) {
       const { uploadUrl, fields } = res;
       const formData = new FormData();
       Object.entries(fields).forEach(([key, value]) =>
-        formData.append(key, value),
+        formData.append(key, value)
       );
       formData.append("file", file);
 
@@ -127,7 +127,7 @@ export default function useUpload(field) {
         return newUploading;
       });
     },
-    [apiPath, reset, field, addMessage, setUploading],
+    [apiPath, reset, field, addMessage, setUploading]
   );
 
   const dragEvents = useMemo(
@@ -156,7 +156,7 @@ export default function useUpload(field) {
         }
       },
     }),
-    [uploadFile],
+    [uploadFile]
   );
 
   return { uploadFile, dragEvents, reset, src, setSrc };

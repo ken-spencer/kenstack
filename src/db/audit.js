@@ -12,7 +12,7 @@ function saveLog(user) {
       modelName,
       changes: this.getChanges(),
     },
-    user,
+    user
   );
   return this.save();
 }

@@ -21,7 +21,7 @@ const Library = dynamic(
   {
     ssr: false,
     loading: Loading,
-  },
+  }
 );
 
 export default function LibraryIndex() {

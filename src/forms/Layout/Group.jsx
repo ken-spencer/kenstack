@@ -22,19 +22,19 @@ export default function Group(props) {
         card ? "border border-gray-500 rounded" : "",
         "col-span-12",
         span,
-        containerClass,
+        containerClass
       ),
-    [card, containerClass, span],
+    [card, containerClass, span]
   );
 
   const classesTitle = useMemo(
     () => twMerge(card ? "bg-gray-300 dark:bg-gray-700  px-2" : "", titleClass),
-    [card, titleClass],
+    [card, titleClass]
   );
 
   const classesBody = useMemo(
     () => twMerge(card ? "p-2" : "", "grid grid-cols-12 gap-2", bodyClass),
-    [card, bodyClass],
+    [card, bodyClass]
   );
 
   /*

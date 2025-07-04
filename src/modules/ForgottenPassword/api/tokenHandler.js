@@ -22,7 +22,7 @@ export default function API(session) {
 
     const errorResponse = (message) => {
       const redirect = NextResponse.redirect(
-        origin + session.forgottenPasswordPath,
+        origin + session.forgottenPasswordPath
       );
       redirect.cookies.set("forgottenPassword", message);
 
@@ -43,7 +43,7 @@ export default function API(session) {
     const now = new Date();
     if (fp.expiry < now || fp.usedAt) {
       return errorResponse(
-        "Your link has expired. Please request an updated email and try again.",
+        "Your link has expired. Please request an updated email and try again."
       );
     }
 
@@ -58,7 +58,7 @@ export default function API(session) {
     } catch (e) {
       errorLog(e, "Problem logging in");
       return errorResponse(
-        "There was an unexpected problem logging in. Please try again later",
+        "There was an unexpected problem logging in. Please try again later"
       );
     }
 

@@ -44,7 +44,7 @@ const API = (session, props) => {
         country: "United States",
         region: "Texas",
       },
-      null,
+      null
     );
 
     const html = await render(emailElement);

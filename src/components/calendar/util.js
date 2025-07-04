@@ -35,7 +35,7 @@ const getMonthNames = (locale) => {
   for (let month = 0; month < 12; month++) {
     const date = new Date(Date.UTC(2020, month, 1)); // Year is arbitrary; choose a leap year for full February
     monthNames.push(
-      new Intl.DateTimeFormat(locale, { month: "long" }).format(date),
+      new Intl.DateTimeFormat(locale, { month: "long" }).format(date)
     );
   }
   return monthNames;
@@ -46,7 +46,7 @@ const getWeekdayNames = (locale) => {
   for (let day = 0; day < 7; day++) {
     const date = new Date(Date.UTC(2020, 5, day + 1)); // Year and month are arbitrary, start from Sunday
     weekdayNames.push(
-      new Intl.DateTimeFormat(locale, { weekday: "short" }).format(date),
+      new Intl.DateTimeFormat(locale, { weekday: "short" }).format(date)
     );
   }
   return weekdayNames;

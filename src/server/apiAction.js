@@ -9,7 +9,7 @@ import Session from "@kenstack/server/Session";
 export default async function apiAction(
   actionData, // function or Map of actions
   request,
-  { roles = [], session, middleware, ...props } = {},
+  { roles = [], session, middleware, ...props } = {}
 ) {
   const contentType = request.headers.get("content-type");
 

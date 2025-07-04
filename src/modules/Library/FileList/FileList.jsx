@@ -41,7 +41,7 @@ export default function FileList() {
       var dt = evt.dataTransfer;
       prepareUpload(dt.files);
     },
-    [prepareUpload],
+    [prepareUpload]
   );
 
   return (

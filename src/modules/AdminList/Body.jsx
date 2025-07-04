@@ -29,7 +29,7 @@ export default function AdminListBody() {
         select(id);
       }
     },
-    [selected, select, deselect, userId],
+    [selected, select, deselect, userId]
   );
 
   const list = admin.getList();

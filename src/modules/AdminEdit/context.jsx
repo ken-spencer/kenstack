@@ -22,7 +22,7 @@ export function AdminEditProvider({
   const pathname = usePathname();
   const basePathname = useMemo(
     () => pathname.replace(/\/(new|[0-9a-fA-F]{24})$/, ""),
-    [pathname],
+    [pathname]
   );
 
   const params = useParams();
@@ -37,7 +37,7 @@ export function AdminEditProvider({
 
   const store = useMemo(
     () => admin.form.createStore({ values: initialRow ?? {}, apiPath }),
-    [initialRow, admin.form, apiPath],
+    [initialRow, admin.form, apiPath]
   );
 
   const { data, error } = useQuery({
@@ -93,7 +93,7 @@ export function AdminEditProvider({
       apiPath,
       basePathname,
       data,
-    ],
+    ]
   );
 
   if (data?.error || error) {
@@ -113,7 +113,7 @@ export function useAdminEdit() {
   const keys = Object.keys(context);
   if (!keys.length) {
     throw Error(
-      "Unable to fetch AdminEditContext. Please ensure that the admin edit Provider is present",
+      "Unable to fetch AdminEditContext. Please ensure that the admin edit Provider is present"
     );
   }
 

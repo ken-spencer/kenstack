@@ -3,7 +3,7 @@
 export default async function apiAction(
   path,
   data,
-  { invalidateQueries, action, signal, ...props } = {},
+  { invalidateQueries, action, signal, ...props } = {}
 ) {
   let headers = {},
     body;
