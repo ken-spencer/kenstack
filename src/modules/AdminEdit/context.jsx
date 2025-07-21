@@ -57,6 +57,7 @@ export function AdminEditProvider({
     },
     refetchOnMount: false,
     refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     enabled: isNew === false,
   });
 

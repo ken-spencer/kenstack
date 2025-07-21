@@ -6,7 +6,7 @@ import { cookies } from "next/headers";
 import { cache } from "react";
 import ms from "ms";
 
-import { jwtVerify, SignJWT } from "jose";
+import { jwtVerify, SignJWT, errors as JoseErrors } from "jose";
 
 import auditLog from "../log/audit";
 import SessionModel, { SessionStore } from "@kenstack/models/Session";
@@ -342,8 +342,15 @@ const getClaims = cache(async () => {
   try {
     jwt = await jwtVerify(token, secret);
   } catch (e) {
-    // eslint-disable-next-line no-console
-    console.error(e.message);
+    if (
+      !(
+        e instanceof JoseErrors.JWTExpired ||
+        e instanceof JoseErrors.JWSSignatureVerificationFailed
+      )
+    ) {
+      // eslint-disable-next-line no-console
+      console.error(e.message);
+    }
     return false;
   }
 
