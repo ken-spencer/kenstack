@@ -31,8 +31,15 @@ const recaptcha =
 
     const verification = await verificationRes.json();
     if (!verification.success || verification.score < 0.5) {
+      let logData = { ...data };
+      for (const f of ["password", "confirmPassword"]) {
+        if (f in logData) {
+          logData[f] = "* * * * * * * *";
+        }
+      }
+
       // eslint-disable-next-line no-console
-      console.log("Contact captcha failed with: ", verification, data);
+      console.error("Contact captcha failed with: ", verification, logData);
       return Response.json({
         error: "Couldn’t verify you’re human. Please try again.",
       });
