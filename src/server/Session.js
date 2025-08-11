@@ -143,7 +143,7 @@ export default class Session {
     const cookieStore = await cookies();
     cookieStore.delete("auth");
 
-    if (this.doain) {
+    if (this.domain) {
       cookieStore.delete("auth", {
         domain: this.domain,
       });
@@ -158,7 +158,7 @@ export default class Session {
     // });
 
     await SessionModel.deleteOne({ _id: claims.sid });
-
+    //
     return true;
   }
 
