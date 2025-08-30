@@ -1,2 +1,0 @@
-
-* set min / max values based on how many pixels there are. We don't want to over zoom. 
