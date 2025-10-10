@@ -1,24 +1,27 @@
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import js from "@eslint/js";
+import { dirname } from "path";
+import { fileURLToPath } from "url";
 import { FlatCompat } from "@eslint/eslintrc";
 
-import reactCompiler from 'eslint-plugin-react-compiler';
+import reactCompiler from "eslint-plugin-react-compiler";
+import importPlugin from "eslint-plugin-import";
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = dirname(__filename);
+
 const compat = new FlatCompat({
-    baseDirectory: __dirname,
-    recommendedConfig: js.configs.recommended,
-    allConfig: js.configs.all
+  baseDirectory: __dirname,
 });
 
-
-const config = [
+const eslintConfig = [
   {
-    ignores: ["node_modules/**", "src/TODO/**", "**/_sample/**"],
+    ignores: [
+      "node_modules/**",
+      ".next/**",
+      "out/**",
+      "build/**",
+      "next-env.d.ts",
+    ],
   },
-  // js.configs.recommended, // think this is baked in below
   ...compat.extends("next/core-web-vitals", "next/typescript", "prettier"),
   {
     rules: {
@@ -29,28 +32,42 @@ const config = [
   {
     files: ["**/*.js", "**/*.jsx", "**/*.ts", "**/*.tsx"],
     plugins: {
-      'react-compiler': reactCompiler,
+      import: importPlugin,
+      "react-compiler": reactCompiler,
     },
     settings: {
       "import/resolver": {
-        alias: {
-          map: [["@kenstack", "./src"]],
-          extensions: [".js", ".jsx", ".ts", ".tsx", ".json"],
+        typescript: {
+          project: "./tsconfig.json", // or "tsconfig.base.json" if that’s what you use
         },
       },
-    },    
+    },
+    // settings: {
+    //   "import/resolver": {
+    //     alias: {
+    //       map: [["@kenstack", "./kenstack/src"], ["@", "./src"]],
+    //       extensions: [".js", ".jsx", ".ts", ".tsx", ".json"],
+    //     },
+    //   },
+    // },
     rules: {
       "no-unreachable": "error",
-      "@typescript-eslint/no-unused-vars": ["error", { "args": "none" }],
+      "@typescript-eslint/no-unused-vars": ["error", { args: "none" }],
       "no-unused-vars": "off",
-      "@typescript-eslint/no-shadow": ["error", { "hoist": "all", "builtinGlobals": false }],
+      // "@typescript-eslint/no-shadow": ["error", { "hoist": "all", "builtinGlobals": false }],
       "no-console": "error",
       "no-undef": "error",
       "import/no-unresolved": "error",
-
-    }
+      // "no-duplicate-imports": "error",
+      "@typescript-eslint/no-redeclare": "error",
+    },
   },
-
-
+  {
+    files: ["**/*.ts", "**/*.tsx"],
+    rules: {
+      "no-undef": "off",
+    },
+  },
 ];
-export default config;
+
+export default eslintConfig;
