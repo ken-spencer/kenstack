@@ -24,8 +24,7 @@ export default function MarkdownField({
   label,
   description,
   className,
-  inputClass,
-  ...props
+  // ...props
 }: InputProps) {
   const ref = useRef(null);
   const { setValue, getValues } = useFormContext();

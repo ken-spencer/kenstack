@@ -20,7 +20,6 @@ export default function UrlField({
   label,
   description,
   className,
-  inputClass,
   icon = "url",
   ...props
 }: InputProps) {

@@ -15,7 +15,6 @@ export default function SwitchField({
   label,
   description,
   className,
-  inputClass,
 }: SwitchFieldProps) {
   return (
     <Field

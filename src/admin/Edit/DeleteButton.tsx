@@ -27,7 +27,7 @@ export default function DeleteButton() {
     mutationFn: async (idToRemove: string) =>
       fetcher(apiPath + "/remove", { remove: [idToRemove] }),
     onMutate: async () => {},
-    onError: (err, _variables, context) => {
+    onError: (err) => {
       setStatusMessage({
         status: "error",
         message:

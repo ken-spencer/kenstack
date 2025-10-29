@@ -132,7 +132,7 @@ export default function TagSearcht({ field }) {
         </PopoverTrigger>
 
         <PopoverContent
-          className="m-0 w-[var(--radix-popover-trigger-width)] p-0"
+          className="m-0 w-(--radix-popover-trigger-width) p-0"
           onOpenAutoFocus={(e) => {
             // prevent the Popover from moving focus into itself
             e.preventDefault();
@@ -165,7 +165,7 @@ export default function TagSearcht({ field }) {
                       key={tag.name}
                       className="block cursor-pointer"
                       value={tag.slug}
-                      onSelect={(v) => {
+                      onSelect={() => {
                         const newValue = [...field.value, tag].sort((a, b) =>
                           a.name.localeCompare(b.name)
                         );

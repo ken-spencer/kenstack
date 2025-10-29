@@ -122,7 +122,7 @@ function FormProvider<
       //eslint-disable-next-line no-console
       console.error(err);
     },
-    onSuccess: (data, variables, context) => {
+    onSuccess: (data, variables) => {
       if ("error" === data.status) {
         const extraErrors = [];
         const { fieldErrors /*, formErrors*/ } = data;

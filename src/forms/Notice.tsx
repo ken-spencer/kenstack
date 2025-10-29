@@ -23,7 +23,7 @@ export default function NoticeList() {
   return (
     <Alert ref={ref} status={statusMessage.status} className="scroll-mt-12">
       <div className="flex items-center">
-        <div className="flex-grow">{statusMessage.message}</div>
+        <div className="grow">{statusMessage.message}</div>
         <Button
           size="icon"
           className="flex-0"

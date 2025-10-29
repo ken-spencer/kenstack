@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 import * as React from "react";
 import { Funnel, ChevronDown } from "lucide-react";
@@ -20,19 +20,11 @@ const Filter: React.FC = () => {
   // const { getValues } = useFormContext();
   const [open, setOpen] = useState(false);
   const { adminConfig, filters: filterStore, setFilters } = useAdminList();
-  const [hydrated, setHydrated] = useState(false);
-  // const [state, setState, hydrated] = usePersistedState(
-  //   "admin-filters",
-  //   adminConfig.filters ? adminConfig.filters.defaultValues : {}
-  // );
 
   const value = [];
-  useEffect(() => {
-    setHydrated(true);
-  }, []);
 
   const filters = adminConfig.filters;
-  if (!hydrated || !filters) {
+  if (typeof document === "undefined" || !filters) {
     return null;
   }
   // console.log("foo", state);

@@ -15,7 +15,7 @@ function objectId<T extends "client" | "server">(mode: T): Return<T> {
       z
         .any()
         // .transform((v) => (isObjectId(v) ? v.toHexString() : v))
-        .transform((v, ctx) => {
+        .transform((v) => {
           if (isObjectId(v)) {
             return v.toHexString();
           }

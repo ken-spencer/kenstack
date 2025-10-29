@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import Notice from "@kenstack/forms/Notice";
 import Alert from "@kenstack/components/Alert";
 import { useFormContext } from "react-hook-form";
@@ -9,15 +9,28 @@ export default function AdminEditAlerts() {
     formState: { isSubmitted, isValid, submitCount, errors },
   } = useFormContext();
   const { renderedFields } = useForm();
+  const [lastSubmitCount, setLastSubmitCount] = useState(submitCount);
 
   const [showAlert, setShowAlert] = useState(false);
-  const lastSubmitCount = useRef(submitCount);
-  useEffect(() => {
-    if (lastSubmitCount.current !== submitCount) {
-      setShowAlert(isSubmitted && !isValid);
-    }
-    lastSubmitCount.current = submitCount;
-  }, [isSubmitted, isValid, submitCount]);
+  // const lastSubmitCount = useRef(submitCount);
+
+  // let showAlert = false;
+  // if (lastSubmitCount.current !== submitCount) {
+  //   showAlert = isSubmitted && !isValid;
+  //   lastSubmitCount.current = submitCount;
+  // }
+
+  // useEffect(() => {
+  //   if (lastSubmitCount.current !== submitCount) {
+  //     setShowAlert(isSubmitted && !isValid);
+  //   }
+  //   lastSubmitCount.current = submitCount;
+  // }, [isSubmitted, isValid, submitCount]);
+
+  if (lastSubmitCount !== submitCount) {
+    setLastSubmitCount(submitCount);
+    setShowAlert(isSubmitted && !isValid);
+  }
 
   return (
     <>

@@ -1,5 +1,5 @@
 import * as z from "zod";
-import unsecureId from "@kenstack/admin/utils/unsecureId";
+import unsecureId from "@kenstack/lib/unsecureId";
 import normalizeFilename from "@kenstack/admin/utils/normalizeFilename";
 
 const postSchema = z.object({

@@ -1,6 +1,6 @@
 import { basename, extname } from "path";
 
-import unsecureId from "@kenstack/admin/utils/unsecureId";
+import unsecureId from "@kenstack/lib/unsecureId";
 
 export default function normalizeFilename(filename: string) {
   const retval = basename(filename, extname(filename))

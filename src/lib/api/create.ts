@@ -10,7 +10,7 @@ const create =
     collection: string,
     { defaultValues = {} }: CreateProps = {}
   ): PipelineAction =>
-  async ({ schema, data, response }) => {
+  async ({ data, response }) => {
     let result;
     try {
       result = await insertOne(collection, {

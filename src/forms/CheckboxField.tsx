@@ -31,7 +31,7 @@ export default function CheckboxField({
             {...props}
             className={inputClass}
             {...field}
-            onClick={(evt) => {
+            onClick={() => {
               field.onChange(!field.value);
             }}
             checked={field.value}
