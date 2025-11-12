@@ -1,11 +1,9 @@
 import { getDb } from "@kenstack/lib/db";
 import errorLog from "@kenstack/lib/errorLog";
 
-// import * as z from "zod";
+import { getClaims } from "@kenstack/lib/auth";
 import { pipeline, type PipelineAction } from "@kenstack/lib/api";
 import { type AdminServerConfig } from "../types";
-// import { objectId } from "@kenstack/schemas/atoms";
-// const schema = z.object({ id: objectId("server") });
 
 import getEditAggregations from "./getEditAggregations";
 
@@ -69,7 +67,9 @@ const loadAction =
       );
     }
 
+    const claims = await getClaims();
     return response.success({
+      userId: claims ? claims.sub : null,
       item: {
         ...{ ...adminConfig.defaultValues, ...doc },
         // meta: {

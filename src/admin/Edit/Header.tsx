@@ -18,7 +18,7 @@ export default function AdminEditHeader() {
   const { listPath, adminConfig, isNew, item } = useAdminEdit();
   return (
     <div className="flex gap-4 border-b">
-      <div className="flex flex-grow gap-1">
+      <div className="flex grow gap-1">
         <IconButton
           disabled={!isDirty || mutation.isPending}
           isPending={mutation.isPending && mutation.variables.action === "new"}

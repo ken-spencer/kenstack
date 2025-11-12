@@ -22,6 +22,7 @@ type AdminEditContext<
 > = {
   type: string;
   id: string;
+  userId: string;
   isNew: boolean;
   apiPath: string;
   listPath: string;
@@ -51,7 +52,7 @@ export function AdminEditProvider({ adminConfig, children }: AdminEditProps) {
   }, [pathname]);
 
   const { data, error, isPending } = useQuery<
-    FetchResult<{ item: Record<string, unknown> }>
+    FetchResult<{ item: Record<string, unknown>; userId: string }>
   >({
     queryFn: () => fetcher(apiPath + "/load", { id }),
     queryKey: ["admin-edit", id],
@@ -85,6 +86,7 @@ export function AdminEditProvider({ adminConfig, children }: AdminEditProps) {
     apiPath,
     listPath,
     adminConfig,
+    userId: id && data?.status === "success" ? data.userId : null,
     item: id && data?.status === "success" ? data.item : null,
     defaultValues,
   };

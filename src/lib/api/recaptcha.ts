@@ -1,3 +1,5 @@
+import { hasRole } from "../auth";
+
 type RecaptchaOptions = {
   /** name of the field in `data` that holds the token */
   field?: string;
@@ -18,6 +20,11 @@ const recaptcha =
     threshold = 0.5,
   }: RecaptchaOptions = {}): PipelineAction =>
   async ({ dataIn, data, response }) => {
+    if (await hasRole(["AUTHENTICATED"])) {
+      /** Skip recaptcha if logged in */
+      return;
+    }
+
     const secretKey = process.env.RECAPTCHA_SECRET_KEY;
     if (!secretKey) {
       throw new Error("RECAPTCHA_SECRET_KEY environment variable is not set");
@@ -43,7 +50,9 @@ const recaptcha =
 
     const verification =
       (await verificationRes.json()) as RecaptchaVerifyResponse;
+
     if (!verification.success || (verification.score ?? 0) < threshold) {
+      /** Sanitize the data before logging */
       const logData = typeof data === "object" ? { ...data } : {};
       for (const f of ["password", "confirmPassword"]) {
         if (f in logData) {
