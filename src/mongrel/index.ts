@@ -10,11 +10,13 @@ import type {
   Filter,
   AggregateOptions,
   UpdateFilter,
-  // WithId,
+  WithId,
   OptionalUnlessRequiredId,
   OptionalId,
+  FindOneAndUpdateOptions,
   UpdateOptions,
   UpdateResult,
+  ModifyResult,
   InsertOneResult,
   FindOptions,
   BulkWriteOptions,
@@ -31,12 +33,37 @@ export type Meta = {
 };
 
 export type WithMeta<TSchema> = TSchema & { _id?: ObjectId; meta: Meta };
+
 type Options<TSchema> = {
   defaultValues?: TSchema;
 };
 
-class Mongrel<TSchema extends Document> {
+type ProjectionShape<TSchema extends Document> = Partial<
+  Record<keyof WithId<TSchema>, 0 | false | 1 | true>
+>;
+
+type Prettify<T> = {
+  [K in keyof T]: T[K];
+} & {};
+
+type IdExcluded<T> = "_id" extends keyof T
+  ? T["_id"] extends 0 | false
+    ? true
+    : false
+  : false;
+
+type InferFindOneResult<TSchema extends Document, TResult> =
+  TResult extends ProjectionShape<TSchema>
+    ? Prettify<
+        IdExcluded<TResult> extends true
+          ? Pick<TSchema, Extract<keyof TSchema, keyof TResult>>
+          : WithId<Pick<TSchema, Extract<keyof TSchema, keyof TResult>>>
+      >
+    : WithId<TResult>;
+
+class MongrelImpl<TSchema extends Document> {
   declare readonly Schema: TSchema;
+  declare readonly Projection: ProjectionShape<TSchema>;
   readonly defaultValues: TSchema;
 
   constructor(
@@ -71,7 +98,7 @@ class Mongrel<TSchema extends Document> {
   /** find */
   async find<TResult extends Document = TSchema>(
     filter: Filter<WithMeta<TSchema>> = {},
-    options?: FindOptions<WithMeta<TSchema>>
+    options?: FindOptions
   ): Promise<TResult[]> {
     const collection = await this.getCollection();
 
@@ -86,10 +113,12 @@ class Mongrel<TSchema extends Document> {
   }
 
   /** findOne */
-  async findOne<TResult extends Document = TSchema>(
+  async findOne<
+    TResult extends ProjectionShape<TSchema> | Partial<WithId<TSchema>>,
+  >(
     filter: Filter<WithMeta<TSchema>> = {},
-    options?: FindOptions<WithMeta<TSchema>>
-  ): Promise<TResult | null> {
+    options?: FindOptions
+  ): Promise<InferFindOneResult<TSchema, TResult> | null> {
     const collection = await this.getCollection();
 
     const finalFilter = {
@@ -97,7 +126,10 @@ class Mongrel<TSchema extends Document> {
       ...filter,
     };
 
-    return collection.findOne<TResult>(finalFilter, options);
+    return await collection.findOne<InferFindOneResult<TSchema, TResult>>(
+      finalFilter,
+      options
+    );
   }
 
   /** aggregate */
@@ -114,7 +146,7 @@ class Mongrel<TSchema extends Document> {
 
   /** insertOne */
   async insertOne(
-    insert: OptionalUnlessRequiredId<TSchema>
+    insert: OptionalUnlessRequiredId<Partial<TSchema>>
   ): Promise<InsertOneResult<WithMeta<TSchema>>> {
     const collection = await this.getCollection();
 
@@ -127,12 +159,15 @@ class Mongrel<TSchema extends Document> {
       deleted: false,
     };
 
+    const defaults = defaultsFromSchema(this.schema);
     const documentWithMeta = {
+      ...defaults,
       ...insert,
       meta,
     } as unknown as OptionalUnlessRequiredId<WithMeta<TSchema>>;
 
-    return collection.insertOne(documentWithMeta);
+    const retval = await collection.insertOne(documentWithMeta);
+    return retval;
   }
 
   /** bulkWrite */
@@ -243,6 +278,22 @@ class Mongrel<TSchema extends Document> {
     return collection.bulkWrite(finalOps, options);
   }
 
+  async findOneAndUpdate<TResult extends Document = WithMeta<TSchema>>(
+    filter: Filter<WithMeta<TSchema>> = {},
+    update: UpdateFilter<WithMeta<TSchema>>,
+    options?: FindOneAndUpdateOptions
+  ): Promise<ModifyResult<TResult>> {
+    const collection = await this.getCollection();
+
+    const finalFilter = {
+      "meta.deleted": false,
+      ...filter,
+    };
+
+    const result = collection.findOneAndUpdate(finalFilter, update, options);
+    return result as unknown as ModifyResult<TResult>;
+  }
+
   /** updateOne */
   async updateOne(
     filter: Filter<WithMeta<TSchema>>,
@@ -266,19 +317,59 @@ class Mongrel<TSchema extends Document> {
     const finalUpdate = this.withTouchedMeta(
       update as UpdateFilter<WithMeta<TSchema>>
     );
+
     return collection.updateOne(filter, finalUpdate, options);
+  }
+
+  /** updateMany */
+  async updateMany(
+    filter: Filter<WithMeta<TSchema>>,
+    update: UpdateFilter<WithMeta<TSchema>>,
+    options?: UpdateOptions
+  ): Promise<UpdateResult> {
+    const collection = await this.getCollection();
+
+    if (!update || typeof update !== "object") {
+      throw new TypeError("updateOne: 'update' must be an object.");
+    }
+
+    if (!Object.keys(update).some((key) => key.startsWith("$"))) {
+      throw Error("Full document replacement is not supported");
+    }
+
+    if (Array.isArray(update)) {
+      throw new TypeError("updateMany: 'update' must not be an array.");
+    }
+
+    const finalUpdate = this.withTouchedMeta(
+      update as UpdateFilter<WithMeta<TSchema>>
+    );
+
+    return collection.updateMany(filter, finalUpdate, options);
+  }
+
+  schemaToProjection(userSchema: z.ZodObject | null = null) {
+    const schema = userSchema ?? this.schema;
+    const projection = Object.keys(schema.shape).reduce((acc, key) => {
+      acc[key] = true;
+      return acc;
+    }, {});
+
+    return projection;
   }
 }
 
-type MongrelReturn<T> = T extends z.ZodObject<infer S>
-  ? Mongrel<z.infer<z.ZodObject<S>>>
-  : T extends (...args: unknown[]) => unknown
-  ? Mongrel<z.infer<ReturnType<T>>>
-  : never;
+type MongrelReturn<T> =
+  T extends z.ZodObject<infer S>
+    ? Mongrel<z.infer<z.ZodObject<S>>>
+    : T extends (...args: unknown[]) => unknown
+      ? Mongrel<z.infer<ReturnType<T>>>
+      : never;
 
 function mongrel<T extends z.ZodObject | SchemaFactory>(
   collectionName: string,
-  schemaOrFactory: T
+  schemaOrFactory: T,
+  options: Options<T> = {}
 ): MongrelReturn<T> {
   const schema =
     typeof schemaOrFactory === "function"
@@ -286,8 +377,9 @@ function mongrel<T extends z.ZodObject | SchemaFactory>(
       : (schemaOrFactory as z.ZodObject);
 
   const defaultValues = defaultsFromSchema(schema);
-  return new Mongrel(collectionName, schema, {
+  return new MongrelImpl(collectionName, schema, {
     defaultValues,
+    ...options,
   }) as MongrelReturn<T>;
 }
 
@@ -325,4 +417,9 @@ function defaultsFromSchema<T extends z.ZodRawShape>(
   return out as { [K in keyof T]: unknown };
 }
 
+export type Project<M extends Mongrel, P extends Record<string, 1 | true>> = {
+  [K in keyof P & keyof M["Schema"]]: M["Schema"][K];
+};
+
+export type Mongrel<TSchema extends Document = Document> = MongrelImpl<TSchema>;
 export default mongrel;

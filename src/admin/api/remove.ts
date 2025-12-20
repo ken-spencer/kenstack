@@ -1,6 +1,3 @@
-import { getDb } from "@kenstack/lib/db";
-import { revalidatePath } from "next/cache";
-
 import { objectId } from "@kenstack/schemas/atoms";
 import * as z from "zod";
 
@@ -17,7 +14,7 @@ const remove = (request, adminConfig: AdminServerConfig) => {
 };
 
 const removeAction =
-  (adminConfig): PipelineAction<typeof schema> =>
+  (adminConfig: AdminServerConfig): PipelineAction<typeof schema> =>
   async ({ response, data }) => {
     // const result = schema.safeParse(data);
     // if (!result.success) {
@@ -28,8 +25,7 @@ const removeAction =
       return response.error("No records provided to delete.");
     }
 
-    const db = await getDb();
-    await db.collection(adminConfig.collection).updateMany(
+    await adminConfig.model.updateMany(
       { _id: { $in: data.remove } },
       {
         $set: {
@@ -38,25 +34,8 @@ const removeAction =
         },
       }
     );
-
-    if (
-      Array.isArray(adminConfig.revalidate) &&
-      adminConfig.revalidate.length
-    ) {
-      const docs = await db
-        .collection(adminConfig.collection)
-        .find({ _id: { $in: data.remove } })
-        .toArray();
-
-      docs.forEach((doc) => {
-        adminConfig.revalidate.forEach((arg) => {
-          if (typeof arg === "function") {
-            revalidatePath(arg({ id: doc._id.toHexString(), ...doc }));
-          } else {
-            revalidatePath(arg);
-          }
-        });
-      });
+    if (adminConfig.revalidate) {
+      await adminConfig.revalidate.onDelete(data.remove);
     }
 
     return response.success({});

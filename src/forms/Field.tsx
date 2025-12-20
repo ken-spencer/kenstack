@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { CircleAlert } from "lucide-react";
 
 import {
@@ -8,7 +7,6 @@ import {
   ControllerRenderProps,
   type ControllerFieldState,
 } from "react-hook-form";
-import { useForm } from "@kenstack/forms/context";
 
 import {
   // FormControl,
@@ -45,18 +43,8 @@ const Field: React.FC<FieldPropsLocal> = ({
   ...props
 }) => {
   const { control } = useFormContext();
-  const { renderedFields } = useForm();
 
   /** Keep track of list of rendered fields so we can display errors for non rendered fields  * */
-  useEffect(() => {
-    if (!name) {
-      return;
-    }
-    renderedFields.add(name);
-    return () => {
-      renderedFields.delete(name);
-    };
-  }, [name, renderedFields]);
   return (
     <FormField
       control={control}

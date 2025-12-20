@@ -54,7 +54,6 @@ export type UseFormResult<
 > = {
   apiPath?: string;
   form: UseFormReturn<Record<string, unknown>>;
-  renderedFields: Set<string>;
   statusMessage: StatusMessage | null;
   setStatusMessage: React.Dispatch<React.SetStateAction<StatusMessage | null>>;
   mutation: UseMutationResult<
@@ -91,7 +90,6 @@ function FormProvider<
     mode: "onBlur", // validate fields on blur
     shouldFocusError: true,
   });
-  const renderedFields = new Set<string>();
 
   const { resetField, setError, clearErrors } = form;
 
@@ -139,7 +137,7 @@ function FormProvider<
                 //   : true,
               }
             );
-            if (renderedFields.has(field) === false) {
+            if (!form.control._fields[field]) {
               extraErrors.push(
                 <li
                   key={index}
@@ -200,7 +198,6 @@ function FormProvider<
   const values = {
     apiPath,
     form,
-    renderedFields,
     statusMessage,
     setStatusMessage,
     mutation,

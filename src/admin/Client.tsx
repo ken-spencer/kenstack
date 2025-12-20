@@ -5,6 +5,7 @@ import merge from "lodash-es/merge";
 
 import AdminList from "@kenstack/admin/List";
 import Edit from "@kenstack/admin/Edit";
+import Suspense from "@kenstack/components/Suspense";
 
 import { type ClientConfig } from "@kenstack/admin/types";
 
@@ -28,7 +29,9 @@ export default function AdminClient({ config }: AdminClientProps) {
         {Icon && <Icon className="size-4 text-gray-800" />}{" "}
         <span className="font-bold">{admin.title}</span>
       </div>
-      <AdminRoute admin={admin} />
+      <Suspense>
+        <AdminRoute admin={admin} />
+      </Suspense>
     </div>
   );
 }

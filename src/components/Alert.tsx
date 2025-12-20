@@ -44,7 +44,7 @@ const Alert: React.FC<AlertProps> = ({
       )}
     >
       <Icon className="size-8" />
-      <div className="flex-grow">{message ?? children}</div>
+      <div className="grow">{message ?? children}</div>
     </div>
   );
 };

@@ -1,7 +1,8 @@
-import { ServerEvents /*Sort*/ } from "mongodb";
+import { type WithId /*ServerEvents*/ /*Sort*/ } from "mongodb";
+import { type WithMeta } from "@kenstack/mongrel";
 import * as z from "zod";
 
-import { getDb } from "@kenstack/lib/db";
+// import { getDb } from "@kenstack/lib/db";
 // import { ObjectId } from "mongodb";
 
 import type { PipelineAction } from "@kenstack/lib/api";
@@ -21,7 +22,7 @@ const list = (request, adminConfig: AdminServerConfig) => {
 };
 
 const listAction =
-  (adminConfig): PipelineAction<typeof querySchema> =>
+  (adminConfig: AdminServerConfig): PipelineAction<typeof querySchema> =>
   async ({ response, data }) => {
     const { keywords, page } = data;
     const limit = adminConfig.list.limit || 25;
@@ -38,19 +39,22 @@ const listAction =
         });
       }
     }
-    type EntityServer = z.infer<typeof adminConfig.schemaServer>;
+    // type EntityServer = z.infer<typeof adminConfig.schemaServer>;
 
     const aggregations = adminConfig.list?.aggregate
       ? adminConfig.list.aggregate({ data })
       : [];
 
-    const db = await getDb();
+    // const db = await getDb();
 
-    const [res] = await db
-      .collection<ServerEvents>(adminConfig.collection)
+    // const [res] = await db
+    //   .collection<ServerEvents>(adminConfig.collection)
+    //   .aggregate<{
+    const [res] = await adminConfig.model
       .aggregate<{
         metadata: { total: number }[];
-        data: EntityServer[];
+        data: WithMeta<WithId<Record<string, unknown>>>[];
+        // data: EntityServer[];
       }>([
         { $match: filter },
         ...aggregations,

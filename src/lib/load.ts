@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { cache } from "react";
+import { cacheLife } from "next/cache";
 
 import { getCollection } from "@kenstack/lib/db";
 
@@ -16,6 +17,9 @@ const schema = z.object({
 type Content = z.infer<typeof schema>;
 
 export const loadMD = cache(async (localPath: string): Promise<Content> => {
+  "use cache";
+  cacheLife("max");
+
   const Content = await getCollection("content");
 
   const doc = await Content.findOne({
@@ -27,7 +31,7 @@ export const loadMD = cache(async (localPath: string): Promise<Content> => {
   }
 
   return {
-    seoTitle: "GiveRound",
+    // seoTitle: "GiveRound",
   };
 });
 

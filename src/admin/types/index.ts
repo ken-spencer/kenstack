@@ -1,6 +1,7 @@
 import type { ComponentType, SVGProps } from "react";
 import type { /*PipelineSchema,*/ SchemaFactory } from "@kenstack/schemas";
 import { type Document } from "mongodb";
+import { type Revalidator } from "@kenstack/mongrel/revalidator";
 import * as z from "zod";
 
 type BaseList = {
@@ -40,17 +41,25 @@ export type AdminSharedConfig = {
   edit?: BaseEdit;
 };
 
+import { type Mongrel } from "@kenstack/mongrel";
+
 export type AdminServerOnlyConfig = {
   // schemaServer: ZodObject;
+  //eslint-disable-next-line @typescript-eslint/no-explicit-any
+  model: Mongrel<any>;
+  revalidate?: Revalidator;
   /** MongoDB collection name */
-  collection: string;
+  // collection: string;
   /** Routes to revalidate with revalidatePath */
-  revalidate?: (
-    | `/${string}`
-    | ((params: Record<string, unknown>) => `/${string}`)
-  )[];
+  // revalidate?: (
+  //   | `/${string}`
+  //   | ((params: { id: string; slug: string }) => `/${string}`)
+  // )[];
   /** Tags to revalidate with revalidateTag */
-  revalidateTags?: string[];
+  // revalidateTags?: (
+  //   | string
+  //   | ((params: { id: string; slug: string }) => `${string}`)
+  // )[];
   list: BaseList & {
     aggregate?: (options?: { data: Record<string, unknown> }) => Document[];
     select: Partial<Record<string, 1>>;

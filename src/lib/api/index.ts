@@ -1,8 +1,9 @@
 export { default as pipeline } from "./pipeline";
 export { default as recaptcha } from "./recaptcha";
 export { default as authenticate } from "./authenticate";
-export { default as create } from "./create";
-export { default as update } from "./update";
+// export { default as create } from "./create";
+// export { default as update } from "./update";
+export { default as saveErrorResponse } from "./saveErrorResponse";
 
 import type { ObjectId } from "mongodb";
 

@@ -135,7 +135,8 @@ type SessionUser = {
 
 export const login = async (
   userId: string | ObjectId,
-  extraClaims: Record<string, unknown> = {}
+  extraClaims: Record<string, unknown> = {},
+  auditAction: string = "login"
 ): Promise<boolean> => {
   const id = userId instanceof ObjectId ? userId : new ObjectId(userId);
   const db = await getDb();
@@ -149,7 +150,7 @@ export const login = async (
   if (!user) {
     return false;
   }
-  auditLog("login", null, null, userId);
+  auditLog(auditAction, null, null, userId);
 
   const expiresAt = new Date(Date.now() + ttl);
 

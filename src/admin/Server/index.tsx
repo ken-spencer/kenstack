@@ -4,6 +4,7 @@ import { ServerProvider } from "./context";
 import { ObjectId } from "mongodb";
 // import merge from "lodash-es/merge";
 import { notFound } from "next/navigation";
+import { cacheLife } from "next/cache";
 
 type AdminServerProps = {
   context: {
@@ -18,6 +19,9 @@ export default async function AdminServer({
   config,
   children,
 }: AdminServerProps) {
+  "use cache";
+  cacheLife("max");
+
   const { type, id } = await params;
 
   if (id && id !== "new" && !ObjectId.isValid(id)) {

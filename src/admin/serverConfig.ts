@@ -5,9 +5,23 @@ import {
 } from "@kenstack/admin/types";
 import merge from "lodash-es/merge";
 
-export default function clientConfig(
+import { type RevalidateKey } from "@kenstack/mongrel/types";
+import revalidator, { type Revalidator } from "@kenstack/mongrel/revalidator";
+
+type ServerOnlyConfigInput = Omit<AdminServerOnlyConfig, "revalidate"> & {
+  revalidate?: RevalidateKey[] | Revalidator;
+};
+
+export default function serverConfig(
   sharedConfig: AdminSharedConfig,
-  serverConfig: AdminServerOnlyConfig
+  serverConfig: ServerOnlyConfigInput
 ): AdminServerConfig {
-  return merge({}, sharedConfig, serverConfig);
+  const serverProcessed: AdminServerOnlyConfig = {
+    ...serverConfig,
+    revalidate: Array.isArray(serverConfig.revalidate)
+      ? revalidator(serverConfig.model, serverConfig.revalidate)
+      : serverConfig.revalidate,
+  };
+
+  return merge({}, sharedConfig, serverProcessed);
 }

@@ -1,4 +1,3 @@
-import { getDb } from "@kenstack/lib/db";
 import errorLog from "@kenstack/lib/errorLog";
 
 import { getClaims } from "@kenstack/lib/auth";
@@ -40,11 +39,12 @@ const loadAction =
     //     ];
 
     const aggregations = getEditAggregations(adminConfig);
-    const db = await getDb();
+    // const db = await getDb();
     let doc;
     try {
-      doc = await db
-        .collection(adminConfig.collection)
+      // doc = await db
+      //   .collection(adminConfig.collection)
+      doc = await adminConfig.model
         .aggregate([
           { $match: { _id: id, "meta.deleted": false } },
           ...aggregations,

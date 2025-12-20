@@ -2,13 +2,12 @@ import { useState } from "react";
 import Notice from "@kenstack/forms/Notice";
 import Alert from "@kenstack/components/Alert";
 import { useFormContext } from "react-hook-form";
-import { useForm } from "@kenstack/forms/context";
 
 export default function AdminEditAlerts() {
   const {
     formState: { isSubmitted, isValid, submitCount, errors },
+    control,
   } = useFormContext();
-  const { renderedFields } = useForm();
   const [lastSubmitCount, setLastSubmitCount] = useState(submitCount);
 
   const [showAlert, setShowAlert] = useState(false);
@@ -42,7 +41,7 @@ export default function AdminEditAlerts() {
           </div>
           <ul className="empty:hidden mt-4 pl-8 list-disc">
             {Object.entries(errors).reduce((acc, [name, { message }]) => {
-              if (!renderedFields.has(name)) {
+              if (!control._fields[name]) {
                 acc.push(
                   <li
                     key={name}
