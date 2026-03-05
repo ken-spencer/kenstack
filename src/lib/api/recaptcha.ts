@@ -1,4 +1,4 @@
-import { hasRole } from "../auth";
+import { deps } from "@app/deps";
 
 type RecaptchaOptions = {
   /** name of the field in `data` that holds the token */
@@ -14,13 +14,19 @@ type RecaptchaVerifyResponse = {
 
 import type { PipelineAction } from "@kenstack/lib/api";
 
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
 const recaptcha =
   ({
     field = "recaptchaToken",
     threshold = 0.5,
   }: RecaptchaOptions = {}): PipelineAction =>
   async ({ dataIn, data, response }) => {
-    if (await hasRole(["AUTHENTICATED"])) {
+    if (!isObject(dataIn)) {
+      return response.error("Missing input on recaptcha");
+    }
+    if (await deps.auth.getCurrentUser()) {
       /** Skip recaptcha if logged in */
       return;
     }

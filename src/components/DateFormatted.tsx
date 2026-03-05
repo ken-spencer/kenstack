@@ -1,7 +1,10 @@
 import { useMemo } from "react";
 
 import { DateTime } from "luxon";
-export default function DateFormatted({ date, ...props }) {
+export default function DateFormatted({
+  date,
+  ...props
+}: React.ComponentProps<"time"> & { date: string }) {
   // const [formatted, setFormatted] = useState('');
 
   const formatted = useMemo(() => {

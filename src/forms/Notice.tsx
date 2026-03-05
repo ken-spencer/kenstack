@@ -8,7 +8,7 @@ import { CircleX } from "lucide-react";
 
 export default function NoticeList() {
   const { statusMessage, setStatusMessage } = useForm();
-  const ref = useRef(null);
+  const ref = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (ref.current) {
       ref.current.scrollIntoView({

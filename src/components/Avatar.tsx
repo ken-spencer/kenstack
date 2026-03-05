@@ -21,7 +21,7 @@ const palette = [
 ];
 
 type AvatarProps = {
-  url?: string;
+  url?: string | null;
   initials?: string;
   className?: string;
 };

@@ -1,35 +1,35 @@
 import errorLog from "@kenstack/lib/errorLog";
 import { NextRequest, NextResponse } from "next/server";
 import type { PipelineAction, PipelineContext } from ".";
-import { type PipelineSchema } from "@kenstack/schemas";
 
 import { type FetchError } from "@kenstack/lib/fetcher";
 
-import { z } from "zod";
-// type Merge<A, B> = Omit<A, keyof B> & B;
+import * as z from "zod";
 
 import isPlainObject from "lodash-es/isPlainObject";
 
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { PipelineResponse } from "./PipelineResponse";
 
-import { objectId } from "@kenstack/schemas/atoms";
-const idSchema = objectId("server").default(null);
+// import { objectId } from "@kenstack/schemas/atoms";
+// const idSchema = objectId("server").default(null);
 
-import { type SchemaFactory } from "@kenstack/schemas";
-export default async function pipeline<
-  TSchema extends PipelineSchema = z.ZodObject,
->(
-  request: NextRequest,
-  schemaOrFactory: TSchema | SchemaFactory = null,
-  actions: PipelineAction<TSchema>[] = [],
-  options: Record<string, unknown> = {}
+export type PipelineOptions<TSchema extends z.ZodType> = {
+  request: NextRequest;
+  schema?: TSchema;
+  json?: Record<string, unknown>;
+} & Record<string, unknown>;
+
+export default async function pipeline<TSchema extends z.ZodType>(
+  options: PipelineOptions<TSchema>,
+  actions: PipelineAction<TSchema>[] = []
 ) {
+  const { request, schema, ...localOptions } = options;
   /** Build schema from factory function when needed */
-  const schema =
-    typeof schemaOrFactory === "function"
-      ? schemaOrFactory("server")
-      : schemaOrFactory;
+  // const schema =
+  //   schemaOrFactory && typeof schemaOrFactory === "function"
+  //     ? schemaOrFactory("server")
+  //     : schemaOrFactory;
 
   const contentType = request.headers.get("content-type");
   if (!contentType?.startsWith("application/json")) {
@@ -38,36 +38,42 @@ export default async function pipeline<
       message: "Invalid request. Only JSON is accepted.",
     } satisfies FetchError);
   }
-  const { id, ...json } = await request.json();
+  const { id, ...json } = localOptions?.json ?? (await request.json());
 
-  let parsedId = null;
-  const idCheck = idSchema.safeParse(id);
+  let parsedId;
+  const idCheck = z.number().optional().safeParse(id);
   if (idCheck.success) {
     parsedId = idCheck.data;
   }
 
-  let parsed;
+  let data;
   if (schema) {
-    parsed = await schema.safeParseAsync(json);
+    const parsed = await schema.safeParseAsync(json);
     if (!parsed.success) {
       const { fieldErrors } = z.flattenError(parsed.error);
 
       return NextResponse.json({
         status: "error",
         message: "Please review the() form and correct the highlighted fields.",
-        fieldErrors,
+        fieldErrors: fieldErrors as Record<string, string[]>,
       } satisfies FetchError);
     }
+    data = parsed.data; // as Record<string, unknown>;
   }
+
+  if (!data) {
+    throw Error("data is missing");
+  }
+
   const response = new PipelineResponse();
   let context: PipelineContext<TSchema> = {
-    ...options,
+    ...localOptions,
     id: parsedId,
     request,
     response,
     schema,
     dataIn: json,
-    data: schema ? parsed.data : null, // as z.output<typeof schema>,
+    data,
   };
 
   for (const [key, action] of actions.entries()) {
@@ -79,7 +85,12 @@ export default async function pipeline<
         throw e;
       }
 
-      errorLog(e, `Fatal Error on apiPipleine key ${key}`);
+      if (e instanceof Error) {
+        errorLog(e, `Fatal Error on apiPipleine key ${key}`);
+      } else {
+        // eslint-disable-next-line no-console
+        console.error("Unknown error", e);
+      }
       return NextResponse.json({
         status: "error",
         message:

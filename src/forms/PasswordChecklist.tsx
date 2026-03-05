@@ -2,19 +2,19 @@ import { Check, X } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 const rules = [
   {
-    test: (val) => /[a-z]/.test(val),
+    test: (val: string) => /[a-z]/.test(val),
     label: "Have at least one lower case letter",
   },
   {
-    test: (val) => /[A-Z]/.test(val),
+    test: (val: string) => /[A-Z]/.test(val),
     label: "Have at least one upper case letter",
   },
   {
-    test: (val) => /\d/.test(val),
+    test: (val: string) => /\d/.test(val),
     label: "Include at least one number",
   },
   {
-    test: (val) => val.length >= 8,
+    test: (val: string) => val.length >= 8,
     label: "Be at least 8 characters long",
   },
 ];

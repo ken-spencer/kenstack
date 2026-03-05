@@ -6,6 +6,7 @@ import {
   Path,
   ControllerRenderProps,
   type ControllerFieldState,
+  // type FieldError,
 } from "react-hook-form";
 
 import {
@@ -68,7 +69,7 @@ const Field: React.FC<FieldPropsLocal> = ({
   );
 };
 
-function FormMessage({ className, ...props }) {
+function FormMessage({ className, ...props }: React.ComponentProps<"p">) {
   const { error, formMessageId } = useFormField();
   const firstError = findFirstMessageObject(error);
   const body = firstError
@@ -98,13 +99,16 @@ function FormMessage({ className, ...props }) {
   );
 }
 
-function findFirstMessageObject(obj) {
+type MessageCarrier = { message?: string | string[] };
+
+function findFirstMessageObject(obj: unknown): MessageCarrier | null {
   if (obj && typeof obj === "object") {
     if (Object.prototype.hasOwnProperty.call(obj, "message")) {
       return obj;
     }
-    for (const key of Object.keys(obj)) {
-      const found = findFirstMessageObject(obj[key]);
+    const record = obj as Record<string, unknown>;
+    for (const key of Object.keys(record)) {
+      const found = findFirstMessageObject(record[key]);
       if (found) {
         return found;
       }

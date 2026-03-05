@@ -1,5 +1,5 @@
 import * as React from "react";
-const SvgProgress = (props) => (
+const SvgProgress = (props: React.ComponentProps<"svg">) => (
   <svg
     aria-hidden="true"
     viewBox="0 0 24 24"

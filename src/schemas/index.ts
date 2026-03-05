@@ -1,8 +1,11 @@
 import * as z from "zod";
-export type PipelineSchema =
-  | z.ZodObject
-  | z.ZodPipe<z.ZodObject>
-  | z.ZodUnion<readonly z.ZodObject[]>;
+
+// // type AnyRecord = Record<string, unknown>;
+
+// export type PipelineSchema =
+//   | z.ZodObject
+//   | z.ZodPipe<z.ZodObject>
+//   | z.ZodUnion<readonly z.ZodObject[]>;
 
 export type SchemaModes = "client" | "server";
 export type SchemaFactory = <T extends SchemaModes>(mode: T) => z.ZodObject;

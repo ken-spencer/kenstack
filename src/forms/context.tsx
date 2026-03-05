@@ -1,19 +1,28 @@
+import type * as z from "zod";
+
 import React, { useRef, createContext, useContext, useState } from "react";
 // import { nanoid } from "nanoid";
-import { useForm as useReactHookForm } from "react-hook-form";
-import type { UseFormReturn } from "react-hook-form";
+import {
+  useForm as useReactHookForm,
+  type UseFormReturn,
+  type DefaultValues,
+  type FieldValues,
+  type Path,
+} from "react-hook-form";
 import { Form as ReactHookFormProvider } from "@kenstack/components/ui/form";
 
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import {
   useMutation,
-  type MutationFunction,
+  // type MutationFunction,
   type UseMutationResult,
 } from "@tanstack/react-query";
 import fetcher, { type FetchResult } from "@kenstack/lib/fetcher";
 
-const FormContext = createContext<UseFormResult | null>(null);
-import type * as z from "zod";
+export type FormSchema = z.ZodType<Record<string, unknown>, FieldValues>;
+
+//eslint-disable-next-line @typescript-eslint/no-explicit-any
+const FormContext = createContext<UseFormResult<any, any, any> | null>(null);
 
 import { FetchSuccess } from "@kenstack/lib/fetcher";
 
@@ -22,42 +31,44 @@ export type StatusMessage = {
   message: React.ReactNode;
 };
 
-export type WithExtra<TResult> = TResult & { values: Record<string, unknown> };
+// export type WithExtra<TResult> = TResult & { values: Record<string, unknown> };
 
-export type MutationFn<
-  TResult extends Record<string, unknown>,
-  TVariables,
-> = MutationFunction<FetchResult<WithExtra<TResult>>, TVariables>;
-
-import { type SchemaFactory } from "@kenstack/schemas";
+export type MutationFn<TResult extends Record<string, unknown>, TVariables> = (
+  variables: TVariables,
+  context: unknown
+) => Promise<FetchResult<TResult>>;
 
 export type FormProviderProps<
-  TResult extends Record<string, unknown> = Record<string, unknown>,
-  TVariables = Record<string, unknown>,
+  TResult extends Record<string, unknown>, // = Record<string, unknown>,
+  TVariables extends Record<string, unknown>,
+  TSchema extends FormSchema,
+  TValues extends FieldValues = z.input<TSchema>,
 > = {
   /** Also used internally by some fields */
   apiPath?: string;
   mutationFn?: MutationFn<TResult, TVariables>;
-  schema: z.ZodType<Record<string, unknown>> | SchemaFactory;
-  defaultValues: Record<string, unknown>;
+  schema: TSchema;
+  defaultValues: DefaultValues<TValues>;
   onSuccess?: (
     data: FetchSuccess<TResult>,
     variables: TVariables,
-    context: { form: UseFormReturn }
+    context: { form: UseFormReturn<TValues> }
   ) => void;
   children: React.ReactNode;
 };
 
 export type UseFormResult<
-  TResult extends Record<string, unknown> = Record<string, unknown>,
-  TVariables extends Record<string, unknown> = Record<string, unknown>,
+  TResult extends Record<string, unknown>, // = Record<string, unknown>,
+  TVariables extends Record<string, unknown>, // = Record<string, unknown>,
+  TValues extends FieldValues,
 > = {
   apiPath?: string;
-  form: UseFormReturn<Record<string, unknown>>;
+  form: UseFormReturn<TValues>;
   statusMessage: StatusMessage | null;
   setStatusMessage: React.Dispatch<React.SetStateAction<StatusMessage | null>>;
   mutation: UseMutationResult<
-    FetchResult<WithExtra<TResult>>,
+    // FetchResult<WithExtra<TResult>>,
+    FetchResult<TResult>,
     Error,
     TVariables
   >;
@@ -65,27 +76,25 @@ export type UseFormResult<
 
 function FormProvider<
   TResult extends Record<string, unknown>,
-  TVariables extends Record<string, unknown> = Record<string, unknown>,
+  TVariables extends Record<string, unknown>, // = Record<string, unknown>,
+  TSchema extends FormSchema,
+  TValues extends FieldValues = z.input<TSchema>,
 >({
   apiPath,
   defaultValues,
-  schema: schemaInitial,
+  // schema: schemaInitial,
+  schema,
   mutationFn,
   onSuccess,
   children,
-}: FormProviderProps<TResult, TVariables>) {
-  const [statusMessage, setStatusMessage] = useState<StatusMessage>(null);
-  const counterRef = useRef(0);
+}: FormProviderProps<TResult, TVariables, TSchema, TValues>) {
+  const [statusMessage, setStatusMessage] = useState<StatusMessage | null>(
+    null
+  );
   const lastFieldRef = useRef(null);
 
-  /** Build schema from factory function when needed */
-  const schema =
-    typeof schemaInitial === "function"
-      ? schemaInitial("client")
-      : schemaInitial;
-
-  const form = useReactHookForm({
-    resolver: zodResolver(schema as z.ZodObject),
+  const form = useReactHookForm<TValues>({
+    resolver: standardSchemaResolver(schema),
     defaultValues,
     mode: "onBlur", // validate fields on blur
     shouldFocusError: true,
@@ -93,17 +102,22 @@ function FormProvider<
 
   const { resetField, setError, clearErrors } = form;
 
-  const mutation = useMutation<
-    FetchResult<WithExtra<TResult>>,
-    Error,
-    TVariables
-  >({
-    mutationFn:
-      mutationFn ??
-      (async (variables) => {
-        counterRef.current++;
-        return fetcher(apiPath, variables);
-      }),
+  // const mutation = useMutation<
+  //   FetchResult<WithExtra<TResult>>,
+  //   Error,
+  //   TVariables
+  // >({
+  const mutation = useMutation({
+    mutationFn: async (variables: TVariables, context) => {
+      if (mutationFn) {
+        return await mutationFn(variables, context);
+      }
+
+      if (!apiPath) {
+        throw Error("apiPath or mutationFn is required to mutate a form");
+      }
+      return fetcher<TResult>(apiPath, variables);
+    },
     onMutate: () => {
       setStatusMessage(null);
     },
@@ -122,13 +136,13 @@ function FormProvider<
     },
     onSuccess: (data, variables) => {
       if ("error" === data.status) {
-        const extraErrors = [];
+        const extraErrors: React.ReactNode[] = [];
         const { fieldErrors /*, formErrors*/ } = data;
         if (fieldErrors) {
           clearErrors();
           Object.entries(fieldErrors).forEach(([field, err], index) => {
             setError(
-              field,
+              field as Path<TValues>,
               { type: "server", message: Array.isArray(err) ? err[0] : err },
               {
                 shouldFocus: true,
@@ -169,7 +183,7 @@ function FormProvider<
         if (data.values) {
           // this will only update fields that are rendered
           Object.entries(data.values).forEach(([fieldName, value]) => {
-            resetField(fieldName, {
+            resetField(fieldName as Path<TValues>, {
               defaultValue: value,
               keepError: false,
               keepDirty: false,
@@ -186,7 +200,7 @@ function FormProvider<
         }
         if (onSuccess) {
           //  && !("commit" in (variables as CommitVariables))) {
-          onSuccess(data, variables as TVariables, { form });
+          onSuccess(data, variables, { form });
         }
       }
     },
@@ -195,7 +209,7 @@ function FormProvider<
     },
   });
 
-  const values = {
+  const values: UseFormResult<TResult, TVariables, TValues> = {
     apiPath,
     form,
     statusMessage,
@@ -210,10 +224,15 @@ function FormProvider<
   );
 }
 
-function useForm(): UseFormResult {
+function useForm<
+  TResult extends Record<string, unknown>,
+  TVariables extends Record<string, unknown>,
+  TValues extends FieldValues,
+>() {
+  //}: UseFormResult {
   const ctx = useContext(FormContext);
   if (!ctx) throw new Error("useForm must be used within FormProvider");
-  return ctx;
+  return ctx as UseFormResult<TResult, TVariables, TValues>;
 }
 
 export { FormProvider, useForm };

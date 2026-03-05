@@ -6,4 +6,3 @@ export { default as twitter } from "./twitter";
 export { default as image } from "./image";
 export { default as tags } from "./tags";
 export { default as date } from "./date";
-export { default as objectId } from "./objectId";

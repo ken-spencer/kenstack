@@ -1,18 +1,30 @@
-import { getAuthenticatedUser, hasRole, revalidate } from "@kenstack/lib/auth";
 import type { PipelineAction } from ".";
+import { deps, type UserRole } from "@app/deps";
 
 const authenticate =
-  ({ roles = ["ADMIN"] } = {}): PipelineAction =>
+  (options?: { role: UserRole | UserRole[] }): PipelineAction =>
   async ({ response }) => {
-    if (!(await hasRole(roles))) {
-      return response.redirectToLogin();
-    }
-    const user = await getAuthenticatedUser();
+    const user = await deps.auth.getCurrentUser();
+
     if (!user) {
       return response.redirectToLogin();
     }
 
-    await revalidate();
+    if (options?.role) {
+      const requiredRoles = Array.isArray(options.role)
+        ? options.role
+        : [options.role];
+
+      const hasPermission = user.roles.some((userRole) =>
+        requiredRoles.includes(userRole as UserRole)
+      );
+
+      if (!hasPermission) {
+        return response.redirectToLogin();
+      }
+    }
+
+    // await revalidate();
     return { user };
   };
 

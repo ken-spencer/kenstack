@@ -25,7 +25,7 @@ type InputProps = FieldProps &
     inputClass?: string;
   };
 
-const formatDate = (date) => {
+const formatDate = (date: string | Date) => {
   return format(date, "MMMM d, yyyy '@' h:mm a");
 };
 export default function InputField({

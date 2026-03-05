@@ -3,7 +3,11 @@ import { createMimeMessage } from "mimetext";
 
 const ses = new SESClient();
 
-function isRateLimitError(err) {
+function isRateLimitError(err: unknown) {
+  if (typeof err !== "object" || err === null || !("name" in err)) {
+    return false;
+  }
+
   // SES can return error.name = "Throttling" or "ThrottlingException"
   return (
     err.name === "Throttling" ||

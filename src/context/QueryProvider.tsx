@@ -1,4 +1,5 @@
 "use client";
+import type { ReactNode } from "react";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { QueryClient, QueryCache } from "@tanstack/react-query";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
@@ -24,7 +25,7 @@ const dummyForServer = {
   setItem: () => {},
   removeItem: () => {},
 };
-export default function QueryProvider({ children }) {
+export default function QueryProvider({ children }: { children: ReactNode }) {
   // Safe on client because this is a Client Component
   const persister = createAsyncStoragePersister({
     storage:

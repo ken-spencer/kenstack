@@ -17,7 +17,7 @@ const eslintConfig = defineConfig([
     rules: {
       "@next/next/no-img-element": "off",
       "@next/next/no-html-link-for-pages": "off",
-
+      "@typescript-eslint/no-empty-object-type": "off",
       "no-console": "error",
     },
   },

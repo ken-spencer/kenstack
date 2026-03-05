@@ -7,7 +7,7 @@ export default function SubmitButton({ children = "Submit", ...props }) {
   } = useFormContext();
 
   return (
-    <Button name="foo" value="bar" {...props} isPending={isSubmitting}>
+    <Button {...props} isPending={isSubmitting}>
       {children}
     </Button>
   );

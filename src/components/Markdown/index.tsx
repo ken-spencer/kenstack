@@ -1,22 +1,15 @@
-// import { visit } from "unist-util-visit";
+"use client";
+import { twMerge } from "tailwind-merge";
+import { useEffect, useState } from "react";
 import { remark } from "remark";
-// import toHtml from "remark-html";
 import remarkGfm from "remark-gfm";
 
 import remarkRehype from "remark-rehype";
 import rehypeStringify from "rehype-stringify";
-// import rehypeSanitize from "rehype-sanitize";
-// import { defaultSchema } from "hast-util-sanitize";
-// import rehypeRaw from "rehype-raw";
 import remarkBreaks from "remark-breaks";
-import { remarkShiftHeadings } from "./plugins";
+// import { remarkShiftHeadings } from "./plugins";
 
-// const customSchema = {
-//   ...defaultSchema,
-//   tagNames: [...defaultSchema.tagNames, "u"],
-// };
-
-export async function mdToHtml(content) {
+export async function mdToHtml(content: string) {
   if (!content) {
     return "";
   }
@@ -28,7 +21,7 @@ export async function mdToHtml(content) {
 
   const processedContent = await remark()
     // .use(remarkUnderline)
-    .use(remarkShiftHeadings)
+    // .use(remarkShiftHeadings)
     .use(remarkGfm)
     .use(remarkBreaks) // Convert single newline to <br />    // .use(toHtml)
     .use(remarkRehype)
@@ -40,8 +33,47 @@ export async function mdToHtml(content) {
   return processedContent.toString();
 }
 
-export default async function Markdown({ content, ...props }) {
-  const html = await mdToHtml(content);
+import { type ComponentProps } from "@kenstack/pageEditor/types";
 
-  return <div {...props} dangerouslySetInnerHTML={{ __html: html }} />;
+// type Props = React.ComponentProps<"div"> & {
+//   content?: string;
+//   placeholder?: string;
+// } & React.ComponentProps<"div">;
+
+export default function Markdown({
+  content,
+  className,
+  placeholder,
+  ...props
+}: ComponentProps<"div">) {
+  delete props.tag; // in case this was used int he page editor.
+
+  const [html, setHtml] = useState("");
+  useEffect(() => {
+    mdToHtml(content ?? "")
+      .then((value) => {
+        setHtml(value);
+      })
+      .catch((err) => {
+        //eslint-disable-next-line no-console
+        console.error(err);
+      });
+  }, [content]);
+
+  if (html) {
+    return (
+      <div
+        {...props}
+        className={className}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    );
+  }
+  if (placeholder) {
+    return (
+      <div {...props} className={twMerge(className, "text-gray-500/50")}>
+        {placeholder}
+      </div>
+    );
+  }
 }

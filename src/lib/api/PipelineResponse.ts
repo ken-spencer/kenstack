@@ -61,6 +61,16 @@ export class PipelineResponse implements PipelineResponseShape {
   }
 
   redirectToLogin() {
+    response.cookies.set({
+      name: "loginMessage",
+      value: "You are no longer logged in. Please log in and try again.",
+      maxAge: 60,
+      path: "/login",
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: false, // cookie read and deleted in client.
+    });
+
     return this.final({ redirect: "/login" });
   }
 
@@ -76,7 +86,10 @@ export class PipelineResponse implements PipelineResponseShape {
   }
   error(
     message: string,
-    payload: { fieldErrors?: Record<string, string | string[]> } = {}
+    payload: {
+      formErrors?: string[];
+      fieldErrors?: Record<string, string | string[]>;
+    } = {}
   ) {
     return this.final({ status: "error", message, ...payload });
   }

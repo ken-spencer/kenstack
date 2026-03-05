@@ -1,6 +1,6 @@
 import getGeo from "@kenstack/lib/geo";
 import { headers } from "next/headers";
-import { getClaims } from "./auth";
+// import { getClaims } from "./auth";
 
 export default async function errorLog(
   error: Error,
@@ -12,11 +12,11 @@ export default async function errorLog(
   const userAgent = headersList.get("user-agent");
   const pathname = headersList.get("x-pathname") ?? null;
   const ip = headersList.get("x-real-ip") ?? "127.0.0.1";
-  const claims = await getClaims();
+  // const claims = await getClaims();
 
   const meta = {
     pathname,
-    user: claims ? claims.sub : null,
+    // user: claims ? claims.sub : null,
     ip,
     userAgent,
     geo,
