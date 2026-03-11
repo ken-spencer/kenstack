@@ -1,31 +1,15 @@
-"use client";
-import { Suspense } from "react";
-import {
-  SidebarProvider,
-  SidebarTrigger,
-} from "@kenstack/components/ui/sidebar";
-import { AppSidebar } from "./app-sidebar";
+import AdminSidebar from "./Sidebar";
+import { deps } from "@app/deps";
 
-// import Content from "./Content";
-
-export default function AdminSidebar({
+export default async function AdminSIdebarCont({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <Suspense>
-      <SidebarProvider className="flex" defaultOpen={false}>
-        <div className="flex flex-grow">
-          <div className="flex-grow">{children}</div>
-          <div className="relative w-9">
-            <div className="fixed">
-              <SidebarTrigger className="cursor-pointer" />
-            </div>
-          </div>
-        </div>
-        <AppSidebar />
-      </SidebarProvider>
-    </Suspense>
-  );
+  const { auth } = deps;
+
+  if (await auth.hasRole("admin")) {
+    return <AdminSidebar>{children}</AdminSidebar>;
+  }
+  return children;
 }
