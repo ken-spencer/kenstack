@@ -1,32 +1,25 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
 import { useAdminUi } from "@kenstack/hooks/useAdminUi";
 import { usePageEditor } from "@kenstack/pageEditor/context";
 
-import dynamic from "next/dynamic";
+// import dynamic from "next/dynamic";
 import type {
   PageEditorProps,
   PageEditorLoader,
-  PageComponentLoader,
+  // PageComponentLoader,
   ComponentProps,
   BlockTag,
 } from "../types";
 
-type Props =
-  | {
-      component: React.ComponentType<ComponentProps<"div">>;
-      componentLoader?: never;
-      editor: PageEditorLoader;
-    }
-  | {
-      component?: never;
-      componentLoader: PageComponentLoader;
-      editor: PageEditorLoader;
-    };
+type Props = {
+  component: React.ComponentType<ComponentProps<"div">>;
+  editor: PageEditorLoader;
+};
 
 type PolymorphicEditorComponent = <TTag extends BlockTag>(
-  props: PageEditorProps<TTag>
+  props: PageEditorProps<TTag>,
 ) => React.ReactElement | null;
 
 type EditorWrapperProps<TTag extends BlockTag> = {
@@ -41,53 +34,63 @@ type EditorWrapperProps<TTag extends BlockTag> = {
 };
 
 export default function createEditor({
-  component,
-  componentLoader,
+  component: Component,
+  // componentLoader,
   editor,
 }: Props) {
-  const PageEditor = dynamic(editor, {
-    ssr: false,
-  });
-  const PageEditorAny = PageEditor as React.ComponentType<
+  const PageEditor = React.lazy(editor) as React.ComponentType<
     EditorWrapperProps<BlockTag>
   >;
+  // const PageEditor = dynamic(editor, {
+  //   ssr: false,
+  //   loading: () => <div className="h-13 bg-red-500"></div>,
+  // });
+  // const PageEditorAny = PageEditor as React.ComponentType<
+  //   EditorWrapperProps<BlockTag>
+  // >;
 
-  const Component = componentLoader ? dynamic(componentLoader) : component;
+  // const Component = component; //componentLoader ? React.lazy(componentLoader) : component;
   const ComponentAny = Component as React.ComponentType<unknown>;
 
   const PageEditCont = function PageEditCont<Tag extends BlockTag>({
     tag,
     name,
     placeholder = "Enter Text",
-    // content: _ignoredContent,
     ...props
   }: PageEditorProps<Tag>) {
     const { isEditingEnabled } = useAdminUi();
     const { content } = usePageEditor();
-    const value = content[name] as string | undefined;
+    const value = content[name];
+    const html = content[name + "Html"] ?? null;
 
     const tagProp = tag ?? ("div" as Tag);
 
     if (isEditingEnabled()) {
       return (
-        <PageEditorAny
-          name={name}
-          tag={tagProp}
-          Component={ComponentAny}
-          componentProps={props}
-          placeholder={placeholder}
-        />
+        <Suspense
+          fallback={
+            <ComponentAny
+              tag={tagProp}
+              {...props}
+              content={html ?? value}
+              placeholder={placeholder}
+            />
+          }
+        >
+          <PageEditor
+            name={name}
+            tag={tagProp}
+            Component={Component}
+            componentProps={props}
+            placeholder={placeholder}
+          />
+        </Suspense>
       );
     }
 
-    return (
-      <ComponentAny
-        tag={tagProp}
-        {...props}
-        placeholder={placeholder}
-        content={value}
-      />
-    );
+    if (value) {
+      return <ComponentAny tag={tagProp} {...props} content={html ?? value} />;
+    }
   };
 
   return PageEditCont as PolymorphicEditorComponent;

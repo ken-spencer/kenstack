@@ -17,6 +17,10 @@ import {
 import schema from "@kenstack/auth/schemas/forgotPassword";
 import { type ForgotPasswordEmailProps } from "@kenstack/auth/email/ForgotPassword";
 
+import DefaultEmail, {
+  attachments as defaultAttachments,
+} from "@kenstack/auth/email/ForgotPassword";
+
 type ForgotPasswordProps = {
   Email: React.FC<ForgotPasswordEmailProps>;
   attachments: Attachment[];
@@ -24,7 +28,7 @@ type ForgotPasswordProps = {
 };
 
 export const forgottenPasswordPipeline =
-  (props: ForgotPasswordProps) => (options: PipelineOptions) =>
+  (props: ForgotPasswordProps) => (options: PipelineOptions<typeof schema>) =>
     pipeline({ ...options, schema }, [
       recaptcha(),
       forgottenPasswordAction(props),
@@ -32,8 +36,8 @@ export const forgottenPasswordPipeline =
 
 export const forgottenPasswordAction =
   ({
-    Email,
-    attachments,
+    Email = DefaultEmail,
+    attachments = defaultAttachments,
     from,
   }: ForgotPasswordProps): PipelineAction<typeof schema> =>
   async ({ request, response, data }) => {
@@ -65,7 +69,7 @@ export const forgottenPasswordAction =
       .from(passwordResetRequests)
       .where(
         sql`${passwordResetRequests.requestedAt} > now() - interval '15 minutes'
-        and ${passwordResetRequests.email} = ${email}`
+        and ${passwordResetRequests.email} = ${email}`,
       );
 
     const ipCount =
@@ -79,7 +83,7 @@ export const forgottenPasswordAction =
               .from(passwordResetRequests)
               .where(
                 sql`${passwordResetRequests.requestedAt} > now() - interval '15 minutes'
-              and ${passwordResetRequests.ip} = ${ip}`
+              and ${passwordResetRequests.ip} = ${ip}`,
               )
           )[0].ipCount;
 
@@ -95,7 +99,7 @@ export const forgottenPasswordAction =
       return response.error(
         ipCount > 10
           ? "We have received too many requests from your network to reset this password. Please try again later."
-          : "We have received too many requests to reset this password. Please try again later."
+          : "We have received too many requests to reset this password. Please try again later.",
       );
     }
 
@@ -152,8 +156,8 @@ export const forgottenPasswordAction =
         and(
           eq(passwordResetRequests.email, email),
           isNull(passwordResetRequests.invalidatedAt),
-          gte(passwordResetRequests.expiresAt, new Date())
-        )
+          gte(passwordResetRequests.expiresAt, new Date()),
+        ),
       );
 
     await deps.db.insert(passwordResetRequests).values({
@@ -180,7 +184,7 @@ export const forgottenPasswordAction =
         ip={ip}
         geo={geo}
         admin={false}
-      />
+      />,
     );
 
     await mailer({

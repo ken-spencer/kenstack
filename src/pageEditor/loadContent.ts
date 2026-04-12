@@ -4,14 +4,19 @@ import { and, eq } from "drizzle-orm";
 
 import { cache } from "react";
 import { cacheLife, cacheTag } from "next/cache";
+import mdToHtml from "@kenstack/components/Markdown/mdToHtml";
 
 export type Content = {
   title: string;
   description: string;
   content: string;
+  contentHtml: string;
   seoTitle: string;
   seoDescription: string;
 };
+
+import { type Prettify } from "@kenstack/types";
+export type DefaultValues = Prettify<Partial<Content>>;
 
 export const loadContent = cache(
   async (
@@ -19,15 +24,20 @@ export const loadContent = cache(
     {
       // tenant,
       defaultValues = {},
-    }: { tenant?: string; defaultValues?: Partial<Content> } = {}
+    }: { tenant?: string; defaultValues?: DefaultValues } = {},
   ): Promise<Content> => {
     "use cache";
     cacheLife("max");
+
+    if (!slug) {
+      throw Error("slug is required");
+    }
 
     const defaults = {
       title: "",
       description: "",
       content: "",
+      contentHtml: "",
       seoTitle: "",
       seoDescription: "",
       ...defaultValues,
@@ -63,9 +73,9 @@ export const loadContent = cache(
       .from(content)
       .where(
         and(
-          eq(content.slug, slug)
+          eq(content.slug, slug),
           // multiTenant && tenant ? eq(content.orgId, org!.id) : undefined
-        )
+        ),
       );
 
     if (!row) {
@@ -76,10 +86,11 @@ export const loadContent = cache(
       title: row.title ?? defaults.title,
       description: row.description ?? defaults.description,
       content: row.content ?? defaults.content,
+      contentHtml: row.content ? await mdToHtml(row.content) : "",
       seoTitle: row.seoTitle ?? defaults.seoTitle,
       seoDescription: row.seoDescription ?? defaults.seoDescription,
     };
-  }
+  },
 );
 
 export const loadMeta = async (
@@ -87,14 +98,14 @@ export const loadMeta = async (
   {
     tenant,
     defaultValues = {},
-  }: { tenant?: string; defaultValues?: Partial<Content> } = {}
+  }: { tenant?: string; defaultValues?: Partial<Content> } = {},
 ): Promise<Metadata> => {
   const { title, description, seoTitle, seoDescription } = await loadContent(
     slug,
     {
       tenant,
       defaultValues,
-    }
+    },
   );
 
   return {

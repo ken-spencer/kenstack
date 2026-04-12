@@ -37,7 +37,7 @@
 //   requireUser: (options?: RequireUserOptions) => Promise<User>;
 // };
 
-import { type User } from "@kenstack/types";
+// import { type User } from "@kenstack/types";
 // type UserRoles = "member" | "admin" | "editor";
 
 // export type Deps<TSchema extends SchemaMin = SchemaMin> = {

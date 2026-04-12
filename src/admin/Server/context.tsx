@@ -5,15 +5,15 @@ import React, { createContext, useContext } from "react";
 const ServerContext = createContext(null);
 
 type ServerProvider = {
-  type: string;
+  name: string;
   isNew: boolean;
   id: string | null;
   children: React.ReactNode;
 };
 
-export function ServerProvider({ children, type, id, isNew }: ServerProvider) {
+export function ServerProvider({ children, name, id, isNew }: ServerProvider) {
   return (
-    <ServerContext.Provider value={{ type, id, isNew }}>
+    <ServerContext.Provider value={{ name, id, isNew }}>
       {children}
     </ServerContext.Provider>
   );

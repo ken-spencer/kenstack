@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import cookies from "js-cookie";
@@ -23,18 +23,20 @@ const defaultValues = {
   email: "",
   password: "",
 };
-// import { type FetchResult } from "@kenstack/lib/fetcher";
-// type Result = FetchResult<{
-//   path: string;
-// }>;
-type Result = {
-  path: string;
-};
 
-export default function LoginForm() {
-  const router = useRouter();
+export default function LoginFormCont() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+export function LoginForm() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { executeRecaptcha } = useGoogleReCaptcha();
+
   const [message, setMessage] = useState(() => {
     if (typeof window === "undefined") {
       return;
@@ -50,7 +52,7 @@ export default function LoginForm() {
   });
 
   return (
-    <Form<Result>
+    <Form
       className="space-y-4"
       apiPath="/api/auth"
       schema={loginSchema}
@@ -65,7 +67,9 @@ export default function LoginForm() {
           .then((res) => {
             if (res.status === "success") {
               form.reset();
-              router.push(res.path);
+              if (typeof res.path === "string") {
+                router.push(res.path);
+              }
               router.refresh();
             }
           });

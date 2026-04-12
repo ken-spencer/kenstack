@@ -3,14 +3,16 @@ import Header from "./Header";
 import Footer from "./Footer";
 import List from "./List";
 
-import { type AdminClientConfig } from "@kenstack/admin/types";
+import { type AnyAdminTable } from "@kenstack/admin";
 type AdminListProps = {
-  admin: AdminClientConfig;
+  adminTable: AnyAdminTable;
 };
 
-export default function AdminListCont({ admin }: AdminListProps) {
+export default function AdminListCont({
+  adminTable: { client },
+}: AdminListProps) {
   return (
-    <AdminListProvider admin={admin}>
+    <AdminListProvider client={client}>
       <section>
         <Header />
         <List />

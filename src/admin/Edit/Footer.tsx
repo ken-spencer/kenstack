@@ -1,9 +1,14 @@
+"use client";
 import { useAdminEdit } from "./context";
 import MetaDates from "../MetaDates";
 
 export default function AdminEditFooter() {
-  const { id, defaultValues: item } = useAdminEdit();
+  const { id, item } = useAdminEdit();
   return (
-    <div className="py-2 border-t">{id && <MetaDates meta={item.meta} />}</div>
+    <div className="border-t py-2">
+      {id && (
+        <MetaDates createdAt={item.createdAt} updatedAt={item.updatedAt} />
+      )}
+    </div>
   );
 }

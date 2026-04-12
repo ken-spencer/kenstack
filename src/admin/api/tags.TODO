@@ -1,7 +1,3 @@
-import type { Document } from "mongodb";
-
-import { getDb } from "@kenstack/lib/db";
-
 import { tags as tagSchema } from "@kenstack/schemas/atoms";
 import * as z from "zod";
 // import { adminConfig } from "@/config/client";
@@ -15,7 +11,7 @@ const responseSchema = z.array(
     count: z.number(),
     name: z.string(),
     slug: z.string(),
-  })
+  }),
 );
 
 const tagSearch = (request, adminConfig: AdminServerConfig) => {
@@ -60,7 +56,7 @@ const tagSearchAction =
       },
       { $sort: { count: -1, _id: 1 } },
       { $limit: 5 },
-      { $project: { name: "$_id.name", slug: "$_id.slug", count: 1, _id: 0 } }
+      { $project: { name: "$_id.name", slug: "$_id.slug", count: 1, _id: 0 } },
     );
 
     const db = await getDb();

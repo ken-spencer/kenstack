@@ -36,7 +36,8 @@ export default function InputField({
   inputClass,
   ...props
 }: InputProps) {
-  const { getValues, setValue: setFormValue } = useFormContext();
+  const { watch, getValues, setValue: setFormValue } = useFormContext();
+  const [prevFormValue, setPrevFormValue] = useState(getValues(name));
   const [value, setValue] = useState(() => {
     const v = getValues(name);
     if (v) {
@@ -45,11 +46,19 @@ export default function InputField({
     return "";
   });
 
+  const formValue = watch(name);
+  if (formValue !== prevFormValue) {
+    setPrevFormValue(formValue);
+    setValue(formValue ? formatDate(formValue) : "");
+  }
   const handleDate = (newDate: string | Date) => {
     if (newDate) {
       const result =
         newDate instanceof Date ? newDate : (parseDate(newDate) ?? "");
-      setFormValue(name, result, { shouldDirty: true, shouldTouch: true });
+      setFormValue(name, result instanceof Date ? result.toISOString() : "", {
+        shouldDirty: true,
+        shouldTouch: true,
+      });
       setValue(formatDate(result || new Date()));
     } else {
       setFormValue(name, "", { shouldDirty: true, shouldTouch: true });

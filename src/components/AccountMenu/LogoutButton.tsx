@@ -10,7 +10,7 @@ export default function LogoutButton() {
   const router = useRouter();
   return (
     <Button
-      className="w-full justify-start cursor-pointer"
+      className="w-full cursor-pointer justify-start"
       variant="link"
       tabIndex={-1} // stop Safari from automatically putting a focus style on this button
       onClick={() => {

@@ -1,11 +1,11 @@
-import { deps } from "@server/deps";
+import { deps } from "@app/deps";
 import {
   pipeline,
   type PipelineAction,
   type PipelineOptions,
 } from "@kenstack/lib/api";
 
-export const logoutPipeline = () => (options: PipelineOptions) =>
+export const logoutPipeline = () => (options: PipelineOptions<null>) =>
   pipeline(options, [logout()]);
 
 export const logout =

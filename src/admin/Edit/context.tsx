@@ -1,68 +1,76 @@
 "use client";
 
+import { type ZodObject } from "zod";
+
 import React, { createContext, useContext, useMemo } from "react";
 import { useServer } from "@kenstack/admin/Server/context";
 import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
-import fetcher, { type FetchResult } from "@kenstack/lib/fetcher";
+import fetcher from "@kenstack/lib/fetcher";
 import Alert from "@kenstack/components/Alert";
 import Progress from "@kenstack/components/Progress";
 import EditForm from "./Form";
-// import * as z from "zod";
+import { AdminClient, PreviewPath } from "..";
 
-import { type AdminClientConfig } from "@kenstack/admin/types";
 type AdminEditProps = {
-  adminConfig: AdminClientConfig;
+  name: string;
+  defaultValues: Record<string, unknown>;
+  client: AdminClient;
   children: React.ReactNode;
+  preview?: PreviewPath;
 };
 
-type AdminEditContext<
-  T extends Record<string, unknown> = Record<string, unknown>,
-> = {
-  type: string;
+type EditItem = { id: number; createdAt: string; updatedAt: string } & Record<
+  string,
+  unknown
+>;
+
+type AdminEditContext = {
+  name: string;
+  client: AdminClient;
   id: string;
-  userId: string;
+  userId: number;
   isNew: boolean;
   apiPath: string;
   listPath: string;
-  adminConfig: AdminClientConfig;
-  item: T;
-  defaultValues: T;
+  item: null | EditItem;
+  defaultValues: Record<string, unknown>;
+  schema: ZodObject;
+  preview?: PreviewPath;
 };
 
 const AdminEditContext = createContext<AdminEditContext | null>(null);
 
-export function AdminEditProvider({ adminConfig, children }: AdminEditProps) {
-  // const clientSchema =
-  //   typeof adminConfig.schema === "function"
-  //     ? adminConfig.schema("client")
-  //     : adminConfig.schema;
-  // type FormValues = z.infer<typeof clientSchema>;
-
+export function AdminEditProvider({
+  name,
+  defaultValues,
+  client,
+  preview,
+  children,
+}: AdminEditProps) {
   const pathname = usePathname();
-  const { type, id, isNew } = useServer();
-  const regex = new RegExp(`^(.*?)(?=/${type}(?:/|$)).*$`);
-  const basePathname = pathname.replace(regex, "$1");
-  const apiPath = basePathname + "/api/" + type;
+  const { id, isNew } = useServer();
+  const apiPath = "/api/admin";
   const listPath = useMemo(() => {
     const parts = pathname.split("/").filter(Boolean); // removes empty strings
     parts.pop(); // remove last segment
     return "/" + parts.join("/");
   }, [pathname]);
 
-  const { data, error, isPending } = useQuery<
-    FetchResult<{ item: Record<string, unknown>; userId: string }>
-  >({
-    queryFn: () => fetcher(apiPath + "/load", { id }),
+  const { data, error, isPending } = useQuery({
+    queryFn: () =>
+      fetcher<{ item: EditItem; userId: number }>(apiPath, {
+        name,
+        action: "load",
+        id,
+      }),
     queryKey: ["admin-edit", id],
     enabled: !!id,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
-
-  let defaultValues = adminConfig.defaultValues;
 
   if (id) {
     if (error) {
@@ -80,15 +88,17 @@ export function AdminEditProvider({ adminConfig, children }: AdminEditProps) {
   }
 
   const values: AdminEditContext = {
-    type,
+    name,
+    client,
     id,
     isNew,
     apiPath,
     listPath,
-    adminConfig,
     userId: id && data?.status === "success" ? data.userId : null,
     item: id && data?.status === "success" ? data.item : null,
     defaultValues,
+    schema: client.schema,
+    preview,
   };
   return (
     <AdminEditContext.Provider value={values}>
@@ -97,12 +107,10 @@ export function AdminEditProvider({ adminConfig, children }: AdminEditProps) {
   );
 }
 
-export function useAdminEdit<
-  T extends Record<string, unknown>,
->(): AdminEditContext<T> {
+export function useAdminEdit() {
   const context = useContext(AdminEditContext);
   if (context === null) {
     throw new Error("useAdminEdit must be used within an AdminEditProvider");
   }
-  return context as AdminEditContext<T>;
+  return context;
 }

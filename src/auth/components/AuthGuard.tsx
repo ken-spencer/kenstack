@@ -1,9 +1,11 @@
 import { Suspense } from "react";
 
-import { deps, type UserRole } from "@app/deps";
+import { deps } from "@app/deps";
+
+type Roles = (typeof deps)["roles"];
 
 type Props = {
-  role?: UserRole | UserRole[];
+  role?: Roles[number] | Roles[number][];
   children: React.ReactNode;
 };
 

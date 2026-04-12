@@ -17,35 +17,33 @@ function isPostgresError(err: unknown): err is postgres.PostgresError {
   );
 }
 
-export const createDbEerrorTranslator =
-  () =>
-  (err: unknown): FetchError | undefined => {
-    if (
-      typeof err !== "object" ||
-      err === null ||
-      !("cause" in err) ||
-      !isPostgresError(err.cause)
-    ) {
-      return;
-    }
+export const errorTranslator = (err: unknown): FetchError | undefined => {
+  if (
+    typeof err !== "object" ||
+    err === null ||
+    !("cause" in err) ||
+    !isPostgresError(err.cause)
+  ) {
+    return;
+  }
 
-    const { cause } = err;
+  const { cause } = err;
 
-    if (cause.code === "23505") {
-      const { constraint_name: constraint } = cause;
-      if (constraint && uniqueConstraintMessages[constraint]) {
-        const [fieldName, message] = uniqueConstraintMessages[constraint];
-        return {
-          status: "error",
-          message:
-            "We couldn't conplete your request. See the highlighted field below for more information.",
-          fieldErrors: { [fieldName]: [message] },
-        };
-      } else {
-        return {
-          status: "error",
-          message: "We couldn't complete your request. " + cause.detail,
-        };
-      }
+  if (cause.code === "23505") {
+    const { constraint_name: constraint } = cause;
+    if (constraint && uniqueConstraintMessages[constraint]) {
+      const [fieldName, message] = uniqueConstraintMessages[constraint];
+      return {
+        status: "error",
+        message:
+          "We couldn't conplete your request. See the highlighted field below for more information.",
+        fieldErrors: { [fieldName]: [message] },
+      };
+    } else {
+      return {
+        status: "error",
+        message: "We couldn't complete your request. " + cause.detail,
+      };
     }
-  };
+  }
+};

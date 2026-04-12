@@ -69,7 +69,7 @@ export function usePageEditor() {
 
   if (!ctx) {
     throw new Error(
-      "usePageEditor must be used within the PageEditor component"
+      "usePageEditor must be used within the PageEditor component",
     );
   }
 
@@ -81,10 +81,23 @@ export const useCommit = () => {
   const { slug, content, setContent } = usePageEditor();
   const { form, mutation } = useForm();
   return useCallback(
-    (name: Name) => {
+    (name: Name, { markdown }: { markdown?: true } = {}) => {
       const value = form.getValues(name);
       if (value !== undefined && content[name] !== value) {
         setContent({ ...content, [name]: value });
+        if (markdown) {
+          import("@kenstack/components/Markdown/mdToHtml").then(
+            ({ default: mdToHtml }) => {
+              mdToHtml(value).then((md) => {
+                setContent((currentContent) => ({
+                  ...currentContent,
+                  [name + "Html"]: md,
+                }));
+              });
+            },
+          );
+        }
+
         mutation.mutateAsync({ slug, field: name, value }).then((res) => {
           if (res.status === "success") {
             router.refresh();
@@ -92,6 +105,6 @@ export const useCommit = () => {
         });
       }
     },
-    [form, router, mutation, slug, content, setContent]
+    [form, router, mutation, slug, content, setContent],
   );
 };

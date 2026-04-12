@@ -51,9 +51,9 @@ export type PageEditorAdminProps = {
   className?: string;
 };
 
-export type PageComponentLoader = () => Promise<{
-  default: React.ComponentType<ComponentProps<"div">>;
-}>;
+// export type PageComponentLoader = () => Promise<{
+//   default: React.ComponentType<ComponentProps<"div">>;
+// }>;
 
 export type EditorWrapperProps<T extends BlockTag = "div"> = {
   name: Name;

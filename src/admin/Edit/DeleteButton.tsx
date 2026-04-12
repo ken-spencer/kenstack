@@ -1,3 +1,4 @@
+"use client";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,11 +22,11 @@ import { useForm } from "@kenstack/forms/context";
 export default function DeleteButton() {
   const { setStatusMessage } = useForm();
   const router = useRouter();
-  const { isNew, id, apiPath, listPath } = useAdminEdit();
+  const { isNew, id, name, apiPath, listPath } = useAdminEdit();
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: async (idToRemove: string) =>
-      fetcher(apiPath + "/remove", { remove: [idToRemove] }),
+      fetcher(apiPath, { name, action: "remove", remove: [idToRemove] }),
     onMutate: async () => {},
     onError: (err) => {
       setStatusMessage({

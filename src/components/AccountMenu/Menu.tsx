@@ -5,7 +5,6 @@ import { useAdminUi } from "@kenstack/hooks/useAdminUi";
 // import Link from "next/link";
 import Avatar from "@kenstack/components/Avatar";
 
-// import AccountMenuItems from "./Items";
 import LogoutButton from "./LogoutButton";
 
 import {

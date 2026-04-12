@@ -88,7 +88,7 @@ const MilkdownEditor: React.FC<
           const md = getMarkdown()(ctx);
           field.onChange(md);
           field.onBlur();
-          commit(name);
+          commit(name, { markdown: true });
         });
 
         ctx.get(listenerCtx).focus(() => setFocused(true));
@@ -98,7 +98,7 @@ const MilkdownEditor: React.FC<
       .use(history)
       .use(placeholderPlugin)
       .use(commonmark)
-      .use(gfm)
+      .use(gfm),
   );
 
   return <Milkdown />;

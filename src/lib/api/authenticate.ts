@@ -1,5 +1,7 @@
 import type { PipelineAction } from ".";
-import { deps, type UserRole } from "@app/deps";
+import { deps } from "@app/deps";
+
+type UserRole = (typeof deps.roles)[number];
 
 const authenticate =
   (options?: { role: UserRole | UserRole[] }): PipelineAction =>
@@ -16,7 +18,7 @@ const authenticate =
         : [options.role];
 
       const hasPermission = user.roles.some((userRole) =>
-        requiredRoles.includes(userRole as UserRole)
+        requiredRoles.includes(userRole as UserRole),
       );
 
       if (!hasPermission) {

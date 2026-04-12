@@ -14,7 +14,7 @@ export default function AdminEditForm({ children }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const { defaultValues, adminConfig, isNew, id, apiPath } = useAdminEdit();
+  const { defaultValues, schema, isNew, id, apiPath, name } = useAdminEdit();
   const basePathname = useMemo(() => {
     const parts = pathname.split("/").filter(Boolean); // removes empty strings
     parts.pop(); // remove last segment
@@ -22,16 +22,21 @@ export default function AdminEditForm({ children }) {
   }, [pathname]);
 
   return (
-    <Form<{ id: string; values: Record<string, unknown> }>
-      schema={adminConfig.schema}
+    <Form
+      schema={schema}
       defaultValues={defaultValues}
       apiPath={apiPath}
       mutationFn={async (vars) => {
-        return fetcher(apiPath + "/save", {
-          id,
-          isNew,
-          ...omit(vars, ["meta"]),
-        });
+        return fetcher<{ id: number; values: Record<string, unknown> }>(
+          apiPath,
+          {
+            action: "save",
+            name,
+            id,
+            isNew,
+            ...omit(vars, ["meta"]),
+          },
+        );
       }}
       onSuccess={(data, variables, { form }) => {
         queryClient.invalidateQueries({ queryKey: ["admin-list"] });
@@ -41,18 +46,18 @@ export default function AdminEditForm({ children }) {
           item: data.values,
         });
 
-        if (variables.action === "list") {
+        if (variables.submitter === "list") {
           router.push(
-            basePathname + (searchParams.size ? "?" + searchParams : "")
+            basePathname + (searchParams.size ? "?" + searchParams : ""),
           );
-        } else if (variables.action === "new") {
+        } else if (variables.submitter === "new") {
           if (isNew) {
             form.reset(defaultValues);
           } else {
             router.push(
               basePathname +
                 "/new" +
-                (searchParams.size ? "?" + searchParams : "")
+                (searchParams.size ? "?" + searchParams : ""),
             );
           }
         } else if (isNew) {
@@ -60,7 +65,7 @@ export default function AdminEditForm({ children }) {
             basePathname +
               "/" +
               data.id +
-              (searchParams.size ? "?" + searchParams : "")
+              (searchParams.size ? "?" + searchParams : ""),
           );
         }
       }}
@@ -68,7 +73,7 @@ export default function AdminEditForm({ children }) {
         const button = (event.nativeEvent as SubmitEvent)
           ?.submitter as HTMLButtonElement;
         if (button && button.name === "action") {
-          return mutation.mutateAsync({ action: button.value, ...data });
+          return mutation.mutateAsync({ submitter: button.value, ...data });
         } else {
           return mutation.mutateAsync(data);
         }

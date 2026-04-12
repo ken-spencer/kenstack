@@ -15,7 +15,7 @@ import { PipelineResponse } from "@kenstack/lib/api/PipelineResponse";
 class TransactionError extends Error {
   constructor(
     public code: string,
-    message: string
+    message: string,
   ) {
     super(message);
   }
@@ -37,7 +37,7 @@ const resetPasswordAction: PipelineAction<typeof schema> = async ({
     if (!token.match(/^[A-Za-z0-9_-]{32}$/)) {
       return errorResponse(
         response,
-        "That password reset link isn't valid. Please request a new one below."
+        "That password reset link isn't valid. Please request a new one below.",
       );
     }
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
@@ -54,20 +54,20 @@ const resetPasswordAction: PipelineAction<typeof schema> = async ({
     if (!fp) {
       return errorResponse(
         response,
-        "That password reset link isn't valid. Please request a new one below."
+        "That password reset link isn't valid. Please request a new one below.",
       );
     }
 
     if (fp.invalidatedAt) {
       return errorResponse(
         response,
-        "That password reset link has already been used. Please request a new one below."
+        "That password reset link has already been used. Please request a new one below.",
       );
     }
     if (fp.expiresAt < now) {
       return errorResponse(
         response,
-        "That password reset link has expired. Please request a new one below."
+        "That password reset link has expired. Please request a new one below.",
       );
     }
 
@@ -79,7 +79,7 @@ const resetPasswordAction: PipelineAction<typeof schema> = async ({
     if (!user) {
       return errorResponse(
         response,
-        "We couldn't find an account for that reset link. Please request a new link below."
+        "We couldn't find an account for that reset link. Please request a new link below.",
       );
     }
 
@@ -94,15 +94,15 @@ const resetPasswordAction: PipelineAction<typeof schema> = async ({
             and(
               eq(prr.tokenHash, tokenHash),
               isNull(prr.invalidatedAt),
-              gte(prr.expiresAt, now)
-            )
+              gte(prr.expiresAt, now),
+            ),
           )
           .returning({ tokenHash: prr.tokenHash });
 
         if (consumed.length !== 1) {
           throw new TransactionError(
             "NOT_CONSUMED",
-            "The token was not consumed."
+            "The token was not consumed.",
           );
         }
 
@@ -119,7 +119,7 @@ const resetPasswordAction: PipelineAction<typeof schema> = async ({
         if (updatedUser.length !== 1) {
           throw new TransactionError(
             "USER_UPDATE_FAILED",
-            "There was a problem updating your password. Please try again."
+            "There was a problem updating your password. Please try again.",
           );
         }
 
@@ -130,7 +130,7 @@ const resetPasswordAction: PipelineAction<typeof schema> = async ({
         if (err.code === "NOT_CONSUMED") {
           return errorResponse(
             response,
-            "That password reset link is no longer valid. Please request a new one below."
+            "That password reset link is no longer valid. Please request a new one below.",
           );
         }
 
@@ -174,7 +174,7 @@ const resetPasswordAction: PipelineAction<typeof schema> = async ({
     if (!updated.length) {
       /** user is logged in, No reason to redirect. */
       return response.error(
-        "We couldn't update your password. Please try again."
+        "We couldn't update your password. Please try again.",
       );
     }
     await deps.logger.audit({ action: "reset-password", userId: user.id });

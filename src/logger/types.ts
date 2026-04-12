@@ -8,10 +8,10 @@ export type AuditLogger = (
       }
   ) & {
     action: string;
-    entityType?: string;
-    entityId?: number | null;
+    table?: string;
+    rowId?: number | null;
     data?: Record<string, unknown>;
-  }
+  },
 ) => Promise<void>;
 
 export type Logger = {

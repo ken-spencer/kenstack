@@ -1,62 +1,90 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import isPlainObject from "lodash-es/isPlainObject";
 
-import { hasRole, revalidate } from "@kenstack/lib/auth";
+import { deps } from "@app/deps";
 
-import merge from "lodash-es/merge";
+// import merge from "lodash-es/merge";
 
 import list from "@kenstack/admin/api/list";
 import load from "@kenstack/admin/api/load";
-import tags from "@kenstack/admin/api/tags";
 import save from "@kenstack/admin/api/save";
 import remove from "@kenstack/admin/api/remove";
-import presignImage from "@kenstack/admin/api/presignedCloudinaryUrl";
+// import presignImage from "@kenstack/admin/api/presignedCloudinaryUrl";
+// import tags from "@kenstack/admin/api/tags";
 
-import { type ServerConfig } from "@kenstack/admin/types";
-type Options = { serverConfig: ServerConfig };
+import { type AdminConfig } from "@kenstack/admin";
+import { type FetchError } from "@kenstack/lib/fetcher";
+
+type Options = { adminConfig: AdminConfig };
 
 export const adminPipeline = async (
-  request: Request,
+  request: NextRequest,
   context,
-  options: Options
+  options: Options,
 ) => {
-  if (!(await hasRole("ADMIN"))) {
+  if (!(await deps.auth.hasRole("admin"))) {
     return NextResponse.json({ redirect: "/login" });
   }
-  await revalidate();
+  // await deps.auth.revalidate();
 
-  const { params } = context;
-  const { serverConfig } = options;
-  const { type, action } = await params;
+  const { adminConfig } = options;
+  // const { type, action } = await params;
 
-  const [, base, overrides] = serverConfig.find(([t]) => t === type) || [];
+  const contentType = request.headers.get("content-type");
+  if (!contentType?.startsWith("application/json")) {
+    return NextResponse.json(
+      {
+        status: "error",
+        message: "Invalid request. Only JSON is accepted.",
+      } satisfies FetchError,
+      { status: 415 },
+    );
+  }
+
+  const rawJson = await request.json();
+  if (!isPlainObject(rawJson)) {
+    return NextResponse.json(
+      {
+        status: "error",
+        message: `Invalid JSON a plain object is expected`,
+      } satisfies FetchError,
+      { status: 400 },
+    );
+  }
+
+  const { action, name, ...json } = rawJson;
+
+  const [, base /*overrides*/] = adminConfig.find(([t]) => t === name) || [];
   if (!base) {
     return NextResponse.json({
       status: "error",
-      message: `Unknown module ${type}`,
+      message: `Unknown admin table name "${name}"`,
     });
   }
 
-  const adminConfig = merge({}, base, overrides);
-
-  const input: [Request, typeof adminConfig] = [
+  // const input: [Request, typeof adminConfig] = [
+  //   request,
+  //   merge({}, base, overrides),
+  // ];
+  const input = {
     request,
-    // context,
-    adminConfig,
-  ];
+    json,
+    adminTable: base, //merge({}, base, overrides),
+  };
 
   switch (action) {
     case "list":
-      return list(...input);
+      return list(input);
     case "load":
-      return load(...input);
+      return load(input);
     case "save":
-      return save(...input);
+      return save(input);
     case "remove":
-      return remove(...input);
-    case "get-presigned-url":
-      return presignImage(...input);
-    case "tags":
-      return tags(...input);
+      return remove(input);
+    // case "get-presigned-url":
+    //   return presignImage(...input);
+    // case "tags":
+    //   return tags(...input);
   }
   return NextResponse.json({
     status: "error",

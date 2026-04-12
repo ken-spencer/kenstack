@@ -2,10 +2,8 @@
 import React from "react";
 
 import createEditor from "../wrapper";
+
 import type { BlockTag, ComponentProps } from "@kenstack/pageEditor/types";
-
-// type Tag = keyof React.JSX.IntrinsicElements;
-
 function Text<T extends BlockTag = "div">({
   tag,
   content,

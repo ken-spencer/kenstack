@@ -27,8 +27,8 @@ export const auditLogs = pgTable(
 
     action: varchar("action", { length: 64 }).notNull(),
 
-    entityType: varchar("entity_type", { length: 64 }),
-    entityId: integer("entity_id"),
+    table: varchar("table", { length: 64 }),
+    rowId: integer("row_id"),
 
     pathname: text("pathname"),
     ipAddress: inet("ip_address"),
@@ -41,5 +41,5 @@ export const auditLogs = pgTable(
     index("audit_logs_org_id_idx").on(t.orgId),
     index("audit_logs_user_id_idx").on(t.userId),
     index("audit_logs_created_at_idx").on(t.createdAt),
-  ]
+  ],
 );

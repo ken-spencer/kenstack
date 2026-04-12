@@ -5,9 +5,12 @@ import { type Sessions } from "@kenstack/db/schema/sessions";
 
 export type Tables = { users: Users; sessions: Sessions };
 
-export type AuthDeps<TSchema extends Tables> = {
+export type AuthDeps<
+  TSchema extends Tables,
+  TRoles extends readonly string[],
+> = {
   db: PostgresJsDatabase<TSchema>;
   tables: TSchema;
   logger: Logger;
-  roles: readonly string[];
+  roles: TRoles;
 };

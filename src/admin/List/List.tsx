@@ -1,3 +1,4 @@
+"use client";
 import { Fragment, useLayoutEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useAdminList } from "./context";
@@ -20,13 +21,8 @@ function AdminList() {
   const {
     selected,
     setSelected,
-    // apiPath,
     query,
-    adminConfig: {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      schema,
-      list: { component: ListItemComponent },
-    },
+    client: { ListItem },
   } = useAdminList();
 
   const { data, error, isPending } = query;
@@ -62,11 +58,11 @@ function AdminList() {
     <>
       {/* hidden measurer for first row to determine column count */}
       <div ref={measureRef} className="hidden">
-        {firstItem ? <ListItemComponent path="#" item={firstItem} /> : null}
+        {firstItem ? <ListItem path="#" item={firstItem} /> : null}
       </div>
 
       <div
-        className={`grid gap-x-2 grid-cols-[min-content_1fr] ${cols > 0 ? "md:[grid-template-columns:min-content_repeat(var(--cols),auto)_1fr]" : ""} md:items-center`}
+        className={`grid grid-cols-[min-content_1fr] gap-x-2 ${cols > 0 ? "md:[grid-template-columns:min-content_repeat(var(--cols),auto)_1fr]" : ""} md:items-center`}
         style={{ "--cols": cols } as React.CSSProperties}
       >
         {data.items.map((item, key) => {
@@ -77,25 +73,25 @@ function AdminList() {
             (searchParams.size ? "?" + searchParams : "");
           return (
             <Fragment key={item.id}>
-              <div className="p-1 flex items-center justify-self-start col-start-1">
+              <div className="col-start-1 flex items-center justify-self-start p-1">
                 <Checkbox
                   checked={selected.includes(item.id)}
                   onCheckedChange={(checked) => {
                     return checked
                       ? setSelected([...selected, item.id])
                       : setSelected(
-                          selected.filter((value) => value !== item.id)
+                          selected.filter((value) => value !== item.id),
                         );
                   }}
                 />
               </div>
               <div className="flex flex-col gap-1 md:contents">
-                <ListItemComponent path={path} item={item} />
+                <ListItem path={path} item={item} />
               </div>
               {data.items.length > key + 1 ? (
                 <div className="col-span-full my-2 border-t" />
               ) : (
-                <div className="col-span-full mt-2 " />
+                <div className="col-span-full mt-2" />
               )}
             </Fragment>
           );

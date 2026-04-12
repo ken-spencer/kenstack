@@ -35,7 +35,7 @@ export type StatusMessage = {
 
 export type MutationFn<TResult extends Record<string, unknown>, TVariables> = (
   variables: TVariables,
-  context: unknown
+  context: unknown,
 ) => Promise<FetchResult<TResult>>;
 
 export type FormProviderProps<
@@ -52,7 +52,7 @@ export type FormProviderProps<
   onSuccess?: (
     data: FetchSuccess<TResult>,
     variables: TVariables,
-    context: { form: UseFormReturn<TValues> }
+    context: { form: UseFormReturn<TValues> },
   ) => void;
   children: React.ReactNode;
 };
@@ -89,7 +89,7 @@ function FormProvider<
   children,
 }: FormProviderProps<TResult, TVariables, TSchema, TValues>) {
   const [statusMessage, setStatusMessage] = useState<StatusMessage | null>(
-    null
+    null,
   );
   const lastFieldRef = useRef(null);
 
@@ -149,13 +149,13 @@ function FormProvider<
                 // shouldFocus: (variables as CommitVariables)?.commit
                 //   ? false
                 //   : true,
-              }
+              },
             );
             if (!form.control._fields[field]) {
               extraErrors.push(
                 <li
                   key={index}
-                >{`Error on field ${field}: ${err}. Please contact us if you are unable to proceed.`}</li>
+                >{`Error on field ${field}: ${err}. Please contact us if you are unable to proceed.`}</li>,
               );
             }
           });

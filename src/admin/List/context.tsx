@@ -2,9 +2,8 @@
 
 import React, { createContext, useContext, useState } from "react";
 import { useServer } from "@kenstack/admin/Server/context";
-import { usePathname, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
-// type BaseDoc = Record<string, unknown>;
 const AdminListContext = createContext<UseListProps | null>(null);
 import fetcher from "@kenstack/lib/fetcher";
 import { useQuery, UseQueryResult } from "@tanstack/react-query";
@@ -15,19 +14,33 @@ type FilterProps = {
   filters: Record<string, unknown>;
 };
 
-import { type AdminClientConfig, type AdminListResult } from "@kenstack/admin/types";
+// type BaseItem = {
+//   id: string;
+// };
+import { AdminClient, type AdminListResult } from "@kenstack/admin/client";
+
+// import { type FetchResult } from "@kenstack/lib/fetcher";
+// export type AdminListResult<
+//   TItem extends Record<string, unknown> | never = never,
+// > = FetchResult<{
+//   total: number;
+//   items: [TItem] extends [never] ? BaseListItem[] : (BaseListItem & TItem)[];
+// }>;
+
 type AdminListProps = {
-  admin: AdminClientConfig;
+  client: AdminClient;
   children: React.ReactNode;
 };
 
 type QueryKey = [string, FilterProps, number];
 
 type UseListProps<TDoc extends Record<string, unknown> = never> = {
-  selected: string[];
-  setSelected: React.Dispatch<React.SetStateAction<string[]>>;
+  client: AdminClient;
+  selected: number[];
+  name: string;
+  setSelected: React.Dispatch<React.SetStateAction<number[]>>;
   apiPath: string;
-  adminConfig: AdminClientConfig;
+  // adminConfig: AdminClientConfig;
   queryKey: QueryKey;
   filters: FilterProps;
   setFilters: SetQueryStore<FilterProps>;
@@ -35,37 +48,39 @@ type UseListProps<TDoc extends Record<string, unknown> = never> = {
   // setKeywords: React.Dispatch<React.SetStateAction<string>>;
   page: number;
   query: UseQueryResult<AdminListResult<TDoc>, Error>;
+  limit: number;
 };
 
-export function AdminListProvider({ admin, children }: AdminListProps) {
+export function AdminListProvider({ client, children }: AdminListProps) {
   const [selected, setSelected] = useState([]);
   const [filters, debouncedFilters, setFilters] = useQueryStore<FilterProps>({
     keywords: "",
-    filters: admin.filters ? admin.filters.defaultValues : {},
+    // filters: admin.filters ? admin.filters.defaultValues : {},
+    filters: {},
   });
 
-  const pathname = usePathname();
   const searchParams = useSearchParams();
   const page = Number(searchParams.get("page") ?? 1);
 
-  const { type } = useServer();
-  const regex = new RegExp(`^(.*?)(?=/${type}(?:/|$)).*$`);
-  const basePathname = pathname.replace(regex, "$1");
-  const apiPath = basePathname + "/api/" + type;
+  const { name } = useServer();
+  const apiPath = "/api/admin/";
 
   const queryKey = ["admin-list", debouncedFilters, page] satisfies QueryKey;
 
   const query = useQuery<AdminListResult, Error>({
-    queryFn: () => fetcher(apiPath + "/list", { ...debouncedFilters, page }),
+    queryFn: () =>
+      fetcher(apiPath, { action: "list", name, ...debouncedFilters, page }),
     queryKey,
     placeholderData: (prev) => prev,
   });
 
   const values: UseListProps = {
+    client,
+    name,
     selected,
     setSelected,
     apiPath,
-    adminConfig: admin,
+    // adminConfig: admin,
     queryKey,
     filters,
     setFilters,
@@ -74,6 +89,7 @@ export function AdminListProvider({ admin, children }: AdminListProps) {
     // setKeywords,
     page,
     query,
+    limit: 25,
   };
   return (
     <AdminListContext.Provider value={values}>

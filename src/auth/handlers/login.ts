@@ -8,13 +8,14 @@ import {
   type PipelineAction,
 } from "@kenstack/lib/api";
 import loginSchema from "@kenstack/auth/schemas/login";
-import { deps } from "@server/deps";
+import { deps } from "@app/deps";
 import { sql } from "drizzle-orm";
 
 import { PipelineResponse } from "@kenstack/lib/api/PipelineResponse";
 
-export const loginPipeline = () => (options: PipelineOptions) =>
-  pipeline({ ...options, schema: loginSchema }, [recaptcha(), login()]);
+export const loginPipeline =
+  () => (options: PipelineOptions<typeof loginSchema>) =>
+    pipeline({ ...options, schema: loginSchema }, [recaptcha(), login()]);
 
 const login =
   (): PipelineAction<typeof loginSchema> =>
@@ -33,17 +34,17 @@ const login =
       .from(loginFailures)
       .where(
         sql`${loginFailures.attemptedAt} > now() - interval '15 minutes'
-        and (${loginFailures.email} = ${email} or ${loginFailures.ip} = ${ipAddress})`
+        and (${loginFailures.email} = ${email} or ${loginFailures.ip} = ${ipAddress})`,
       );
 
     if (emailCount >= 3) {
       return response.error(
-        "Your account has been temporarily locked due to multiple failed login attempts. Please wait 15 minutes before trying again. If you've forgotten your password, consider using the 'Forgot Password' option."
+        "Your account has been temporarily locked due to multiple failed login attempts. Please wait 15 minutes before trying again. If you've forgotten your password, consider using the 'Forgot Password' option.",
       );
     }
     if (ipCount >= 10) {
       return response.error(
-        "Your account has been temporarily locked due to suspicious activity from your network. Please wait 15 minutes before trying again. If you've forgotten your password, consider using the 'Forgot Password' option."
+        "Your account has been temporarily locked due to suspicious activity from your network. Please wait 15 minutes before trying again. If you've forgotten your password, consider using the 'Forgot Password' option.",
       );
     }
 
@@ -85,7 +86,7 @@ const login =
 async function failResponse(
   email: string,
   request: NextRequest,
-  response: PipelineResponse
+  response: PipelineResponse,
 ) {
   const {
     db,

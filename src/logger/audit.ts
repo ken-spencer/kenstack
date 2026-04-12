@@ -4,8 +4,7 @@ import { type PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { geolocation } from "@vercel/functions";
 
 import { headers } from "next/headers";
-import { auditLogs } from "@server/db/schema";
-// import { getCurrentOrganization } from "@server/db/loaders/organizations";
+import { auditLogs } from "@kenstack/db/schema/audit";
 
 export const createAuditLogger =
   <TSchema extends Record<string, unknown>>(

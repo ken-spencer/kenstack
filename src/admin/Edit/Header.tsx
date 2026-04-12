@@ -1,3 +1,4 @@
+"use client";
 import IconButton from "@kenstack/components/IconButton";
 import { Plus, Save, List, ScanEye } from "lucide-react";
 import { useFormContext } from "react-hook-form";
@@ -15,13 +16,15 @@ export default function AdminEditHeader() {
   } = useFormContext();
 
   const { mutation } = useForm();
-  const { listPath, adminConfig, isNew, item } = useAdminEdit();
+  const { listPath, preview, isNew, item } = useAdminEdit();
   return (
     <div className="flex gap-4 border-b">
       <div className="flex grow gap-1">
         <IconButton
           disabled={!isDirty || mutation.isPending}
-          isPending={mutation.isPending && mutation.variables.action === "new"}
+          isPending={
+            mutation.isPending && mutation.variables.submitter === "new"
+          }
           className={isDirty ? "" : "hidden"}
           name="action"
           value="new"
@@ -41,7 +44,9 @@ export default function AdminEditHeader() {
 
         <IconButton
           disabled={!isDirty || mutation.isPending}
-          isPending={mutation.isPending && mutation.variables.action === "list"}
+          isPending={
+            mutation.isPending && mutation.variables.submitter === "list"
+          }
           className={isDirty ? "" : "hidden"}
           name="action"
           value="list"
@@ -61,7 +66,9 @@ export default function AdminEditHeader() {
 
         <IconButton
           disabled={!isDirty || mutation.isPending}
-          isPending={mutation.isPending && mutation.variables.action === "save"}
+          isPending={
+            mutation.isPending && mutation.variables.submitter === "save"
+          }
           name="action"
           value="save"
           tooltip="Save"
@@ -70,12 +77,21 @@ export default function AdminEditHeader() {
         </IconButton>
       </div>
       <div className="">
-        {adminConfig.preview && (
+        {preview && !isNew && item && (
           <IconButton
             type="button"
             disabled={isNew}
             tooltip="View Content"
-            onClick={() => window.open(adminConfig.preview(item), "_blank")}
+            onClick={() =>
+              window.open(
+                preview.replace(/\${(.*?)}/g, (_, key) =>
+                  typeof item[key] === "string" || typeof item[key] === "number"
+                    ? String(item[key])
+                    : "",
+                ),
+                "_blank",
+              )
+            }
           >
             <ScanEye className="size-6 text-gray-800" />
           </IconButton>

@@ -1,5 +1,5 @@
 import * as z from "zod";
-import isEmail from "validator/es/lib/isEmail";
+import isEmail from "validator/lib/isEmail";
 import tlds from "tlds";
 
 const emailSchema = () =>

@@ -1,3 +1,4 @@
+"use client";
 import { useMemo } from "react";
 import {
   Pagination,
@@ -15,9 +16,7 @@ import { useAdminList } from "./context";
 import omit from "lodash-es/omit";
 
 export default function AdminListFooter() {
-  const { page, query, adminConfig } = useAdminList();
-
-  const limit = adminConfig.list.limit || 25;
+  const { page, query, limit } = useAdminList();
 
   if (query.isPending || query.error || "error" === query.data.status) {
     return;
@@ -59,7 +58,7 @@ function PaginationCont({
   const [firstPages, lastPages] = useMemo(() => {
     const first = Array.from({ length: 5 }, (_, i) => i + 1).slice(
       0,
-      totalPages <= 5 ? totalPages : 5
+      totalPages <= 5 ? totalPages : 5,
     );
 
     let last: number[] = [];
@@ -68,7 +67,7 @@ function PaginationCont({
       const extraCount = totalPages === 6 ? 1 : 2;
       last = Array.from(
         { length: extraCount },
-        (_, i) => totalPages - extraCount + 1 + i
+        (_, i) => totalPages - extraCount + 1 + i,
       );
     }
     return [first, last];

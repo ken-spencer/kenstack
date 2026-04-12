@@ -1,17 +1,13 @@
-import {
-  Button,
-  // Container,
-  // Head,
-  Heading,
-  Hr,
-  Section,
-  Text,
-} from "@react-email/components";
+import { Button, Heading, Hr, Section, Text } from "@react-email/components";
 
-import EmailCont from "@server/email";
-export { attachments } from "@server/email";
+import { deps } from "@app/deps";
 
 import { type Geo } from "@vercel/functions";
+
+const {
+  email: { EmailCont, attachments },
+} = deps;
+export { attachments };
 
 export type ForgotPasswordEmailProps =
   | {

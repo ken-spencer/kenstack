@@ -1,42 +1,40 @@
-import { objectId } from "@kenstack/schemas/atoms";
 import * as z from "zod";
+import { inArray } from "drizzle-orm";
 
 import type { PipelineAction } from "@kenstack/lib/api";
 import { pipeline } from "@kenstack/lib/api";
-import { type AdminServerConfig } from "../types";
+import type { AdminApiOptions, AnyAdminTable } from "..";
+import { deps } from "@app/deps";
 
 const schema = z.object({
-  remove: z.array(objectId("server")),
+  remove: z.array(z.coerce.number()),
 });
 
-const remove = (request, adminConfig: AdminServerConfig) => {
-  return pipeline(request, schema, [removeAction(adminConfig)]);
+const remove = ({ adminTable, ...options }: AdminApiOptions) => {
+  return pipeline({ ...options, schema }, [removeAction(adminTable)]);
 };
 
 const removeAction =
-  (adminConfig: AdminServerConfig): PipelineAction<typeof schema> =>
+  (adminTable: AnyAdminTable): PipelineAction<typeof schema> =>
   async ({ response, data }) => {
-    // const result = schema.safeParse(data);
-    // if (!result.success) {
-    //   return response.error("A valid id is required ");
-    // }
-
     if (data.remove.length === 0) {
       return response.error("No records provided to delete.");
     }
+    const { table } = adminTable;
+    const { db } = deps;
 
-    await adminConfig.model.updateMany(
-      { _id: { $in: data.remove } },
-      {
-        $set: {
-          "meta.deleted": true,
-          "meta.updatedAt": new Date(),
-        },
-      }
-    );
-    if (adminConfig.revalidate) {
-      await adminConfig.revalidate.onDelete(data.remove);
-    }
+    await db
+      .update(table)
+      .set({ deletedAt: new Date() })
+      .where(inArray(table.id, data.remove));
+
+    // TODo implement log, potentially look up user in audit?
+    // deps.logger.audit({
+    //   action: "soft-delete",
+    // });
+    // if (adminConfig.revalidate) {
+    //   await adminConfig.revalidate.onDelete(data.remove);
+    // }
 
     return response.success({});
   };

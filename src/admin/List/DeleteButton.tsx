@@ -17,19 +17,19 @@ import { useAdminList } from "./context";
 import fetcher, { type FetchResult } from "@kenstack/lib/fetcher";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { AdminListResult } from "@kenstack/admin/types";
+import { AdminListResult } from "@kenstack/admin/client";
 
 export default function DeleteButton() {
-  const { selected, setSelected, apiPath, queryKey } = useAdminList();
+  const { name, selected, setSelected, apiPath, queryKey } = useAdminList();
   const queryClient = useQueryClient();
   const mutation = useMutation<
     FetchResult,
     Error,
-    string[],
+    number[],
     { previous: unknown }
   >({
     mutationFn: async (variables) =>
-      fetcher(apiPath + "/remove", { remove: variables }),
+      fetcher(apiPath, { name, action: "remove", remove: variables }),
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey });
 

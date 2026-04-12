@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { generateToken, hashToken } from "./token";
 import { AuthDeps, type Tables } from "./types";
@@ -5,9 +6,12 @@ import { eq } from "drizzle-orm";
 
 import { type User } from "@kenstack/types";
 
-export function createAuth<TSchema extends Tables>(
-  deps: AuthDeps<TSchema>,
-  { getCurrentUser }: { getCurrentUser: () => Promise<User | undefined> }
+export function createAuth<
+  TSchema extends Tables,
+  TRoles extends readonly string[],
+>(
+  deps: AuthDeps<TSchema, TRoles>,
+  { getCurrentUser }: { getCurrentUser: () => Promise<User | undefined> },
 ) {
   const {
     db,
@@ -37,8 +41,8 @@ export function createAuth<TSchema extends Tables>(
     await logger.audit({
       action: "login",
       userId,
-      entityId: sessionRow.id,
-      entityType: "sessions",
+      rowId: sessionRow.id,
+      table: "sessions",
     });
 
     const isProd =
@@ -74,8 +78,8 @@ export function createAuth<TSchema extends Tables>(
     await deps.logger.audit({
       action: "logout",
       userId: user ? user.id : null,
-      entityId: deletedSession ? deletedSession.id : null,
-      entityType: "sessions",
+      rowId: deletedSession ? deletedSession.id : null,
+      table: "sessions",
     });
 
     const isProd =
@@ -92,5 +96,23 @@ export function createAuth<TSchema extends Tables>(
       path: "/",
     });
   };
-  return { login, logout };
+
+  const hasRole = cache(async (role: TRoles | TRoles[number]) => {
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return false;
+    }
+
+    if (role) {
+      const requiredRoles = Array.isArray(role) ? role : [role];
+
+      const hasPermission = user.roles.some((userRole) =>
+        requiredRoles.includes(userRole),
+      );
+
+      return hasPermission;
+    }
+  });
+  return { login, logout, hasRole };
 }

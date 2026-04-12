@@ -1,9 +1,11 @@
 import { createDb } from "@kenstack/db";
 import { createLogger } from "@kenstack/logger";
 import { createAuth } from "@kenstack/auth/server";
+import Email from "./components/Email";
 
 import { type Users } from "@kenstack/db/schema/users";
 import { type Sessions } from "@kenstack/db/schema/sessions";
+import { type Attachment } from "@kenstack/lib/mailer";
 
 export type Tables = { users: Users; sessions: Sessions } & Record<
   string,
@@ -26,7 +28,7 @@ export const defaultRoles = ["admin", "member"] as const;
 
 export const createDeps = <
   TSchema extends Tables,
-  TRoles extends readonly string[] = typeof defaultRoles,
+  const TRoles extends readonly string[] = typeof defaultRoles,
 >(options: {
   roles?: TRoles;
   multiTenant?: boolean;
@@ -36,7 +38,12 @@ export const createDeps = <
   const db = createDb({ schema: options.tables });
   const logger = createLogger<TSchema>(db);
   const roles = (options.roles ?? defaultRoles) as TRoles;
-  const auth = createAuth({ db, tables: options.tables, logger, roles });
+  const auth = createAuth<TSchema, TRoles>({
+    db,
+    tables: options.tables,
+    logger,
+    roles,
+  });
   return {
     multiTenant: false,
     ...options,
@@ -44,6 +51,10 @@ export const createDeps = <
     auth,
     roles,
     db,
+    email: {
+      EmailCont: Email,
+      attachments: [] as Attachment[],
+    },
   };
 };
 

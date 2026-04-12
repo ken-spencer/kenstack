@@ -1,81 +1,36 @@
-import errorLog from "@kenstack/lib/errorLog";
-
-import { getClaims } from "@kenstack/lib/auth";
+import { selectFields } from "..";
 import { pipeline, type PipelineAction } from "@kenstack/lib/api";
-import { type AdminServerConfig } from "../types";
+import { deps } from "@app/deps";
+import { eq } from "drizzle-orm";
 
-import getEditAggregations from "./getEditAggregations";
+import type { AdminApiOptions, AnyAdminTable } from "..";
 
-const load = (request, adminConfig: AdminServerConfig) => {
-  return pipeline(request, null, [loadAction(adminConfig)]);
+const load = ({ adminTable, ...options }: AdminApiOptions) => {
+  return pipeline({ ...options, schema: null }, [loadAction(adminTable)]);
 };
 
 const loadAction =
-  (adminConfig: AdminServerConfig): PipelineAction =>
+  (adminTable: AnyAdminTable): PipelineAction =>
   async ({ response, id }) => {
     if (!id) {
       return response.error("A valid id is required");
     }
 
-    // const clientSchema =
-    //   typeof adminConfig.schema === "function"
-    //     ? adminConfig.schema("client")
-    //     : adminConfig.schema;
+    const { db } = deps;
+    const { table, fields } = adminTable;
+    const user = await deps.auth.requireUser();
 
-    // const projection = {
-    //   ...Object.keys(clientSchema.shape).reduce((acc, k) => {
-    //     acc[k] = true;
-    //     return acc;
-    //   }, {}),
-    //   meta: true,
-    // };
+    const select = selectFields(table, fields);
+    const rows = await db.select(select).from(table).where(eq(table.id, id));
 
-    // const aggregations = adminConfig.edit?.aggregate
-    //   ? adminConfig.edit.aggregate({ projection })
-    //   : [
-    //       {
-    //         $project: projection,
-    //       },
-    //     ];
-
-    const aggregations = getEditAggregations(adminConfig);
-    // const db = await getDb();
-    let doc;
-    try {
-      // doc = await db
-      //   .collection(adminConfig.collection)
-      doc = await adminConfig.model
-        .aggregate([
-          { $match: { _id: id, "meta.deleted": false } },
-          ...aggregations,
-        ])
-        .next();
-    } catch (e) {
-      if (e.errorResponse?.errmsg) {
-        errorLog(e, "Query error: " + e.errorResponse?.errmsg);
-        return response.error(
-          "There was an unexpected problem quierying the record"
-        );
-      } else {
-        throw e;
-      }
+    if (!rows.length) {
+      return response.error("Unable to find the requested record.");
     }
 
-    if (!doc) {
-      return response.error(
-        "Unable to find the requested document. Was it deleted?"
-      );
-    }
-
-    const claims = await getClaims();
     return response.success({
-      userId: claims ? claims.sub : null,
+      userId: user.id,
       item: {
-        ...{ ...adminConfig.defaultValues, ...doc },
-        // meta: {
-        //   createdAt: doc.meta.createdAt.toString(),
-        //   updatedAt: doc.meta.updatedAt.toString(),
-        // },
+        ...{ ...adminTable.defaultValues, ...rows[0] },
       },
     });
   };

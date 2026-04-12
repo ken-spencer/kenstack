@@ -1,12 +1,11 @@
+"use client";
 import Form from "@kenstack/forms/Form";
 import Notice from "@kenstack/forms/Notice";
-import { pageEditorSchema, isEditableField, type ApiSchema } from "./schema";
+import { pageEditorSchema, type ApiSchema } from "./schema";
 import { usePageEditor } from "./context";
-import { useRouter } from "next/navigation";
 
 export const PageEditorForm = ({ children }: { children: React.ReactNode }) => {
-  const { content, setContent, slug } = usePageEditor();
-  const router = useRouter();
+  const { content } = usePageEditor();
 
   return (
     <Form<{}, ApiSchema, typeof pageEditorSchema>

@@ -47,8 +47,8 @@ const pageEditAction: PipelineAction<typeof apiSchema> = async ({
   await logger.audit({
     action: "page-editor",
     userId: user.id,
-    entityType: "content",
-    entityId: row.id,
+    table: "content",
+    rowId: row.id,
   });
   revalidateTag("content:" + slug, "max");
   return response.success({});

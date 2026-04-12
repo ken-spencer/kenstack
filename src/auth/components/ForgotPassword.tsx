@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 
 import Link from "next/link";
 
@@ -21,7 +21,15 @@ const defaultValues = {
   email: "",
 };
 
-export default function ForgotPasswordForm() {
+export default function ForgotPasswordFormCont() {
+  return (
+    <Suspense>
+      <ForgotPasswordForm />
+    </Suspense>
+  );
+}
+
+export function ForgotPasswordForm() {
   const searchParams = useSearchParams();
   const { executeRecaptcha } = useGoogleReCaptcha();
   const [message, setMessage] = useState(() => {

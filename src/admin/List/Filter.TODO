@@ -23,7 +23,7 @@ const Filter: React.FC = () => {
 
   const value = [];
 
-  const filters = adminConfig.filters;
+  const filters = adminConfig?.filters;
   if (typeof document === "undefined" || !filters) {
     return null;
   }

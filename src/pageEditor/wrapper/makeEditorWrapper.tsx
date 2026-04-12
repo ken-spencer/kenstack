@@ -17,7 +17,7 @@ type DynamicComponent<P> = React.ComponentType<P> & {
 };
 
 export function makeEditorWrapper(
-  Editor: DynamicComponent<PageEditorAdminProps>
+  Editor: DynamicComponent<PageEditorAdminProps>,
 ) {
   return function EditorWrapper({
     tag,
@@ -29,10 +29,17 @@ export function makeEditorWrapper(
     const { content, editing } = usePageEditor();
     const { isEditingEnabled } = useAdminUi();
     const defaultValue = content[name];
-    // const [value, setValue] = useState(defaultValue);
+    const html = content[name + "Html"] as string | undefined;
 
     if (!isEditingEnabled()) {
-      return <Component tag={tag} {...componentProps} content={defaultValue} />;
+      return (
+        <Component
+          tag={tag}
+          {...componentProps}
+          placeholder={placeholder}
+          content={html ?? defaultValue}
+        />
+      );
     }
 
     if (editing === name) {
@@ -44,7 +51,6 @@ export function makeEditorWrapper(
               // value={value}
               // setValue={setValue}
               placeholder={placeholder}
-              // commit={commit}
               className={componentProps.className}
             />
           </PageEditorForm>
@@ -58,7 +64,7 @@ export function makeEditorWrapper(
           tag={tag}
           {...componentProps}
           placeholder={placeholder}
-          content={defaultValue}
+          content={html ?? defaultValue}
         />
       </Toggle>
     );
@@ -89,7 +95,7 @@ function Toggle({ name, children }: { name: Name; children: React.ReactNode }) {
       <button
         type="button"
         className={
-          "absolute -top-3 -right-6 size-6 rounded-full cursor-pointer " +
+          "absolute -top-3 -right-6 size-6 cursor-pointer rounded-full " +
           (editing === name ? "bg-indigo-600 text-white" : "")
         }
         onClick={() => {

@@ -14,7 +14,7 @@ import { PipelineResponse } from "./PipelineResponse";
 // import { objectId } from "@kenstack/schemas/atoms";
 // const idSchema = objectId("server").default(null);
 
-export type PipelineOptions<TSchema extends z.ZodType> = {
+export type PipelineOptions<TSchema extends z.ZodType = undefined> = {
   request: NextRequest;
   schema?: TSchema;
   json?: Record<string, unknown>;
@@ -22,7 +22,7 @@ export type PipelineOptions<TSchema extends z.ZodType> = {
 
 export default async function pipeline<TSchema extends z.ZodType>(
   options: PipelineOptions<TSchema>,
-  actions: PipelineAction<TSchema>[] = []
+  actions: PipelineAction<TSchema>[] = [],
 ) {
   const { request, schema, ...localOptions } = options;
   /** Build schema from factory function when needed */
@@ -41,7 +41,7 @@ export default async function pipeline<TSchema extends z.ZodType>(
   const { id, ...json } = localOptions?.json ?? (await request.json());
 
   let parsedId;
-  const idCheck = z.number().optional().safeParse(id);
+  const idCheck = z.coerce.number().optional().safeParse(id);
   if (idCheck.success) {
     parsedId = idCheck.data;
   }
@@ -59,10 +59,9 @@ export default async function pipeline<TSchema extends z.ZodType>(
       } satisfies FetchError);
     }
     data = parsed.data; // as Record<string, unknown>;
-  }
-
-  if (!data) {
-    throw Error("data is missing");
+    if (!data) {
+      throw Error("data is missing");
+    }
   }
 
   const response = new PipelineResponse();

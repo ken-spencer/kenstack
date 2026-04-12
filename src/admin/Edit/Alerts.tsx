@@ -1,3 +1,4 @@
+"use client";
 import { useState } from "react";
 import Notice from "@kenstack/forms/Notice";
 import Alert from "@kenstack/components/Alert";
@@ -39,13 +40,13 @@ export default function AdminEditAlerts() {
             We couldn&apos;t save your changes. Check the highlighted fields
             below for more information.
           </div>
-          <ul className="empty:hidden mt-4 pl-8 list-disc">
+          <ul className="mt-4 list-disc pl-8 empty:hidden">
             {Object.entries(errors).reduce((acc, [name, { message }]) => {
               if (!control._fields[name]) {
                 acc.push(
                   <li
                     key={name}
-                  >{`Unrendered field ${name} has error ${message}`}</li>
+                  >{`Unrendered field ${name} has error ${message}`}</li>,
                 );
               }
               return acc;

@@ -70,7 +70,7 @@ export const users = pgTable(
     index("users_org_created_at_active_idx")
       .on(t.createdAt)
       .where(sql`${t.deletedAt} IS NULL`),
-  ]
+  ],
 );
 
 export type Users = typeof users;

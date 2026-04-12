@@ -1,10 +1,12 @@
+"use client";
+
 import { Plus } from "lucide-react";
 import IconButton from "@kenstack/components/IconButton";
 import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import DeleteButton from "./DeleteButton";
 import KeywordSearch from "./KeywordSearch";
-import Filter from "./Filter";
+// import Filter from "./Filter";
 
 export default function AdminListHeader() {
   const pathname = usePathname();
@@ -12,7 +14,7 @@ export default function AdminListHeader() {
 
   return (
     <header>
-      <div className="flex gap-4 items-center">
+      <div className="flex items-center gap-4">
         <div className="flex-grow">
           <IconButton tooltip="New Entry" asChild>
             <Link
@@ -27,7 +29,7 @@ export default function AdminListHeader() {
           </IconButton>
         </div>
         <KeywordSearch />
-        <Filter />
+        {/* <Filter /> */}
         <DeleteButton />
       </div>
     </header>

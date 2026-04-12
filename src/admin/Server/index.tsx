@@ -1,46 +1,69 @@
-import { ReactNode } from "react";
-import type { ServerConfig } from "@kenstack/admin/types";
+import { Suspense } from "react";
 import { ServerProvider } from "./context";
-import { ObjectId } from "mongodb";
 // import merge from "lodash-es/merge";
-import { notFound } from "next/navigation";
-import { cacheLife } from "next/cache";
+import { notFound, redirect } from "next/navigation";
+import AdminList from "@kenstack/admin/List";
+import Edit from "@kenstack/admin/Edit";
+import { deps } from "@app/deps";
+import { AdminConfig } from "..";
 
 type AdminServerProps = {
   context: {
-    params: Promise<{ type: string; id?: string }>;
+    params: Promise<{ admin: [string, string?] }>;
   };
-  config: ServerConfig;
-  children: ReactNode;
+  adminConfig: AdminConfig;
 };
 
-export default async function AdminServer({
+export default function AdminServer(props: AdminServerProps) {
+  return (
+    <div>
+      <Suspense>
+        <AdminServerCore {...props} />
+      </Suspense>
+    </div>
+  );
+}
+
+async function AdminServerCore({
   context: { params },
-  config,
-  children,
+  adminConfig,
 }: AdminServerProps) {
-  "use cache";
-  cacheLife("max");
+  const { admin: adminRoute } = await params;
 
-  const { type, id } = await params;
+  if (!Array.isArray(adminRoute)) {
+    throw Error("/[...admin] routing structure is required for admin");
+  }
 
-  if (id && id !== "new" && !ObjectId.isValid(id)) {
+  const [name, id] = adminRoute;
+
+  if (id && id !== "new" && !id.match(/^[0-9]+$/)) {
     notFound();
   }
   const isNew = id === "new";
 
-  const thrupple = config.find(([t]) => t === type);
+  const thrupple = adminConfig.find(([t]) => t === name);
   if (!thrupple) {
     notFound();
   }
 
+  if ((await deps.auth.hasRole("admin")) !== true) {
+    redirect("/login");
+  }
   // const admin = thrupple[2] ? merge({}, thrupple[1], thrupple[2]) : thrupple[1];
+  const adminTable = thrupple[1];
+  const { icon: Icon, title } = adminTable;
 
   return (
-    <div>
-      <ServerProvider type={type} id={isNew ? null : id} isNew={isNew}>
-        {children}
-      </ServerProvider>
-    </div>
+    <ServerProvider name={name} id={isNew ? null : id} isNew={isNew}>
+      <div className="text-md mx-auto mb-2 flex items-center justify-center gap-4 text-gray-700">
+        {Icon && <Icon className="size-4 text-gray-800" />}
+        <span className="font-bold">{title}</span>
+      </div>
+      {isNew || id ? (
+        <Edit name={name} adminTable={adminTable} />
+      ) : (
+        <AdminList adminTable={adminTable} />
+      )}
+    </ServerProvider>
   );
 }
