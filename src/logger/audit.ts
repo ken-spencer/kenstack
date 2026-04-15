@@ -4,16 +4,16 @@ import { type PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { geolocation } from "@vercel/functions";
 
 import { headers } from "next/headers";
-import { auditLogs } from "@kenstack/db/schema/audit";
+import { auditLogs } from "@kenstack/db/tables/audit";
 
 export const createAuditLogger =
   <TSchema extends Record<string, unknown>>(
-    db: PostgresJsDatabase<TSchema>
+    db: PostgresJsDatabase<TSchema>,
   ): AuditLogger =>
   async (props) => {
     const headersList = await headers();
     const geo = geolocation(
-      new Request("http://internal", { headers: headersList })
+      new Request("http://internal", { headers: headersList }),
     );
     const userAgent = headersList.get("user-agent");
     const ipAddress = headersList.get("x-real-ip") ?? "127.0.0.1";

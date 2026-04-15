@@ -17,7 +17,6 @@
 //   | JsonValue[]
 //   | { [key: string]: JsonValue };
 
-// import { passwordResetRequests } from "@kenstack/db/schema/sessions";
 // import { users } from "@kenstack/db/schema/users";
 // import { auditLogs } from "@kenstack/db/schema/audit";
 

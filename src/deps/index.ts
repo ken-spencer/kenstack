@@ -3,8 +3,8 @@ import { createLogger } from "@kenstack/logger";
 import { createAuth } from "@kenstack/auth/server";
 import Email from "./components/Email";
 
-import { type Users } from "@kenstack/db/schema/users";
-import { type Sessions } from "@kenstack/db/schema/sessions";
+import { type Users } from "@kenstack/db/tables/users";
+import { type Sessions } from "@kenstack/db/tables/sessions";
 import { type Attachment } from "@kenstack/lib/mailer";
 
 export type Tables = { users: Users; sessions: Sessions } & Record<
