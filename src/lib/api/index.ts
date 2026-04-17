@@ -10,36 +10,33 @@ import type { NextRequest } from "next/server";
 import { PipelineResponse } from "./PipelineResponse";
 
 import { z } from "zod";
-export type DefaultSchema = z.ZodObject;
-
-// const defaultSchema = z.object({}).catchall(z.unknown()); // => Record<string, unknown>
-// export type DefaultSchema = typeof defaultSchema;
 
 import { type User } from "@kenstack/types";
 
-export type PipelineContext<TSchema extends z.ZodType> = {
+export type ObjectSchema = z.Schema<Record<string, unknown>>;
+
+export type PipelineContext<TSchema extends ObjectSchema | undefined> = {
   request: NextRequest;
   response: PipelineResponse;
   /** unsafe data */
   dataIn?: unknown;
-  schema?: TSchema;
-  data: z.output<TSchema>;
+  schema: TSchema;
+  data: TSchema extends ObjectSchema ? z.output<TSchema> : undefined;
   id?: number;
-  // insertedId?: ObjectId;
   user?: User;
   session?: never;
-  model?: never;
+  // model?: never;
 };
 
-export type ActionResult<TSchema extends z.ZodType> =
+export type ActionResult<TSchema extends ObjectSchema> =
   | Partial<PipelineContext<TSchema>>
   | PipelineResponse
   | void;
 
-export type PipelineAction<TSchema extends z.ZodType = z.ZodObject> = <
-  Ctx extends PipelineContext<TSchema> = PipelineContext<TSchema>,
->(
-  ctx: Ctx
+export type PipelineAction<
+  TSchema extends ObjectSchema | undefined = z.ZodObject,
+> = <Ctx extends PipelineContext<TSchema> = PipelineContext<TSchema>>(
+  ctx: Ctx,
 ) =>
   | void
   | Partial<Ctx>

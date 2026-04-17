@@ -22,8 +22,8 @@ import DefaultEmail, {
 } from "@kenstack/auth/email/ForgotPassword";
 
 type ForgotPasswordProps = {
-  Email: React.FC<ForgotPasswordEmailProps>;
-  attachments: Attachment[];
+  Email?: React.FC<ForgotPasswordEmailProps>;
+  attachments?: Attachment[];
   from: string;
 };
 

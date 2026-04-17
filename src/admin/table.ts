@@ -1,6 +1,9 @@
-import type { PgColumn } from "drizzle-orm/pg-core";
-
-import { getTableColumns, sql } from "drizzle-orm";
+import {
+  getTableColumns,
+  sql,
+  type ColumnBaseConfig,
+  type ColumnDataType,
+} from "drizzle-orm";
 import {
   index,
   integer,
@@ -9,31 +12,49 @@ import {
   timestamp,
   boolean,
   jsonb,
-  type AnyPgTable,
-  // type AnyPgColumn,
   type PgColumnBuilderBase,
   type PgTableExtraConfigValue,
+  type PgColumn,
+  type PgTable,
 } from "drizzle-orm/pg-core";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const metaColumnsTable = pgTable("_meta_columns", {
-  id: integer("id").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
-  deletedAt: timestamp("deleted_at", { withTimezone: true }),
-});
+export type ColOf<
+  TData,
+  TNotNull extends boolean = boolean,
+  THasDefault extends boolean = boolean,
+  TIsPrimaryKey extends boolean = boolean,
+  TTableName extends string = string,
+> = PgColumn<{
+  name: string;
+  tableName: TTableName;
+  dataType: ColumnDataType;
+  columnType: string;
+  data: TData;
+  driverParam: unknown;
+  notNull: TNotNull;
+  hasDefault: THasDefault;
+  isPrimaryKey: TIsPrimaryKey;
+  isAutoincrement: boolean;
+  hasRuntimeDefault: boolean;
+  enumValues: string[] | undefined;
+  baseColumn: ColumnBaseConfig<ColumnDataType, string> | undefined;
+  generated: GeneratedConfig | undefined;
+}>;
 
-type MetaColumns = typeof metaColumnsTable._.columns;
+/**
+ * Drizzle's generated-column config shape. Kept local so we
+ * don't depend on an internal export.
+ */
+type GeneratedConfig = {
+  as: unknown;
+  type: "always" | "byDefault";
+};
 
-export type MetaTable = AnyPgTable & {
-  _: AnyPgTable["_"] & {
-    columns: AnyPgTable["_"]["columns"] &
-      Pick<MetaColumns, "id" | "createdAt" | "updatedAt" | "deletedAt">;
-  };
-  id: MetaColumns["id"];
-  createdAt: MetaColumns["createdAt"];
-  updatedAt: MetaColumns["updatedAt"];
-  deletedAt: MetaColumns["deletedAt"];
+export type MetaTable<TTableName extends string = string> = PgTable & {
+  id: ColOf<number, true, true, true, TTableName>;
+  createdAt: ColOf<Date, true, true, false, TTableName>;
+  updatedAt: ColOf<Date, true, true, false, TTableName>;
+  deletedAt: ColOf<Date, false, false, false, TTableName>;
 };
 
 import { type FieldOptions } from "./fields";

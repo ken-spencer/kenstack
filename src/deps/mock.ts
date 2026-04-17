@@ -7,7 +7,7 @@ const content = createContent();
 
 import { RectangleEllipsis, UserPen } from "lucide-react";
 
-const tables = { ...users, ...coreTables, ...content };
+const tables = { ...users, ...coreTables, content };
 
 export const deps = createDeps({
   tables,

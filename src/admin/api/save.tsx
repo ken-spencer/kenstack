@@ -14,7 +14,7 @@ const save = ({ adminTable, ...options }: AdminApiOptions) => {
 };
 
 const saveAction =
-  (adminTable: AnyAdminTable): PipelineAction =>
+  (adminTable: AnyAdminTable): PipelineAction<typeof adminTable.schema> =>
   async ({ response, data, id }) => {
     const { db } = deps;
 

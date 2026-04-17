@@ -33,7 +33,7 @@ export default function SlugField({
     formState: { defaultValues },
   } = useFormContext();
   const watchedValue = watch(watchField);
-  const defaultValue = defaultValues[name];
+  const defaultValue = defaultValues ? defaultValues[name] : undefined;
   const [locked, setLocked] = useState(defaultValue ? true : false);
   const [wasEdited, setWasEdited] = useState(false);
 
@@ -72,7 +72,7 @@ export default function SlugField({
               className={twMerge(
                 "-mr-8 pr-9",
                 locked && "bg-gray-300",
-                inputClass
+                inputClass,
               )}
               readOnly={locked}
             />

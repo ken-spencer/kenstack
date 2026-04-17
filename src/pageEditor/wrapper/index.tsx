@@ -14,7 +14,7 @@ import type {
 } from "../types";
 
 type Props = {
-  component: React.ComponentType<ComponentProps<"div">>;
+  component: React.ComponentType<ComponentProps<BlockTag>>;
   editor: PageEditorLoader;
 };
 
@@ -25,7 +25,7 @@ type PolymorphicEditorComponent = <TTag extends BlockTag>(
 type EditorWrapperProps<TTag extends BlockTag> = {
   name: PageEditorProps<TTag>["name"];
   tag: TTag;
-  Component: React.ComponentType<unknown>;
+  Component: React.ComponentType<ComponentProps<TTag>>;
   componentProps: Omit<
     PageEditorProps<TTag>,
     "name" | "tag" | "placeholder" | "content"
@@ -50,7 +50,6 @@ export default function createEditor({
   // >;
 
   // const Component = component; //componentLoader ? React.lazy(componentLoader) : component;
-  const ComponentAny = Component as React.ComponentType<unknown>;
 
   const PageEditCont = function PageEditCont<Tag extends BlockTag>({
     tag,
@@ -64,14 +63,18 @@ export default function createEditor({
     const html = name === "content" ? content["contentHtml"] : null;
 
     const tagProp = tag ?? ("div" as Tag);
+    const ComponentForTag = Component as React.ComponentType<
+      ComponentProps<Tag>
+    >;
+    const componentProps = props as ComponentProps<Tag>;
 
     if (isEditingEnabled()) {
       return (
         <Suspense
           fallback={
-            <ComponentAny
+            <ComponentForTag
               tag={tagProp}
-              {...props}
+              {...componentProps}
               content={html ?? value}
               placeholder={placeholder}
             />
@@ -89,7 +92,13 @@ export default function createEditor({
     }
 
     if (value) {
-      return <ComponentAny tag={tagProp} {...props} content={html ?? value} />;
+      return (
+        <ComponentForTag
+          tag={tagProp}
+          {...componentProps}
+          content={html ?? value}
+        />
+      );
     }
   };
 

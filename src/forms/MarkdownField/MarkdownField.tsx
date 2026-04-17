@@ -14,7 +14,7 @@ const toolbarItems = [
   // ['scrollSync'],
 ];
 
-type InputProps = React.ComponentProps<"input"> &
+export type InputProps = React.ComponentProps<"input"> &
   FieldProps & {
     inputClass?: string;
   };

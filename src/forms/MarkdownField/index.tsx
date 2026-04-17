@@ -9,6 +9,8 @@ const MarkdownField = dynamic(() => import("./MarkdownField"), {
   loading: () => <Progress />,
 });
 
-export default function MarkdownFieldCont(props) {
+import type { InputProps } from "./MarkdownField";
+
+export default function MarkdownFieldCont(props: InputProps) {
   return <MarkdownField {...props} />;
 }

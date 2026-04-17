@@ -4,8 +4,16 @@ export type IconOption = [
   meta: {
     icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
     description?: string;
-  }
+  },
 ];
+
+import {
+  type ControllerRenderProps,
+  type FieldValues,
+  type Path,
+} from "react-hook-form";
+
+export type AnyField = ControllerRenderProps<FieldValues, Path<FieldValues>>;
 
 export type IconOptions = IconOption[];
 

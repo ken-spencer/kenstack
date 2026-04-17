@@ -2,6 +2,7 @@ import Field, { type FieldProps } from "@kenstack/forms/Field";
 import { X } from "lucide-react";
 
 import Search from "./Search";
+import type { Tag } from "./types";
 
 type InputProps = React.ComponentProps<"input"> &
   FieldProps & {
@@ -22,18 +23,17 @@ export default function Tags({
       className={className}
       render={({ field }) => (
         <>
-          <div className="flex flex-wrap gap-x-4 gap-y-2 items-center">
-            {field.value.map((tag) => {
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            {field.value.map((tag: Tag) => {
               return (
-                <span
-                  key={tag.name}
-                  className="inline-flex  items-center gap-2"
-                >
+                <span key={tag.name} className="inline-flex items-center gap-2">
                   {tag.name}
                   <button
                     type="button"
                     onClick={() => {
-                      const newValue = field.value.filter((v) => v !== tag);
+                      const newValue = field.value.filter(
+                        (v: Tag) => v !== tag,
+                      );
                       field.onChange(newValue);
                     }}
                   >
@@ -97,5 +97,3 @@ export default function Tags({
     />
   );
 }
-
-Tags.defaultValue = [];

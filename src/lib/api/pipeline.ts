@@ -1,6 +1,6 @@
 import errorLog from "@kenstack/lib/errorLog";
 import { NextRequest, NextResponse } from "next/server";
-import type { PipelineAction, PipelineContext } from ".";
+import type { PipelineAction, PipelineContext, ObjectSchema } from ".";
 
 import { type FetchError } from "@kenstack/lib/fetcher";
 
@@ -14,16 +14,17 @@ import { PipelineResponse } from "./PipelineResponse";
 // import { objectId } from "@kenstack/schemas/atoms";
 // const idSchema = objectId("server").default(null);
 
-export type PipelineOptions<TSchema extends z.ZodType = undefined> = {
+export type PipelineOptions<
+  TSchema extends ObjectSchema | undefined = undefined,
+> = {
   request: NextRequest;
   schema?: TSchema;
   json?: Record<string, unknown>;
 } & Record<string, unknown>;
 
-export default async function pipeline<TSchema extends z.ZodType>(
-  options: PipelineOptions<TSchema>,
-  actions: PipelineAction<TSchema>[] = [],
-) {
+export default async function pipeline<
+  TSchema extends ObjectSchema | undefined,
+>(options: PipelineOptions<TSchema>, actions: PipelineAction<TSchema>[] = []) {
   const { request, schema, ...localOptions } = options;
   /** Build schema from factory function when needed */
   // const schema =
@@ -58,22 +59,22 @@ export default async function pipeline<TSchema extends z.ZodType>(
         fieldErrors: fieldErrors as Record<string, string[]>,
       } satisfies FetchError);
     }
-    data = parsed.data; // as Record<string, unknown>;
+    data = parsed.data;
     if (!data) {
       throw Error("data is missing");
     }
   }
 
   const response = new PipelineResponse();
-  let context: PipelineContext<TSchema> = {
+  let context = {
     ...localOptions,
     id: parsedId,
     request,
     response,
-    schema,
     dataIn: json,
-    data,
-  };
+    data: data as TSchema extends ObjectSchema ? z.output<TSchema> : undefined,
+    schema: schema as TSchema,
+  } satisfies PipelineContext<TSchema>;
 
   for (const [key, action] of actions.entries()) {
     let result;

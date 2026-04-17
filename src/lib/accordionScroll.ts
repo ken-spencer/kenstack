@@ -1,4 +1,4 @@
-export default function AccordionScroll(item) {
+export default function AccordionScroll(item: HTMLElement) {
   if (!item) {
     return;
   }
@@ -7,8 +7,12 @@ export default function AccordionScroll(item) {
     return;
   }
 
-  let openNode;
-  for (let p = item; p; p = p.previousSibling) {
+  let openNode: HTMLElement | null = null;
+  for (
+    let p: HTMLElement | null = item;
+    p;
+    p = p.previousElementSibling as HTMLElement | null
+  ) {
     if (p.dataset.state === "open") {
       openNode = p;
       break;
@@ -19,7 +23,9 @@ export default function AccordionScroll(item) {
     return;
   }
 
-  const height = openNode.querySelector(".accordion-content").offsetHeight;
+  const height =
+    openNode?.querySelector<HTMLElement>(".accordion-content")?.offsetHeight ??
+    0;
   const rect = item.getBoundingClientRect();
   if (rect.top - height < 0) {
     window.scrollBy({

@@ -1,5 +1,6 @@
 import pick from "lodash-es/pick";
-import { useCallback, useState } from "react";
+import { useCallback, useState, type ChangeEvent, type DragEvent } from "react";
+import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 
 import fetcher from "@kenstack/lib/fetcher";
 
@@ -36,20 +37,24 @@ type UploadFieldProps = FieldProps &
   React.ComponentProps<"div"> &
   ImageRenderProps;
 
+type ImageFieldRenderProps = {
+  field: ControllerRenderProps<FieldValues, string>;
+};
+
 export default function ImageField({
   name,
   label,
   description,
   ...props
 }: UploadFieldProps) {
-  const { apiPath, setStatusMessage } = useForm();
+  const { apiPath } = useForm();
 
   return (
     <Field
       name={name}
       label={label}
       description={description}
-      render={imageRender({ apiPath, ...props, setStatusMessage })}
+      render={imageRender({ apiPath, ...props })}
     />
   );
 }
@@ -62,7 +67,7 @@ const imageRender = ({
   imageClass,
   accept = acceptDefault,
 }: ImageRenderProps) =>
-  function ImageFieldRender({ field }) {
+  function ImageFieldRender({ field }: ImageFieldRenderProps) {
     const { setStatusMessage } = useForm();
 
     const acceptStr = accept.join(", ");
@@ -85,7 +90,7 @@ const imageRender = ({
       setUploading(false);
     }, []);
 
-    const uploadFile = async (file) => {
+    const uploadFile = async (file?: File) => {
       if (!file) {
         return;
       }
@@ -143,6 +148,7 @@ const imageRender = ({
 
       let uploadRes;
       try {
+        // uploadRes = fetcher(uploadUrl, )
         uploadRes = await fetch(uploadUrl, {
           method: "POST",
           headers: {
@@ -151,9 +157,14 @@ const imageRender = ({
           body: formData,
         });
       } catch (e) {
-        setStatusMessage({ status: "error", message: e.message });
+        setStatusMessage({
+          status: "error",
+          message: e instanceof Error ? e.message : String(e),
+        });
         reset();
+        return;
       }
+
       const data = await uploadRes.json();
 
       if (data.error) {
@@ -181,7 +192,7 @@ const imageRender = ({
           "original_filename",
         ]),
         url: data.secure_url,
-        sizes: {},
+        sizes: {} as Record<string, unknown>,
       };
 
       if (data.format !== "svg") {
@@ -205,11 +216,11 @@ const imageRender = ({
     };
 
     const dragEvents = {
-      onDragEnter: (evt) => {
+      onDragEnter: (evt: DragEvent<HTMLElement>) => {
         evt.preventDefault();
         evt.stopPropagation();
       },
-      onDragOver: (evt) => {
+      onDragOver: (evt: DragEvent<HTMLElement>) => {
         evt.preventDefault();
         evt.stopPropagation();
 
@@ -218,7 +229,7 @@ const imageRender = ({
           dt.effectAllowed = dt.dropEffect = "none";
         }
       },
-      onDrop: (evt) => {
+      onDrop: (evt: DragEvent<HTMLElement>) => {
         evt.preventDefault();
         evt.stopPropagation();
 
@@ -238,10 +249,12 @@ const imageRender = ({
         className="sr-only"
         type="file"
         accept={acceptStr}
-        onChange={(evt) => {
+        onChange={(evt: ChangeEvent<HTMLInputElement>) => {
           const target = evt.currentTarget;
-          uploadFile(target.files[0]);
-          target.value = "";
+          if (target?.files) {
+            uploadFile(target.files[0]);
+            target.value = "";
+          }
         }}
       />
     );

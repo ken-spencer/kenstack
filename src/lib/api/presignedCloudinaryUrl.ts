@@ -83,9 +83,14 @@ const presignedUrlAction =
       // tags: "provisional",
     };
 
+    if (!process.env.CLOUDINARY_API_SECRET) {
+      return response.error(
+        "Environment variable CLOUDINARY_API_SECRE is not set",
+      );
+    }
     const signature = cloudinary.utils.api_sign_request(
       options,
-      process.env.CLOUDINARY_API_SECRET
+      process.env.CLOUDINARY_API_SECRET,
     );
 
     return response.success({

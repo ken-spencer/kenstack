@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 
-import { Tag } from "lucide-react";
+import { Tag as TagIcon } from "lucide-react";
 import Progress from "@kenstack/components/Progress";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import Alert from "@kenstack/components/Alert";
@@ -22,15 +22,12 @@ import {
   PopoverTrigger,
 } from "@kenstack/components/ui/popover";
 
-type Tags = {
-  count: number;
-  name: string;
-  slug: string;
-};
+import type { Tag } from "./types";
+import { type AnyField } from "../types";
 
-export default function TagSearcht({ field }) {
-  const dialogRef = useRef(null);
-  const inputRef = useRef(null);
+export default function TagSearcht({ field }: { field: AnyField }) {
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const [keywords, debouncedValue, setKeywords] = useDebounce();
   const [focusing, setFocusing] = useState(false);
   const [commandValue, setCommandValue] = useState("no-value");
@@ -46,7 +43,7 @@ export default function TagSearcht({ field }) {
   const { apiPath } = useForm();
 
   const { data, error, isPending } = useQuery<
-    FetchResult<{ tags: Tags[] }>,
+    FetchResult<{ tags: Tag[] }>,
     Error
   >({
     queryKey: ["tags", debouncedValue, field.value],
@@ -64,6 +61,7 @@ export default function TagSearcht({ field }) {
       open={
         focusing &&
         !isPending &&
+        data &&
         data.status === "success" &&
         !!data.tags.length
       }
@@ -79,10 +77,10 @@ export default function TagSearcht({ field }) {
       >
         <PopoverTrigger asChild>
           <div className="flex items-center">
-            <Tag className="text-gray-600 size-6" />
+            <TagIcon className="size-6 text-gray-600" />
             <Input
               // className="flex-1 min-w-36 p-0 appearance-none border-none  bg-transparent focus:outline-none focus:ring-0"
-              className="-ml-9 pl-10 border-0 border-b rounded-none"
+              className="-ml-9 rounded-none border-0 border-b pl-10"
               placeholder="Enter tag"
               value={keywords}
               ref={inputRef}
@@ -97,7 +95,7 @@ export default function TagSearcht({ field }) {
                     .replace(/\s+/g, "-")
                     .replace(/[^a-z0-9-]/g, "");
 
-                  if (field.value.some((v) => v.slug === slug)) {
+                  if (field.value.some((v: Tag) => v.slug === slug)) {
                     setKeywords("");
                     setCommandValue("no-value");
 
@@ -167,11 +165,11 @@ export default function TagSearcht({ field }) {
                       value={tag.slug}
                       onSelect={() => {
                         const newValue = [...field.value, tag].sort((a, b) =>
-                          a.name.localeCompare(b.name)
+                          a.name.localeCompare(b.name),
                         );
 
                         field.onChange(newValue);
-                        inputRef.current.focus();
+                        inputRef.current?.focus();
                         setKeywords("");
                       }}
                     >
