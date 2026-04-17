@@ -1,6 +1,10 @@
-import { Suspense } from "react";
+import React, { Suspense } from "react";
 import Loading from "./Progress";
 
-export default function SuspenseWrapper({ children }) {
+export default function SuspenseWrapper({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return <Suspense fallback={<Loading />}>{children}</Suspense>;
 }

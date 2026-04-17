@@ -1,7 +1,6 @@
 "use client";
 
 import React, { createContext, useContext, useState } from "react";
-import { useServer } from "@kenstack/admin/Server/context";
 import { useSearchParams } from "next/navigation";
 
 const AdminListContext = createContext<UseListProps | null>(null);
@@ -14,21 +13,12 @@ type FilterProps = {
   filters: Record<string, unknown>;
 };
 
-// type BaseItem = {
-//   id: string;
-// };
 import { AdminClient, type AdminListResult } from "@kenstack/admin/client";
-
-// import { type FetchResult } from "@kenstack/lib/fetcher";
-// export type AdminListResult<
-//   TItem extends Record<string, unknown> | never = never,
-// > = FetchResult<{
-//   total: number;
-//   items: [TItem] extends [never] ? BaseListItem[] : (BaseListItem & TItem)[];
-// }>;
 
 type AdminListProps = {
   client: AdminClient;
+  userId: number;
+  name: string;
   children: React.ReactNode;
 };
 
@@ -46,13 +36,19 @@ type UseListProps<TDoc extends Record<string, unknown> = never> = {
   setFilters: SetQueryStore<FilterProps>;
   // keywords: string;
   // setKeywords: React.Dispatch<React.SetStateAction<string>>;
+  userId: number;
   page: number;
   query: UseQueryResult<AdminListResult<TDoc>, Error>;
   limit: number;
 };
 
-export function AdminListProvider({ client, children }: AdminListProps) {
-  const [selected, setSelected] = useState([]);
+export function AdminListProvider({
+  client,
+  userId,
+  name,
+  children,
+}: AdminListProps) {
+  const [selected, setSelected] = useState<number[]>([]);
   const [filters, debouncedFilters, setFilters] = useQueryStore<FilterProps>({
     keywords: "",
     // filters: admin.filters ? admin.filters.defaultValues : {},
@@ -62,7 +58,6 @@ export function AdminListProvider({ client, children }: AdminListProps) {
   const searchParams = useSearchParams();
   const page = Number(searchParams.get("page") ?? 1);
 
-  const { name } = useServer();
   const apiPath = "/api/admin/";
 
   const queryKey = ["admin-list", debouncedFilters, page] satisfies QueryKey;
@@ -84,6 +79,7 @@ export function AdminListProvider({ client, children }: AdminListProps) {
     queryKey,
     filters,
     setFilters,
+    userId,
     // keywords,
 
     // setKeywords,

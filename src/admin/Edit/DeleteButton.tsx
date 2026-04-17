@@ -22,10 +22,10 @@ import { useForm } from "@kenstack/forms/context";
 export default function DeleteButton() {
   const { setStatusMessage } = useForm();
   const router = useRouter();
-  const { isNew, id, name, apiPath, listPath } = useAdminEdit();
+  const { isNew, id, name, userId, apiPath, listPath } = useAdminEdit();
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: async (idToRemove: string) =>
+    mutationFn: async (idToRemove: number) =>
       fetcher(apiPath, { name, action: "remove", remove: [idToRemove] }),
     onMutate: async () => {},
     onError: (err) => {
@@ -64,7 +64,7 @@ export default function DeleteButton() {
     <AlertDialog>
       <AlertDialogTrigger asChild>
         <IconButton
-          disabled={isNew}
+          disabled={isNew || (name === "users" && id === userId)}
           isPending={mutation.isPending}
           className="relative"
           tooltip="Delete"
@@ -84,7 +84,9 @@ export default function DeleteButton() {
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={() => {
-              mutation.mutate(id);
+              if (id) {
+                mutation.mutate(id);
+              }
             }}
           >
             Continue

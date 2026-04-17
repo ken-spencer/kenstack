@@ -5,7 +5,7 @@ import {
   type PipelineOptions,
 } from "@kenstack/lib/api";
 
-export const logoutPipeline = () => (options: PipelineOptions<null>) =>
+export const logoutPipeline = () => (options: PipelineOptions) =>
   pipeline(options, [logout()]);
 
 export const logout =

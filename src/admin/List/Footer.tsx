@@ -118,7 +118,13 @@ function PaginationCont({
   );
 }
 
-function PaginationNumber({ value, searchParamsPlain }) {
+function PaginationNumber({
+  value,
+  searchParamsPlain,
+}: {
+  value: number;
+  searchParamsPlain: Record<string, unknown>;
+}) {
   const pathname = usePathname();
   const { page } = useAdminList();
 

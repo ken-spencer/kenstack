@@ -102,9 +102,15 @@ export default function InputField({
   );
 }
 
-function DatePicker({ handleDate, value }) {
+function DatePicker({
+  handleDate,
+  value,
+}: {
+  handleDate: (newDate: string | Date) => void;
+  value: string;
+}) {
   const [open, setOpen] = useState(false);
-  const date = useMemo(() => (value ? new Date(value) : null), [value]);
+  const date = useMemo(() => (value ? new Date(value) : undefined), [value]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -125,7 +131,7 @@ function DatePicker({ handleDate, value }) {
           mode="single"
           selected={date}
           onSelect={(v) => {
-            handleDate(v);
+            handleDate(v ?? "");
             setOpen(false);
           }}
         />

@@ -58,7 +58,9 @@ export default function CheckboxField({
                         return checked
                           ? field.onChange([...field.value, key])
                           : field.onChange(
-                              field.value?.filter((value) => value !== key)
+                              field.value?.filter(
+                                (value: string) => value !== key,
+                              ),
                             );
                       }}
                     />

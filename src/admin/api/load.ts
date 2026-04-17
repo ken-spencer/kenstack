@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 import type { AdminApiOptions, AnyAdminTable } from "..";
 
 const load = ({ adminTable, ...options }: AdminApiOptions) => {
-  return pipeline({ ...options, schema: null }, [loadAction(adminTable)]);
+  return pipeline({ ...options }, [loadAction(adminTable)]);
 };
 
 const loadAction =
@@ -18,7 +18,6 @@ const loadAction =
 
     const { db } = deps;
     const { table, fields } = adminTable;
-    const user = await deps.auth.requireUser();
 
     const select = selectFields(table, fields);
     const rows = await db.select(select).from(table).where(eq(table.id, id));
@@ -28,7 +27,6 @@ const loadAction =
     }
 
     return response.success({
-      userId: user.id,
       item: {
         ...{ ...adminTable.defaultValues, ...rows[0] },
       },

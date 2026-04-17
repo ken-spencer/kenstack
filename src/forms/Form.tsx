@@ -123,7 +123,7 @@ export function Form<
           isDirty,
           form,
           setStatusMessage,
-        })
+        }),
       )}
       onBlur={
         onBlur

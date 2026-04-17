@@ -41,16 +41,21 @@ export default function AdminEditAlerts() {
             below for more information.
           </div>
           <ul className="mt-4 list-disc pl-8 empty:hidden">
-            {Object.entries(errors).reduce((acc, [name, { message }]) => {
-              if (!control._fields[name]) {
-                acc.push(
-                  <li
-                    key={name}
-                  >{`Unrendered field ${name} has error ${message}`}</li>,
-                );
-              }
-              return acc;
-            }, [])}
+            {Object.entries(errors).reduce<React.ReactNode[]>(
+              (acc, [name, fieldError]) => {
+                if (fieldError && "message" in fieldError) {
+                  if (!control._fields[name]) {
+                    acc.push(
+                      <li
+                        key={name}
+                      >{`Unrendered field ${name} has error ${fieldError.message}`}</li>,
+                    );
+                  }
+                }
+                return acc;
+              },
+              [],
+            )}
           </ul>
         </Alert>
       )}

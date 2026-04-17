@@ -32,7 +32,11 @@ export default function AdminEditHeader() {
         >
           <Plus className="size-6 text-gray-800" />
         </IconButton>
-        <IconButton className={isDirty && "hidden"} tooltip="New Entry" asChild>
+        <IconButton
+          className={isDirty ? "hidden" : ""}
+          tooltip="New Entry"
+          asChild
+        >
           <Link
             href={
               listPath + "/new" + (searchParams.size ? "?" + searchParams : "")
@@ -55,7 +59,7 @@ export default function AdminEditHeader() {
           <List className="size-6 text-gray-800" />
         </IconButton>
         <IconButton
-          className={isDirty && "hidden"}
+          className={isDirty ? "hidden" : ""}
           tooltip="Go To List"
           asChild
         >

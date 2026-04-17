@@ -24,7 +24,7 @@ type BooleanFieldOption = BaseFieldOption & {
 
 type NumberFieldOption = BaseFieldOption & {
   kind: "number";
-  default: number;
+  default?: number;
   zod?: z.ZodNumber;
 };
 
@@ -125,9 +125,9 @@ export function createDefaultValues<const T extends FieldOptions>(fields: T) {
         case "text": {
           return [key, ""];
         }
-        case "boolean": {
-          return [key, false];
-        }
+        // case "boolean": {
+        //   return [key, false];
+        // }
         case "number": {
           return [key, 0];
         }

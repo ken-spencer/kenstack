@@ -29,7 +29,7 @@ export function makeEditorWrapper(
     const { content, editing } = usePageEditor();
     const { isEditingEnabled } = useAdminUi();
     const defaultValue = content[name];
-    const html = content[name + "Html"] as string | undefined;
+    const html = name === "content" ? content["contentHtml"] : undefined;
 
     if (!isEditingEnabled()) {
       return (

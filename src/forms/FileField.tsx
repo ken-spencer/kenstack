@@ -14,7 +14,7 @@ const allowed = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ];
 
-const icons = {
+const icons: Record<string, string> = {
   "application/pdf": "/icons/pdf.svg",
   "application/msword": "/icons/doc.svg",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
@@ -50,8 +50,10 @@ export default function InputField({
                 className="sr-only"
                 // {...field}
                 onChange={(evt) => {
-                  const file = evt.target.files[0];
-                  field.onChange(file);
+                  if (evt.target?.files) {
+                    const file = evt.target.files[0];
+                    field.onChange(file);
+                  }
                 }}
               />
             </FormControl>

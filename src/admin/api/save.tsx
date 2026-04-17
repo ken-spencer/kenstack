@@ -22,6 +22,7 @@ const saveAction =
 
     const user = await deps.auth.requireUser();
     const select = selectFields(table, fields);
+
     let rows;
     try {
       rows = id

@@ -20,7 +20,7 @@ const buttonClass =
 type ImageRenderProps = {
   square?: boolean;
   apiPath?: string;
-  setStatusMessage?: (message) => void;
+  // setStatusMessage?: (message) => void;
   placeholder?: React.ReactNode;
   imageClass?: string;
   accept?: string[];
@@ -57,22 +57,24 @@ export default function ImageField({
 const imageRender = ({
   square = false,
   apiPath,
-  setStatusMessage,
+  // setStatusMessage,
   placeholder = <AddImageIcon className="h-16 w-16 text-gray-600" />,
   imageClass,
   accept = acceptDefault,
 }: ImageRenderProps) =>
   function ImageFieldRender({ field }) {
+    const { setStatusMessage } = useForm();
+
     const acceptStr = accept.join(", ");
     const contClass = twMerge(
       "relative flex items-center justify-center",
-      square ? "overflow-hidden w-32 h-32" : "w-max h-max w-32 max-h-32 "
+      square ? "overflow-hidden w-32 h-32" : "w-max h-max w-32 max-h-32 ",
     );
     const imgClass = twMerge(
       square
         ? "object-cover object-center w-full h-full"
         : "object-scale-down object-center w-full h-full",
-      imageClass
+      imageClass,
     );
 
     const [uploading, setUploading] = useState(false);
@@ -120,7 +122,7 @@ const imageRender = ({
           filename: file.name,
           type: file.type,
           name: field.name,
-        }
+        },
       );
 
       if ("error" === res.status) {
@@ -135,7 +137,7 @@ const imageRender = ({
       const { uploadUrl, fields, transformations } = res;
       const formData = new FormData();
       Object.entries(fields).forEach(([key, value]) =>
-        formData.append(key, String(value))
+        formData.append(key, String(value)),
       );
       formData.append("file", file);
 

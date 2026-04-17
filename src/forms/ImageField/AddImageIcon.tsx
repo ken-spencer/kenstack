@@ -1,5 +1,5 @@
 import * as React from "react";
-const SvgAddImage = (props) => (
+const SvgAddImage = (props: React.ComponentProps<"svg">) => (
   <svg
     aria-hidden="true"
     viewBox="0 0 24 24"

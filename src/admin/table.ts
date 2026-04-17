@@ -1,6 +1,6 @@
 import type { PgColumn } from "drizzle-orm/pg-core";
 
-import { getTableColumns, sql, type Table } from "drizzle-orm";
+import { getTableColumns, sql } from "drizzle-orm";
 import {
   index,
   integer,
@@ -9,16 +9,32 @@ import {
   timestamp,
   boolean,
   jsonb,
+  type AnyPgTable,
+  // type AnyPgColumn,
   type PgColumnBuilderBase,
   type PgTableExtraConfigValue,
 } from "drizzle-orm/pg-core";
 
-export type MetaTable = {
-  id: PgColumn;
-  createdAt: PgColumn;
-  updatedAt: PgColumn;
-  deletedAt: PgColumn;
-} & Table;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const metaColumnsTable = pgTable("_meta_columns", {
+  id: integer("id").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+});
+
+type MetaColumns = typeof metaColumnsTable._.columns;
+
+export type MetaTable = AnyPgTable & {
+  _: AnyPgTable["_"] & {
+    columns: AnyPgTable["_"]["columns"] &
+      Pick<MetaColumns, "id" | "createdAt" | "updatedAt" | "deletedAt">;
+  };
+  id: MetaColumns["id"];
+  createdAt: MetaColumns["createdAt"];
+  updatedAt: MetaColumns["updatedAt"];
+  deletedAt: MetaColumns["deletedAt"];
+};
 
 import { type FieldOptions } from "./fields";
 import { createId } from "@paralleldrive/cuid2";
@@ -71,47 +87,47 @@ type BuildTableOptions<
 export function createColumnsFromFields<const T extends FieldOptions>(
   fields: T,
 ): FieldColumns<T> {
-  return Object.fromEntries(
-    Object.entries(fields).map(([key, field]) => {
-      const columnName = field.column ?? key;
+  const entries = Object.entries(fields).map(([key, field]) => {
+    const columnName = field.column ?? key;
 
-      let column;
+    let column;
 
-      switch (field.kind) {
-        case "boolean": {
-          column = boolean(columnName);
-          break;
-        }
-        case "number": {
-          column = integer(columnName);
-          break;
-        }
-        case "timestamp": {
-          column = timestamp(columnName, { withTimezone: true });
-          break;
-        }
-        case "jsonb": {
-          column = jsonb(columnName);
-          break;
-        }
-        case "text":
-        default: {
-          column = text(columnName);
-          break;
-        }
+    switch (field.kind) {
+      case "boolean": {
+        column = boolean(columnName);
+        break;
       }
-
-      if (!field.nullable) {
-        column = column.notNull();
+      case "number": {
+        column = integer(columnName);
+        break;
       }
-
-      if (field.unique) {
-        column = column.unique();
+      case "timestamp": {
+        column = timestamp(columnName, { withTimezone: true });
+        break;
       }
+      case "jsonb": {
+        column = jsonb(columnName);
+        break;
+      }
+      case "text":
+      default: {
+        column = text(columnName);
+        break;
+      }
+    }
 
-      return [key, column];
-    }),
-  ) as FieldColumns<T>;
+    if (!field.nullable) {
+      column = column.notNull();
+    }
+
+    if (field.unique) {
+      column = column.unique();
+    }
+
+    return [key, column];
+  });
+
+  return Object.fromEntries(entries);
 }
 
 export const defineTable = <
@@ -200,11 +216,13 @@ export function selectFields<
   TSelection extends FieldOptions,
 >(table: TTable, selection: TSelection) {
   const columns = getTableColumns(table);
-  const result: Record<string, PgColumn> = {
+  const baseResult = {
     id: table.id,
     createdAt: table.createdAt,
     updatedAt: table.updatedAt,
   };
+
+  const result = baseResult as typeof baseResult & Record<string, PgColumn>;
 
   for (const key in selection) {
     if (key in columns) {

@@ -19,7 +19,7 @@ type Options = { adminConfig: AdminConfig };
 
 export const adminPipeline = async (
   request: NextRequest,
-  context,
+  context: Record<string, unknown>,
   options: Options,
 ) => {
   if (!(await deps.auth.hasRole("admin"))) {

@@ -31,7 +31,7 @@ export default function CheckboxIconField({
           {options.map(([key, label, { icon: Icon, description }]) => (
             <label
               className={twMerge(
-                "flex cursor-pointer items-center gap-4 rounded border p-2"
+                "flex cursor-pointer items-center gap-4 rounded border p-2",
               )}
               key={key}
             >
@@ -45,7 +45,7 @@ export default function CheckboxIconField({
                 onChange={(evt) => {
                   const next = evt.target.checked
                     ? [...field.value, key]
-                    : field.value.filter((v) => v !== key);
+                    : field.value.filter((v: string) => v !== key);
                   field.onChange(next);
                 }}
               />
@@ -53,7 +53,7 @@ export default function CheckboxIconField({
               <span
                 className={twMerge(
                   "rounded-full border border-purple-800 p-2 transition",
-                  field.value.includes(key) ? "bg-purple-800 text-white" : ""
+                  field.value.includes(key) ? "bg-purple-800 text-white" : "",
                   // key === field.value
                   //   ? "bg-purple-300"
                   //   : "hover:bg-purple-200 transition",

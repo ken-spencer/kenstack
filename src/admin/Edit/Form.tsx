@@ -9,7 +9,11 @@ import fetcher from "@kenstack/lib/fetcher";
 import { useAdminEdit } from "./context";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
-export default function AdminEditForm({ children }) {
+export default function AdminEditForm({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -70,7 +74,7 @@ export default function AdminEditForm({ children }) {
         }
       }}
       onSubmit={({ data, mutation, event }) => {
-        const button = (event.nativeEvent as SubmitEvent)
+        const button = (event?.nativeEvent as SubmitEvent)
           ?.submitter as HTMLButtonElement;
         if (button && button.name === "action") {
           return mutation.mutateAsync({ submitter: button.value, ...data });

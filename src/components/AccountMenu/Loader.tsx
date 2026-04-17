@@ -16,18 +16,19 @@ export default async function AccountMenuLoader({
   if (!user) {
     return fallback ?? null;
   }
-  const items = await deps.accountMenu.getItems();
+  const items = await deps.accountMenu?.getItems();
 
   return (
     <Menu user={user}>
-      {items.map(([href, text, Icon], key) => (
-        <Button key={href + key} variant="link" asChild>
-          <Link className="w-full justify-start" href={href}>
-            <Icon />
-            {text}
-          </Link>
-        </Button>
-      ))}
+      {items &&
+        items.map(([href, text, Icon], key) => (
+          <Button key={href + key} variant="link" asChild>
+            <Link className="w-full justify-start" href={href}>
+              <Icon />
+              {text}
+            </Link>
+          </Button>
+        ))}
     </Menu>
   );
 }

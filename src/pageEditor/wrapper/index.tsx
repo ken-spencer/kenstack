@@ -61,7 +61,7 @@ export default function createEditor({
     const { isEditingEnabled } = useAdminUi();
     const { content } = usePageEditor();
     const value = content[name];
-    const html = content[name + "Html"] ?? null;
+    const html = name === "content" ? content["contentHtml"] : null;
 
     const tagProp = tag ?? ("div" as Tag);
 

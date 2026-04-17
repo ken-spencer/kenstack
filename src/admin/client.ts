@@ -20,7 +20,7 @@ export type AdminListResult<
   items: [TItem] extends [never] ? BaseListItem[] : (BaseListItem & TItem)[];
 }>;
 
-export type AdminClient = {
+export type AdminClientProps = {
   /** SVG icon component (e.g. Lucide icons) */
   icon?: ComponentType<SVGProps<SVGSVGElement>>;
   schema?: z.ZodObject;
@@ -29,10 +29,12 @@ export type AdminClient = {
   EditForm: React.FC;
 };
 
-export function adminClient(options: AdminClient) {
+export type AdminClient = ReturnType<typeof adminClient>;
+
+export function adminClient(options: AdminClientProps) {
   return {
+    ...options,
     schema: createZodSchema(options.fields),
     // defaultValues: createDefaultValues(options.fields),
-    ...options,
   };
 }

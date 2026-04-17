@@ -1,11 +1,9 @@
 import { Suspense } from "react";
-import { ServerProvider } from "./context";
-// import merge from "lodash-es/merge";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import AdminList from "@kenstack/admin/List";
 import Edit from "@kenstack/admin/Edit";
 import { deps } from "@app/deps";
-import { AdminConfig } from "..";
+import { AdminConfig } from ".";
 
 type AdminServerProps = {
   context: {
@@ -46,24 +44,25 @@ async function AdminServerCore({
     notFound();
   }
 
-  if ((await deps.auth.hasRole("admin")) !== true) {
-    redirect("/login");
-  }
+  const user = await deps.auth.requireUser({ role: "admin" });
+
   // const admin = thrupple[2] ? merge({}, thrupple[1], thrupple[2]) : thrupple[1];
   const adminTable = thrupple[1];
   const { icon: Icon, title } = adminTable;
 
+  const props = { name, adminTable, userId: user.id };
+
   return (
-    <ServerProvider name={name} id={isNew ? null : id} isNew={isNew}>
+    <div>
       <div className="text-md mx-auto mb-2 flex items-center justify-center gap-4 text-gray-700">
         {Icon && <Icon className="size-4 text-gray-800" />}
         <span className="font-bold">{title}</span>
       </div>
       {isNew || id ? (
-        <Edit name={name} adminTable={adminTable} />
+        <Edit id={id ? parseInt(id) : undefined} isNew={isNew} {...props} />
       ) : (
-        <AdminList adminTable={adminTable} />
+        <AdminList {...props} />
       )}
-    </ServerProvider>
+    </div>
   );
 }

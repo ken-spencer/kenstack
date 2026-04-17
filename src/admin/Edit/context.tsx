@@ -3,7 +3,6 @@
 import { type ZodObject } from "zod";
 
 import React, { createContext, useContext, useMemo } from "react";
-import { useServer } from "@kenstack/admin/Server/context";
 import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
@@ -15,6 +14,9 @@ import { AdminClient, PreviewPath } from "..";
 
 type AdminEditProps = {
   name: string;
+  id?: number;
+  isNew: boolean;
+  userId: number;
   defaultValues: Record<string, unknown>;
   client: AdminClient;
   children: React.ReactNode;
@@ -29,9 +31,9 @@ type EditItem = { id: number; createdAt: string; updatedAt: string } & Record<
 type AdminEditContext = {
   name: string;
   client: AdminClient;
-  id: string;
-  userId: number;
+  id?: number;
   isNew: boolean;
+  userId: number;
   apiPath: string;
   listPath: string;
   item: null | EditItem;
@@ -44,13 +46,15 @@ const AdminEditContext = createContext<AdminEditContext | null>(null);
 
 export function AdminEditProvider({
   name,
+  id,
+  isNew,
+  userId,
   defaultValues,
   client,
   preview,
   children,
 }: AdminEditProps) {
   const pathname = usePathname();
-  const { id, isNew } = useServer();
   const apiPath = "/api/admin";
   const listPath = useMemo(() => {
     const parts = pathname.split("/").filter(Boolean); // removes empty strings
@@ -60,7 +64,7 @@ export function AdminEditProvider({
 
   const { data, error, isPending } = useQuery({
     queryFn: () =>
-      fetcher<{ item: EditItem; userId: number }>(apiPath, {
+      fetcher<{ item: EditItem }>(apiPath, {
         name,
         action: "load",
         id,
@@ -94,7 +98,7 @@ export function AdminEditProvider({
     isNew,
     apiPath,
     listPath,
-    userId: id && data?.status === "success" ? data.userId : null,
+    userId: userId,
     item: id && data?.status === "success" ? data.item : null,
     defaultValues,
     schema: client.schema,

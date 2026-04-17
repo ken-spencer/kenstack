@@ -42,7 +42,9 @@ const listAction =
 
       const keyword = keywords.trim();
       if (keyword && searchable.length) {
-        const searchableColumns = searchable.map((key) => table[key]);
+        const searchableColumns = searchable
+          .filter((key): key is keyof typeof table => key in table)
+          .map((key) => table[key]);
 
         // if (keyword.length >= 2) {
         // where.push(

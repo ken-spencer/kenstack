@@ -8,9 +8,15 @@ import { type AnyAdminTable } from "..";
 
 export default function AdminEdit({
   name,
+  id,
+  isNew,
+  userId,
   adminTable,
 }: {
   name: string;
+  id?: number;
+  isNew: boolean;
+  userId: number;
   adminTable: AnyAdminTable;
 }) {
   const { defaultValues, preview, client } = adminTable;
@@ -18,7 +24,10 @@ export default function AdminEdit({
   return (
     <AdminEditProvider
       name={name}
-      defaultValues={defaultValues}
+      id={id}
+      isNew={isNew}
+      userId={userId}
+      defaultValues={defaultValues as Record<string, unknown>}
       preview={preview}
       client={client}
     >
