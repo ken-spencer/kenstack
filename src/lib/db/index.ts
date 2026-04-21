@@ -197,7 +197,8 @@ export async function findOne<
 >(
   name: string,
   filter: Filter<WithId<WithMeta<TSchema>>> = {},
-  options?: FindOptions<WithId<WithMeta<TSchema>>>
+  // options?: FindOptions<WithId<WithMeta<TSchema>>>
+  options?: FindOptions
 ): Promise<TResult> {
   const db = await getDb();
   const collection = db.collection<WithId<WithMeta<TSchema>>>(name);
@@ -216,7 +217,8 @@ export async function findMany<
 >(
   name: string,
   filter: Filter<WithId<WithMeta<TSchema>>> = {},
-  options?: FindOptions<WithId<WithMeta<TSchema>>>
+  // options?: FindOptions<WithId<WithMeta<TSchema>>>
+  options?: FindOptions
 ): Promise<TResult[]> {
   const db = await getDb();
 

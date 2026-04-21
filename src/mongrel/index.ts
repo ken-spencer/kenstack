@@ -71,7 +71,8 @@ class Mongrel<TSchema extends Document> {
   /** find */
   async find<TResult extends Document = TSchema>(
     filter: Filter<WithMeta<TSchema>> = {},
-    options?: FindOptions<WithMeta<TSchema>>
+    // options?: FindOptions<WithMeta<TSchema>>
+    options?: FindOptions
   ): Promise<TResult[]> {
     const collection = await this.getCollection();
 
@@ -88,7 +89,8 @@ class Mongrel<TSchema extends Document> {
   /** findOne */
   async findOne<TResult extends Document = TSchema>(
     filter: Filter<WithMeta<TSchema>> = {},
-    options?: FindOptions<WithMeta<TSchema>>
+    // options?: FindOptions<WithMeta<TSchema>>
+    options?: FindOptions
   ): Promise<TResult | null> {
     const collection = await this.getCollection();
 
@@ -270,11 +272,12 @@ class Mongrel<TSchema extends Document> {
   }
 }
 
-type MongrelReturn<T> = T extends z.ZodObject<infer S>
-  ? Mongrel<z.infer<z.ZodObject<S>>>
-  : T extends (...args: unknown[]) => unknown
-  ? Mongrel<z.infer<ReturnType<T>>>
-  : never;
+type MongrelReturn<T> =
+  T extends z.ZodObject<infer S>
+    ? Mongrel<z.infer<z.ZodObject<S>>>
+    : T extends (...args: unknown[]) => unknown
+      ? Mongrel<z.infer<ReturnType<T>>>
+      : never;
 
 function mongrel<T extends z.ZodObject | SchemaFactory>(
   collectionName: string,
