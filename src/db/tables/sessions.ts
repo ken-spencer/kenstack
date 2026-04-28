@@ -9,7 +9,7 @@ import {
   uniqueIndex,
   index,
 } from "drizzle-orm/pg-core";
-import { users } from "./users";
+import { users } from "@kenstack/modules/users/tables";
 import { relations, sql } from "drizzle-orm";
 
 export const loginProvider = pgEnum("login_provider", [
@@ -46,7 +46,7 @@ export const sessions = pgTable(
     uniqueIndex("sessions_token_hash_unique").on(t.tokenHash),
     index("sessions_user_id_idx").on(t.userId),
     index("sessions_expires_at_idx").on(t.expiresAt),
-  ]
+  ],
 );
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
@@ -74,7 +74,7 @@ export const loginFailures = pgTable(
     index("login_failures_email_attempted_at_idx").on(t.email, t.attemptedAt),
     index("login_failures_ip_attempted_at_idx").on(t.ip, t.attemptedAt),
     index("login_failures_attempted_at_idx").on(t.attemptedAt),
-  ]
+  ],
 );
 
 export const passwordResetRequests = pgTable(
@@ -100,15 +100,15 @@ export const passwordResetRequests = pgTable(
       .where(sql`${t.tokenHash} IS NOT NULL`),
     index("password_reset_requests_email_requested_at_idx").on(
       t.email,
-      t.requestedAt
+      t.requestedAt,
     ),
     index("password_reset_requests_ip_requested_at_idx").on(
       t.ip,
-      t.requestedAt
+      t.requestedAt,
     ),
     index("password_reset_requests_requested_at_idx").on(t.requestedAt),
     index("password_reset_requests_expires_at_idx").on(t.expiresAt),
-  ]
+  ],
 );
 
 // export type PasswordResetRequest = typeof passwordResetRequests.$inferSelect;

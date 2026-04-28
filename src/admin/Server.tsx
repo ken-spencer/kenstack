@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import AdminList from "@kenstack/admin/List";
 import Edit from "@kenstack/admin/Edit";
 import { deps } from "@app/deps";
-import { AdminConfig } from ".";
+import { type AdminConfig } from ".";
 
 type AdminServerProps = {
   context: {

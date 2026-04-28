@@ -14,6 +14,9 @@ const makeClient = () =>
   postgres(connectionString, {
     prepare: false,
     debug: false,
+    max: 1,
+    idle_timeout: 20,
+    max_lifetime: 60 * 30,
   });
 
 // Avoid creating a new client on every hot reload in dev.

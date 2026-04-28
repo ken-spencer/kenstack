@@ -14,12 +14,13 @@ import { type PipelineOptions } from "@kenstack/lib/api";
 import { type AdminClient, adminClient } from "./client";
 export { type AdminClient, adminClient };
 
+import { type TagsTable } from "@kenstack/db/tables/tags";
 import type {
   AnyColumn,
   InferSelectModel,
   SQL,
   InferInsertModel,
-  Table,
+  // Table,
 } from "drizzle-orm";
 
 type OrderBy = SQL; // | AnyColumn;
@@ -44,7 +45,7 @@ type Filters = {
 
 type MetaKeys = keyof MetaTable;
 
-type AdminDefaultValues<TTable extends MetaTable & Table> = Omit<
+type AdminDefaultValues<TTable extends MetaTable> = Omit<
   InferInsertModel<TTable>,
   MetaKeys
 >;
@@ -74,6 +75,9 @@ export type AdminTable<
   limit?: number;
   orderBy?: OrderBy[];
   select: TListSelect;
+  tags?: {
+    table: TagsTable;
+  };
 };
 
 export type AnyAdminTable = AdminTable<MetaTable, SelectShape | undefined>;

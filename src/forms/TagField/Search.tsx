@@ -5,9 +5,10 @@ import Progress from "@kenstack/components/Progress";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import Alert from "@kenstack/components/Alert";
 import fetcher, { type FetchResult } from "@kenstack/lib/fetcher";
-import { useForm } from "@kenstack/forms/context";
 import useDebounce from "@kenstack/hooks/useDebounce";
 import { Input } from "@kenstack/components/ui/input";
+import { useAdminEdit } from "@kenstack/admin/Edit/context";
+import kebabCase from "lodash-es/kebabCase";
 
 import {
   Command,
@@ -40,7 +41,7 @@ export default function TagSearcht({ field }: { field: AnyField }) {
   // );
 
   // const [keywords, debouncedKeywords, setKeywords] = useDebounce("", 500);
-  const { apiPath } = useForm();
+  const { apiPath, name: adminName } = useAdminEdit();
 
   const { data, error, isPending } = useQuery<
     FetchResult<{ tags: Tag[] }>,
@@ -48,7 +49,9 @@ export default function TagSearcht({ field }: { field: AnyField }) {
   >({
     queryKey: ["tags", debouncedValue, field.value],
     queryFn: async () =>
-      fetcher(apiPath + "/tags", {
+      fetcher(apiPath, {
+        action: "tags",
+        name: adminName,
         keywords: debouncedValue,
         exclude: field.value,
       }),
@@ -86,26 +89,35 @@ export default function TagSearcht({ field }: { field: AnyField }) {
               ref={inputRef}
               autoComplete="off"
               onKeyDown={(evt) => {
-                if (evt.key === "Enter" && keywords.length) {
+                if (
+                  evt.key === "Enter" &&
+                  commandValue === "no-value" &&
+                  keywords.length
+                ) {
                   evt.preventDefault();
                   // avoid duplication
-                  const slug = keywords
-                    .toLowerCase()
-                    .trim()
-                    .replace(/\s+/g, "-")
-                    .replace(/[^a-z0-9-]/g, "");
+                  const newTags = keywords
+                    .split(",")
+                    .map((value) => value.trim())
+                    .filter(Boolean)
+                    .map((name) => ({ name, slug: kebabCase(name).trim() }))
+                    .filter(
+                      (tag, index, tags) =>
+                        tag.slug.length > 0 &&
+                        !field.value.some(
+                          (value: Tag) => value.slug === tag.slug,
+                        ) &&
+                        tags.findIndex((value) => value.slug === tag.slug) ===
+                          index,
+                    );
 
-                  if (field.value.some((v: Tag) => v.slug === slug)) {
-                    setKeywords("");
-                    setCommandValue("no-value");
-
-                    return;
+                  if (newTags.length) {
+                    const newValue = [...field.value, ...newTags].sort((a, b) =>
+                      a.name.localeCompare(b.name),
+                    );
+                    field.onChange(newValue);
                   }
-                  const newValue = [
-                    ...field.value,
-                    { name: keywords.trim(), slug },
-                  ].sort((a, b) => a.name.localeCompare(b.name));
-                  field.onChange(newValue);
+
                   setKeywords("");
                   setCommandValue("no-value");
                 }

@@ -1,101 +1,152 @@
 import * as z from "zod";
 
-type BaseFieldOption = {
-  column?: string;
-  unique?: boolean;
-  nullable?: boolean;
+export type FieldOption = {
+  zod: z.ZodType;
   serverZod?: z.ZodType;
-  /** field is in the db, but never sent to the browser */
-  private?: boolean;
-};
-
-type TextFieldOption = BaseFieldOption & {
-  kind?: "text";
-  default?: string;
-  zod?: z.ZodString;
+  default: unknown;
   searchable?: boolean;
 };
 
-type BooleanFieldOption = BaseFieldOption & {
-  kind: "boolean";
-  default: boolean;
-  zod?: z.ZodBoolean;
-};
+// type BaseFieldOption = {
+//   column?: string;
+//   unique?: boolean;
+//   nullable?: boolean;
+//   serverZod?: z.ZodType;
+//   /** field is in the db, but never sent to the browser */
+//   private?: boolean;
+// };
 
-type NumberFieldOption = BaseFieldOption & {
-  kind: "number";
-  default?: number;
-  zod?: z.ZodNumber;
-};
+// type NoBaseFieldOption = {
+//   column?: never;
+//   unique?: never;
+//   nullable?: never;
+//   private?: never;
+// };
 
-type TimestampFieldOption = BaseFieldOption & {
-  kind: "timestamp";
-  default?: string;
-  zod?: z.ZodType<Date | string | null>;
-};
+// type TextFieldOption = BaseFieldOption & {
+//   kind?: "text";
+//   default?: string;
+//   zod?: z.ZodString;
+//   searchable?: boolean;
+// };
+// type VirtualFieldOption = NoBaseFieldOption & {
+//   kind: "virtual";
+//   default: unknown;
+//   zod?: z.ZodType;
+//   serverZod?: z.ZodType;
+// };
 
-type JsonbFieldOption<TSchema extends z.ZodType = z.ZodType> =
-  BaseFieldOption & {
-    kind: "jsonb";
-    default?: Record<string, unknown> | null;
-    zod: TSchema;
-  };
+// type BooleanFieldOption = BaseFieldOption & {
+//   kind: "boolean";
+//   default: boolean;
+//   zod?: z.ZodBoolean;
+// };
 
-export type FieldOption =
-  | TextFieldOption
-  | BooleanFieldOption
-  | NumberFieldOption
-  | TimestampFieldOption
-  | JsonbFieldOption;
+// type IntegerFieldOption = BaseFieldOption & {
+//   kind: "integer";
+//   default?: number;
+//   zod?: z.ZodType<number>;
+// };
+
+// type NumericFieldOption = BaseFieldOption & {
+//   kind: "numeric";
+//   default?: string;
+//   zod?: z.ZodType<string>;
+// };
+
+// type TimestampFieldOption = BaseFieldOption & {
+//   kind: "timestamp";
+//   default?: string;
+//   zod?: z.ZodArray<z.ZodType<string | number>>;
+// };
+
+// type TextArrayFieldOption = BaseFieldOption & {
+//   kind: "text-array";
+//   default?: string[];
+//   zod?: z.ZodType<string[]>;
+// };
+
+// type IntegerArrayFieldOption = BaseFieldOption & {
+//   kind: "integer-array";
+//   default?: number[];
+//   zod?: z.ZodType<number[]>;
+// };
+// type JsonbFieldOption<TSchema extends z.ZodType = z.ZodType> =
+//   BaseFieldOption & {
+//     kind: "jsonb";
+//     default?: Record<string, unknown> | null;
+//     zod: TSchema;
+//   };
+
+// export type FieldOption =
+//   | TextFieldOption
+//   | BooleanFieldOption
+//   | IntegerFieldOption
+//   | NumericFieldOption
+//   | TimestampFieldOption
+//   | JsonbFieldOption
+//   | TextArrayFieldOption
+//   | IntegerArrayFieldOption
+//   | VirtualFieldOption;
+
+// export type FieldKind = NonNullable<FieldOption["kind"]>;
 
 export type FieldOptions = Record<string, FieldOption>;
 
-export function defineFields<const T extends FieldOptions>(options: T) {
+export function defineFields(options: FieldOptions) {
   return options;
 }
 
-function getFieldZodSchema(field: FieldOption, isServer: boolean): z.ZodType {
-  let schema: z.ZodType;
+// function getFieldZodSchema(field: FieldOption, isServer: boolean): z.ZodType {
+//   let schema: z.ZodType;
 
-  if (isServer && field.serverZod) {
-    schema = field.serverZod;
-  } else if (field.zod) {
-    schema = field.zod;
-  } else {
-    switch (field.kind) {
-      case "text": {
-        schema = z.string();
-        break;
-      }
-      case "boolean": {
-        schema = z.boolean();
-        break;
-      }
-      case "number": {
-        schema = z.coerce.number();
-        break;
-      }
-      case "timestamp": {
-        schema = z.coerce.date();
-        break;
-      }
-      case "jsonb": {
-        schema = field.zod;
-        break;
-      }
-      default: {
-        schema = z.string();
-        break;
-      }
-    }
-  }
+//   if (isServer && field.serverZod) {
+//     schema = field.serverZod;
+//   } else if (field.zod) {
+//     schema = field.zod;
+//   } else {
+//     const kind: FieldKind = field.kind ?? "text";
+//     switch (kind) {
+//       case "text": {
+//         schema = z.string();
+//         break;
+//       }
+//       case "boolean": {
+//         schema = z.boolean();
+//         break;
+//       }
+//       case "integer": {
+//         schema = z.coerce.number().int();
+//         break;
+//       }
+//       case "numeric": {
+//         schema = z.coerce.string();
+//         break;
+//       }
+//       case "text-array": {
+//         schema = z.array(z.string());
+//         break;
+//       }
+//       case "integer-array": {
+//         schema = z.array(z.coerce.number().int());
+//         break;
+//       }
+//       case "timestamp": {
+//         schema = z.coerce.date();
+//         break;
+//       }
+//       default: {
+//         throw new Error(`Unsupported field kind: ${String(kind)}`);
+//       }
+//     }
+//   }
 
-  if (field.nullable) {
-    return schema.nullable();
-  }
+//   if (field.nullable) {
+//     return schema.nullable();
+//   }
 
-  return schema;
-}
+//   return schema;
+// }
 
 export function createZodSchema<const T extends FieldOptions>(
   fields: T,
@@ -104,7 +155,8 @@ export function createZodSchema<const T extends FieldOptions>(
   const shape = Object.fromEntries(
     Object.entries(fields).map(([key, field]) => [
       key,
-      getFieldZodSchema(field, isServer),
+      isServer ? (field.serverZod ?? field.zod) : field.zod,
+      // getFieldZodSchema(field, isServer),
     ]),
   );
 
@@ -113,34 +165,44 @@ export function createZodSchema<const T extends FieldOptions>(
 export function createDefaultValues<const T extends FieldOptions>(fields: T) {
   return Object.fromEntries(
     Object.entries(fields).map(([key, field]) => {
-      if (field.default !== undefined) {
-        return [key, field.default];
-      }
+      return [key, field.default];
 
-      if (field.nullable) {
-        return [key, null];
-      }
+      // if (field.default !== undefined) {
+      //   return [key, field.default];
+      // }
 
-      switch (field.kind) {
-        case "text": {
-          return [key, ""];
-        }
-        // case "boolean": {
-        //   return [key, false];
-        // }
-        case "number": {
-          return [key, 0];
-        }
-        case "timestamp": {
-          return [key, ""];
-        }
-        case "jsonb": {
-          return [key, null];
-        }
-        default: {
-          return [key, ""];
-        }
-      }
+      // if (field.nullable) {
+      //   return [key, null];
+      // }
+
+      // const kind: FieldKind = field.kind ?? "text";
+
+      // switch (kind) {
+      //   case "text": {
+      //     return [key, ""];
+      //   }
+      //   // case "boolean": {
+      //   //   return [key, false];
+      //   // }
+      //   case "integer": {
+      //     return [key, 0];
+      //   }
+      //   case "numeric": {
+      //     return [key, ""];
+      //   }
+      //   case "text-array":
+      //   case "integer-array": {
+      //     return [key, []];
+      //   }
+      //   case "timestamp": {
+      //     return [key, ""];
+      //   }
+      //   case "jsonb": {
+      //     return [key, null];
+      //   }
+      //   default:
+      //     throw new Error(`Unsupported field kind: ${String(kind)}`);
+      // }
     }),
   );
 }

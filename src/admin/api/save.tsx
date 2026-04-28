@@ -3,6 +3,8 @@ import { type PipelineAction } from "@kenstack/lib/api";
 import { pipeline } from "@kenstack/lib/api";
 import type { AdminApiOptions, AnyAdminTable } from "..";
 import { eq, getTableName } from "drizzle-orm";
+import * as z from "zod";
+import { saveTags } from "./helpers/saveTags";
 
 import { deps } from "@app/deps";
 import { errorTranslator } from "@kenstack/db/errorTranslator";
@@ -14,11 +16,12 @@ const save = ({ adminTable, ...options }: AdminApiOptions) => {
 };
 
 const saveAction =
-  (adminTable: AnyAdminTable): PipelineAction<typeof adminTable.schema> =>
-  async ({ response, data, id }) => {
+  (adminTable: AnyAdminTable): PipelineAction<z.ZodObject> =>
+  async ({ response, data: { tags, ...data }, id }) => {
     const { db } = deps;
 
     const { table, fields } = adminTable;
+    const tagRelations = adminTable?.tags?.table;
 
     const user = await deps.auth.requireUser();
     const select = selectFields(table, fields);
@@ -52,6 +55,16 @@ const saveAction =
       table: getTableName(table),
       action: id ? "update" : "insert",
     });
+
+    if (tagRelations && Array.isArray(tags)) {
+      const savedTags = await saveTags({
+        tags: tags,
+        tableId: row.id,
+        tagRelations,
+      });
+
+      row.tags = savedTags;
+    }
 
     return response.success({
       id: row.id,

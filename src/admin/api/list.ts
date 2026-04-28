@@ -43,7 +43,9 @@ const listAction =
       const keyword = keywords.trim();
       if (keyword && searchable.length) {
         const searchableColumns = searchable
-          .filter((key): key is keyof typeof table => key in table)
+          .filter(
+            (key): key is Extract<keyof typeof table, string> => key in table,
+          )
           .map((key) => table[key]);
 
         // if (keyword.length >= 2) {

@@ -11,6 +11,18 @@ export type BaseListItem = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type ListItemProps<
+  TExtra extends Record<string, unknown> = Record<string, unknown>,
+> = {
+  path: string;
+  item: BaseListItem & TExtra;
+};
+
+export type ListItemComponent<
+  TExtra extends Record<string, unknown> = Record<string, unknown>,
+> = React.FC<ListItemProps<TExtra>>;
+
 import type { FetchResult } from "@kenstack/lib/fetcher";
 
 export type AdminListResult<
@@ -25,7 +37,8 @@ export type AdminClientProps = {
   icon?: ComponentType<SVGProps<SVGSVGElement>>;
   schema?: z.ZodObject;
   fields: FieldOptions;
-  ListItem: React.FC<{ path: string; item: Record<string, unknown> }>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ListItem: ListItemComponent<any>;
   EditForm: React.FC;
 };
 

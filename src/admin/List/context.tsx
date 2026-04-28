@@ -22,7 +22,7 @@ type AdminListProps = {
   children: React.ReactNode;
 };
 
-type QueryKey = [string, FilterProps, number];
+type QueryKey = [string, string, FilterProps, number];
 
 type UseListProps<TDoc extends Record<string, unknown> = never> = {
   client: AdminClient;
@@ -60,11 +60,21 @@ export function AdminListProvider({
 
   const apiPath = "/api/admin/";
 
-  const queryKey = ["admin-list", debouncedFilters, page] satisfies QueryKey;
+  const queryKey = [
+    "admin-list",
+    name,
+    debouncedFilters,
+    page,
+  ] satisfies QueryKey;
 
-  const query = useQuery<AdminListResult, Error>({
+  const query = useQuery({
     queryFn: () =>
-      fetcher(apiPath, { action: "list", name, ...debouncedFilters, page }),
+      fetcher<AdminListResult>(apiPath, {
+        action: "list",
+        name,
+        ...debouncedFilters,
+        page,
+      }),
     queryKey,
     placeholderData: (prev) => prev,
   });

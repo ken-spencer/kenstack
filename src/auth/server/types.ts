@@ -1,6 +1,6 @@
 import { type PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { type Logger } from "@kenstack/logger/types";
-import { type Users } from "@kenstack/db/tables/users";
+import { type Users } from "@kenstack/modules/users/tables";
 import { type Sessions } from "@kenstack/db/tables/sessions";
 
 export type Tables = { users: Users; sessions: Sessions };

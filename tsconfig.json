@@ -20,6 +20,7 @@
     ],
     "paths": {
       "@app/deps": ["./src/deps/mock"],
+      "@app/deps/roles": ["./src/deps/roles"],
       "@kenstack/*": ["./src/*"]
     }
   },

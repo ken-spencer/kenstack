@@ -10,7 +10,7 @@ import load from "@kenstack/admin/api/load";
 import save from "@kenstack/admin/api/save";
 import remove from "@kenstack/admin/api/remove";
 // import presignImage from "@kenstack/admin/api/presignedCloudinaryUrl";
-// import tags from "@kenstack/admin/api/tags";
+import tags from "@kenstack/admin/api/tags";
 
 import { type AdminConfig } from "@kenstack/admin";
 import { type FetchError } from "@kenstack/lib/fetcher";
@@ -83,8 +83,8 @@ export const adminPipeline = async (
       return remove(input);
     // case "get-presigned-url":
     //   return presignImage(...input);
-    // case "tags":
-    //   return tags(...input);
+    case "tags":
+      return tags(input);
   }
   return NextResponse.json({
     status: "error",
