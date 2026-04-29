@@ -13,27 +13,22 @@ import Field, { type FieldProps } from "@kenstack/forms/Field";
 import IconButton from "@kenstack/components/IconButton";
 import { useForm } from "@kenstack/forms/context";
 
-import acceptDefault from "@kenstack/forms/ImageField/accept";
+import { imageMimeTypes as acceptDefault } from "@kenstack/zod/image";
 
 const buttonClass =
   "size-6 bg-gray-200/60  hover:bg-gray-400 border rounded-full";
 
 type ImageRenderProps = {
   square?: boolean;
-  apiPath?: string;
+  apiPath: string;
+  data?: Record<string, unknown>;
   // setStatusMessage?: (message) => void;
   placeholder?: React.ReactNode;
   imageClass?: string;
   accept?: string[];
 };
 
-type PresignedFetchResult = {
-  uploadUrl: string;
-  fields: Record<string, string | number | boolean | null>;
-  transformations: string[];
-};
-
-type UploadFieldProps = FieldProps &
+export type ImageFieldProps = FieldProps &
   React.ComponentProps<"div"> &
   ImageRenderProps;
 
@@ -46,15 +41,13 @@ export default function ImageField({
   label,
   description,
   ...props
-}: UploadFieldProps) {
-  const { apiPath } = useForm();
-
+}: ImageFieldProps) {
   return (
     <Field
       name={name}
       label={label}
       description={description}
-      render={imageRender({ apiPath, ...props })}
+      render={imageRender({ ...props })}
     />
   );
 }
@@ -62,6 +55,7 @@ export default function ImageField({
 const imageRender = ({
   square = false,
   apiPath,
+  data: extraData,
   // setStatusMessage,
   placeholder = <AddImageIcon className="h-16 w-16 text-gray-600" />,
   imageClass,
@@ -121,14 +115,19 @@ const imageRender = ({
       };
       reader.readAsDataURL(file);
 
-      const res = await fetcher<PresignedFetchResult>(
-        apiPath + "/get-presigned-url",
-        {
-          filename: file.name,
-          type: file.type,
-          name: field.name,
-        },
-      );
+      console.log(apiPath);
+      const res = await fetcher<{
+        uploadUrl: string;
+        // fields: Record<string, string | number | boolean | null>;
+        // transformations: string[];
+      }>(apiPath, {
+        ...(extraData ? extraData : {}),
+        action: "get-presigned-url",
+        filename: file.name,
+        type: file.type,
+        fieldname: field.name,
+        size: file.size,
+      });
 
       if ("error" === res.status) {
         setStatusMessage({
@@ -139,22 +138,20 @@ const imageRender = ({
         return;
       }
 
-      const { uploadUrl, fields, transformations } = res;
-      const formData = new FormData();
-      Object.entries(fields).forEach(([key, value]) =>
-        formData.append(key, String(value)),
-      );
-      formData.append("file", file);
+      const { uploadUrl, key: awsKey } = res;
 
+      console.log(uploadUrl);
       let uploadRes;
       try {
-        // uploadRes = fetcher(uploadUrl, )
         uploadRes = await fetch(uploadUrl, {
-          method: "POST",
+          method: "PUT",
           headers: {
-            Accept: "application/json", // Request a JSON response from Cloudinary
+            "Content-Type": file.type,
+            "Content-Length": file.size.toString(),
+            // 'x-amz-checksum-crc32': 'AAAAAA=='   // ← add the header that was signed
           },
-          body: formData,
+
+          body: file,
         });
       } catch (e) {
         setStatusMessage({
@@ -165,54 +162,32 @@ const imageRender = ({
         return;
       }
 
-      const data = await uploadRes.json();
+      if (!uploadRes.ok) {
+        const errorText = await uploadRes.text();
+        console.error("S3 upload failed", {
+          status: uploadRes.status,
+          error: errorText,
+        });
 
-      if (data.error) {
         setStatusMessage({
           status: "error",
-          message: `There was an unexpected problem loading ${file.name}:  ${data.error.message}`,
+          message:
+            "There wasd a problem uploading your image. Please try again.",
         });
         reset();
         return;
       }
 
-      const retval = {
-        filename: file.name,
-        ...pick(data, [
-          "asset_id",
-          "public_id",
-          "version",
-          "version_id",
-          "width",
-          "height",
-          "format",
-          "bytes",
-          "asset_folder",
-          "display_name",
-          "original_filename",
-        ]),
-        url: data.secure_url,
-        sizes: {} as Record<string, unknown>,
-      };
+      // TODO api request to resize image via sharp.
+      // fetcher(apiPath, {
+      //   ...(extraData ? extraData : {}),
+      //   action: "upload-complete",
+      //   fieldname: field.name,
+      //   key: awsKey,
+      // });
 
-      if (data.format !== "svg") {
-        transformations.forEach((sizeName, key) => {
-          const size = data.eager[key];
-
-          retval.sizes[sizeName] = {
-            width: size.width,
-            height: size.height,
-            format: size.format,
-            bytes: size.bytes,
-            url: size.secure_url,
-            transformation: size.transformation,
-          };
-        });
-      }
-
-      field.onChange(retval);
+      // field.onChange(retval);
       setUploading(false);
-      // commit();
     };
 
     const dragEvents = {
