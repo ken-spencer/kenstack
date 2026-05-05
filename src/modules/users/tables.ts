@@ -1,10 +1,16 @@
 import { defineTable } from "@kenstack/admin/table";
 import { sql } from "drizzle-orm";
-import { text, varchar, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+  text,
+  varchar,
+  integer,
+  index,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 
-import * as z from "zod";
-import { image } from "@kenstack/schemas/atoms";
-type Image = z.infer<ReturnType<typeof image>>;
+// import * as z from "zod";
+// import { image } from "@kenstack/schemas/atoms";
+// type Image = z.infer<ReturnType<typeof image>>;
 
 export const users = defineTable({
   name: "users",
@@ -17,7 +23,8 @@ export const users = defineTable({
       .notNull()
       .default(sql`'{}'`),
 
-    avatar: jsonb("avatar").$type<Image>(),
+    // avatar: jsonb("avatar").$type<Image>(),
+    avatar: integer("avatar"),
     passwordHash: text("password_hash"),
   },
   extraConfig: (t) => [

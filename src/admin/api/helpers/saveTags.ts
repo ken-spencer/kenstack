@@ -1,6 +1,6 @@
 import { and, eq, inArray, notInArray, asc } from "drizzle-orm";
 import { tags as tagsTable, type TagsTable } from "@kenstack/db/tables/tags";
-import { deps } from "@app/deps";
+import type { deps } from "@app/deps";
 
 type TagInput = {
   name: string;
@@ -8,10 +8,12 @@ type TagInput = {
 };
 
 export const saveTags = async ({
+  db,
   tags,
   tableId,
   tagRelations,
 }: {
+  db: Pick<typeof deps.db, "delete" | "insert" | "select">;
   tags: TagInput[];
   tableId: number;
   tagRelations: TagsTable;
@@ -19,16 +21,16 @@ export const saveTags = async ({
   const slugs = tags.map((tag) => tag.slug);
 
   if (slugs.length === 0) {
-    await deps.db.delete(tagRelations).where(eq(tagRelations.tableId, tableId));
+    await db.delete(tagRelations).where(eq(tagRelations.tableId, tableId));
 
     return [];
   }
 
-  await deps.db.insert(tagsTable).values(tags).onConflictDoNothing({
+  await db.insert(tagsTable).values(tags).onConflictDoNothing({
     target: tagsTable.slug,
   });
 
-  const savedTags = await deps.db
+  const savedTags = await db
     .select({
       id: tagsTable.id,
       name: tagsTable.name,
@@ -40,7 +42,7 @@ export const saveTags = async ({
 
   const tagIds = savedTags.map((tag) => tag.id);
 
-  await deps.db
+  await db
     .delete(tagRelations)
     .where(
       and(
@@ -53,7 +55,7 @@ export const saveTags = async ({
     return [];
   }
 
-  await deps.db
+  await db
     .insert(tagRelations)
     .values(
       tagIds.map((tagId) => ({

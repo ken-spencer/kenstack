@@ -34,7 +34,7 @@ export default function AccountMenu({
     <div className="flex items-center gap-4">
       <Popover>
         <PopoverTrigger className="cursor-pointer">
-          <Avatar initials={user.initials} url={user.avatar} />
+          <Avatar initials={user.initials} url={user.avatar?.url} />
         </PopoverTrigger>
         <PopoverContent
           className="flex w-max flex-col px-8"

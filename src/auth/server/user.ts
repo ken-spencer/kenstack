@@ -5,6 +5,7 @@ import { hashToken } from "./token";
 import { sql, and, isNull, eq, gt } from "drizzle-orm";
 import { type User } from "@kenstack/types";
 import { redirect } from "next/navigation";
+import { selectImageSubquery } from "@kenstack/db/tables";
 
 export function createUser<
   TSchema extends Tables,
@@ -33,10 +34,8 @@ export function createUser<
             "name",
           ),
           email: users.email,
-          // avatar: users.avatar,
+          avatar: selectImageSubquery(users.avatar, "square"),
           roles: users.roles,
-          // provider: sessions.provider,
-          // expiresAt: sessions.expiresAt,
         })
         .from(sessions)
         .innerJoin(users, eq(users.id, sessions.userId))
@@ -54,7 +53,6 @@ export function createUser<
       }
       return {
         ...user,
-        avatar: null,
         initials: user.firstName.slice(0, 1) + user.lastName.slice(0, 1),
       };
     },
@@ -71,7 +69,7 @@ export function createUser<
           "name",
         ),
         email: users.email,
-        // avatar: users.avatar,
+        avatar: selectImageSubquery(users.avatar, "square"),
         roles: users.roles,
       })
       .from(users)
@@ -80,7 +78,6 @@ export function createUser<
 
     return {
       ...user,
-      avatar: null,
       initials: user.firstName.slice(0, 1) + user.lastName.slice(0, 1),
     };
   });

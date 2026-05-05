@@ -1,4 +1,8 @@
-export { default as pipeline, type PipelineOptions } from "./pipeline";
+export {
+  default as pipeline,
+  pipelineAction,
+  type PipelineOptions,
+} from "./pipeline";
 export { default as multiPipeline } from "./multiPipeline";
 export { default as recaptcha } from "./recaptcha";
 export { default as authenticate } from "./authenticate";

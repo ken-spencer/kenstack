@@ -1,5 +1,4 @@
-import InputField from "@kenstack/forms/InputField";
-import CheckboxList from "@kenstack/forms/CheckboxList";
+import { InputField, CheckboxList, ImageField } from "@kenstack/admin/forms";
 import SwitchUser from "./SwitchUser";
 import ResetPassword from "./ResetPassword";
 
@@ -10,11 +9,25 @@ export default function Form() {
     <div>
       <div className="flex flex-col gap-4 md:flex-row">
         <div className="flex flex-col gap-4">
-          <div className="flex items-start gap-4">
-            <InputField name="firstName" label="last Name" />
-            <InputField name="lastName" label="Last Name" />
+          <div className="flex items-center gap-4">
+            <ImageField
+              label="Avatar"
+              name="avatar"
+              imageClass="rounded-full"
+            />
+            <div className="flex flex-grow flex-col gap-4">
+              <div className="flex gap-4">
+                <InputField name="firstName" label="last Name" />
+                <InputField name="lastName" label="Last Name" />
+              </div>
+              <InputField
+                className="w-full"
+                name="email"
+                label="Email"
+                type="email"
+              />
+            </div>
           </div>
-          <InputField name="email" label="Email" type="email" />
         </div>
         <div className="flex flex-col gap-4">
           <CheckboxList name="roles" label="Access Roles" options={roles} />

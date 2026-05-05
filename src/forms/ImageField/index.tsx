@@ -1,4 +1,3 @@
-import pick from "lodash-es/pick";
 import { useCallback, useState, type ChangeEvent, type DragEvent } from "react";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 
@@ -13,7 +12,7 @@ import Field, { type FieldProps } from "@kenstack/forms/Field";
 import IconButton from "@kenstack/components/IconButton";
 import { useForm } from "@kenstack/forms/context";
 
-import { imageMimeTypes as acceptDefault } from "@kenstack/zod/image";
+import { imageMimeTypes as acceptDefault } from "@kenstack/db/tables/images/mimeTypes";
 
 const buttonClass =
   "size-6 bg-gray-200/60  hover:bg-gray-400 border rounded-full";
@@ -25,7 +24,8 @@ type ImageRenderProps = {
   // setStatusMessage?: (message) => void;
   placeholder?: React.ReactNode;
   imageClass?: string;
-  accept?: string[];
+  accept?: readonly string[];
+  className?: string;
 };
 
 export type ImageFieldProps = FieldProps &
@@ -53,12 +53,13 @@ export default function ImageField({
 }
 
 const imageRender = ({
-  square = false,
+  square = true,
   apiPath,
   data: extraData,
   // setStatusMessage,
-  placeholder = <AddImageIcon className="h-16 w-16 text-gray-600" />,
+  placeholder,
   imageClass,
+  className,
   accept = acceptDefault,
 }: ImageRenderProps) =>
   function ImageFieldRender({ field }: ImageFieldRenderProps) {
@@ -68,8 +69,10 @@ const imageRender = ({
     const contClass = twMerge(
       "relative flex items-center justify-center",
       square ? "overflow-hidden w-32 h-32" : "w-max h-max w-32 max-h-32 ",
+      className,
     );
     const imgClass = twMerge(
+      "border border-gray-200 rounded",
       square
         ? "object-cover object-center w-full h-full"
         : "object-scale-down object-center w-full h-full",
@@ -115,11 +118,9 @@ const imageRender = ({
       };
       reader.readAsDataURL(file);
 
-      console.log(apiPath);
       const res = await fetcher<{
         uploadUrl: string;
-        // fields: Record<string, string | number | boolean | null>;
-        // transformations: string[];
+        id: string;
       }>(apiPath, {
         ...(extraData ? extraData : {}),
         action: "get-presigned-url",
@@ -138,9 +139,8 @@ const imageRender = ({
         return;
       }
 
-      const { uploadUrl, key: awsKey } = res;
+      const { uploadUrl } = res;
 
-      console.log(uploadUrl);
       let uploadRes;
       try {
         uploadRes = await fetch(uploadUrl, {
@@ -164,6 +164,7 @@ const imageRender = ({
 
       if (!uploadRes.ok) {
         const errorText = await uploadRes.text();
+        //eslint-disable-next-line no-console
         console.error("S3 upload failed", {
           status: uploadRes.status,
           error: errorText,
@@ -172,21 +173,40 @@ const imageRender = ({
         setStatusMessage({
           status: "error",
           message:
-            "There wasd a problem uploading your image. Please try again.",
+            "There was a problem uploading your image. Please try again.",
         });
         reset();
         return;
       }
 
-      // TODO api request to resize image via sharp.
-      // fetcher(apiPath, {
-      //   ...(extraData ? extraData : {}),
-      //   action: "upload-complete",
-      //   fieldname: field.name,
-      //   key: awsKey,
-      // });
+      const complete = await fetcher<{
+        imageId: string;
+        url: string;
+        width?: number;
+        height?: number;
+      }>(apiPath, {
+        ...(extraData ? extraData : {}),
+        action: "upload-complete",
+        fieldname: field.name,
+        imageId: res.id,
+      });
 
-      // field.onChange(retval);
+      if (complete.status === "error") {
+        setStatusMessage({
+          status: "error",
+          message: complete.message,
+        });
+        reset();
+        return;
+      }
+
+      field.onChange({
+        url: complete.url,
+        width: complete.width,
+        height: complete.height,
+        action: "upload",
+        imageId: complete.imageId,
+      });
       setUploading(false);
     };
 
@@ -260,7 +280,7 @@ const imageRender = ({
 
     if (field.value) {
       return (
-        <div className={twMerge(contClass)} {...dragEvents}>
+        <div className={contClass} {...dragEvents}>
           <IconButton
             type="button"
             className={"absolute top-1 right-1 " + buttonClass}
@@ -288,26 +308,20 @@ const imageRender = ({
               <UploadIcon />
             </label>
           </IconButton>
-          <img
-            alt=""
-            className={imgClass}
-            src={
-              field.value.format === "svg"
-                ? field.value.url
-                : square
-                  ? field.value.sizes.squareThumbnail?.url
-                  : field.value.sizes.thumbnail?.url
-            }
-          />
+          <img alt="" className={imgClass} src={field.value.url} />
         </div>
       );
     }
 
     return (
       <label className={twMerge(contClass, "cursor-pointer")} {...dragEvents}>
-        {placeholder}
+        {placeholder ?? (
+          <div className={imgClass + " flex items-center justify-center"}>
+            <AddImageIcon className="h-16 w-16 text-gray-600" />
+          </div>
+        )}
         {input}
-        <UploadIcon className="absolute bottom-1 left-1" />
+        {/* <UploadIcon className="absolute bottom-1 left-1" /> */}
       </label>
     );
   };

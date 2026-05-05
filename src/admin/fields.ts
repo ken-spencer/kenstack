@@ -1,100 +1,50 @@
 import * as z from "zod";
+import { imageSchema } from "@kenstack/zod/image";
 
-export type FieldOption = {
+export type DefaultOption = {
+  kind?: never;
   zod: z.ZodType;
   serverZod?: z.ZodType;
   default: unknown;
   searchable?: boolean;
 };
 
-// type BaseFieldOption = {
-//   column?: string;
-//   unique?: boolean;
-//   nullable?: boolean;
-//   serverZod?: z.ZodType;
-//   /** field is in the db, but never sent to the browser */
-//   private?: boolean;
-// };
+type ImageOption = {
+  kind: "image";
+  zod?: typeof imageSchema;
+  serverZod?: never;
+  default?: null;
+  searchable?: false;
+};
 
-// type NoBaseFieldOption = {
-//   column?: never;
-//   unique?: never;
-//   nullable?: never;
-//   private?: never;
-// };
-
-// type TextFieldOption = BaseFieldOption & {
-//   kind?: "text";
-//   default?: string;
-//   zod?: z.ZodString;
-//   searchable?: boolean;
-// };
-// type VirtualFieldOption = NoBaseFieldOption & {
-//   kind: "virtual";
-//   default: unknown;
-//   zod?: z.ZodType;
-//   serverZod?: z.ZodType;
-// };
-
-// type BooleanFieldOption = BaseFieldOption & {
-//   kind: "boolean";
-//   default: boolean;
-//   zod?: z.ZodBoolean;
-// };
-
-// type IntegerFieldOption = BaseFieldOption & {
-//   kind: "integer";
-//   default?: number;
-//   zod?: z.ZodType<number>;
-// };
-
-// type NumericFieldOption = BaseFieldOption & {
-//   kind: "numeric";
-//   default?: string;
-//   zod?: z.ZodType<string>;
-// };
-
-// type TimestampFieldOption = BaseFieldOption & {
-//   kind: "timestamp";
-//   default?: string;
-//   zod?: z.ZodArray<z.ZodType<string | number>>;
-// };
-
-// type TextArrayFieldOption = BaseFieldOption & {
-//   kind: "text-array";
-//   default?: string[];
-//   zod?: z.ZodType<string[]>;
-// };
-
-// type IntegerArrayFieldOption = BaseFieldOption & {
-//   kind: "integer-array";
-//   default?: number[];
-//   zod?: z.ZodType<number[]>;
-// };
-// type JsonbFieldOption<TSchema extends z.ZodType = z.ZodType> =
-//   BaseFieldOption & {
-//     kind: "jsonb";
-//     default?: Record<string, unknown> | null;
-//     zod: TSchema;
-//   };
-
-// export type FieldOption =
-//   | TextFieldOption
-//   | BooleanFieldOption
-//   | IntegerFieldOption
-//   | NumericFieldOption
-//   | TimestampFieldOption
-//   | JsonbFieldOption
-//   | TextArrayFieldOption
-//   | IntegerArrayFieldOption
-//   | VirtualFieldOption;
-
-// export type FieldKind = NonNullable<FieldOption["kind"]>;
-
+export type FieldOption = DefaultOption | ImageOption;
 export type FieldOptions = Record<string, FieldOption>;
+export type DefinedFields = Record<string, Required<FieldOption>>;
 
 export function defineFields(options: FieldOptions) {
-  return options;
+  return Object.fromEntries(
+    Object.entries(options).map(([key, field]) => {
+      if ("kind" in field && field.kind === "image") {
+        return [
+          key,
+          {
+            ...field,
+            zod: field.zod ?? imageSchema,
+            default: field.default ?? null,
+            searchable: false,
+          },
+        ];
+      }
+
+      return [
+        key,
+        {
+          ...field,
+          searchable: field.searchable === true,
+        },
+      ];
+    }),
+  ) as DefinedFields;
 }
 
 // function getFieldZodSchema(field: FieldOption, isServer: boolean): z.ZodType {
@@ -148,7 +98,7 @@ export function defineFields(options: FieldOptions) {
 //   return schema;
 // }
 
-export function createZodSchema<const T extends FieldOptions>(
+export function createZodSchema<const T extends DefinedFields>(
   fields: T,
   isServer = false,
 ) {
@@ -162,7 +112,7 @@ export function createZodSchema<const T extends FieldOptions>(
 
   return z.object(shape);
 }
-export function createDefaultValues<const T extends FieldOptions>(fields: T) {
+export function createDefaultValues<const T extends DefinedFields>(fields: T) {
   return Object.fromEntries(
     Object.entries(fields).map(([key, field]) => {
       return [key, field.default];

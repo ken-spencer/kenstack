@@ -24,7 +24,7 @@ import {
 } from "@kenstack/components/ui/popover";
 
 import type { Tag } from "./types";
-import { type AnyField } from "../types";
+import { type AnyField } from "@kenstack/forms/types";
 
 export default function TagSearcht({ field }: { field: AnyField }) {
   const dialogRef = useRef<HTMLDivElement | null>(null);

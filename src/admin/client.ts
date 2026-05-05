@@ -3,7 +3,7 @@ import * as z from "zod";
 import {
   // createDefaultValues,
   createZodSchema,
-  type FieldOptions,
+  type DefinedFields,
 } from "./fields";
 
 export type BaseListItem = {
@@ -36,7 +36,7 @@ export type AdminClientProps = {
   /** SVG icon component (e.g. Lucide icons) */
   icon?: ComponentType<SVGProps<SVGSVGElement>>;
   schema?: z.ZodObject;
-  fields: FieldOptions;
+  fields: DefinedFields;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ListItem: ListItemComponent<any>;
   EditForm: React.FC;

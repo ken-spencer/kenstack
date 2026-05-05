@@ -1,4 +1,4 @@
-import { selectFields } from "..";
+import { selectFields } from "./helpers/selectFields";
 import { pipeline, type PipelineAction } from "@kenstack/lib/api";
 import { deps } from "@app/deps";
 import { eq, asc } from "drizzle-orm";
@@ -22,6 +22,7 @@ const loadAction =
     const tagRelations = adminTable?.tags?.table;
 
     const select = selectFields(table, fields);
+
     const rows = await db.select(select).from(table).where(eq(table.id, id));
 
     if (!rows.length) {

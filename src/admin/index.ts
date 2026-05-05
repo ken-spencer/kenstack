@@ -5,7 +5,7 @@ import type { MetaTable } from "./table";
 import {
   createDefaultValues,
   createZodSchema,
-  type FieldOptions,
+  type DefinedFields,
 } from "./fields";
 
 import type { ComponentType, SVGProps } from "react";
@@ -67,7 +67,7 @@ export type AdminTable<
   defaultValues?: AdminDefaultValues<TTable>;
   revalidate?: (string | ((row: InferSelectModel<TTable>) => string))[];
 
-  fields: FieldOptions;
+  fields: DefinedFields;
   filters?: Omit<Filters, "Filters">;
 
   preview?: PreviewPath;

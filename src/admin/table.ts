@@ -1,4 +1,5 @@
-import { getTableColumns, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
+
 import {
   index,
   integer,
@@ -12,38 +13,12 @@ import {
   type PgTableExtraConfigValue,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
-import { type FieldOptions } from "./fields";
 import { createId } from "@paralleldrive/cuid2";
 
 // declare const defineTableBrand: unique symbol;
 
 // type SearchableKey<TColumnsMap extends Record<string, PgColumnBuilderBase>> =
 //   Extract<keyof TColumnsMap, string>;
-
-export function selectFields<
-  TTable extends MetaTable,
-  TSelection extends FieldOptions,
->(table: TTable, selection: TSelection) {
-  const columns = getTableColumns(table);
-  const baseResult = {
-    id: table.id,
-    createdAt: table.createdAt,
-    updatedAt: table.updatedAt,
-  };
-
-  const result = baseResult as typeof baseResult & Record<string, AnyPgColumn>;
-
-  for (const key in selection) {
-    // const field = selection[key];
-    if (key in columns) {
-      (result as Record<string, AnyPgColumn>)[key] = columns[
-        key as keyof typeof columns
-      ] as AnyPgColumn;
-    }
-  }
-
-  return result;
-}
 
 // type FieldKey<TFields extends FieldOptions> = Extract<keyof TFields, string>;
 type ColumnKey<TColumnsMap extends Record<string, PgColumnBuilderBase>> =

@@ -5,7 +5,7 @@ export type User<TRoles extends readonly string[] = string[]> = {
   lastName: string;
   name: string;
   initials: string;
-  avatar: string | null;
+  avatar: { url: string; width: number | null; height: number | null } | null;
   email: string;
   roles: TRoles;
 };

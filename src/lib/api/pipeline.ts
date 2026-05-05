@@ -39,7 +39,9 @@ export default async function pipeline<
       message: "Invalid request. Only JSON is accepted.",
     } satisfies FetchError);
   }
-  const { id, ...json } = localOptions?.json ?? (await request.json());
+
+  const json = localOptions?.json ?? (await request.json());
+  const { id } = json;
 
   let parsedId;
   const idCheck = z.coerce.number().optional().safeParse(id);
@@ -55,7 +57,7 @@ export default async function pipeline<
 
       return NextResponse.json({
         status: "error",
-        message: "Please review the() form and correct the highlighted fields.",
+        message: "Please review the form and correct the highlighted fields.",
         fieldErrors: fieldErrors as Record<string, string[]>,
       } satisfies FetchError);
     }
@@ -113,3 +115,24 @@ export default async function pipeline<
 
   return response.toNextResponse();
 }
+
+export const pipelineAction =
+  <TSchema extends ObjectSchema>(
+    { schema }: { schema: TSchema },
+    action: PipelineAction<TSchema>,
+  ): PipelineAction<TSchema> =>
+  async (ctx) => {
+    const parsed = await schema.safeParseAsync(ctx.dataIn);
+    if (!parsed.success) {
+      const { fieldErrors } = z.flattenError(parsed.error);
+
+      return ctx.response.error(
+        "Please review the form and correct the highlighted fields.",
+        {
+          fieldErrors: fieldErrors as Record<string, string[]>,
+        },
+      );
+    }
+
+    return action({ ...ctx, data: parsed.data });
+  };

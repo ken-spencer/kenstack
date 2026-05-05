@@ -21,13 +21,13 @@ import DefaultEmail, {
   attachments as defaultAttachments,
 } from "@kenstack/auth/email/ForgotPassword";
 
-type ForgotPasswordProps = {
+export type ForgotPasswordProps = {
   Email?: React.FC<ForgotPasswordEmailProps>;
   attachments?: Attachment[];
   from: string;
 };
 
-export const forgottenPasswordPipeline =
+export const forgotPasswordPipeline =
   (props: ForgotPasswordProps) => (options: PipelineOptions<typeof schema>) =>
     pipeline({ ...options, schema }, [
       recaptcha(),

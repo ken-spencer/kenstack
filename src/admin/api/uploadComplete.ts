@@ -1,16 +1,19 @@
 import type { AdminApiOptions, AnyAdminTable } from "..";
+import type { Readable } from "node:stream";
 
 import {
   GetObjectCommand,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
-import type { Readable } from "node:stream";
+import { images } from "@kenstack/db/tables/images";
+import { deps } from "@app/deps";
+import { and, eq, getTableName } from "drizzle-orm";
 
 import { pipeline, type PipelineAction } from "@kenstack/lib/api";
 
 import * as z from "zod";
-import { imageMimeTypes } from "@kenstack/zod/image";
+// import { imageMimeTypes } from "@kenstack/zod/image";
 
 const region = process.env.AWS_S3_REGION ?? process.env.AWS_REGION;
 const bucket = process.env.AWS_S3_BUCKET;
@@ -19,16 +22,32 @@ const maxOriginalWidth = 1920;
 const maxOriginalHeight = 1920;
 const squareSize = 800;
 
+const sanitizeSvg = async (buffer: Buffer): Promise<Buffer> => {
+  const { optimize } = await import("svgo");
+  const svg = buffer.toString("utf8");
+  const result = optimize(svg, {
+    multipass: true,
+    plugins: ["removeDimensions"],
+  });
+
+  if ("data" in result) {
+    return Buffer.from(result.data, "utf8");
+  }
+
+  throw new Error("Could not sanitize SVG");
+};
+
 const uploadSchema = z.object({
   fieldname: z.string("image field name is required").min(1),
-  prefix: z.string("prefix is required").min(1),
-  key: z.string("key is required").min(1),
-  baseName: z.string("baseName is required").min(1),
-  filename: z
-    .string("filename is required")
-    .nonempty("filename cannot be empty"),
-  type: z.enum(imageMimeTypes, "Image type is not supported"),
-  size: z.number("size is required").gt(0, "size must be greater than 0"),
+  imageId: z.string("image id is required").min(1),
+  // prefix: z.string("prefix is required").min(1),
+  // key: z.string("key is required").min(1),
+  // baseName: z.string("baseName is required").min(1),
+  // filename: z
+  //   .string("filename is required")
+  //   .nonempty("filename cannot be empty"),
+  // type: z.enum(imageMimeTypes, "Image type is not supported"),
+  // size: z.number("size is required").gt(0, "size must be greater than 0"),
 });
 
 export const uploadCompletePipeline = ({
@@ -96,7 +115,27 @@ const uploadCompleteAction =
     }
     const { data } = parsedData;
 
-    const { fieldname, key, baseName, prefix, filename, type, size } = data;
+    const { fieldname /*key, baseName, prefix, filename, type, size*/ } = data;
+
+    const [pendingImage] = await deps.db
+      .select({
+        id: images.id,
+        key: images.sourceKey,
+        prefix: images.prefix,
+        baseName: images.baseName,
+        type: images.sourceType,
+      })
+      .from(images)
+      .where(
+        and(eq(images.publicId, data.imageId), eq(images.status, "pending")),
+      );
+
+    if (!pendingImage) {
+      return response.error(
+        "Problem finding uploaded image. Please try again.",
+      );
+    }
+    const { id, key, type, baseName, prefix } = pendingImage;
 
     const field = adminTable.fields[fieldname];
     if (!field) {
@@ -106,24 +145,7 @@ const uploadCompleteAction =
       return response.error("Missing AWS_S3_BUCKET");
     }
 
-    const sourceUrl = `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
-
-    if (type === "image/svg+xml") {
-      return response.success({
-        kind: "svg",
-        version: 1,
-        filename,
-        prefix,
-        baseName,
-        source: {
-          key,
-          url: sourceUrl,
-          type,
-          size,
-        },
-      });
-    }
-
+    // const sourceUrl = `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
     const { default: sharp } = await import("sharp");
 
     const originalObject = await s3.send(
@@ -141,6 +163,45 @@ const uploadCompleteAction =
       originalObject.Body as Readable,
     );
     const metadata = await sharp(originalBuffer).metadata();
+
+    if (!metadata.format) {
+      return response.error("Uploaded file is not a supported image");
+    }
+
+    if (type === "image/svg+xml") {
+      const sanitizedSvg = await sanitizeSvg(originalBuffer);
+
+      await s3.send(
+        new PutObjectCommand({
+          Bucket: bucket,
+          Key: key,
+          Body: sanitizedSvg,
+          ContentType: type,
+        }),
+      );
+
+      const [image] = await deps.db
+        .update(images)
+        .set({
+          status: "uploaded",
+          kind: "svg",
+          table: getTableName(adminTable.table),
+          // sourceUrl,
+          sourceSize: sanitizedSvg.length,
+          sourceWidth: metadata.width ?? null,
+          sourceHeight: metadata.height ?? null,
+        })
+        .where(eq(images.id, id))
+        .returning({
+          imageId: images.publicId,
+          url: images.sourceUrl,
+          width: images.sourceWidth,
+          height: images.sourceHeight,
+        });
+
+      return response.success({ ...image });
+    }
+
     const webpOptions = getWebpOptions(metadata.format);
 
     const originalWebpKey = `${prefix}/original/${baseName}.webp`;
@@ -198,54 +259,54 @@ const uploadCompleteAction =
       return response.error("Could not determine square variant dimensions");
     }
 
-    /**
-     * TODO
-     * Note that this approach would not be secure for avatars
-     * build single images table similar to tags.
-     * images uploaded here would be marked as pending and could be cleaned up later
-     * on final save, link to table via intermediary blg_images, user_avatars etc.
-     * that way image info is not saved with the record.
-     * include uploader_id on the mages table, and only allow them to claim a pending upload
-     * presigned url would go in a tmp folder for future cleanup.
-     * This function would move from tmp to permanent location. (but cleaned up via pending)
-     * would need to have an image kind for fields that would trigger joins in admin.
-     * Thinking this might be ore like a ts type than a zod type as would not be transmitted in full moving forward
-     * image field would not submit same data it receives, but only send commands.
-     * something like {url, width, height, action} where only theaction is seen by server (+ related data)
-     */
+    const [image] = await deps.db
+      .update(images)
+      .set({
+        status: "uploaded",
+        kind: "raster",
+        table: getTableName(adminTable.table),
+
+        // sourceUrl: sourceUrl,
+        // sourceType: type,
+        sourceSize: originalBuffer.length,
+        sourceWidth: metadata.width,
+        sourceHeight: metadata.height,
+
+        variants: {
+          original: {
+            key: originalWebpKey,
+            url: originalWebpUrl,
+            type: "image/webp",
+            size: originalWebp.length,
+            width: originalWebpMetadata.width,
+            height: originalWebpMetadata.height,
+          },
+          square: {
+            key: squareWebpKey,
+            url: squareWebpUrl,
+            type: "image/webp",
+            size: squareWebp.length,
+            width: squareWebpMetadata.width,
+            height: squareWebpMetadata.height,
+            square: true,
+          },
+        },
+      })
+      .where(eq(images.id, id))
+      .returning({ imageId: images.publicId, variants: images.variants });
+
+    if (!image.variants) {
+      throw Error("No variants on image");
+    }
+
+    const {
+      variants: { square },
+    } = image;
 
     return response.success({
-      kind: "raster",
-      version: 1,
-      filename,
-      prefix,
-      baseName,
-      source: {
-        key,
-        url: sourceUrl,
-        type,
-        size,
-        width: metadata.width,
-        height: metadata.height,
-      },
-      variants: {
-        original: {
-          key: originalWebpKey,
-          url: originalWebpUrl,
-          type: "image/webp",
-          size: originalWebp.length,
-          width: originalWebpMetadata.width,
-          height: originalWebpMetadata.height,
-        },
-        square: {
-          key: squareWebpKey,
-          url: squareWebpUrl,
-          type: "image/webp",
-          size: squareWebp.length,
-          width: squareWebpMetadata.width,
-          height: squareWebpMetadata.height,
-          square: true,
-        },
-      },
+      imageId: image.imageId,
+      url: square.url,
+      width: square.width,
+      height: square.height,
     });
   };
