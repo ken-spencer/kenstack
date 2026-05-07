@@ -37,8 +37,10 @@ export default function AdminEditForm({
             action: "save",
             name,
             id,
-            isNew,
-            ...omit(vars, ["meta"]),
+            payload: {
+              isNew,
+              ...omit(vars, ["meta"]),
+            },
           },
         );
       }}

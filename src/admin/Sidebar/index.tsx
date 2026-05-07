@@ -16,7 +16,7 @@ import { type AdminConfig } from "@kenstack/admin";
 import Content from "./Content";
 
 export default function AdminSidebar({
-  content,
+  // content,
   adminConfig,
   children,
 }: {

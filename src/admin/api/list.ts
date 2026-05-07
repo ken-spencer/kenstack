@@ -1,7 +1,7 @@
 import * as z from "zod";
 import { sql, desc, isNull, and, or, ilike } from "drizzle-orm";
 
-import { pipeline, type PipelineAction } from "@kenstack/lib/api";
+import { pipeline, pipelineStage } from "@kenstack/lib/api";
 import type { AdminApiOptions, AnyAdminTable } from "@kenstack/admin";
 
 const querySchema = z.object({
@@ -12,77 +12,79 @@ const querySchema = z.object({
 import { deps } from "@app/deps";
 
 const list = ({ adminTable, ...options }: AdminApiOptions) => {
-  const schema = adminTable.filters?.schema
-    ? querySchema.extend({ filters: adminTable.filters.schema })
-    : querySchema;
-  return pipeline({ ...options, schema }, [listAction(adminTable)]);
+  return pipeline(options, [listAction(adminTable)]);
 };
 
-const listAction =
-  (adminTable: AnyAdminTable): PipelineAction<typeof querySchema> =>
-  async ({ response, data }) => {
-    const { keywords, page } = data;
-    const limit = adminTable.limit || 25;
-    const offset = (page - 1) * limit;
+const listAction = (adminTable: AnyAdminTable) =>
+  pipelineStage(
+    {
+      schema: adminTable.filters?.schema
+        ? querySchema.extend({ filters: adminTable.filters.schema })
+        : querySchema,
+    },
+    async ({ response, data }) => {
+      const { keywords, page } = data;
+      const limit = adminTable.limit || 25;
+      const offset = (page - 1) * limit;
 
-    const { db } = deps;
-    const { table, fields, orderBy } = adminTable;
+      const { db } = deps;
+      const { table, fields, orderBy } = adminTable;
 
-    const searchable = Object.entries(fields)
-      .filter(([, field]) => "searchable" in field && field.searchable)
-      .map(([key]) => key);
+      const searchable = Object.entries(fields)
+        .filter(([, field]) => "searchable" in field && field.searchable)
+        .map(([key]) => key);
 
-    const where = [isNull(table.deletedAt)];
-
-    const keyword = keywords.trim();
-    if (keyword && searchable.length) {
-      // const searchableColumns = searchable.map(
-      //   (key) => table[key as keyof typeof table],
-      // );
+      const where = [isNull(table.deletedAt)];
 
       const keyword = keywords.trim();
       if (keyword && searchable.length) {
-        const searchableColumns = searchable
-          .filter(
-            (key): key is Extract<keyof typeof table, string> => key in table,
-          )
-          .map((key) => table[key]);
-
-        // if (keyword.length >= 2) {
-        // where.push(
-        //   sql<boolean>`to_tsvector('english', concat_ws(' ', ${sql.join(searchableColumns, sql`, `)})) @@ websearch_to_tsquery('english', ${keyword})`,
+        // const searchableColumns = searchable.map(
+        //   (key) => table[key as keyof typeof table],
         // );
-        // } else {
-        const searchConditions = searchableColumns.map((column) => {
-          return ilike(sql`${column}`, `%${keyword}%`);
-        });
 
-        where.push(or(...searchConditions)!);
-        // }
+        const keyword = keywords.trim();
+        if (keyword && searchable.length) {
+          const searchableColumns = searchable
+            .filter(
+              (key): key is Extract<keyof typeof table, string> => key in table,
+            )
+            .map((key) => table[key]);
+
+          // if (keyword.length >= 2) {
+          // where.push(
+          //   sql<boolean>`to_tsvector('english', concat_ws(' ', ${sql.join(searchableColumns, sql`, `)})) @@ websearch_to_tsquery('english', ${keyword})`,
+          // );
+          // } else {
+          const searchConditions = searchableColumns.map((column) => {
+            return ilike(sql`${column}`, `%${keyword}%`);
+          });
+
+          where.push(or(...searchConditions)!);
+          // }
+        }
       }
-    }
 
-    const rows = await db
-      .select({
-        id: table.id,
-        createdAt: table.createdAt,
-        updatedAt: table.updatedAt,
-        ...adminTable.select,
-      })
-      .from(table)
-      .where(and(...where))
-      .orderBy(...(orderBy ? orderBy : [desc(table.id)]))
-      .limit(limit)
-      .offset(offset);
+      const rows = await db
+        .select({
+          id: table.id,
+          createdAt: table.createdAt,
+          updatedAt: table.updatedAt,
+          ...adminTable.select,
+        })
+        .from(table)
+        .where(and(...where))
+        .orderBy(...(orderBy ? orderBy : [desc(table.id)]))
+        .limit(limit)
+        .offset(offset);
 
-    const [{ count }] = await db
-      .select({ count: sql`count(*)`.mapWith(Number) })
-      .from(table)
-      .where(and(...where));
+      const [{ count }] = await db
+        .select({ count: sql`count(*)`.mapWith(Number) })
+        .from(table)
+        .where(and(...where));
 
-    return response.success({ total: count, items: rows });
+      return response.success({ total: count, items: rows });
 
-    /*
+      /*
     const filter: Record<string, unknown> = { "meta.deleted": { $ne: true } };
 
     if (keywords) {
@@ -146,7 +148,8 @@ const listAction =
 
     return response.success({ total, items });
     */
-  };
+    },
+  );
 
 import { type SchemaFactory } from "@kenstack/schemas";
 

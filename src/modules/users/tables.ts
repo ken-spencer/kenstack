@@ -15,8 +15,8 @@ import {
 export const users = defineTable({
   name: "users",
   columns: {
-    firstName: text("first_name").notNull(),
-    lastName: text("last_name").notNull(),
+    givenName: text("given_name").notNull(),
+    familyName: text("family_name").notNull(),
     email: varchar("email", { length: 320 }).notNull(),
     roles: text("roles")
       .array()

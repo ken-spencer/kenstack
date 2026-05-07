@@ -5,17 +5,16 @@ import { tags as tagsTable } from "@kenstack/db/tables/tags";
 import { and, count, desc, eq, ilike, notInArray } from "drizzle-orm";
 import { deps } from "@app/deps";
 
-import { pipeline, type PipelineAction } from "@kenstack/lib/api";
+import { pipeline, pipelineStage } from "@kenstack/lib/api";
 
 const schema = z.object({ exclude: tagSchema(), keywords: z.string() });
 
 const tagSearch = ({ adminTable, ...options }: AdminApiOptions) => {
-  return pipeline({ ...options, schema }, [tagSearchAction(adminTable)]);
+  return pipeline(options, [tagSearchAction(adminTable)]);
 };
 
-const tagSearchAction =
-  (adminTable: AnyAdminTable): PipelineAction<typeof schema> =>
-  async ({ response, data }) => {
+const tagSearchAction = (adminTable: AnyAdminTable) =>
+  pipelineStage({ schema }, async ({ response, data }) => {
     const { keywords, exclude } = data;
     const excludedSlugs = exclude.map((e) => e.slug);
 
@@ -53,6 +52,6 @@ const tagSearchAction =
     return response.success({
       tags,
     });
-  };
+  });
 
 export default tagSearch;

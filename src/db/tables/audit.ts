@@ -23,6 +23,7 @@ export const auditLogs = pgTable(
 
     orgId: integer("org_id"),
     userId: integer("user_id"),
+    impersonatedBy: integer("impersonated_by"),
     isSystem: boolean("is_system").default(false).notNull(),
 
     action: varchar("action", { length: 64 }).notNull(),

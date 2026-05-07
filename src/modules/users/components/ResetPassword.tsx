@@ -10,7 +10,8 @@ import fetcher from "@kenstack/lib/fetcher";
 export default function ResetPassword() {
   const { id } = useAdminEdit();
   const mutation = useMutation({
-    mutationFn: () => fetcher("/forgotten-password/api", { userId: id }),
+    mutationFn: () =>
+      fetcher("/api/auth", { _action: "send-password-reset", userId: id }),
   });
 
   if (!id) {

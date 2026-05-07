@@ -17,8 +17,8 @@ export default function Form() {
             />
             <div className="flex flex-grow flex-col gap-4">
               <div className="flex gap-4">
-                <InputField name="firstName" label="last Name" />
-                <InputField name="lastName" label="Last Name" />
+                <InputField name="givenName" label="Given Name" />
+                <InputField name="familyName" label="Family Name" />
               </div>
               <InputField
                 className="w-full"

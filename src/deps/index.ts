@@ -1,5 +1,5 @@
 import { createDb } from "@kenstack/db";
-import { createLogger } from "@kenstack/logger";
+import { Logger } from "@kenstack/logger";
 import { createAuth } from "@kenstack/auth/server";
 import Email from "./components/Email";
 
@@ -36,7 +36,7 @@ export const createDeps = <
   accountMenu?: { getItems: () => AccountMenuItems };
 }) => {
   const db = createDb({ schema: options.tables });
-  const logger = createLogger<TSchema>(db);
+  const logger = new Logger<TSchema>({ db });
   const roles = (options.roles ?? defaultRoles) as TRoles;
   const auth = createAuth<TSchema, TRoles>({
     db,
@@ -44,6 +44,9 @@ export const createDeps = <
     logger,
     roles,
   });
+
+  logger.bindAuth(auth);
+
   return {
     multiTenant: false,
     ...options,

@@ -60,6 +60,50 @@ export function createAuth<
     });
   };
 
+  const impersonate = async (userId: number): Promise<void> => {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("sessionId");
+
+    if (!token) {
+      return;
+    }
+
+    const tokenHash = hashToken(token.value);
+    const user = await getCurrentUser();
+    if (!user) {
+      return;
+    }
+
+    if (user.id === userId) {
+      return;
+    }
+
+    if (user.impersonatedBy) {
+      return;
+    }
+
+    if (!user.roles.includes("admin")) {
+      return;
+    }
+
+    const [sess] = await db
+      .update(sessions)
+      .set({
+        userId,
+        impersonatedBy: user.id,
+      })
+      .where(eq(sessions.tokenHash, tokenHash))
+      .returning({ id: sessions.id });
+
+    await deps.logger.audit({
+      action: "start-impersonation",
+      userId: user.id,
+      rowId: sess ? sess.id : null,
+      table: "sessions",
+      data: { impersonatedUserId: userId },
+    });
+  };
+
   const logout = async (): Promise<void> => {
     const cookieStore = await cookies();
     const token = cookieStore.get("sessionId");
@@ -71,13 +115,39 @@ export function createAuth<
     const tokenHash = hashToken(token.value);
 
     const user = await getCurrentUser();
+    if (!user) {
+      return;
+    }
+
+    if (user.impersonatedBy) {
+      const [sess] = await db
+        .update(sessions)
+        .set({
+          userId: user.impersonatedBy,
+          impersonatedBy: null,
+        })
+        .where(eq(sessions.tokenHash, tokenHash))
+        .returning({ id: sessions.id });
+
+      await deps.logger.audit({
+        action: "end-impersonation",
+        userId: user.impersonatedBy,
+        rowId: sess ? sess.id : null,
+        table: "sessions",
+        data: { impersonatedUserId: user.id },
+      });
+
+      return;
+    }
+
     const [deletedSession] = await db
       .delete(sessions)
       .where(eq(sessions.tokenHash, tokenHash))
       .returning({ id: sessions.id });
+
     await deps.logger.audit({
       action: "logout",
-      userId: user ? user.id : null,
+      userId: user.id,
       rowId: deletedSession ? deletedSession.id : null,
       table: "sessions",
     });
@@ -114,5 +184,5 @@ export function createAuth<
       return hasPermission;
     }
   });
-  return { login, logout, hasRole };
+  return { login, impersonate, logout, hasRole };
 }

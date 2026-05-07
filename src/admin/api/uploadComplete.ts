@@ -10,7 +10,7 @@ import { images } from "@kenstack/db/tables/images";
 import { deps } from "@app/deps";
 import { and, eq, getTableName } from "drizzle-orm";
 
-import { pipeline, type PipelineAction } from "@kenstack/lib/api";
+import { pipeline, pipelineStage } from "@kenstack/lib/api";
 
 import * as z from "zod";
 // import { imageMimeTypes } from "@kenstack/zod/image";
@@ -103,9 +103,8 @@ const uploadWebpVariant = async ({
   );
 };
 
-const uploadCompleteAction =
-  (adminTable: AnyAdminTable): PipelineAction<typeof uploadSchema> =>
-  async ({ dataIn, response }) => {
+const uploadCompleteAction = (adminTable: AnyAdminTable) =>
+  pipelineStage({}, async ({ dataIn, response }) => {
     const parsedData = uploadSchema.safeParse(dataIn);
     if (!parsedData.success) {
       const firstIssue = parsedData.error.issues[0];
@@ -309,4 +308,4 @@ const uploadCompleteAction =
       width: square.width,
       height: square.height,
     });
-  };
+  });

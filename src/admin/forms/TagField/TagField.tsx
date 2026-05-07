@@ -1,5 +1,6 @@
 import Field, { type FieldProps } from "@kenstack/forms/Field";
 import { X } from "lucide-react";
+import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 
 import Search from "./Search";
 import type { Tag } from "./types";
@@ -21,10 +22,14 @@ export default function Tags({
       label={label}
       description={description}
       className={className}
-      render={({ field }) => (
+      render={({
+        field,
+      }: {
+        field: ControllerRenderProps<FieldValues, string>;
+      }) => (
         <>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            {field.value.map((tag: Tag) => {
+            {field.value?.map((tag: Tag) => {
               return (
                 <span key={tag.name} className="inline-flex items-center gap-2">
                   {tag.name}

@@ -8,7 +8,7 @@ import unsecureId from "@kenstack/lib/unsecureId";
 import { images } from "@kenstack/db/tables";
 import { deps } from "@app/deps";
 
-import { pipeline, type PipelineAction } from "@kenstack/lib/api";
+import { pipeline, pipelineStage } from "@kenstack/lib/api";
 
 import * as z from "zod";
 import { imageMimeTypes } from "@kenstack/db/tables/images/mimeTypes";
@@ -37,9 +37,8 @@ export const getPresignedUrlPipeline = ({
   return pipeline({ ...options }, [getPresignedUrl(adminTable)]);
 };
 
-const getPresignedUrl =
-  (adminTable: AnyAdminTable): PipelineAction<typeof uploadSchema> =>
-  async ({ dataIn, response }) => {
+const getPresignedUrl = (adminTable: AnyAdminTable) =>
+  pipelineStage({}, async ({ dataIn, response }) => {
     const parsedData = uploadSchema.safeParse(dataIn);
     if (!parsedData.success) {
       const firstIssue = parsedData.error.issues[0];
@@ -94,4 +93,4 @@ const getPresignedUrl =
       .returning({ id: images.publicId });
 
     return response.success({ uploadUrl, id: image.id });
-  };
+  });

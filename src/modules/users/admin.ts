@@ -15,8 +15,8 @@ const config = adminTable({
   table: users,
   // revalidate: ["blog", ({ slug }) => `blog-${slug}`],
   select: {
-    firstName: users.firstName,
-    lastName: users.lastName,
+    givenName: users.givenName,
+    familyName: users.familyName,
     email: users.email,
   },
 });

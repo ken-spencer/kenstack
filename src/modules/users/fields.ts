@@ -7,14 +7,14 @@ import { email } from "@kenstack/schemas/atoms";
 const userRoles = roles.map(([role]) => role);
 
 export const fields = defineFields({
-  firstName: {
+  givenName: {
     default: "",
-    zod: z.string().min(1, "First name is required"),
+    zod: z.string().min(1, "Given name is required"),
     searchable: true,
   },
-  lastName: {
+  familyName: {
     default: "",
-    zod: z.string().min(1, "Last name is required"),
+    zod: z.string().min(1, "Family name is required"),
     searchable: true,
   },
   email: {

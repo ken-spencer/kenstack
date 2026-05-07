@@ -12,7 +12,7 @@ import {
   pipeline,
   recaptcha,
   type PipelineOptions,
-  type PipelineAction,
+  pipelineStage,
 } from "@kenstack/lib/api";
 import schema from "@kenstack/auth/schemas/forgotPassword";
 import { type ForgotPasswordEmailProps } from "@kenstack/auth/email/ForgotPassword";
@@ -28,19 +28,15 @@ export type ForgotPasswordProps = {
 };
 
 export const forgotPasswordPipeline =
-  (props: ForgotPasswordProps) => (options: PipelineOptions<typeof schema>) =>
-    pipeline({ ...options, schema }, [
-      recaptcha(),
-      forgottenPasswordAction(props),
-    ]);
+  (props: ForgotPasswordProps) => (options: PipelineOptions) =>
+    pipeline(options, [recaptcha(), forgottenPasswordAction(props)]);
 
-export const forgottenPasswordAction =
-  ({
-    Email = DefaultEmail,
-    attachments = defaultAttachments,
-    from,
-  }: ForgotPasswordProps): PipelineAction<typeof schema> =>
-  async ({ request, response, data }) => {
+export const forgottenPasswordAction = ({
+  Email = DefaultEmail,
+  attachments = defaultAttachments,
+  from,
+}: ForgotPasswordProps) =>
+  pipelineStage({ schema }, async ({ request, response, data }) => {
     if (!data) {
       throw Error("data is required");
     }
@@ -105,8 +101,8 @@ export const forgottenPasswordAction =
 
     const [user] = await deps.db
       .select({
-        firstName: users.firstName,
-        lastName: users.lastName,
+        givenName: users.givenName,
+        familyName: users.familyName,
       })
       .from(users)
       .where(and(eq(users.email, email), isNull(users.deletedAt)));
@@ -175,7 +171,7 @@ export const forgottenPasswordAction =
     const emailHtml = await render(
       <Email
         name={
-          [user.firstName, user.lastName]
+          [user.givenName, user.familyName]
             .filter((part) => Boolean(part))
             .join(" ")
             .trim() || "there"
@@ -199,4 +195,4 @@ export const forgottenPasswordAction =
     return response.success({
       message: `An email has been sent to ${email}. Please open and follow the provided instructions to reset your password.`,
     });
-  };
+  });

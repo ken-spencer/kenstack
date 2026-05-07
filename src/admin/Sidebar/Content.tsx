@@ -3,7 +3,7 @@ import React from "react";
 
 import { useSidebar, SidebarTrigger } from "@kenstack/components/ui/sidebar";
 
-import { Home, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 import Link from "next/link";
 
 export default function SidebarContent({

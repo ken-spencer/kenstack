@@ -12,7 +12,6 @@ export interface PipelineResponseShape {
   status(code: number): this;
   json(obj: Record<string, unknown>): this;
   final(obj: Record<string, unknown>): this;
-  error(message: string): this;
   toNextResponse(): NextResponse;
 }
 
@@ -88,13 +87,20 @@ export class PipelineResponse implements PipelineResponseShape {
     });
   }
   error(
-    message: string,
-    payload: {
-      formErrors?: string[];
-      fieldErrors?: Record<string, string | string[]>;
-    } = {},
+    arg:
+      | string
+      | {
+          message: string;
+          status?: number;
+          formErrors?: string[];
+          fieldErrors?: Record<string, string | string[]>;
+        },
   ) {
-    return this.final({ status: "error", message, ...payload });
+    const { status = 422, ...payload } =
+      typeof arg === "string" ? { message: arg } : arg;
+
+    this.status(status);
+    return this.final({ status: "error", ...payload });
   }
 
   toNextResponse() {

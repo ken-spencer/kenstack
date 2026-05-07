@@ -27,10 +27,11 @@ export function createUser<
       const [user] = await db
         .select({
           id: users.id,
+          impersonatedBy: sessions.impersonatedBy,
           publicId: users.publicId,
-          firstName: users.firstName,
-          lastName: users.lastName,
-          name: sql<string>`trim(${users.firstName} || ' ' || ${users.lastName})`.as(
+          givenName: users.givenName,
+          familyName: users.familyName,
+          name: sql<string>`trim(${users.givenName} || ' ' || ${users.familyName})`.as(
             "name",
           ),
           email: users.email,
@@ -51,9 +52,13 @@ export function createUser<
       if (!user) {
         return undefined;
       }
+
+      const { impersonatedBy, ...publicUser } = user;
+
       return {
-        ...user,
-        initials: user.firstName.slice(0, 1) + user.lastName.slice(0, 1),
+        ...publicUser,
+        ...(impersonatedBy ? { impersonatedBy } : {}),
+        initials: user.givenName.slice(0, 1) + user.familyName.slice(0, 1),
       };
     },
   );
@@ -62,10 +67,11 @@ export function createUser<
     const [user] = await db
       .select({
         id: users.id,
+        impersonatedBy: sessions.impersonatedBy,
         publicId: users.publicId,
-        firstName: users.firstName,
-        lastName: users.lastName,
-        name: sql<string>`trim(${users.firstName} || ' ' || ${users.lastName})`.as(
+        givenName: users.givenName,
+        familyName: users.familyName,
+        name: sql<string>`trim(${users.givenName} || ' ' || ${users.familyName})`.as(
           "name",
         ),
         email: users.email,
@@ -76,9 +82,12 @@ export function createUser<
       .where(and(eq(users.id, userId), isNull(users.deletedAt)))
       .limit(1);
 
+    const { impersonatedBy, ...publicUser } = user;
+
     return {
-      ...user,
-      initials: user.firstName.slice(0, 1) + user.lastName.slice(0, 1),
+      ...publicUser,
+      ...(impersonatedBy ? { impersonatedBy } : {}),
+      initials: user.givenName.slice(0, 1) + user.familyName.slice(0, 1),
     };
   });
 

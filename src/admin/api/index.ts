@@ -12,6 +12,7 @@ import remove from "@kenstack/admin/api/remove";
 import tags from "@kenstack/admin/api/tags";
 import { getPresignedUrlPipeline } from "./presignedUrl";
 import { uploadCompletePipeline } from "./uploadComplete";
+import { impersonatePipeline } from "./impersonate";
 
 import { type AdminConfig } from "@kenstack/admin";
 import { type FetchError } from "@kenstack/lib/fetcher";
@@ -86,6 +87,8 @@ export const adminPipeline = async (
       return getPresignedUrlPipeline(input);
     case "upload-complete":
       return uploadCompletePipeline(input);
+    case "impersonate":
+      return impersonatePipeline(input);
     case "tags":
       return tags(input);
   }

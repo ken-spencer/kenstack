@@ -30,6 +30,10 @@ export const sessions = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
 
+    impersonatedBy: integer("impersonated_by").references(() => users.id, {
+      onDelete: "cascade",
+    }),
+
     provider: loginProvider("provider").notNull(),
 
     createdAt: timestamp("created_at", { withTimezone: true })

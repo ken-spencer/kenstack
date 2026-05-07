@@ -12,20 +12,16 @@ type RecaptchaVerifyResponse = {
   [k: string]: unknown;
 };
 
-import type { PipelineAction } from "@kenstack/lib/api";
+import { pipelineStage } from "@kenstack/lib/api";
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
-const recaptcha =
-  ({
-    field = "recaptchaToken",
-    threshold = 0.5,
-  }: RecaptchaOptions = {}): PipelineAction =>
-  async ({ dataIn, data, response }) => {
-    if (!isObject(dataIn)) {
-      return response.error("Missing input on recaptcha");
-    }
+const recaptcha = ({
+  field = "recaptchaToken",
+  threshold = 0.5,
+}: RecaptchaOptions = {}) =>
+  pipelineStage({}, async ({ dataIn, response }) => {
     if (await deps.auth.getCurrentUser()) {
       /** Skip recaptcha if logged in */
       return;
@@ -33,10 +29,12 @@ const recaptcha =
 
     const secretKey = process.env.RECAPTCHA_SECRET_KEY;
     if (!secretKey) {
-      throw new Error("RECAPTCHA_SECRET_KEY environment variable is not set");
+      return response.error(
+        "RECAPTCHA_SECRET_KEY environment variable is not set",
+      );
     }
 
-    const token = dataIn[field];
+    const token = isObject(dataIn) && dataIn[field];
     if (!token || typeof token !== "string") {
       return response.error(`Recaptcha token field "${field}" is required`);
     }
@@ -47,7 +45,7 @@ const recaptcha =
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: `secret=${encodeURIComponent(secretKey)}&response=${encodeURIComponent(token)}`,
-      }
+      },
     );
 
     if (!verificationRes.ok) {
@@ -59,8 +57,8 @@ const recaptcha =
 
     if (!verification.success || (verification.score ?? 0) < threshold) {
       /** Sanitize the data before logging */
-      const logData = typeof data === "object" ? { ...data } : {};
-      for (const f of ["password", "confirmPassword"]) {
+      const logData = typeof dataIn === "object" ? { ...dataIn } : {};
+      for (const f of ["password", "passwordHash", "confirmPassword"]) {
         if (f in logData) {
           logData[f] = "* * * * * * * *";
         }
@@ -71,6 +69,6 @@ const recaptcha =
     }
 
     // on success, just fall through
-  };
+  });
 
 export default recaptcha;

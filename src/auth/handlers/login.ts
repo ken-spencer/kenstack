@@ -4,8 +4,8 @@ import { geolocation, ipAddress } from "@vercel/functions";
 import {
   recaptcha,
   pipeline,
+  pipelineStage,
   type PipelineOptions,
-  type PipelineAction,
 } from "@kenstack/lib/api";
 import loginSchema from "@kenstack/auth/schemas/login";
 import { deps } from "@app/deps";
@@ -13,75 +13,76 @@ import { sql } from "drizzle-orm";
 
 import { PipelineResponse } from "@kenstack/lib/api/PipelineResponse";
 
-export const loginPipeline =
-  () => (options: PipelineOptions<typeof loginSchema>) =>
-    pipeline({ ...options, schema: loginSchema }, [recaptcha(), login()]);
+export const loginPipeline = () => (options: PipelineOptions) =>
+  pipeline(options, [recaptcha(), login()]);
 
-const login =
-  (): PipelineAction<typeof loginSchema> =>
-  async ({ data: { email, password }, request, response }) => {
-    const ip = ipAddress(request) ?? "127.0.0.1";
-    const {
-      db,
-      tables: { loginFailures },
-    } = deps;
+const login = () =>
+  pipelineStage(
+    { schema: loginSchema },
+    async ({ data: { email, password }, request, response }) => {
+      const ip = ipAddress(request) ?? "127.0.0.1";
+      const {
+        db,
+        tables: { loginFailures },
+      } = deps;
 
-    const [{ emailCount, ipCount }] = await db
-      .select({
-        emailCount: sql<number>`(count(*) FILTER (WHERE ${loginFailures.email} = ${email}))::int`,
-        ipCount: sql<number>`(count(*) FILTER (WHERE ${loginFailures.ip} = ${ip}))::int`,
-      })
-      .from(loginFailures)
-      .where(
-        sql`${loginFailures.attemptedAt} > now() - interval '15 minutes'
+      const [{ emailCount, ipCount }] = await db
+        .select({
+          emailCount: sql<number>`(count(*) FILTER (WHERE ${loginFailures.email} = ${email}))::int`,
+          ipCount: sql<number>`(count(*) FILTER (WHERE ${loginFailures.ip} = ${ip}))::int`,
+        })
+        .from(loginFailures)
+        .where(
+          sql`${loginFailures.attemptedAt} > now() - interval '15 minutes'
         and (${loginFailures.email} = ${email} or ${loginFailures.ip} = ${ipAddress})`,
-      );
+        );
 
-    if (emailCount >= 3) {
-      return response.error(
-        "Your account has been temporarily locked due to multiple failed login attempts. Please wait 15 minutes before trying again. If you've forgotten your password, consider using the 'Forgot Password' option.",
-      );
-    }
-    if (ipCount >= 10) {
-      return response.error(
-        "Your account has been temporarily locked due to suspicious activity from your network. Please wait 15 minutes before trying again. If you've forgotten your password, consider using the 'Forgot Password' option.",
-      );
-    }
+      if (emailCount >= 3) {
+        return response.error(
+          "Your account has been temporarily locked due to multiple failed login attempts. Please wait 15 minutes before trying again. If you've forgotten your password, consider using the 'Forgot Password' option.",
+        );
+      }
+      if (ipCount >= 10) {
+        return response.error(
+          "Your account has been temporarily locked due to suspicious activity from your network. Please wait 15 minutes before trying again. If you've forgotten your password, consider using the 'Forgot Password' option.",
+        );
+      }
 
-    const user = await db.query.users.findFirst({
-      columns: { id: true, passwordHash: true },
-      where: (u, { and, eq, isNull }) =>
-        and(eq(u.email, email), isNull(u.deletedAt)),
-    });
+      const user = await db.query.users.findFirst({
+        columns: { id: true, passwordHash: true },
+        where: (u, { and, eq, isNull }) =>
+          and(eq(u.email, email), isNull(u.deletedAt)),
+      });
 
-    if (!user || !user.passwordHash) {
-      // prevent introspection using timing.
-      const failHash =
-        "$2b$12$vU8SBwjV2ZMjNFqpESF7lug7JWrU3A3EfBFpT.lqUal5tlqvdIcV";
-      await bcrypt.compare("fake-to-delay", failHash);
+      if (!user || !user.passwordHash) {
+        // prevent introspection using timing.
+        const failHash =
+          "$2b$12$vU8SBwjV2ZMjNFqpESF7lug7JWrU3A3EfBFpT.lqUal5tlqvdIcV";
+        await bcrypt.compare("fake-to-delay", failHash);
 
-      return await failResponse(email, request, response);
-    }
+        return await failResponse(email, request, response);
+      }
 
-    const success = await bcrypt.compare(password, user.passwordHash);
-    if (!success) {
-      return await failResponse(email, request, response);
-    }
+      const success = await bcrypt.compare(password, user.passwordHash);
+      if (!success) {
+        return await failResponse(email, request, response);
+      }
 
-    const returnTo = request.cookies.get("returnTo");
-    const path = returnTo?.value ?? "/";
+      const returnTo = request.cookies.get("returnTo");
+      const path = returnTo?.value ?? "/";
 
-    await deps.auth.login(user.id);
+      await deps.auth.login(user.id);
 
-    if (returnTo) {
-      response.cookies.delete("returnTo");
-    }
+      if (returnTo) {
+        response.cookies.delete("returnTo");
+      }
 
-    return response.success({
-      authenticated: true,
-      path,
-    });
-  };
+      return response.success({
+        authenticated: true,
+        path,
+      });
+    },
+  );
 
 async function failResponse(
   email: string,

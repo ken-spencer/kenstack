@@ -1,7 +1,7 @@
 import * as z from "zod";
 import { inArray } from "drizzle-orm";
 
-import type { PipelineAction } from "@kenstack/lib/api";
+import { pipelineStage } from "@kenstack/lib/api";
 import { pipeline } from "@kenstack/lib/api";
 import type { AdminApiOptions, AnyAdminTable } from "..";
 import { deps } from "@app/deps";
@@ -11,12 +11,11 @@ const schema = z.object({
 });
 
 const remove = ({ adminTable, ...options }: AdminApiOptions) => {
-  return pipeline({ ...options, schema }, [removeAction(adminTable)]);
+  return pipeline(options, [removeAction(adminTable)]);
 };
 
-const removeAction =
-  (adminTable: AnyAdminTable): PipelineAction<typeof schema> =>
-  async ({ response, data }) => {
+const removeAction = (adminTable: AnyAdminTable) =>
+  pipelineStage({ schema }, async ({ response, data }) => {
     if (data.remove.length === 0) {
       return response.error("No records provided to delete.");
     }
@@ -37,6 +36,6 @@ const removeAction =
     // }
 
     return response.success({});
-  };
+  });
 
 export default remove;

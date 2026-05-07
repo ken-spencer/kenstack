@@ -80,7 +80,9 @@ export type AdminTable<
   };
 };
 
-export type AnyAdminTable = AdminTable<MetaTable, SelectShape | undefined>;
+export type AnyAdminTable = AdminTable<MetaTable, SelectShape | undefined> & {
+  schema: z.ZodObject;
+};
 
 export type AdminApiOptions = PipelineOptions & {
   adminTable: AnyAdminTable;
@@ -91,9 +93,9 @@ export function adminTable<
   TListSelect extends SelectShape | undefined = undefined,
 >(options: AdminTable<TTable, TListSelect>) {
   return {
+    ...options,
     schema: createZodSchema(options.fields, true),
     defaultValues: createDefaultValues(options.fields),
-    ...options,
   };
 }
 

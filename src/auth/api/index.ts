@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import { loginPipeline } from "@kenstack/auth/handlers/login";
 import { logoutPipeline } from "@kenstack/auth/handlers/logout";
 import { resetPasswordPipeline } from "@kenstack/auth/handlers/resetPassword";
+import { sendPasswordResetPipeline } from "@kenstack/auth/handlers/sendPasswordReset";
 import {
   forgotPasswordPipeline,
   type ForgotPasswordProps,
@@ -32,6 +33,10 @@ export const authPipeline = (props: AuthPipelineOptions) => {
       ["logout", logoutPipeline()],
       ["forgot-password", forgotPasswordPipeline(options.forgotPassword)],
       ["reset-password", resetPasswordPipeline()],
+      [
+        "send-password-reset",
+        sendPasswordResetPipeline(options.forgotPassword),
+      ],
     ]);
 
   return { POST };

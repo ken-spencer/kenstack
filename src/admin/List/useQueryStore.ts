@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useMemo, useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 /**
@@ -14,7 +14,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 export type SetQueryStore<T> = (
   value: React.SetStateAction<T>,
-  debounce?: boolean
+  debounce?: boolean,
 ) => void;
 
 export default function useQueryStore<T extends Record<string, unknown>>(
@@ -31,7 +31,7 @@ export default function useQueryStore<T extends Record<string, unknown>>(
     excludeParams?: string[];
     routerMode?: "replace" | "push";
     onPopState?: (state: T) => void;
-  } = {}
+  } = {},
 ) {
   const router = useRouter();
   const pathname = usePathname();
@@ -53,11 +53,8 @@ export default function useQueryStore<T extends Record<string, unknown>>(
     return Object.fromEntries(pairs) as T;
   };
 
-  //  eslint-disable-next-line react-hooks/exhaustive-deps
-  const init = useMemo(importSearchParams, []);
-
-  const [value, setValue] = useState<T>(init);
-  const [debouncedValue, setDebouncedValue] = useState<T>(init);
+  const [value, setValue] = useState<T>(() => importSearchParams());
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
   const initialSearchParams = useRef(searchParams);
   const skipRef = useRef(false);
 
