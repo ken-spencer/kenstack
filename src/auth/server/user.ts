@@ -63,33 +63,37 @@ export function createUser<
     },
   );
 
-  const loadUser = cache(async (userId: number): Promise<User | undefined> => {
-    const [user] = await db
-      .select({
-        id: users.id,
-        impersonatedBy: sessions.impersonatedBy,
-        publicId: users.publicId,
-        givenName: users.givenName,
-        familyName: users.familyName,
-        name: sql<string>`trim(${users.givenName} || ' ' || ${users.familyName})`.as(
-          "name",
-        ),
-        email: users.email,
-        avatar: selectImageSubquery(users.avatar, "square"),
-        roles: users.roles,
-      })
-      .from(users)
-      .where(and(eq(users.id, userId), isNull(users.deletedAt)))
-      .limit(1);
+  // const loadUser = cache(async (userId: number): Promise<User | undefined> => {
+  //   const [user] = await db
+  //     .select({
+  //       id: users.id,
+  //       impersonatedBy: sessions.impersonatedBy,
+  //       publicId: users.publicId,
+  //       givenName: users.givenName,
+  //       familyName: users.familyName,
+  //       name: sql<string>`trim(${users.givenName} || ' ' || ${users.familyName})`.as(
+  //         "name",
+  //       ),
+  //       email: users.email,
+  //       avatar: selectImageSubquery(users.avatar, "square"),
+  //       roles: users.roles,
+  //     })
+  //     .from(users)
+  //     .where(and(eq(users.id, userId), isNull(users.deletedAt)))
+  //     .limit(1);
 
-    const { impersonatedBy, ...publicUser } = user;
+  //   if (!user) {
+  //     return undefined;
+  //   }
 
-    return {
-      ...publicUser,
-      ...(impersonatedBy ? { impersonatedBy } : {}),
-      initials: user.givenName.slice(0, 1) + user.familyName.slice(0, 1),
-    };
-  });
+  //   const { impersonatedBy, ...publicUser } = user;
+
+  //   return {
+  //     ...publicUser,
+  //     ...(impersonatedBy ? { impersonatedBy } : {}),
+  //     initials: user.givenName.slice(0, 1) + user.familyName.slice(0, 1),
+  //   };
+  // });
 
   const getCurrentUser = async () /*: Promise<User<TRoles> | undefined>*/ => {
     const cookieStore = await cookies();
@@ -133,5 +137,5 @@ export function createUser<
     },
   );
 
-  return { getUserBySessionToken, getCurrentUser, loadUser, requireUser };
+  return { getUserBySessionToken, getCurrentUser, requireUser };
 }
