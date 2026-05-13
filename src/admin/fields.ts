@@ -1,5 +1,13 @@
 import * as z from "zod";
 import { imageSchema } from "@kenstack/zod/image";
+import { gallerySchema } from "@kenstack/zod/gallery";
+
+export const relationshipValueSchema = z.object({
+  id: z.number(),
+  label: z.string(),
+});
+
+export const relationshipSchema = z.array(relationshipValueSchema);
 
 export type DefaultOption = {
   kind?: never;
@@ -17,7 +25,27 @@ type ImageOption = {
   searchable?: false;
 };
 
-export type FieldOption = DefaultOption | ImageOption;
+type GalleryOption = {
+  kind: "gallery";
+  zod?: typeof gallerySchema;
+  serverZod?: typeof gallerySchema;
+  default?: z.output<typeof gallerySchema>;
+  searchable?: false;
+};
+
+type RelationshipOption = {
+  kind: "relationship";
+  zod?: typeof relationshipSchema;
+  serverZod?: typeof relationshipSchema;
+  default?: z.output<typeof relationshipSchema>;
+  searchable?: false;
+};
+
+export type FieldOption =
+  | DefaultOption
+  | ImageOption
+  | GalleryOption
+  | RelationshipOption;
 export type FieldOptions = Record<string, FieldOption>;
 export type DefinedFields = Record<string, Required<FieldOption>>;
 
@@ -31,6 +59,32 @@ export function defineFields(options: FieldOptions) {
             ...field,
             zod: field.zod ?? imageSchema,
             default: field.default ?? null,
+            searchable: false,
+          },
+        ];
+      }
+
+      if ("kind" in field && field.kind === "gallery") {
+        return [
+          key,
+          {
+            ...field,
+            zod: field.zod ?? gallerySchema,
+            serverZod: field.serverZod ?? gallerySchema,
+            default: field.default ?? [],
+            searchable: false,
+          },
+        ];
+      }
+
+      if ("kind" in field && field.kind === "relationship") {
+        return [
+          key,
+          {
+            ...field,
+            zod: field.zod ?? relationshipSchema,
+            serverZod: field.serverZod ?? relationshipSchema,
+            default: field.default ?? [],
             searchable: false,
           },
         ];

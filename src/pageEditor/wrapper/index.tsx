@@ -68,16 +68,20 @@ export default function createEditor({
     >;
     const componentProps = props as ComponentProps<Tag>;
 
-    if (isEditingEnabled()) {
+    const isAdminEditing = isEditingEnabled();
+
+    if (isAdminEditing) {
       return (
         <Suspense
           fallback={
-            <ComponentForTag
-              tag={tagProp}
-              {...componentProps}
-              content={html ?? value}
-              placeholder={placeholder}
-            />
+            <EditorSkeleton>
+              <ComponentForTag
+                tag={tagProp}
+                {...componentProps}
+                content={html ?? value}
+                placeholder={placeholder}
+              />
+            </EditorSkeleton>
           }
         >
           <PageEditor
@@ -103,4 +107,16 @@ export default function createEditor({
   };
 
   return PageEditCont as PolymorphicEditorComponent;
+}
+
+function EditorSkeleton({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="relative min-h-7">
+      {children}
+      <span
+        className="absolute -top-3 -right-6 size-6 rounded-full"
+        aria-hidden="true"
+      />
+    </div>
+  );
 }

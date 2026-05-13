@@ -12,16 +12,41 @@ import {
 import { AppSidebar } from "./app-sidebar";
 import AccountMenu from "@kenstack/components/AccountMenu";
 import { type AdminConfig } from "@kenstack/admin";
+import NavLink from "./NavLink";
 
 import Content from "./Content";
+
+function NavLinkFallback({
+  href,
+  icon,
+  title,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  title: string;
+}) {
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton asChild>
+        <Link href={href}>
+          {icon}
+          <span>{title}</span>
+        </Link>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}
 
 export default function AdminSidebar({
   // content,
   adminConfig,
+  logo,
   children,
 }: {
   content: React.ReactNode;
   adminConfig: AdminConfig;
+  logo?: React.ReactNode;
+
   children: React.ReactNode;
 }) {
   const sidebarNav = (
@@ -29,16 +54,25 @@ export default function AdminSidebar({
       <SidebarGroupLabel>Administration</SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
-          {adminConfig.map(([name, table]) => (
-            <SidebarMenuItem key={name}>
-              <SidebarMenuButton asChild>
-                <Link href={"/admin/" + name}>
-                  {table.icon ? <table.icon /> : <span className="w-3" />}
-                  <span>{table.title}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
+          {adminConfig.map(([name, table]) => {
+            const href = "/admin/" + name;
+            const icon = table.icon ? <table.icon /> : <span className="w-3" />;
+
+            return (
+              <Suspense
+                key={name}
+                fallback={
+                  <NavLinkFallback
+                    href={href}
+                    icon={icon}
+                    title={table.title}
+                  />
+                }
+              >
+                <NavLink href={href} icon={icon} title={table.title} />
+              </Suspense>
+            );
+          })}
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>
@@ -51,6 +85,7 @@ export default function AdminSidebar({
     >
       <AppSidebar content={sidebarNav} />
       <Content
+        logo={logo}
         accountMenu={
           <Suspense>
             <AccountMenu fallback={null} />

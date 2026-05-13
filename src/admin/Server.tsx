@@ -54,7 +54,7 @@ async function AdminServerCore({
 
   return (
     <div>
-      <div className="text-md mx-auto mb-2 flex items-center justify-center gap-4 text-gray-700">
+      <div className="text-md mx-auto flex items-center justify-center gap-4 text-gray-700">
         {Icon && <Icon className="size-4 text-gray-800" />}
         <span className="font-bold">{title}</span>
       </div>

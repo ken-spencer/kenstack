@@ -6,6 +6,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   // boolean,
   // jsonb,
   type AnyPgTable,
@@ -80,7 +81,9 @@ type ColumnKey<TColumnsMap extends Record<string, PgColumnBuilderBase>> =
 //   return Object.fromEntries(entries);
 // }
 
-type ExtraTable<TColumnsMap extends Record<string, PgColumnBuilderBase>> = {
+export type ExtraTable<
+  TColumnsMap extends Record<string, PgColumnBuilderBase>,
+> = {
   id: AnyPgColumn;
   createdBy: AnyPgColumn;
   createdAt: AnyPgColumn;
@@ -91,7 +94,7 @@ type ExtraTable<TColumnsMap extends Record<string, PgColumnBuilderBase>> = {
   [K in ColumnKey<TColumnsMap>]: AnyPgColumn;
 };
 
-type BuildTableOptions<
+export type BuildTableOptions<
   TName extends string,
   // TFields extends FieldOptions,
   TColumnsMap extends Record<string, PgColumnBuilderBase>,
@@ -165,3 +168,59 @@ export type MetaTable = AnyPgTable & {
   updatedAt: AnyPgColumn<{ data: Date; notNull: true }>;
   deletedAt: AnyPgColumn<{ data: Date | null; notNull: false }>;
 };
+
+type RelationshipEntity<TName extends string, TTable extends MetaTable> = {
+  name: TName;
+  table: TTable;
+};
+
+type RelationshipColumns<TFromName extends string, TToName extends string> = {
+  [K in `${TFromName}Id` | `${TToName}Id` | "relationship"]: AnyPgColumn;
+};
+
+export function defineRelationship<
+  const TName extends string,
+  const TFromName extends string,
+  const TToName extends string,
+  TFromTable extends MetaTable,
+  TToTable extends MetaTable,
+>({
+  name,
+  from,
+  to,
+}: {
+  name: TName;
+  from: RelationshipEntity<TFromName, TFromTable>;
+  to: RelationshipEntity<TToName, TToTable>;
+}) {
+  const fromKey = `${from.name}Id` as const;
+  const toKey = `${to.name}Id` as const;
+
+  const columns = {
+    [fromKey]: integer(`${snakeCase(from.name)}_id`)
+      .notNull()
+      .references(() => from.table.id, { onDelete: "cascade" }),
+    [toKey]: integer(`${snakeCase(to.name)}_id`)
+      .notNull()
+      .references(() => to.table.id, { onDelete: "cascade" }),
+    relationship: text("relationship").notNull(),
+  } satisfies Record<string, PgColumnBuilderBase>;
+
+  const table = defineTable({
+    name,
+    columns,
+    extraConfig: (t) => [
+      uniqueIndex(
+        `${name}_${snakeCase(from.name)}_id_${snakeCase(to.name)}_id_relationship_unique`,
+      ).on(t[fromKey], t[toKey], t.relationship),
+      index(`${name}_${snakeCase(from.name)}_id_idx`).on(t[fromKey]),
+      index(`${name}_${snakeCase(to.name)}_id_idx`).on(t[toKey]),
+    ],
+  });
+
+  return table as typeof table & RelationshipColumns<TFromName, TToName>;
+}
+
+function snakeCase(value: string) {
+  return value.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+}

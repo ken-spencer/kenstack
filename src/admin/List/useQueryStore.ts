@@ -69,6 +69,7 @@ export default function useQueryStore<T extends Record<string, unknown>>(
     }
     const params = importSearchParams();
     setValue(params);
+    setDebouncedValue(params);
     if (onPopState) {
       onPopState(params);
     }

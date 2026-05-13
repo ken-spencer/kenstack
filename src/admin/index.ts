@@ -1,5 +1,7 @@
 export * from "./fields";
 export * from "./table";
+import { defineRelationships, type Relationships } from "./relationships";
+
 import type { MetaTable } from "./table";
 
 import {
@@ -22,11 +24,22 @@ import type {
   InferInsertModel,
   // Table,
 } from "drizzle-orm";
+import type { AnyPgColumn, AnyPgTable } from "drizzle-orm/pg-core";
 
 type OrderBy = SQL; // | AnyColumn;
 
 type SelectValue = AnyColumn | SQL | SQL.Aliased;
 type SelectShape = Record<string, SelectValue>;
+
+export type ImageGalleryConfig = {
+  table: AnyPgTable;
+  tableIdKey: string;
+  tableId: AnyPgColumn<{ data: number }>;
+  imageIdKey: string;
+  imageId: AnyPgColumn<{ data: number }>;
+  sortOrderKey: string;
+  sortOrder: AnyPgColumn<{ data: number }>;
+};
 
 // type FieldProps = {
 //   transformations?: Record<string, string>; // cloudinary transformations
@@ -75,6 +88,8 @@ export type AdminTable<
   limit?: number;
   orderBy?: OrderBy[];
   select: TListSelect;
+  relationships?: Relationships;
+  galleries?: Record<string, ImageGalleryConfig>;
   tags?: {
     table: TagsTable;
   };
@@ -104,3 +119,5 @@ export type AdminConfig = [string, AnyAdminTable][];
 export function adminConfig<TConfig extends AdminConfig>(adminConfig: TConfig) {
   return adminConfig;
 }
+
+export { defineRelationships };

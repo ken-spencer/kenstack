@@ -1,6 +1,12 @@
 import type * as z from "zod";
 
-import React, { useRef, createContext, useContext, useState } from "react";
+import React, {
+  useRef,
+  createContext,
+  useCallback,
+  useContext,
+  useState,
+} from "react";
 // import { nanoid } from "nanoid";
 import {
   useForm as useReactHookForm,
@@ -66,6 +72,9 @@ export type UseFormResult<
   form: UseFormReturn<TValues>;
   statusMessage: StatusMessage | null;
   setStatusMessage: React.Dispatch<React.SetStateAction<StatusMessage | null>>;
+  uploadingFields: Set<string>;
+  startUploading: (fieldName: string) => void;
+  finishUploading: (fieldName: string) => void;
   mutation: UseMutationResult<
     // FetchResult<WithExtra<TResult>>,
     FetchResult<TResult>,
@@ -91,7 +100,26 @@ function FormProvider<
   const [statusMessage, setStatusMessage] = useState<StatusMessage | null>(
     null,
   );
+  const [uploadingFields, setUploadingFields] = useState<Set<string>>(
+    () => new Set(),
+  );
   const lastFieldRef = useRef(null);
+
+  const startUploading = useCallback((fieldName: string) => {
+    setUploadingFields((current) => {
+      const next = new Set(current);
+      next.add(fieldName);
+      return next;
+    });
+  }, []);
+
+  const finishUploading = useCallback((fieldName: string) => {
+    setUploadingFields((current) => {
+      const next = new Set(current);
+      next.delete(fieldName);
+      return next;
+    });
+  }, []);
 
   const form = useReactHookForm<TValues>({
     resolver: standardSchemaResolver(schema),
@@ -214,6 +242,9 @@ function FormProvider<
     form,
     statusMessage,
     setStatusMessage,
+    uploadingFields,
+    startUploading,
+    finishUploading,
     mutation,
   };
 

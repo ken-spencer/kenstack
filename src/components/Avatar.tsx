@@ -26,6 +26,8 @@ type AvatarProps = {
   className?: string;
 };
 
+import Image from "next/image";
+
 export default function Avatar({ url, initials = "", className }: AvatarProps) {
   let hash = 0;
   for (let i = 0; i < initials.length; i++) {
@@ -35,9 +37,11 @@ export default function Avatar({ url, initials = "", className }: AvatarProps) {
 
   if (url) {
     return (
-      <img
+      <Image
         className={twMerge("size-10 rounded-full", className)}
         src={url}
+        width={80}
+        height={80}
         alt=""
       />
     );
@@ -48,7 +52,7 @@ export default function Avatar({ url, initials = "", className }: AvatarProps) {
       style={{ backgroundColor: palette[index] }}
       className={twMerge(
         "inline-flex size-10 items-center justify-center rounded-full p-4 text-xl text-white",
-        className
+        className,
       )}
     >
       <span>{initials}</span>

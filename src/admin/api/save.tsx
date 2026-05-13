@@ -2,11 +2,17 @@ import { selectFields } from "./helpers/selectFields";
 import { pipelineStage } from "@kenstack/lib/api";
 import { pipeline } from "@kenstack/lib/api";
 import type { AdminApiOptions, AnyAdminTable } from "..";
-import { sql, and, eq, getTableName, getTableColumns } from "drizzle-orm";
+import { eq, getTableName, getTableColumns } from "drizzle-orm";
+import { revalidateTag } from "next/cache";
+
 import * as z from "zod";
 import { saveTags } from "./helpers/saveTags";
-import { images } from "@kenstack/db/tables";
-import { imageSchema } from "@kenstack/zod/image";
+import { prepareImageFields } from "./helpers/saveImages";
+import {
+  extractRelationshipValues,
+  saveRelationships,
+} from "./helpers/saveRelationships";
+import { extractGalleryValues, saveGalleries } from "./helpers/saveGalleries";
 
 import { deps } from "@app/deps";
 import { errorTranslator } from "@kenstack/db/errorTranslator";
@@ -18,98 +24,50 @@ const save = ({ adminTable, ...options }: AdminApiOptions) => {
 const saveAction = (adminTable: AnyAdminTable) =>
   pipelineStage(
     {
-      schema: z.object({
+      role: "admin",
+      schema: adminTable.schema.extend({
         id: z.number().nullish(),
-        payload: adminTable.schema,
       }),
     },
-    async ({
-      response,
-      data: {
-        id,
-        payload: { tags, ...data },
-      },
-    }) => {
+    async ({ response, user, data: rawData }) => {
+      const { id, tags, ...data } = rawData as Record<string, unknown> & {
+        id?: number | null;
+      };
+      const relationshipValues = extractRelationshipValues({
+        data,
+        relationships: adminTable.relationships,
+      });
+      for (const key of Object.keys(relationshipValues)) {
+        delete data[key];
+      }
+      const galleryValues = extractGalleryValues({
+        data,
+        galleries: adminTable.galleries,
+      });
+      for (const key of Object.keys(galleryValues)) {
+        delete data[key];
+      }
+
       const { db } = deps;
-      type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
-      const user = await deps.auth.requireUser();
 
       const { table, fields } = adminTable;
       const columns = getTableColumns(table);
       const tagRelations = adminTable?.tags?.table;
 
       const select = selectFields(table, fields);
-      const imageStatusQueries: ((tx: Tx) => Promise<unknown>)[] = [];
-      for (const [key, field] of Object.entries(fields)) {
-        if (field.kind === "image") {
-          const fieldData = data[key] as z.output<typeof imageSchema>;
-          if (typeof fieldData === "number") {
-            // prevent user from switching image directly.
-            delete data[key];
-            continue;
-          }
+      const imageFields = await prepareImageFields({
+        adminTable,
+        columns,
+        data,
+        id,
+        user,
+        db,
+      });
 
-          const column = columns[key];
-          if (!column) {
-            continue;
-          }
-
-          if (
-            id &&
-            (fieldData === null ||
-              ("action" in fieldData && fieldData.action === "remove"))
-          ) {
-            data[key] = null;
-            const [oldRow] = await db
-              .select({ removeId: column })
-              .from(table)
-              .where(eq(table.id, id))
-              .limit(1);
-            imageStatusQueries.push(async (tx) => {
-              if (oldRow && typeof oldRow.removeId === "number") {
-                return tx
-                  .update(images)
-                  .set({ status: "removed" })
-                  .where(eq(images.id, oldRow.removeId));
-              }
-            });
-          } else if (fieldData === null) {
-            continue;
-          } else if (
-            typeof fieldData === "number" ||
-            !("action" in fieldData)
-          ) {
-            delete data[key];
-          } else if (fieldData.action === "upload") {
-            const imageIdQuery = db
-              .select({ id: images.id })
-              .from(images)
-              .where(
-                and(
-                  eq(images.publicId, fieldData.imageId),
-                  eq(images.createdBy, user.id),
-                ),
-              )
-              .limit(1);
-
-            data[key] = sql<number>`(${imageIdQuery})`;
-
-            imageStatusQueries.push((tx) =>
-              tx
-                .update(images)
-                .set({ status: "attached" })
-                .where(
-                  and(
-                    eq(images.publicId, fieldData.imageId),
-                    eq(images.createdBy, user.id),
-                  ),
-                ),
-            );
-          } else {
-            return response.error("invalid image data");
-          }
-        }
+      if (imageFields.status === "error") {
+        return response.error(imageFields.message);
       }
+
       let row;
       try {
         row = await db.transaction(async (tx) => {
@@ -143,8 +101,36 @@ const saveAction = (adminTable: AnyAdminTable) =>
             savedRow.tags = savedTags;
           }
 
-          if (imageStatusQueries.length) {
-            await Promise.all(imageStatusQueries.map((query) => query(tx)));
+          if (
+            adminTable.relationships &&
+            Object.keys(relationshipValues).length
+          ) {
+            const savedRelationships = await saveRelationships({
+              db: tx,
+              tableId: savedRow.id,
+              relationships: adminTable.relationships,
+              values: relationshipValues,
+            });
+
+            Object.assign(savedRow, savedRelationships);
+          }
+
+          if (imageFields.imageStatusQueries.length) {
+            await Promise.all(
+              imageFields.imageStatusQueries.map((query) => query(tx)),
+            );
+          }
+
+          if (adminTable.galleries && Object.keys(galleryValues).length) {
+            const savedGalleries = await saveGalleries({
+              db: tx,
+              tableId: savedRow.id,
+              galleries: adminTable.galleries,
+              values: galleryValues,
+              user,
+            });
+
+            Object.assign(savedRow, savedGalleries);
           }
 
           return savedRow;
@@ -167,6 +153,16 @@ const saveAction = (adminTable: AnyAdminTable) =>
         table: getTableName(table),
         action: id ? "update" : "insert",
       });
+
+      if (adminTable.revalidate) {
+        adminTable.revalidate.forEach((validator) => {
+          if (typeof validator === "string") {
+            revalidateTag(validator, "max");
+          } else {
+            revalidateTag(validator(row), "max");
+          }
+        });
+      }
 
       return response.success({
         id: row.id,

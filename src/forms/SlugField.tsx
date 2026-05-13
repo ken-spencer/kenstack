@@ -15,7 +15,7 @@ import { twMerge } from "tailwind-merge";
 type InputProps = React.ComponentProps<"input"> &
   FieldProps & {
     inputClass?: string;
-    watch?: string;
+    watch?: string | string[];
   };
 
 export default function SlugField({
@@ -32,7 +32,11 @@ export default function SlugField({
     setValue,
     formState: { defaultValues },
   } = useFormContext();
-  const watchedValue = watch(watchField);
+  const watchedValue = Array.isArray(watchField)
+    ? watch(watchField)
+        .filter((value) => value !== undefined && value !== null)
+        .join(" ")
+    : watch(watchField);
   const defaultValue = defaultValues ? defaultValues[name] : undefined;
   const [locked, setLocked] = useState(defaultValue ? true : false);
   const [wasEdited, setWasEdited] = useState(false);

@@ -10,6 +10,7 @@ import load from "@kenstack/admin/api/load";
 import save from "@kenstack/admin/api/save";
 import remove from "@kenstack/admin/api/remove";
 import tags from "@kenstack/admin/api/tags";
+import relationships from "@kenstack/admin/api/relationships";
 import { getPresignedUrlPipeline } from "./presignedUrl";
 import { uploadCompletePipeline } from "./uploadComplete";
 import { impersonatePipeline } from "./impersonate";
@@ -91,6 +92,8 @@ export const adminPipeline = async (
       return impersonatePipeline(input);
     case "tags":
       return tags(input);
+    case "relationships":
+      return relationships(input);
   }
   return NextResponse.json({
     status: "error",

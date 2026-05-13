@@ -6,6 +6,8 @@ import { tags as tagsTable } from "@kenstack/db/tables/tags";
 import * as z from "zod";
 
 import type { AdminApiOptions, AnyAdminTable } from "..";
+import { loadRelationships } from "./helpers/loadRelationships";
+import { loadGalleries } from "./helpers/loadGalleries";
 
 const load = ({ adminTable, ...options }: AdminApiOptions) => {
   return pipeline(options, [loadAction(adminTable)]);
@@ -47,6 +49,24 @@ const loadAction = (adminTable: AnyAdminTable) =>
           .where(eq(tagRelations.tableId, id))
           .orderBy(asc(tagsTable.name));
       }
+
+      Object.assign(
+        item,
+        await loadRelationships({
+          db,
+          tableId: id,
+          relationships: adminTable.relationships,
+        }),
+      );
+
+      Object.assign(
+        item,
+        await loadGalleries({
+          db,
+          tableId: id,
+          galleries: adminTable.galleries,
+        }),
+      );
 
       return response.success({
         item,

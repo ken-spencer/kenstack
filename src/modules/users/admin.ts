@@ -7,7 +7,7 @@ import { adminTable } from "@kenstack/admin";
 import client from "./client";
 import { fields } from "./fields";
 
-const config = adminTable({
+export const userAdminTableOptions = {
   title: "Users",
   icon: UsersRound,
   client,
@@ -19,6 +19,8 @@ const config = adminTable({
     familyName: users.familyName,
     email: users.email,
   },
-});
+} as const;
+
+const config = adminTable(userAdminTableOptions);
 
 export default config;

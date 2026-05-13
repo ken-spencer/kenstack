@@ -69,7 +69,7 @@ export function AdminEditProvider({
         action: "load",
         id,
       }),
-    queryKey: ["admin-edit", id],
+    queryKey: ["admin-edit", name, id],
     enabled: !!id,
     refetchOnMount: false,
     refetchOnWindowFocus: false,

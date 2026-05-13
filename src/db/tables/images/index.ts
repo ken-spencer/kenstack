@@ -30,6 +30,8 @@ export const images = defineTable({
     prefix: text("prefix").notNull(),
     baseName: text("base_name").notNull(),
     alt: text("alt"),
+    title: text("title"),
+    caption: text("caption"),
     sourceKey: text("source_key").notNull(),
     sourceUrl: text("source_url").notNull(),
     sourceType: text("source_type").notNull(),
@@ -56,10 +58,15 @@ type ImageAliasKey =
   | "publicId"
   | "kind"
   | "sourceUrl"
+  | "filename"
+  | "sourceType"
+  | "sourceSize"
   | "sourceWidth"
   | "sourceHeight"
   | "variants"
-  | "alt";
+  | "alt"
+  | "title"
+  | "caption";
 
 type ImageAlias = {
   [Key in ImageAliasKey]: LooseImageColumn<(typeof images)[Key]>;
@@ -95,12 +102,20 @@ export const selectImage = (
 });
 
 export type SelectedImage = {
-  // id: string;
+  id?: number;
   kind: "raster" | "svg";
   url: string;
   width: number | null;
   height: number | null;
   alt: string | null;
+  title?: string | null;
+  caption?: string | null;
+  filename?: string | null;
+  sourceType?: string | null;
+  sourceSize?: number | null;
+  sourceWidth?: number | null;
+  sourceHeight?: number | null;
+  originalUrl?: string | null;
 };
 
 export const selectImageSubquery = (
@@ -108,6 +123,7 @@ export const selectImageSubquery = (
   variant: ImageVariantName = "original",
 ) => sql<SelectedImage | null>`(
   select jsonb_build_object(
+    'id', ${images.id},
     'kind', ${images.kind},
     'url', case
       when ${images.kind} = 'svg' then ${images.sourceUrl}
@@ -121,7 +137,18 @@ export const selectImageSubquery = (
       when ${images.kind} = 'svg' then ${images.sourceHeight}
       else (${images.variants}->${variant}->>'height')::int
     end,
-    'alt', ${images.alt}
+    'alt', ${images.alt},
+    'title', ${images.title},
+    'caption', ${images.caption},
+    'filename', ${images.filename},
+    'sourceType', ${images.sourceType},
+    'sourceSize', ${images.sourceSize},
+    'sourceWidth', ${images.sourceWidth},
+    'sourceHeight', ${images.sourceHeight},
+    'originalUrl', case
+      when ${images.kind} = 'svg' then ${images.sourceUrl}
+      else ${images.variants}->'original'->>'url'
+    end
   )
   from ${images}
   where ${images.id} = ${imageCol}

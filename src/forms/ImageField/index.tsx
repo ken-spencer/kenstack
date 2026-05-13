@@ -13,6 +13,9 @@ import IconButton from "@kenstack/components/IconButton";
 import { useForm } from "@kenstack/forms/context";
 
 import { imageMimeTypes as acceptDefault } from "@kenstack/db/tables/images/mimeTypes";
+import ImageDetailsModal, {
+  type ImageDetailsValue,
+} from "@kenstack/admin/forms/ImageDetailsModal";
 
 const buttonClass =
   "size-6 bg-gray-200/60  hover:bg-gray-400 border rounded-full";
@@ -63,7 +66,7 @@ const imageRender = ({
   accept = acceptDefault,
 }: ImageRenderProps) =>
   function ImageFieldRender({ field }: ImageFieldRenderProps) {
-    const { setStatusMessage } = useForm();
+    const { finishUploading, setStatusMessage, startUploading } = useForm();
 
     const acceptStr = accept.join(", ");
     const contClass = twMerge(
@@ -93,6 +96,7 @@ const imageRender = ({
       }
 
       setUploading(true);
+      startUploading(field.name);
       // Must be five megabytes or smaller.
       if (file.size > 5 * 1024 ** 2) {
         // const size = file.size / 1024 ** 2;
@@ -102,48 +106,46 @@ const imageRender = ({
           status: "error",
           message: "Maximum image size is 5 megabytes.",
         });
+        finishUploading(field.name);
         return;
       }
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === "string") {
-          setSrc(reader.result);
-        }
-      };
-      reader.onerror = () => {
-        setStatusMessage({
-          status: "error",
-          message: "Reader error:" + reader.error,
-        });
-      };
-      reader.readAsDataURL(file);
-
-      const res = await fetcher<{
-        uploadUrl: string;
-        id: string;
-      }>(apiPath, {
-        ...(extraData ? extraData : {}),
-        action: "get-presigned-url",
-        filename: file.name,
-        type: file.type,
-        fieldname: field.name,
-        size: file.size,
-      });
-
-      if ("error" === res.status) {
-        setStatusMessage({
-          status: "error",
-          message: res.message,
-        });
-        reset();
-        return;
-      }
-
-      const { uploadUrl } = res;
-
-      let uploadRes;
       try {
-        uploadRes = await fetch(uploadUrl, {
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (typeof reader.result === "string") {
+            setSrc(reader.result);
+          }
+        };
+        reader.onerror = () => {
+          setStatusMessage({
+            status: "error",
+            message: "Reader error:" + reader.error,
+          });
+        };
+        reader.readAsDataURL(file);
+
+        const res = await fetcher<{
+          uploadUrl: string;
+          id: string;
+        }>(apiPath, {
+          ...(extraData ? extraData : {}),
+          action: "get-presigned-url",
+          filename: file.name,
+          type: file.type,
+          fieldname: field.name,
+          size: file.size,
+        });
+
+        if ("error" === res.status) {
+          setStatusMessage({
+            status: "error",
+            message: res.message,
+          });
+          reset();
+          return;
+        }
+
+        const uploadRes = await fetch(res.uploadUrl, {
           method: "PUT",
           headers: {
             "Content-Type": file.type,
@@ -153,61 +155,74 @@ const imageRender = ({
 
           body: file,
         });
+
+        if (!uploadRes.ok) {
+          const errorText = await uploadRes.text();
+          //eslint-disable-next-line no-console
+          console.error("S3 upload failed", {
+            status: uploadRes.status,
+            error: errorText,
+          });
+
+          setStatusMessage({
+            status: "error",
+            message:
+              "There was a problem uploading your image. Please try again.",
+          });
+          reset();
+          return;
+        }
+
+        const complete = await fetcher<{
+          imageId: string;
+          url: string;
+          width?: number;
+          height?: number;
+          filename?: string;
+          sourceType?: string;
+          sourceSize?: number;
+          sourceWidth?: number;
+          sourceHeight?: number;
+          originalUrl?: string;
+        }>(apiPath, {
+          ...(extraData ? extraData : {}),
+          action: "upload-complete",
+          fieldname: field.name,
+          imageId: res.id,
+        });
+
+        if (complete.status === "error") {
+          setStatusMessage({
+            status: "error",
+            message: complete.message,
+          });
+          reset();
+          return;
+        }
+
+        field.onChange({
+          url: complete.url,
+          width: complete.width,
+          height: complete.height,
+          filename: complete.filename ?? file.name,
+          sourceType: complete.sourceType ?? file.type,
+          sourceSize: complete.sourceSize ?? file.size,
+          sourceWidth: complete.sourceWidth,
+          sourceHeight: complete.sourceHeight,
+          originalUrl: complete.originalUrl,
+          action: "upload",
+          imageId: complete.imageId,
+        });
+        setUploading(false);
       } catch (e) {
         setStatusMessage({
           status: "error",
           message: e instanceof Error ? e.message : String(e),
         });
         reset();
-        return;
+      } finally {
+        finishUploading(field.name);
       }
-
-      if (!uploadRes.ok) {
-        const errorText = await uploadRes.text();
-        //eslint-disable-next-line no-console
-        console.error("S3 upload failed", {
-          status: uploadRes.status,
-          error: errorText,
-        });
-
-        setStatusMessage({
-          status: "error",
-          message:
-            "There was a problem uploading your image. Please try again.",
-        });
-        reset();
-        return;
-      }
-
-      const complete = await fetcher<{
-        imageId: string;
-        url: string;
-        width?: number;
-        height?: number;
-      }>(apiPath, {
-        ...(extraData ? extraData : {}),
-        action: "upload-complete",
-        fieldname: field.name,
-        imageId: res.id,
-      });
-
-      if (complete.status === "error") {
-        setStatusMessage({
-          status: "error",
-          message: complete.message,
-        });
-        reset();
-        return;
-      }
-
-      field.onChange({
-        url: complete.url,
-        width: complete.width,
-        height: complete.height,
-        action: "upload",
-        imageId: complete.imageId,
-      });
-      setUploading(false);
     };
 
     const dragEvents = {
@@ -308,7 +323,30 @@ const imageRender = ({
               <UploadIcon />
             </label>
           </IconButton>
-          <img alt="" className={imgClass} src={field.value.url} />
+          <button
+            type="button"
+            className="h-full w-full cursor-pointer"
+            onClick={(evt) => {
+              evt.stopPropagation();
+              setSrc("details");
+            }}
+          >
+            <img alt="" className={imgClass} src={field.value.url} />
+          </button>
+          {src === "details" ? (
+            <ImageDetailsModal
+              image={field.value as ImageDetailsValue}
+              onChange={(image) => {
+                field.onChange({
+                  ...(field.value as ImageDetailsValue),
+                  ...image,
+                });
+              }}
+              onClose={() => {
+                setSrc("");
+              }}
+            />
+          ) : null}
         </div>
       );
     }

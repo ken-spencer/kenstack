@@ -1,6 +1,6 @@
 "use client";
 import { type User } from "@kenstack/types";
-import { useRef, useEffect } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { useAdminUi } from "@kenstack/hooks/useAdminUi";
 // import Link from "next/link";
 import Avatar from "@kenstack/components/Avatar";
@@ -24,7 +24,7 @@ export default function AccountMenu({
 }) {
   const ref = useRef<HTMLButtonElement | null>(null);
   const { setCanEdit } = useAdminUi();
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (user?.roles.includes("admin")) {
       setCanEdit(true);
     }
@@ -33,11 +33,12 @@ export default function AccountMenu({
   return (
     <div className="flex items-center gap-4">
       <Popover>
-        <PopoverTrigger className="cursor-pointer">
+        <PopoverTrigger className="focus-visible:ring-sidebar-ring cursor-pointer rounded-full underline-offset-4 transition hover:underline focus-visible:ring-2 focus-visible:outline-none">
           <Avatar initials={user.initials} url={user.avatar?.url} />
         </PopoverTrigger>
         <PopoverContent
-          className="flex w-max flex-col px-8"
+          align="end"
+          className="flex w-44 flex-col gap-1 p-1.5"
           onClick={() => ref.current?.click()}
         >
           <PopoverClose className="hidden" ref={ref} />

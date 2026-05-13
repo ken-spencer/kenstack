@@ -25,9 +25,9 @@ export const useAdminUi = create<AdminUiState>((set, get) => ({
   editing: false,
 
   setCanEdit: (canEdit) => {
-    set(() => ({
+    set((state) => ({
       canEdit,
-      editing: canEdit,
+      editing: canEdit ? state.editing : false,
     }));
   },
 

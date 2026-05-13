@@ -6,4 +6,6 @@ import EditForm from "./components/Form";
 // import { schema } from './shared/schema';
 import { fields } from "./fields";
 
-export default adminClient({ fields, ListItem, EditForm });
+export const userClientOptions = { fields, ListItem, EditForm } as const;
+
+export default adminClient(userClientOptions);

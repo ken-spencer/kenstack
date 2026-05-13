@@ -6,7 +6,7 @@ import { email } from "@kenstack/schemas/atoms";
 
 const userRoles = roles.map(([role]) => role);
 
-export const fields = defineFields({
+export const userFieldOptions = {
   givenName: {
     default: "",
     zod: z.string().min(1, "Given name is required"),
@@ -24,4 +24,6 @@ export const fields = defineFields({
   },
   avatar: { kind: "image" },
   roles: { default: [], zod: z.array(z.enum(userRoles)) },
-});
+} as const;
+
+export const fields = defineFields(userFieldOptions);

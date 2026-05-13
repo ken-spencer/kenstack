@@ -104,7 +104,7 @@ export function Form<
   onBlur,
   ...props
 }: FormProps<TResult, TVariables, TSchema, TValues>) {
-  const { form, mutation, setStatusMessage } = useForm<
+  const { form, mutation, setStatusMessage, uploadingFields } = useForm<
     TResult,
     TVariables,
     TValues
@@ -115,16 +115,27 @@ export function Form<
   return (
     <form
       noValidate
-      onSubmit={form.handleSubmit((data, event) =>
-        onSubmit({
-          data,
-          event,
-          mutation,
-          isDirty,
-          form,
-          setStatusMessage,
-        }),
-      )}
+      onSubmit={(event) => {
+        if (uploadingFields.size) {
+          event.preventDefault();
+          setStatusMessage({
+            status: "error",
+            message: "Please wait for uploads to finish before saving.",
+          });
+          return;
+        }
+
+        form.handleSubmit((data, submitEvent) =>
+          onSubmit({
+            data,
+            event: submitEvent,
+            mutation,
+            isDirty,
+            form,
+            setStatusMessage,
+          }),
+        )(event);
+      }}
       onBlur={
         onBlur
           ? (event) =>

@@ -35,6 +35,7 @@ export const PageEditorAsync = async ({
 }: Props) => {
   "use cache";
   const content = await loadContent(slug, { tenant, defaultValues });
+
   return (
     <PageEditorProvider slug={slug} tenant={tenant} content={content}>
       {children}

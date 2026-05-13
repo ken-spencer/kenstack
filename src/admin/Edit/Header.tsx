@@ -15,13 +15,14 @@ export default function AdminEditHeader() {
     formState: { isDirty },
   } = useFormContext();
 
-  const { mutation } = useForm();
+  const { mutation, uploadingFields } = useForm();
   const { listPath, preview, isNew, item } = useAdminEdit();
+  const hasUploads = uploadingFields.size > 0;
   return (
     <div className="flex gap-4 border-b">
       <div className="flex grow gap-1">
         <IconButton
-          disabled={!isDirty || mutation.isPending}
+          disabled={!isDirty || mutation.isPending || hasUploads}
           isPending={
             mutation.isPending && mutation.variables.submitter === "new"
           }
@@ -47,7 +48,7 @@ export default function AdminEditHeader() {
         </IconButton>
 
         <IconButton
-          disabled={!isDirty || mutation.isPending}
+          disabled={!isDirty || mutation.isPending || hasUploads}
           isPending={
             mutation.isPending && mutation.variables.submitter === "list"
           }
@@ -69,7 +70,7 @@ export default function AdminEditHeader() {
         </IconButton>
 
         <IconButton
-          disabled={!isDirty || mutation.isPending}
+          disabled={!isDirty || mutation.isPending || hasUploads}
           isPending={
             mutation.isPending && mutation.variables.submitter === "save"
           }

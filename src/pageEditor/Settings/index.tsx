@@ -14,10 +14,6 @@ export async function PageEditSettingsCont() {
   const { auth } = deps;
 
   if (await auth.hasRole("admin")) {
-    return (
-      <div className="absolute top-0 right-0">
-        <Modal />
-      </div>
-    );
+    return <Modal />;
   }
 }

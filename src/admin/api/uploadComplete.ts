@@ -122,6 +122,7 @@ const uploadCompleteAction = (adminTable: AnyAdminTable) =>
         key: images.sourceKey,
         prefix: images.prefix,
         baseName: images.baseName,
+        filename: images.filename,
         type: images.sourceType,
       })
       .from(images)
@@ -134,7 +135,7 @@ const uploadCompleteAction = (adminTable: AnyAdminTable) =>
         "Problem finding uploaded image. Please try again.",
       );
     }
-    const { id, key, type, baseName, prefix } = pendingImage;
+    const { id, key, type, baseName, prefix, filename } = pendingImage;
 
     const field = adminTable.fields[fieldname];
     if (!field) {
@@ -196,9 +197,17 @@ const uploadCompleteAction = (adminTable: AnyAdminTable) =>
           url: images.sourceUrl,
           width: images.sourceWidth,
           height: images.sourceHeight,
+          sourceType: images.sourceType,
+          sourceSize: images.sourceSize,
         });
 
-      return response.success({ ...image });
+      return response.success({
+        ...image,
+        filename,
+        originalUrl: image.url,
+        sourceWidth: image.width,
+        sourceHeight: image.height,
+      });
     }
 
     const webpOptions = getWebpOptions(metadata.format);
@@ -307,5 +316,11 @@ const uploadCompleteAction = (adminTable: AnyAdminTable) =>
       url: square.url,
       width: square.width,
       height: square.height,
+      filename,
+      sourceType: type,
+      sourceSize: originalBuffer.length,
+      sourceWidth: metadata.width,
+      sourceHeight: metadata.height,
+      originalUrl: originalWebpUrl,
     });
   });

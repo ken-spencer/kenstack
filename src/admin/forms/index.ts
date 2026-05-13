@@ -6,4 +6,6 @@ export { default as CheckboxField } from "@kenstack/forms/CheckboxField";
 export { default as TextareaField } from "@kenstack/forms/TextareaField";
 export { default as DateField } from "@kenstack/forms/DateField";
 export { default as ImageField } from "./ImageField";
+export { default as GalleryField } from "./GalleryField";
 export { default as CheckboxList } from "@kenstack/forms/CheckboxList";
+export { default as RelationshipField } from "./RelationshipField";

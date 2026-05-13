@@ -85,7 +85,7 @@ function AdminList() {
                   }}
                 />
               </div>
-              <div className="flex flex-col gap-1 md:contents">
+              <div className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 md:contents">
                 <ListItem path={path} item={item} />
               </div>
               {data.items.length > key + 1 ? (

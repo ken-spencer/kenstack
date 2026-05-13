@@ -10,8 +10,8 @@ export default function LogoutButton() {
   const router = useRouter();
   return (
     <Button
-      className="w-full cursor-pointer justify-start"
-      variant="link"
+      className="h-8 w-full cursor-pointer justify-start gap-2 px-2 text-sm"
+      variant="ghost"
       tabIndex={-1} // stop Safari from automatically putting a focus style on this button
       onClick={() => {
         fetcher("/api/auth", {

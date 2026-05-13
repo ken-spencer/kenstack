@@ -95,8 +95,10 @@ function Toggle({ name, children }: { name: Name; children: React.ReactNode }) {
       <button
         type="button"
         className={
-          "absolute -top-3 -right-6 size-6 cursor-pointer rounded-full " +
-          (editing === name ? "bg-indigo-600 text-white" : "")
+          "absolute -top-3 right-0 z-10 size-6 cursor-pointer rounded-full bg-white/85 shadow ring-1 ring-black/10 sm:-right-6 sm:bg-transparent sm:shadow-none sm:ring-0 dark:bg-gray-950/85 sm:dark:bg-transparent " +
+          (editing === name
+            ? "!bg-fuchsia-800/85 text-white ring-fuchsia-800/60"
+            : "")
         }
         onClick={() => {
           setEditing(editing === name ? null : name);
