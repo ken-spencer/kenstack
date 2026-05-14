@@ -83,7 +83,7 @@ function PaginationCont({
             aria-disabled={isFirst}
             href={{
               pathname,
-              query: { ...params, ...(page > 1 ? { pabge: page - 1 } : {}) },
+              query: { ...params, ...(page > 2 ? { page: page - 1 } : {}) },
             }}
           />
         </PaginationItem>

@@ -6,8 +6,9 @@ import IconButton from "@kenstack/components/IconButton";
 import { useAdminList } from "./context";
 
 export default function TrashToggle() {
-  const { filters, setFilters, setSelected } = useAdminList();
+  const { filters, setFilters, setSelected, sort } = useAdminList();
   const inTrash = filters.trash;
+  const defaultSort = sort.find((option) => option.name !== "deletedAt");
 
   return (
     <IconButton
@@ -15,7 +16,24 @@ export default function TrashToggle() {
       tooltip={inTrash ? "Exit Trash" : "View Trash"}
       onClick={() => {
         setSelected([]);
-        setFilters((prev) => ({ ...prev, trash: !prev.trash }), false);
+        setFilters((prev) => {
+          const filters = { ...prev.filters };
+          if (prev.trash) {
+            delete filters.deletedAt;
+          }
+
+          if (prev.trash && prev.sort === "deletedAt") {
+            return {
+              ...prev,
+              filters,
+              sort: defaultSort?.name ?? "createdAt",
+              direction: defaultSort?.defaultDirection ?? "desc",
+              trash: false,
+            };
+          }
+
+          return { ...prev, filters, trash: !prev.trash };
+        }, false);
       }}
     >
       {inTrash ? (

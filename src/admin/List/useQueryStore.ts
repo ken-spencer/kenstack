@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import type { z } from "zod";
 
 /**
  * Minimal generic URL param hook (no debounce/useEffect loops).
@@ -24,6 +25,7 @@ export default function useQueryStore<T extends Record<string, unknown>>(
     excludeParams = ["page"],
     routerMode = "replace",
     onPopState,
+    schema,
   }: {
     /** Milliseconds to debounce when `set(value, { debounce: true })` is used. */
     debounceMs?: number;
@@ -31,6 +33,7 @@ export default function useQueryStore<T extends Record<string, unknown>>(
     excludeParams?: string[];
     routerMode?: "replace" | "push";
     onPopState?: (state: T) => void;
+    schema?: z.ZodType<T>;
   } = {},
 ) {
   const router = useRouter();
@@ -50,11 +53,14 @@ export default function useQueryStore<T extends Record<string, unknown>>(
         return [key, val] as const;
       }
     });
-    return Object.fromEntries(pairs) as T;
+    const parsedParams = Object.fromEntries(pairs);
+    const parsed = schema?.safeParse(parsedParams);
+    return (parsed?.success ? parsed.data : parsedParams) as T;
   };
 
   const [value, setValue] = useState<T>(() => importSearchParams());
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  const valueRef = useRef(value);
   const initialSearchParams = useRef(searchParams);
   const skipRef = useRef(false);
 
@@ -68,6 +74,7 @@ export default function useQueryStore<T extends Record<string, unknown>>(
       return;
     }
     const params = importSearchParams();
+    valueRef.current = params;
     setValue(params);
     setDebouncedValue(params);
     if (onPopState) {
@@ -130,30 +137,30 @@ export default function useQueryStore<T extends Record<string, unknown>>(
    */
   const set: SetQueryStore<T> = (next, debounce = true) => {
     skipRef.current = true;
-    setValue((prev) => {
-      const resolved =
-        typeof next === "function" ? (next as (p: T) => T)(prev) : next;
+    const resolved =
+      typeof next === "function"
+        ? (next as (p: T) => T)(valueRef.current)
+        : next;
+    valueRef.current = resolved;
+    setValue(resolved);
 
-      if (debounce) {
-        if (timerRef.current) {
-          clearTimeout(timerRef.current);
-        }
-        timerRef.current = setTimeout(() => {
-          setDebouncedValue(resolved);
-          writeToUrl(resolved);
-          timerRef.current = null;
-        }, debounceMs);
-      } else {
-        if (timerRef.current) {
-          clearTimeout(timerRef.current);
-          timerRef.current = null;
-        }
+    if (debounce) {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+      timerRef.current = setTimeout(() => {
         setDebouncedValue(resolved);
         writeToUrl(resolved);
+        timerRef.current = null;
+      }, debounceMs);
+    } else {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
       }
-
-      return resolved;
-    });
+      setDebouncedValue(resolved);
+      writeToUrl(resolved);
+    }
   };
 
   return [value, debouncedValue, set] as const;

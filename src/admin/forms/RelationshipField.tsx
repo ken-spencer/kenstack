@@ -16,7 +16,7 @@ import {
   ComboboxInput,
   ComboboxItem,
   ComboboxList,
-} from "@kenstack/components/ui/combobox";
+} from "@kenstack/components/forms/Combobox";
 import Field, { type FieldProps } from "@kenstack/forms/Field";
 import useDebounce from "@kenstack/hooks/useDebounce";
 import fetcher, { type FetchResult } from "@kenstack/lib/fetcher";

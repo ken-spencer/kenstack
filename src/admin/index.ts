@@ -15,6 +15,7 @@ import * as z from "zod";
 import { type PipelineOptions } from "@kenstack/lib/api";
 import { type AdminClient, adminClient } from "./client";
 export { type AdminClient, adminClient };
+import startCase from "lodash-es/startCase";
 
 import { type TagsTable } from "@kenstack/db/tables/tags";
 import type {
@@ -26,10 +27,97 @@ import type {
 } from "drizzle-orm";
 import type { AnyPgColumn, AnyPgTable } from "drizzle-orm/pg-core";
 
-type OrderBy = SQL; // | AnyColumn;
-
 type SelectValue = AnyColumn | SQL | SQL.Aliased;
 type SelectShape = Record<string, SelectValue>;
+
+export type SortDirection = "asc" | "desc";
+
+export type AdminSortField =
+  | AnyColumn
+  | {
+      field: AnyColumn;
+      direction?: SortDirection;
+    };
+
+export type AdminSortOptions = Record<
+  string,
+  {
+    label?: string;
+    fields: readonly AdminSortField[];
+    defaultDirection?: SortDirection;
+  }
+>;
+
+export type AdminSort = Record<
+  string,
+  {
+    label: string;
+    fields: readonly AdminSortField[];
+    defaultDirection: SortDirection;
+  }
+>;
+
+export type AdminSortMeta = {
+  name: string;
+  label: string;
+  defaultDirection: SortDirection;
+};
+
+export type AdminFilterKind =
+  | "date-range"
+  | "boolean"
+  | "enum"
+  | "includes"
+  | "text";
+
+export type AdminFilterOption = readonly [
+  value: string,
+  label: string,
+  description?: string,
+];
+
+type AdminFilterBase = {
+  label?: string;
+};
+
+export type AdminFilterOptions = Record<
+  string,
+  | (AdminFilterBase & {
+      kind: "date-range";
+      field: AnyColumn;
+    })
+  | (AdminFilterBase & {
+      kind: "boolean";
+      field: AnyColumn;
+    })
+  | (AdminFilterBase & {
+      kind: "enum" | "includes";
+      field: AnyColumn;
+      options: readonly AdminFilterOption[];
+    })
+  | (AdminFilterBase & {
+      kind: "text";
+      field: AnyColumn;
+    })
+>;
+
+export type AdminFilters = Record<
+  string,
+  {
+    label: string;
+  } & AdminFilterOptions[string]
+>;
+
+export type AdminFilterMeta = {
+  name: string;
+  label: string;
+  kind: AdminFilterKind;
+  options?: {
+    value: string;
+    label: string;
+    description?: string;
+  }[];
+};
 
 export type ImageGalleryConfig = {
   table: AnyPgTable;
@@ -46,15 +134,6 @@ export type ImageGalleryConfig = {
 //   accept?: string[]; // array of mime types allowd to upload
 //   folder?: string; // folder to upload to
 // };
-
-type Filters = {
-  schema: z.ZodObject;
-  defaultValues: Record<string, unknown>;
-  Filters: React.FC /*<{
-    state: Record<string, unknown>;
-    setState: React.Dispatch<React.SetStateAction<Record<string, unknown>>>;
-  }>*/;
-};
 
 type MetaKeys = keyof MetaTable;
 
@@ -81,12 +160,12 @@ export type AdminTable<
   revalidate?: (string | ((row: InferSelectModel<TTable>) => string))[];
 
   fields: DefinedFields;
-  filters?: Omit<Filters, "Filters">;
+  filters?: AdminFilterOptions;
 
   preview?: PreviewPath;
 
   limit?: number;
-  orderBy?: OrderBy[];
+  sort?: AdminSortOptions;
   select: TListSelect;
   relationships?: Relationships;
   galleries?: Record<string, ImageGalleryConfig>;
@@ -97,6 +176,10 @@ export type AdminTable<
 
 export type AnyAdminTable = AdminTable<MetaTable, SelectShape | undefined> & {
   schema: z.ZodObject;
+  sort: AdminSort;
+  sortMeta: AdminSortMeta[];
+  filters: AdminFilters;
+  filterMeta: AdminFilterMeta[];
 };
 
 export type AdminApiOptions = PipelineOptions & {
@@ -107,8 +190,31 @@ export function adminTable<
   TTable extends MetaTable,
   TListSelect extends SelectShape | undefined = undefined,
 >(options: AdminTable<TTable, TListSelect>) {
+  const sort = defineSort(options.table, options.sort);
+  const filters = defineFilters(options.table, options.filters);
+
   return {
     ...options,
+    sort,
+    sortMeta: Object.entries(sort).map(([name, option]) => ({
+      name,
+      label: option.label,
+      defaultDirection: option.defaultDirection,
+    })),
+    filters,
+    filterMeta: Object.entries(filters).map(([name, filter]) => ({
+      name,
+      label: filter.label,
+      kind: filter.kind,
+      options:
+        "options" in filter
+          ? filter.options.map(([value, label, description]) => ({
+              value,
+              label,
+              description,
+            }))
+          : undefined,
+    })),
     schema: createZodSchema(options.fields, true),
     defaultValues: createDefaultValues(options.fields),
   };
@@ -121,3 +227,86 @@ export function adminConfig<TConfig extends AdminConfig>(adminConfig: TConfig) {
 }
 
 export { defineRelationships };
+
+function defineSort<TTable extends MetaTable>(
+  table: TTable,
+  options: AdminSortOptions | undefined,
+) {
+  const custom = normalizeSort(options ?? {});
+
+  return {
+    ...custom,
+    ...Object.fromEntries(
+      (
+        [
+          ["createdAt", table.createdAt, "Created"],
+          ["updatedAt", table.updatedAt, "Updated"],
+          ["deletedAt", table.deletedAt, "Deleted"],
+        ] as const
+      )
+        .filter(([name]) => !custom[name])
+        .map(([name, field, label]) => [
+          name,
+          {
+            label,
+            fields: [field],
+            defaultDirection: "desc",
+          },
+        ]),
+    ),
+  } satisfies AdminSort;
+}
+
+function normalizeSort(options: AdminSortOptions) {
+  return Object.fromEntries(
+    Object.entries(options).map(([name, option]) => [
+      name,
+      {
+        label: option.label ?? startCase(name),
+        fields: option.fields,
+        defaultDirection: option.defaultDirection ?? "asc",
+      },
+    ]),
+  ) satisfies AdminSort;
+}
+
+function defineFilters<TTable extends MetaTable>(
+  table: TTable,
+  options: AdminFilterOptions | undefined,
+) {
+  const custom = normalizeFilters(options ?? {});
+
+  return {
+    ...custom,
+    ...Object.fromEntries(
+      (
+        [
+          ["createdAt", table.createdAt, "Created"],
+          ["updatedAt", table.updatedAt, "Updated"],
+          ["deletedAt", table.deletedAt, "Deleted"],
+        ] as const
+      )
+        .filter(([name]) => !custom[name])
+        .map(([name, field, label]) => [
+          name,
+          {
+            label,
+            kind: "date-range",
+            field,
+          },
+        ]),
+    ),
+  } satisfies AdminFilters;
+}
+
+function normalizeFilters(options: AdminFilterOptions) {
+  return Object.fromEntries(
+    Object.entries(options).map(([name, option]) => [
+      name,
+      {
+        ...option,
+        label: option.label ?? startCase(name),
+      },
+    ]),
+  ) satisfies AdminFilters;
+}

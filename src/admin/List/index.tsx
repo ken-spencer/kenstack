@@ -12,12 +12,18 @@ type AdminListProps = {
 };
 
 export default function AdminListCont({
-  adminTable: { client },
+  adminTable: { client, filterMeta, sortMeta },
   userId,
   name,
 }: AdminListProps) {
   return (
-    <AdminListProvider name={name} client={client} userId={userId}>
+    <AdminListProvider
+      name={name}
+      client={client}
+      userId={userId}
+      sort={sortMeta}
+      filter={filterMeta}
+    >
       <section>
         <Header />
         <List />
