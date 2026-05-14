@@ -63,7 +63,9 @@ export async function saveGalleries({
       .from(gallery.table)
       .where(eq(gallery.tableId, tableId));
 
-    const oldImageIds = oldRows.map((row) => row.imageId);
+    const oldImageIds = oldRows
+      .map((row) => row.imageId)
+      .filter((imageId): imageId is number => typeof imageId === "number");
     const imageIds: number[] = [];
     const metadataByImageId = new Map<
       number,

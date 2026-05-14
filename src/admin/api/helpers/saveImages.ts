@@ -15,8 +15,17 @@ type TransactionDb = Parameters<
 
 const imageMetadataKeys = ["alt", "title", "caption"] as const;
 
+function hasImageMetadata(
+  fieldData: z.output<typeof imageSchema>,
+): fieldData is Extract<
+  NonNullable<z.output<typeof imageSchema>>,
+  { alt?: string | null }
+> {
+  return typeof fieldData === "object" && fieldData !== null;
+}
+
 function getImageMetadata(fieldData: z.output<typeof imageSchema>) {
-  if (!fieldData || typeof fieldData === "number") {
+  if (!hasImageMetadata(fieldData)) {
     return {};
   }
 
@@ -86,11 +95,12 @@ export async function prepareImageFields({
       delete data[key];
 
       if (typeof fieldData.id === "number") {
+        const imageId = fieldData.id;
         imageStatusQueries.push((tx) =>
           tx
             .update(images)
             .set(getImageMetadata(fieldData))
-            .where(eq(images.id, fieldData.id)),
+            .where(eq(images.id, imageId)),
         );
       }
     } else if (fieldData.action === "upload") {
