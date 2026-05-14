@@ -90,7 +90,7 @@ function RelationshipControl({
 
   return (
     <div className="space-y-2">
-      <Combobox
+      <Combobox<RelationshipOption>
         items={items}
         open={open}
         inputValue={keywords}

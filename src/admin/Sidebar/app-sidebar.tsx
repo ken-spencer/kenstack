@@ -14,6 +14,7 @@ import cookies from "js-cookie";
 
 import { X } from "lucide-react";
 import { Button } from "@kenstack/components/ui/button";
+import KenstackLogo from "./KenstackLogo";
 
 export function AppSidebar({ content }: { content: React.ReactNode }) {
   const { toggleSidebar, open, isMobile, openMobile } = useSidebar();
@@ -27,8 +28,11 @@ export function AppSidebar({ content }: { content: React.ReactNode }) {
   return (
     <Sidebar className="border-none">
       <SidebarHeader className="bg-gray-100">
-        <div className="flex justify-between">
-          <SidebarTrigger className={isMobile ? "hidden" : ""} />
+        <div className="flex items-center justify-between px-2 pt-1">
+          <div className="flex items-center gap-2">
+            <SidebarTrigger className={isMobile ? "hidden" : ""} />
+            <KenstackLogo className="h-9 w-auto group-data-[collapsible=icon]:hidden" />
+          </div>
           <Button
             className={isMobile ? "" : "hidden"}
             onClick={toggleSidebar}
