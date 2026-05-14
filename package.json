@@ -125,6 +125,7 @@
     "typescript": "^5.6.3"
   },
   "overrides": {
+    "dompurify": "3.4.3",
     "@toast-ui/react-editor": {
       "react": "19.2"
     }
