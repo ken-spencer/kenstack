@@ -7,13 +7,14 @@ import { revalidateTag } from "next/cache";
 export const pageEditorApi = (request: NextRequest) =>
   pipeline({ request }, [pageEditAction]);
 
-const pageEditAction = pipelineStage(
-  { schema: apiSchema },
-  async ({ data, user, response }) => {
-    if (!user) {
-      throw Error("User is required");
-    }
+export const pageEditorPipeline = (options: {
+  request: NextRequest;
+  json?: Record<string, unknown>;
+}) => pipeline(options, [pageEditAction]);
 
+const pageEditAction = pipelineStage(
+  { schema: apiSchema, role: "admin" },
+  async ({ data, user, response }) => {
     const {
       db,
       logger,

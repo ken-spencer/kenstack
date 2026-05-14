@@ -14,6 +14,7 @@ import relationships from "@kenstack/admin/api/relationships";
 import { getPresignedUrlPipeline } from "./presignedUrl";
 import { uploadCompletePipeline } from "./uploadComplete";
 import { impersonatePipeline } from "./impersonate";
+import { pageEditorPipeline } from "@kenstack/pageEditor/api";
 
 import { type AdminConfig } from "@kenstack/admin";
 import { type FetchError } from "@kenstack/lib/fetcher";
@@ -56,6 +57,10 @@ export const adminPipeline = async (
   }
 
   const { action, name, ...json } = rawJson;
+
+  if (action === "page-editor") {
+    return pageEditorPipeline({ request, json });
+  }
 
   const [, base /*overrides*/] = adminConfig.find(([t]) => t === name) || [];
   if (!base) {

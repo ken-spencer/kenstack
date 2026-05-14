@@ -78,7 +78,7 @@ export function usePageEditor() {
 
 export const useCommit = () => {
   const router = useRouter();
-  const { slug, content, setContent } = usePageEditor();
+  const { slug, content, setContent, setError } = usePageEditor();
   const { form, mutation } = useForm();
   return useCallback(
     (name: Name, { markdown }: { markdown?: true } = {}) => {
@@ -98,13 +98,29 @@ export const useCommit = () => {
           );
         }
 
-        mutation.mutateAsync({ slug, field: name, value }).then((res) => {
-          if (res.status === "success") {
+        mutation
+          .mutateAsync({ slug, field: name, value })
+          .then((res) => {
+            if (res.status === "error") {
+              setError({
+                name,
+                message:
+                  res.message ??
+                  "There was an unexpected problem saving this content.",
+              });
+              return;
+            }
+
             router.refresh();
-          }
-        });
+          })
+          .catch(() => {
+            setError({
+              name,
+              message: "There was an unexpected problem saving this content.",
+            });
+          });
       }
     },
-    [form, router, mutation, slug, content, setContent],
+    [form, router, mutation, slug, content, setContent, setError],
   );
 };

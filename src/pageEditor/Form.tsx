@@ -3,13 +3,16 @@ import Form from "@kenstack/forms/Form";
 import Notice from "@kenstack/forms/Notice";
 import { pageEditorSchema, type ApiSchema } from "./schema";
 import { usePageEditor } from "./context";
+import fetcher from "@kenstack/lib/fetcher";
 
 export const PageEditorForm = ({ children }: { children: React.ReactNode }) => {
   const { content } = usePageEditor();
 
   return (
-    <Form<{}, ApiSchema, typeof pageEditorSchema>
-      apiPath="/api/page-editor"
+    <Form<Record<string, never>, ApiSchema, typeof pageEditorSchema>
+      mutationFn={(variables) =>
+        fetcher("/api/admin", { action: "page-editor", ...variables })
+      }
       onSubmit={({ event }) => event && event.preventDefault()}
       className="flex flex-col gap-4"
       schema={pageEditorSchema}
