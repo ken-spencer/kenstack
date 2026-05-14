@@ -4,8 +4,9 @@ import { Plus } from "lucide-react";
 import IconButton from "@kenstack/components/IconButton";
 import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import DeleteButton from "./DeleteButton";
+import DeleteButton, { RestoreButton } from "./DeleteButton";
 import KeywordSearch from "./KeywordSearch";
+import TrashToggle from "./TrashToggle";
 // import Filter from "./Filter";
 
 export default function AdminListHeader() {
@@ -30,6 +31,8 @@ export default function AdminListHeader() {
         </div>
         <KeywordSearch />
         {/* <Filter /> */}
+        <TrashToggle />
+        <RestoreButton />
         <DeleteButton />
       </div>
     </header>

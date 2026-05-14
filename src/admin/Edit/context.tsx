@@ -23,10 +23,12 @@ type AdminEditProps = {
   preview?: PreviewPath;
 };
 
-type EditItem = { id: number; createdAt: string; updatedAt: string } & Record<
-  string,
-  unknown
->;
+type EditItem = {
+  id: number;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+} & Record<string, unknown>;
 
 type AdminEditContext = {
   name: string;

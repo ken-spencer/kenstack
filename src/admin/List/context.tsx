@@ -10,6 +10,7 @@ import useQueryStore, { type SetQueryStore } from "./useQueryStore";
 
 type FilterProps = {
   keywords: string;
+  trash: boolean;
   filters: Record<string, unknown>;
 };
 
@@ -51,6 +52,7 @@ export function AdminListProvider({
   const [selected, setSelected] = useState<number[]>([]);
   const [filters, debouncedFilters, setFilters] = useQueryStore<FilterProps>({
     keywords: "",
+    trash: false,
     // filters: admin.filters ? admin.filters.defaultValues : {},
     filters: {},
   });

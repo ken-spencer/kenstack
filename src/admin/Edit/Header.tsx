@@ -7,7 +7,7 @@ import { useForm } from "@kenstack/forms/context";
 import { useSearchParams } from "next/navigation";
 
 import Link from "next/link";
-import DeleteButton from "./DeleteButton";
+import DeleteButton, { RestoreButton } from "./DeleteButton";
 
 export default function AdminEditHeader() {
   const searchParams = useSearchParams();
@@ -18,6 +18,7 @@ export default function AdminEditHeader() {
   const { mutation, uploadingFields } = useForm();
   const { listPath, preview, isNew, item } = useAdminEdit();
   const hasUploads = uploadingFields.size > 0;
+  const isDeleted = !!item?.deletedAt;
   return (
     <div className="flex gap-4 border-b">
       <div className="flex grow gap-1">
@@ -82,7 +83,7 @@ export default function AdminEditHeader() {
         </IconButton>
       </div>
       <div className="">
-        {preview && !isNew && item && (
+        {preview && !isNew && item && !isDeleted && (
           <IconButton
             type="button"
             disabled={isNew}
@@ -102,6 +103,7 @@ export default function AdminEditHeader() {
           </IconButton>
         )}
 
+        <RestoreButton />
         <DeleteButton />
         {/* <IconButton
           disabled={isDirty || mutation.isPending}

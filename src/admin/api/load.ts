@@ -27,7 +27,10 @@ const loadAction = (adminTable: AnyAdminTable) =>
 
       const select = selectFields(table, fields);
 
-      const rows = await db.select(select).from(table).where(eq(table.id, id));
+      const rows = await db
+        .select({ ...select, deletedAt: table.deletedAt })
+        .from(table)
+        .where(eq(table.id, id));
 
       if (!rows.length) {
         return response.error("Unable to find the requested record.");

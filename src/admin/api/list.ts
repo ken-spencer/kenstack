@@ -1,11 +1,12 @@
 import * as z from "zod";
-import { sql, desc, isNull, and, or, ilike } from "drizzle-orm";
+import { sql, desc, isNull, isNotNull, and, or, ilike } from "drizzle-orm";
 
 import { pipeline, pipelineStage } from "@kenstack/lib/api";
 import type { AdminApiOptions, AnyAdminTable } from "@kenstack/admin";
 
 const querySchema = z.object({
   keywords: z.string(),
+  trash: z.boolean().default(false),
   page: z.number().default(1),
 });
 
@@ -23,7 +24,7 @@ const listAction = (adminTable: AnyAdminTable) =>
         : querySchema,
     },
     async ({ response, data }) => {
-      const { keywords, page } = data;
+      const { keywords, page, trash } = data;
       const limit = adminTable.limit || 25;
       const offset = (page - 1) * limit;
 
@@ -34,7 +35,9 @@ const listAction = (adminTable: AnyAdminTable) =>
         .filter(([, field]) => "searchable" in field && field.searchable)
         .map(([key]) => key);
 
-      const where = [isNull(table.deletedAt)];
+      const where = [
+        trash ? isNotNull(table.deletedAt) : isNull(table.deletedAt),
+      ];
 
       const keyword = keywords.trim();
       if (keyword && searchable.length) {

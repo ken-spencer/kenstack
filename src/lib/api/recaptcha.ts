@@ -19,7 +19,7 @@ const isObject = (value: unknown): value is Record<string, unknown> =>
 
 const recaptcha = ({
   field = "recaptchaToken",
-  threshold = 0.5,
+  threshold = 0.3,
 }: RecaptchaOptions = {}) =>
   pipelineStage({}, async ({ dataIn, response }) => {
     if (await deps.auth.getCurrentUser()) {
