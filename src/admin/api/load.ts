@@ -15,7 +15,7 @@ const load = ({ adminTable, ...options }: AdminApiOptions) => {
 
 const loadAction = (adminTable: AnyAdminTable) =>
   pipelineStage(
-    { schema: z.object({ id: z.number() }) },
+    { role: "admin", schema: z.object({ id: z.number() }) },
     async ({ response, data: { id } }) => {
       if (!id) {
         return response.error("A valid id is required");

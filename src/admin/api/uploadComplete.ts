@@ -2,6 +2,7 @@ import type { AdminApiOptions, AnyAdminTable } from "..";
 import type { Readable } from "node:stream";
 
 import {
+  DeleteObjectCommand,
   GetObjectCommand,
   PutObjectCommand,
   S3Client,
@@ -44,14 +45,6 @@ const sanitizeSvg = async (buffer: Buffer): Promise<Buffer> => {
 const uploadSchema = z.object({
   fieldname: z.string("image field name is required").min(1),
   imageId: z.string("image id is required").min(1),
-  // prefix: z.string("prefix is required").min(1),
-  // key: z.string("key is required").min(1),
-  // baseName: z.string("baseName is required").min(1),
-  // filename: z
-  //   .string("filename is required")
-  //   .nonempty("filename cannot be empty"),
-  // type: z.enum(imageMimeTypes, "Image type is not supported"),
-  // size: z.number("size is required").gt(0, "size must be greater than 0"),
 });
 
 export const uploadCompletePipeline = ({
@@ -107,18 +100,23 @@ const uploadWebpVariant = async ({
   );
 };
 
-const uploadCompleteAction = (adminTable: AnyAdminTable) =>
-  pipelineStage({}, async ({ dataIn, response }) => {
-    const parsedData = uploadSchema.safeParse(dataIn);
-    if (!parsedData.success) {
-      const firstIssue = parsedData.error.issues[0];
-      return response.error(
-        "There was a problem uploading the image: " + firstIssue.message,
-      );
-    }
-    const { data } = parsedData;
+const removeUploadedObject = async (key: string) => {
+  if (!bucket) {
+    throw new Error("Missing AWS_S3_BUCKET");
+  }
 
-    const { fieldname /*key, baseName, prefix, filename, type, size*/ } = data;
+  await s3.send(
+    new DeleteObjectCommand({
+      Bucket: bucket,
+      Key: key,
+    }),
+  );
+};
+
+const uploadCompleteAction = (adminTable: AnyAdminTable) =>
+  pipelineStage({ schema: uploadSchema }, async ({ data, response }) => {
+    const { fieldname } = data;
+    const user = await deps.auth.requireUser();
 
     const [pendingImage] = await deps.db
       .select({
@@ -131,7 +129,11 @@ const uploadCompleteAction = (adminTable: AnyAdminTable) =>
       })
       .from(images)
       .where(
-        and(eq(images.publicId, data.imageId), eq(images.status, "pending")),
+        and(
+          eq(images.publicId, data.imageId),
+          eq(images.status, "pending"),
+          eq(images.createdBy, user.id),
+        ),
       );
 
     if (!pendingImage) {
@@ -163,9 +165,29 @@ const uploadCompleteAction = (adminTable: AnyAdminTable) =>
       return response.error("Could not read uploaded image from S3");
     }
 
+    if (
+      typeof originalObject.ContentLength === "number" &&
+      originalObject.ContentLength > deps.uploadMaxImageSize
+    ) {
+      await removeUploadedObject(key);
+      await deps.db
+        .delete(images)
+        .where(and(eq(images.id, id), eq(images.createdBy, user.id)));
+      return response.error(deps.uploadMaxImageSizeMessage);
+    }
+
     const originalBuffer = await streamToBuffer(
       originalObject.Body as Readable,
     );
+
+    if (originalBuffer.length > deps.uploadMaxImageSize) {
+      await removeUploadedObject(key);
+      await deps.db
+        .delete(images)
+        .where(and(eq(images.id, id), eq(images.createdBy, user.id)));
+      return response.error(deps.uploadMaxImageSizeMessage);
+    }
+
     const metadata = await sharp(originalBuffer).metadata();
 
     if (!metadata.format) {

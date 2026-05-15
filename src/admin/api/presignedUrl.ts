@@ -11,7 +11,7 @@ import { deps } from "@app/deps";
 import { pipeline, pipelineStage } from "@kenstack/lib/api";
 
 import * as z from "zod";
-import { imageMimeTypes } from "@kenstack/db/tables/images/mimeTypes";
+import { rasterMimeTypes } from "@kenstack/db/tables/images/mimeTypes";
 
 const region = process.env.AWS_S3_REGION ?? process.env.AWS_REGION;
 const bucket = process.env.AWS_S3_BUCKET;
@@ -26,9 +26,14 @@ const uploadSchema = z.object({
   filename: z
     .string("filename is required")
     .nonempty("filename cannot be empty"),
-  type: z.enum(imageMimeTypes, "Image type is not supported"),
-  size: z.number("size is required").gt(0, "size must be greater than 0"),
+  type: z.enum(rasterMimeTypes, "Image type is not supported"),
+  size: z
+    .number("size is required")
+    .gt(0, "size must be greater than 0")
+    .max(deps.uploadMaxImageSize, deps.uploadMaxImageSizeMessage),
 });
+
+const svgMimeType = "image/svg+xml";
 
 export const getPresignedUrlPipeline = ({
   adminTable,
@@ -38,59 +43,53 @@ export const getPresignedUrlPipeline = ({
 };
 
 const getPresignedUrl = (adminTable: AnyAdminTable) =>
-  pipelineStage({}, async ({ dataIn, response }) => {
-    const parsedData = uploadSchema.safeParse(dataIn);
-    if (!parsedData.success) {
-      const firstIssue = parsedData.error.issues[0];
-      return response.error(
-        "There was a problem uploading the image: " + firstIssue.message,
-      );
-    }
-    const { data } = parsedData;
-    const user = await deps.auth.requireUser();
+  pipelineStage(
+    { role: "admin", schema: uploadSchema },
+    async ({ data, response, user }) => {
+      const { fieldname, filename, type } = data;
+      // Raster uploads are the current default. Keep the SVG-aware branches here
+      // because this stage will later accept configurable MIME types per field.
+      const uploadType: string = type;
+      const isSvg = uploadType === svgMimeType;
 
-    const { fieldname, filename, type } = data;
+      const field = adminTable.fields[fieldname];
+      if (!field) {
+        return response.error(`Unknown field name ${fieldname}`);
+      }
 
-    const field = adminTable.fields[fieldname];
-    if (!field) {
-      return response.error(`Unknown field name ${fieldname}`);
-    }
+      const tablename = getTableName(adminTable.table);
+      const parsed = path.parse(filename);
+      const baseName = kebabCase(parsed.name) || "image";
+      const ext = parsed.ext.toLowerCase();
+      const imageId = unsecureId();
 
-    const tablename = getTableName(adminTable.table);
-    const parsed = path.parse(filename);
-    const baseName = kebabCase(parsed.name) || "image";
-    const ext = parsed.ext.toLowerCase();
-    const imageId = unsecureId();
+      const prefix = `${tablename}/${fieldname}/${imageId}`;
+      const key = `${isSvg ? "" : "private/"}${prefix}/original-${baseName}${ext}`;
 
-    const prefix = `${tablename}/${fieldname}/${imageId}`;
-    const key = `${type === "image/svg+xml" ? "" : "private/"}${prefix}/original-${baseName}${ext}`;
+      const cmd = new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+        ContentType: type,
+      });
 
-    const cmd = new PutObjectCommand({
-      Bucket: bucket,
-      Key: key,
-      ContentType: type,
-    });
+      const uploadUrl = await getSignedUrl(s3, cmd, { expiresIn: 60 }); // 1 min
+      const publicUrl = `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
 
-    const publicUrl =
-      type === "image/svg+xml"
-        ? `https://${bucket}.s3.${region}.amazonaws.com/${key}`
-        : "";
-    const uploadUrl = await getSignedUrl(s3, cmd, { expiresIn: 60 }); // 1 min
+      const [image] = await deps.db
+        .insert(images)
+        .values({
+          createdBy: user.id,
+          status: "pending",
+          kind: isSvg ? "svg" : "raster",
+          filename,
+          prefix,
+          baseName,
+          sourceKey: key,
+          sourceUrl: publicUrl,
+          sourceType: type,
+        })
+        .returning({ id: images.publicId });
 
-    const [image] = await deps.db
-      .insert(images)
-      .values({
-        createdBy: user.id,
-        status: "pending",
-        kind: type === "image/svg+xml" ? "svg" : "raster",
-        filename,
-        prefix,
-        baseName,
-        sourceKey: key,
-        sourceUrl: publicUrl,
-        sourceType: type,
-      })
-      .returning({ id: images.publicId });
-
-    return response.success({ uploadUrl, id: image.id });
-  });
+      return response.success({ uploadUrl, id: image.id });
+    },
+  );

@@ -38,7 +38,7 @@ const list = ({ adminTable, ...options }: AdminApiOptions) => {
 
 const listAction = (adminTable: AnyAdminTable) =>
   pipelineStage(
-    { schema: getListSchema(adminTable) },
+    { role: "admin", schema: getListSchema(adminTable) },
     async ({ response, data }) => {
       const { keywords, page, trash } = data;
       const limit = adminTable.limit || 25;

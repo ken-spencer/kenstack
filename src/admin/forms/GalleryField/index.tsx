@@ -5,12 +5,12 @@ import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 import { ImagePlus, Upload, X } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 
-import IconButton from "@kenstack/components/IconButton";
 import ProgressIcon from "@kenstack/icons/Progress";
 import Field, { type FieldProps } from "@kenstack/forms/Field";
 import { useForm } from "@kenstack/forms/context";
+import getUploadErrorMessage from "@kenstack/forms/getUploadErrorMessage";
 import fetcher from "@kenstack/lib/fetcher";
-import { imageMimeTypes as acceptDefault } from "@kenstack/db/tables/images/mimeTypes";
+import { rasterMimeTypes as acceptDefault } from "@kenstack/db/tables/images/mimeTypes";
 import { useAdminEdit } from "@kenstack/admin/Edit/context";
 import ImageDetailsModal, {
   type ImageDetailsValue,
@@ -40,7 +40,7 @@ type GalleryFieldRenderProps = {
 };
 
 const buttonClass =
-  "size-6 bg-gray-200/80 hover:bg-gray-400 border rounded-full";
+  "inline-flex size-6 items-center justify-center rounded-full border bg-gray-200/80 hover:bg-gray-400";
 
 export default function GalleryField({
   name,
@@ -102,22 +102,9 @@ const galleryRender = ({
       );
     };
 
-    const removeLocalImage = (localId: string) => {
-      setImages(getImages().filter((item) => item.localId !== localId));
-    };
-
     const uploadFile = async (file: File, localId: string) => {
       if (!file) {
-        return "error";
-      }
-
-      if (file.size > 5 * 1024 ** 2) {
-        updateLocalImage(localId, { uploadState: "error" });
-        form.setError(field.name, {
-          type: "validate",
-          message: "Maximum image size is 5 megabytes.",
-        });
-        return "too-large";
+        return { status: "error", message: "No file was selected." } as const;
       }
 
       updateLocalImage(localId, { uploadState: "uploading" });
@@ -134,9 +121,9 @@ const galleryRender = ({
       });
 
       if (res.status === "error") {
-        setStatusMessage({ status: "error", message: res.message });
+        const message = getUploadErrorMessage(res);
         updateLocalImage(localId, { uploadState: "error" });
-        return "error";
+        return { status: "error", message } as const;
       }
 
       try {
@@ -156,15 +143,20 @@ const galleryRender = ({
               "There was a problem uploading your image. Please try again.",
           });
           updateLocalImage(localId, { uploadState: "error" });
-          return "error";
+          return {
+            status: "error",
+            message:
+              "There was a problem uploading your image. Please try again.",
+          } as const;
         }
       } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
         setStatusMessage({
           status: "error",
-          message: error instanceof Error ? error.message : String(error),
+          message,
         });
         updateLocalImage(localId, { uploadState: "error" });
-        return "error";
+        return { status: "error", message } as const;
       }
 
       const complete = await fetcher<{
@@ -186,9 +178,9 @@ const galleryRender = ({
       });
 
       if (complete.status === "error") {
-        setStatusMessage({ status: "error", message: complete.message });
+        const message = getUploadErrorMessage(complete);
         updateLocalImage(localId, { uploadState: "error" });
-        return "error";
+        return { status: "error", message } as const;
       }
 
       updateLocalImage(localId, {
@@ -206,7 +198,7 @@ const galleryRender = ({
         action: "upload" as const,
         imageId: complete.imageId,
       });
-      return "success";
+      return { status: "success" } as const;
     };
 
     const moveImage = (fromIndex: number, toIndex: number) => {
@@ -254,31 +246,71 @@ const galleryRender = ({
 
       setImages([...getImages(), ...pendingImages]);
       startUploading(field.name);
-      const tooLargeLocalIds: string[] = [];
+
+      const failedLocalIds = new Set<string>();
+      const failedMessages = new Set<string>();
 
       try {
         for (const [index, file] of acceptedFiles.entries()) {
           const pending = pendingImages[index];
           if (pending) {
-            const result = await uploadFile(file, pending.localId);
-            if (result === "too-large") {
-              if (acceptedFiles.length === 1) {
-                removeLocalImage(pending.localId);
-              } else {
-                tooLargeLocalIds.push(pending.localId);
+            try {
+              const result = await uploadFile(file, pending.localId);
+              if (result.status === "error") {
+                failedLocalIds.add(pending.localId);
+                if (result.message) {
+                  failedMessages.add(result.message);
+                }
               }
+            } catch (error) {
+              const message =
+                error instanceof Error ? error.message : String(error);
+              setStatusMessage({
+                status: "error",
+                message,
+              });
+              updateLocalImage(pending.localId, { uploadState: "error" });
+              failedLocalIds.add(pending.localId);
+              failedMessages.add(message);
             }
           }
         }
       } finally {
-        if (tooLargeLocalIds.length) {
-          setImages(
-            getImages().filter(
-              (item) =>
-                !item.localId || !tooLargeLocalIds.includes(item.localId),
-            ),
-          );
+        const nextImages = getImages()
+          .filter(
+            (image) => !image.localId || !failedLocalIds.has(image.localId),
+          )
+          .map((image) => {
+            if (image.uploadState !== "done") {
+              return image;
+            }
+
+            const nextImage = { ...image };
+            delete nextImage.localId;
+            delete nextImage.previewUrl;
+            delete nextImage.uploadState;
+            return nextImage;
+          });
+
+        pendingImages.forEach((image) => {
+          if (image.previewUrl) {
+            URL.revokeObjectURL(image.previewUrl);
+          }
+        });
+
+        setImages(nextImages);
+
+        if (failedLocalIds.size) {
+          const [message] = failedMessages;
+          form.setError(field.name, {
+            type: "validate",
+            message:
+              failedLocalIds.size === 1
+                ? `${message ?? "One image could not be uploaded."} The image was removed from the gallery.`
+                : `${failedLocalIds.size} images could not be uploaded and were removed from the gallery.`,
+          });
         }
+
         finishUploading(field.name);
       }
     };
@@ -356,46 +388,55 @@ const galleryRender = ({
                 setDragIndex(null);
               }
             }}
-            onClick={() => {
-              if (image.uploadState !== "error") {
-                setEditingIndex(index);
-              }
-            }}
           >
-            <IconButton
+            <button
               type="button"
-              className={"absolute top-1 right-1 z-10 " + buttonClass}
-              tooltip="Remove image"
+              title="Remove image"
+              aria-label="Remove image"
+              draggable={false}
+              className={"absolute top-1 right-1 z-20 " + buttonClass}
+              onPointerDown={(evt) => {
+                evt.stopPropagation();
+              }}
               onClick={(evt) => {
                 evt.stopPropagation();
                 setImages(value.filter((_, key) => key !== index));
               }}
             >
               <X />
-            </IconButton>
-            <img
-              alt={image.alt ?? ""}
-              className="h-full w-full object-cover"
-              src={image.previewUrl ?? image.url}
-            />
-            {image.uploadState === "pending" ? (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/35 text-xs font-medium text-white">
-                Waiting
-              </div>
-            ) : null}
-            {image.uploadState === "uploading" ? (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/35">
-                <ProgressIcon
-                  className="size-8 animate-spin text-white"
-                  style={{ animationDuration: "2s" }}
-                />
-              </div>
-            ) : null}
-            {image.uploadState === "error" ? (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/45 px-2 text-center text-xs font-medium text-white">
-                Too large
-              </div>
-            ) : null}
+            </button>
+            <button
+              type="button"
+              className="block h-full w-full"
+              disabled={image.uploadState === "error"}
+              onClick={() => {
+                setEditingIndex(index);
+              }}
+            >
+              <img
+                alt={image.alt ?? ""}
+                className="h-full w-full object-cover"
+                src={image.previewUrl ?? image.url}
+              />
+              {image.uploadState === "pending" ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/35 text-xs font-medium text-white">
+                  Waiting
+                </div>
+              ) : null}
+              {image.uploadState === "uploading" ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/35">
+                  <ProgressIcon
+                    className="size-8 animate-spin text-white"
+                    style={{ animationDuration: "2s" }}
+                  />
+                </div>
+              ) : null}
+              {image.uploadState === "error" ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/45 px-2 text-center text-xs font-medium text-white">
+                  Too large
+                </div>
+              ) : null}
+            </button>
           </div>
         ))}
 

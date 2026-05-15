@@ -9,10 +9,11 @@ import { Upload as UploadIcon, X as CancelIcon } from "lucide-react";
 
 import { twMerge } from "tailwind-merge";
 import Field, { type FieldProps } from "@kenstack/forms/Field";
+import getUploadErrorMessage from "@kenstack/forms/getUploadErrorMessage";
 import IconButton from "@kenstack/components/IconButton";
 import { useForm } from "@kenstack/forms/context";
 
-import { imageMimeTypes as acceptDefault } from "@kenstack/db/tables/images/mimeTypes";
+import { rasterMimeTypes as acceptDefault } from "@kenstack/db/tables/images/mimeTypes";
 import ImageDetailsModal, {
   type ImageDetailsValue,
 } from "@kenstack/admin/forms/ImageDetailsModal";
@@ -66,7 +67,8 @@ const imageRender = ({
   accept = acceptDefault,
 }: ImageRenderProps) =>
   function ImageFieldRender({ field }: ImageFieldRenderProps) {
-    const { finishUploading, setStatusMessage, startUploading } = useForm();
+    const { finishUploading, form, setStatusMessage, startUploading } =
+      useForm();
 
     const acceptStr = accept.join(", ");
     const contClass = twMerge(
@@ -97,18 +99,7 @@ const imageRender = ({
 
       setUploading(true);
       startUploading(field.name);
-      // Must be five megabytes or smaller.
-      if (file.size > 5 * 1024 ** 2) {
-        // const size = file.size / 1024 ** 2;
-        // const sizeStr = size.toFixed(1);
-        reset();
-        setStatusMessage({
-          status: "error",
-          message: "Maximum image size is 5 megabytes.",
-        });
-        finishUploading(field.name);
-        return;
-      }
+      form.clearErrors(field.name);
       try {
         const reader = new FileReader();
         reader.onload = () => {
@@ -137,9 +128,10 @@ const imageRender = ({
         });
 
         if ("error" === res.status) {
-          setStatusMessage({
-            status: "error",
-            message: res.message,
+          const message = getUploadErrorMessage(res);
+          form.setError(field.name, {
+            type: "validate",
+            message,
           });
           reset();
           return;
@@ -192,9 +184,10 @@ const imageRender = ({
         });
 
         if (complete.status === "error") {
-          setStatusMessage({
-            status: "error",
-            message: complete.message,
+          const message = getUploadErrorMessage(complete);
+          form.setError(field.name, {
+            type: "validate",
+            message,
           });
           reset();
           return;
@@ -309,20 +302,20 @@ const imageRender = ({
           >
             <CancelIcon />
           </IconButton>
-          <IconButton
-            className={"absolute bottom-1 left-1 cursor-pointer " + buttonClass}
-            tooltip="upload"
+          <label
+            title="Upload image"
+            aria-label="Upload image"
+            className={
+              "absolute bottom-1 left-1 inline-flex cursor-pointer items-center justify-center " +
+              buttonClass
+            }
             onClick={(evt) => {
-              // field.onChange(null);
               evt.stopPropagation();
             }}
-            asChild
           >
-            <label>
-              {input}
-              <UploadIcon />
-            </label>
-          </IconButton>
+            {input}
+            <UploadIcon />
+          </label>
           <button
             type="button"
             className="h-full w-full cursor-pointer"

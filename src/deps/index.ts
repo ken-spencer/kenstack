@@ -20,6 +20,19 @@ export type AccountMenuItems = [
 
 export const defaultRoles = ["admin", "member"] as const;
 
+const formatFileSize = (bytes: number) => {
+  const units = ["bytes", "kilobytes", "megabytes", "gigabytes"] as const;
+  let size = bytes;
+  let unitIndex = 0;
+
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size = size / 1024;
+    unitIndex++;
+  }
+
+  return `${Number.isInteger(size) ? size : size.toFixed(1)} ${units[unitIndex]}`;
+};
+
 // type BaseDeps<TRoles extends readonly string[]> = {
 //   roles?: TRoles;
 //   multiTenant?: boolean;
@@ -34,10 +47,13 @@ export const createDeps = <
   multiTenant?: boolean;
   tables: TSchema;
   accountMenu?: { getItems: () => AccountMenuItems };
+  uploadMaxImageSize?: number;
+  uploadMaxImageSizeMessage?: string;
 }) => {
   const db = createDb({ schema: options.tables });
   const logger = new Logger<TSchema>({ db });
   const roles = (options.roles ?? defaultRoles) as TRoles;
+  const uploadMaxImageSize = options.uploadMaxImageSize ?? 5 * 1024 ** 2;
   const auth = createAuth<TSchema, TRoles>({
     db,
     tables: options.tables,
@@ -49,7 +65,8 @@ export const createDeps = <
 
   return {
     multiTenant: false,
-    ...options,
+    uploadMaxImageSize,
+    uploadMaxImageSizeMessage: `Maximum image size is ${formatFileSize(uploadMaxImageSize)}.`,
     logger,
     auth,
     roles,
@@ -58,6 +75,7 @@ export const createDeps = <
       EmailCont: Email,
       attachments: [] as Attachment[],
     },
+    ...options,
   };
 };
 

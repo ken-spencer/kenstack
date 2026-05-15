@@ -34,7 +34,7 @@ const login = () =>
         .from(loginFailures)
         .where(
           sql`${loginFailures.attemptedAt} > now() - interval '15 minutes'
-        and (${loginFailures.email} = ${email} or ${loginFailures.ip} = ${ipAddress})`,
+        and (${loginFailures.email} = ${email} or ${loginFailures.ip} = ${ip})`,
         );
 
       if (emailCount >= 3) {

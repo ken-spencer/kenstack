@@ -14,7 +14,7 @@ const tagSearch = ({ adminTable, ...options }: AdminApiOptions) => {
 };
 
 const tagSearchAction = (adminTable: AnyAdminTable) =>
-  pipelineStage({ schema }, async ({ response, data }) => {
+  pipelineStage({ role: "admin", schema }, async ({ response, data }) => {
     const { keywords, exclude } = data;
     const excludedSlugs = exclude.map((e) => e.slug);
 
