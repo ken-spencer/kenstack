@@ -23,9 +23,13 @@ const maxOriginalHeight = 1920;
 const squareSize = 800;
 
 const sanitizeSvg = async (buffer: Buffer): Promise<Buffer> => {
+  const { default: DOMPurify } = await import("isomorphic-dompurify");
   const { optimize } = await import("svgo");
   const svg = buffer.toString("utf8");
-  const result = optimize(svg, {
+  const sanitized = DOMPurify.sanitize(svg, {
+    USE_PROFILES: { svg: true, svgFilters: true },
+  });
+  const result = optimize(sanitized, {
     multipass: true,
     plugins: ["removeDimensions"],
   });
