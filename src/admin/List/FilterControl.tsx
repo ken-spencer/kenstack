@@ -23,6 +23,7 @@ import {
   PopoverTrigger,
 } from "@kenstack/components/ui/popover";
 import { Separator } from "@kenstack/components/ui/separator";
+import Tooltip from "@kenstack/components/Tooltip";
 import { cn } from "@kenstack/lib/utils";
 import { useAdminList } from "./context";
 
@@ -72,22 +73,24 @@ export default function FilterControl() {
 
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="relative text-gray-800"
-          aria-label="Filters"
-        >
-          <ListFilter className="size-6" />
-          {activeCount > 0 ? (
-            <span className="absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-fuchsia-800 text-[10px] font-medium text-white">
-              {activeCount}
-            </span>
-          ) : null}
-        </Button>
-      </PopoverTrigger>
+      <Tooltip content="Filters">
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="relative text-gray-800"
+            aria-label="Filters"
+          >
+            <ListFilter className="size-6" />
+            {activeCount > 0 ? (
+              <span className="absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-fuchsia-800 text-[10px] font-medium text-white">
+                {activeCount}
+              </span>
+            ) : null}
+          </Button>
+        </PopoverTrigger>
+      </Tooltip>
       <PopoverContent align="end" className="w-80 p-3">
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">

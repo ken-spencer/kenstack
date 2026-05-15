@@ -9,6 +9,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@kenstack/components/ui/popover";
+import Tooltip from "@kenstack/components/Tooltip";
 import { useAdminList } from "./context";
 
 type Direction = "asc" | "desc";
@@ -63,18 +64,20 @@ export default function SortControl() {
         setOpen(nextOpen);
       }}
     >
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          className="gap-2 px-2 text-gray-800"
-          aria-label={`Sort by ${currentSort.label}`}
-        >
-          <ArrowUpDown className="size-5" />
-          <span className="hidden sm:inline">{currentSort.label}</span>
-          <DirectionIcon direction={direction} className="hidden sm:block" />
-        </Button>
-      </PopoverTrigger>
+      <Tooltip content="Sort">
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            className="gap-2 px-2 text-gray-800"
+            aria-label={`Sort by ${currentSort.label}`}
+          >
+            <ArrowUpDown className="size-5" />
+            <span className="hidden sm:inline">{currentSort.label}</span>
+            <DirectionIcon direction={direction} className="hidden sm:block" />
+          </Button>
+        </PopoverTrigger>
+      </Tooltip>
       <PopoverContent align="end" className="w-64 p-2">
         <div className="flex flex-col gap-1">
           {sortOptions.map((option) => {
