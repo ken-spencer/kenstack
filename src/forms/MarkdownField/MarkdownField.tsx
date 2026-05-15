@@ -1,18 +1,27 @@
 "use client";
 
-import { useFormContext } from "react-hook-form";
-import { useRef, useEffect } from "react";
-import Editor from "@toast-ui/editor";
-import Field, { type FieldProps } from "@kenstack/forms/Field";
+import { Editor, defaultValueCtx, rootCtx } from "@milkdown/kit/core";
+import { listener, listenerCtx } from "@milkdown/kit/plugin/listener";
+import { history } from "@milkdown/kit/plugin/history";
+import { commonmark } from "@milkdown/kit/preset/commonmark";
+import { gfm } from "@milkdown/kit/preset/gfm";
+import "@milkdown/kit/prose/view/style/prosemirror.css";
+import { replaceAll } from "@milkdown/kit/utils";
+import {
+  Milkdown,
+  MilkdownProvider,
+  useEditor,
+  useInstance,
+} from "@milkdown/react";
+import {
+  placeholder as placeholderPlugin,
+  placeholderCtx,
+} from "milkdown-plugin-placeholder";
+import { useEffect, useRef } from "react";
+import { type ControllerRenderProps } from "react-hook-form";
 
-const toolbarItems = [
-  ["heading", "bold", "italic" /*'strike'*/],
-  // ['hr', 'quote'],
-  ["ul", "ol" /*'task', 'indent', 'outdent'*/],
-  [, /*'table'*/ /*'image',*/ "link"],
-  // ['code', 'codeblock'],
-  // ['scrollSync'],
-];
+import Field, { type FieldProps } from "@kenstack/forms/Field";
+import { MarkdownEditorToolbar } from "@kenstack/forms/MarkdownEditor/Toolbar";
 
 export type InputProps = React.ComponentProps<"input"> &
   FieldProps & {
@@ -24,49 +33,7 @@ export default function MarkdownField({
   label,
   description,
   className,
-  // ...props
 }: InputProps) {
-  const ref = useRef(null);
-  const { setValue, getValues } = useFormContext();
-
-  useEffect(() => {
-    const editor = new Editor({
-      el: ref.current,
-      // theme: theme,
-      autofocus: false,
-      usageStatistics: false,
-      initialValue: "",
-      previewStyle: "tab",
-      height: "400px",
-      initialEditType: "markdown",
-      useCommandShortcut: true,
-      toolbarItems: toolbarItems,
-      hideModeSwitch: true,
-      events: {
-        blur: () => {
-          // console.log("blur time");
-        },
-        change: () => {
-          setValue(name, editor.getMarkdown(), {
-            shouldDirty: true,
-            shouldTouch: true,
-          });
-        },
-      },
-    });
-
-    // if we initialize with initialValue we end up with
-    //unwanted default text. Hack to fix.
-    // slso eem to need a hack to prevent the editor from scrolling and focusing.
-    const { scrollX, scrollY } = window;
-    editor.setMarkdown(getValues(name));
-    setTimeout(() => {
-      editor.blur();
-      editor.setScrollTop(0);
-      window.scrollTo(scrollX, scrollY);
-    }, 0);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
   return (
     <Field
       name={name}
@@ -74,11 +41,65 @@ export default function MarkdownField({
       description={description}
       className={className}
       render={({ field }) => (
-        <div>
-          <div ref={ref} />
-          <input type="hidden" name={name} value={field.value} />
-        </div>
+        <MilkdownProvider>
+          <MarkdownFieldEditor field={field} />
+        </MilkdownProvider>
       )}
     />
+  );
+}
+
+function MarkdownFieldEditor({ field }: { field: ControllerRenderProps }) {
+  const initialValue = typeof field.value === "string" ? field.value : "";
+  const lastEditorValue = useRef(initialValue);
+  const [loading, get] = useInstance();
+
+  useEditor(
+    (root) =>
+      Editor.make()
+        .config((ctx) => {
+          ctx.set(rootCtx, root);
+          ctx.set(defaultValueCtx, initialValue);
+          ctx.set(placeholderCtx, "Start typing...");
+
+          ctx.get(listenerCtx).markdownUpdated((_, markdown) => {
+            lastEditorValue.current = markdown;
+            field.onChange(markdown);
+          });
+
+          ctx.get(listenerCtx).blur(() => {
+            field.onBlur();
+          });
+        })
+        .use(listener)
+        .use(history)
+        .use(placeholderPlugin)
+        .use(commonmark)
+        .use(gfm)
+  );
+
+  useEffect(() => {
+    const nextValue = typeof field.value === "string" ? field.value : "";
+    if (loading || nextValue === lastEditorValue.current) {
+      return;
+    }
+
+    lastEditorValue.current = nextValue;
+    get().action(replaceAll(nextValue, true));
+  }, [field.value, get, loading]);
+
+  return (
+    <div className="overflow-hidden rounded-md border border-input bg-background">
+      <MarkdownEditorToolbar variant="static" />
+      <div className="min-h-[350px] px-3 py-2 [&_.ProseMirror]:min-h-[350px] [&_.ProseMirror]:outline-none">
+        <Milkdown />
+      </div>
+      <input
+        type="hidden"
+        name={field.name}
+        value={typeof field.value === "string" ? field.value : ""}
+        readOnly
+      />
+    </div>
   );
 }

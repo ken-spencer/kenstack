@@ -28,6 +28,7 @@ import { listener, listenerCtx } from "@milkdown/kit/plugin/listener";
 
 import { Toolbar } from "./Toolbar";
 import { usePageEditor, useCommit } from "../context";
+import { cn } from "@kenstack/lib/utils";
 
 type MilkdownEditorProps = {
   setFocused: React.Dispatch<React.SetStateAction<boolean>>;
@@ -56,10 +57,10 @@ const MilkdownEditorField = ({
 
 export const MilkdownEditorWrapper: React.FC<
   PageEditorAdminProps & { field: ControllerRenderProps }
-> = (props) => {
+> = ({ className, ...props }) => {
   const [focused, setFocused] = useState(false);
   return (
-    <div className="relative">
+    <div className={cn("relative", className)}>
       <MilkdownProvider>
         {focused && <Toolbar />}
         <MilkdownEditor setFocused={setFocused} {...props} />
@@ -101,7 +102,11 @@ const MilkdownEditor: React.FC<
       .use(gfm),
   );
 
-  return <Milkdown />;
+  return (
+    <div className="outline-dashed outline-gray-500/50 [&_.ProseMirror]:outline-none">
+      <Milkdown />
+    </div>
+  );
 };
 
 const MarkdownAdmin = makeEditorWrapper(MilkdownEditorField);

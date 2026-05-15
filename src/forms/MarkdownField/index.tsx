@@ -1,7 +1,5 @@
 "use client";
 
-import "@toast-ui/editor/dist/toastui-editor.css";
-
 import Progress from "@kenstack/components/Progress";
 import dynamic from "next/dynamic";
 const MarkdownField = dynamic(() => import("./MarkdownField"), {
