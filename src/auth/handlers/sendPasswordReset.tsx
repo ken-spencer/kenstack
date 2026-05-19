@@ -14,7 +14,7 @@ import {
   recaptcha,
   type PipelineOptions,
   pipelineStage,
-} from "@kenstack/lib/api";
+} from "@kenstack/api";
 import { type ForgotPasswordEmailProps } from "@kenstack/auth/email/ForgotPassword";
 
 import DefaultEmail, {

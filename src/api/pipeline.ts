@@ -2,7 +2,7 @@ import errorLog from "@kenstack/lib/errorLog";
 import { NextRequest, NextResponse } from "next/server";
 import type { ObjectSchema } from ".";
 
-import { type FetchError } from "@kenstack/lib/fetcher";
+import { type FetchError } from "@kenstack/api/fetcher";
 
 import * as z from "zod";
 
@@ -167,7 +167,7 @@ export const pipelineStage =
       data = undefined as PipelineStageContext<TSchema, TRole>["data"];
     }
 
-    const user = role ? await deps.auth.requireUser({ role }) : undefined;
+    const user = role ? await deps.auth.requireUser(role) : undefined;
 
     const arg = {
       ...ctx,

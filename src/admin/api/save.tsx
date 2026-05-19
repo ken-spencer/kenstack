@@ -1,7 +1,6 @@
-import { selectFields } from "./helpers/selectFields";
-import { pipelineStage } from "@kenstack/lib/api";
-import { pipeline } from "@kenstack/lib/api";
-import type { AdminApiOptions, AnyAdminTable } from "..";
+import { selectFields } from "@kenstack/admin/queries/selectFields";
+import { pipelineStage } from "@kenstack/api";
+import type { AnyAdminConfig } from "..";
 import { eq, getTableName, getTableColumns } from "drizzle-orm";
 import { revalidateTag } from "next/cache";
 
@@ -17,16 +16,16 @@ import { extractGalleryValues, saveGalleries } from "./helpers/saveGalleries";
 import { deps } from "@app/deps";
 import { errorTranslator } from "@kenstack/db/errorTranslator";
 
-const save = ({ adminTable, ...options }: AdminApiOptions) => {
-  return pipeline(options, [saveAction(adminTable)]);
-};
+type SavedRow = {
+  id: number;
+} & Record<string, unknown>;
 
-const saveAction = (adminTable: AnyAdminTable) =>
+export const saveAction = (adminConfig: AnyAdminConfig) =>
   pipelineStage(
     {
       role: "admin",
-      schema: adminTable.schema.extend({
-        id: z.number().nullish(),
+      schema: adminConfig.schema.extend({
+        id: adminConfig.single ? z.number() : z.number().nullish(),
       }),
     },
     async ({ response, user, data: rawData }) => {
@@ -35,14 +34,14 @@ const saveAction = (adminTable: AnyAdminTable) =>
       };
       const relationshipValues = extractRelationshipValues({
         data,
-        relationships: adminTable.relationships,
+        relationships: adminConfig.relationships,
       });
       for (const key of Object.keys(relationshipValues)) {
         delete data[key];
       }
       const galleryValues = extractGalleryValues({
         data,
-        galleries: adminTable.galleries,
+        galleries: adminConfig.galleries,
       });
       for (const key of Object.keys(galleryValues)) {
         delete data[key];
@@ -50,13 +49,12 @@ const saveAction = (adminTable: AnyAdminTable) =>
 
       const { db } = deps;
 
-      const { table, fields } = adminTable;
+      const { table, fields } = adminConfig;
       const columns = getTableColumns(table);
-      const tagRelations = adminTable?.tags?.table;
 
       const select = selectFields(table, fields);
       const imageFields = await prepareImageFields({
-        adminTable,
+        adminConfig,
         columns,
         data,
         id,
@@ -71,14 +69,14 @@ const saveAction = (adminTable: AnyAdminTable) =>
       let row;
       try {
         row = await db.transaction(async (tx) => {
-          const rows = id
+          const rows: SavedRow[] = id
             ? await tx
-                .update(table)
+                .update(adminConfig.table)
                 .set({ ...data, updatedAt: new Date() })
-                .where(eq(table.id, id))
+                .where(eq(adminConfig.table.id, id))
                 .returning(select)
             : await tx
-                .insert(table)
+                .insert(adminConfig.table)
                 .values({
                   ...data,
                   createdBy: user.id,
@@ -90,25 +88,25 @@ const saveAction = (adminTable: AnyAdminTable) =>
             return null;
           }
 
-          if (tagRelations && Array.isArray(tags)) {
+          if (adminConfig.tags?.table && Array.isArray(tags)) {
             const savedTags = await saveTags({
               db: tx,
               tags: tags,
               tableId: savedRow.id,
-              tagRelations,
+              tagRelations: adminConfig.tags.table,
             });
 
             savedRow.tags = savedTags;
           }
 
           if (
-            adminTable.relationships &&
+            adminConfig.relationships &&
             Object.keys(relationshipValues).length
           ) {
             const savedRelationships = await saveRelationships({
               db: tx,
               tableId: savedRow.id,
-              relationships: adminTable.relationships,
+              relationships: adminConfig.relationships,
               values: relationshipValues,
             });
 
@@ -121,11 +119,11 @@ const saveAction = (adminTable: AnyAdminTable) =>
             );
           }
 
-          if (adminTable.galleries && Object.keys(galleryValues).length) {
+          if (adminConfig.galleries && Object.keys(galleryValues).length) {
             const savedGalleries = await saveGalleries({
               db: tx,
               tableId: savedRow.id,
-              galleries: adminTable.galleries,
+              galleries: adminConfig.galleries,
               values: galleryValues,
               user,
             });
@@ -154,8 +152,8 @@ const saveAction = (adminTable: AnyAdminTable) =>
         action: id ? "update" : "insert",
       });
 
-      if (adminTable.revalidate) {
-        adminTable.revalidate.forEach((validator) => {
+      if (adminConfig.revalidate) {
+        adminConfig.revalidate.forEach((validator) => {
           if (typeof validator === "string") {
             revalidateTag(validator, "max");
           } else {
@@ -170,5 +168,3 @@ const saveAction = (adminTable: AnyAdminTable) =>
       });
     },
   );
-
-export default save;

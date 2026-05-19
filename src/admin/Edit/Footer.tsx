@@ -1,6 +1,6 @@
 "use client";
 import { useAdminEdit } from "./context";
-import MetaDates from "../MetaDates";
+import MetaDates from "../components/MetaDates";
 
 export default function AdminEditFooter() {
   const { item } = useAdminEdit();

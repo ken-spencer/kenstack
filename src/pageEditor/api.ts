@@ -1,5 +1,5 @@
 import { type NextRequest } from "next/server";
-import { pipeline, pipelineStage } from "@kenstack/lib/api";
+import { pipeline, pipelineStage } from "@kenstack/api";
 import { apiSchema } from "./schema";
 import { deps } from "@app/deps";
 import { revalidateTag } from "next/cache";

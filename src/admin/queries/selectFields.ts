@@ -1,11 +1,14 @@
-import { getTableColumns, type SQL } from "drizzle-orm";
-import { type MetaTable } from "@kenstack/admin/table";
-import { type DefinedFields } from "@kenstack/admin/fields";
-import { type AnyPgColumn } from "drizzle-orm/pg-core";
+import { getTableColumns } from "drizzle-orm";
+
+import type { DefinedFields } from "@kenstack/admin/fields";
+import type { AdminKeyTable, AdminTable } from "@kenstack/admin/table";
 import { selectImageSubquery } from "@kenstack/db/tables";
 
+/**
+ *   Used in admin api actions to build a select wuetry based on given fields
+ */
 export function selectFields<
-  TTable extends MetaTable,
+  TTable extends AdminTable | AdminKeyTable,
   TSelection extends DefinedFields,
 >(table: TTable, selection: TSelection) {
   const columns = getTableColumns(table);
@@ -15,22 +18,21 @@ export function selectFields<
     updatedAt: table.updatedAt,
   };
 
-  const result = baseResult as typeof baseResult &
-    Record<string, SQL | AnyPgColumn>;
-
   for (const key in selection) {
     const field = selection[key];
     if (key in columns) {
       const column = columns[key];
 
       if (field.kind === "image") {
-        result[key] = selectImageSubquery(column, "square");
+        Object.assign(baseResult, {
+          [key]: selectImageSubquery(column, "square"),
+        });
         continue;
       }
 
-      result[key] = column;
+      Object.assign(baseResult, { [key]: column });
     }
   }
 
-  return result;
+  return baseResult;
 }

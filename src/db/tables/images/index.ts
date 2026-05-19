@@ -1,15 +1,18 @@
 import type { ImageVariants } from "./types";
-import { defineTable } from "@kenstack/admin/table";
+import { defineTable, type AdminTable } from "@kenstack/admin/table";
 import {
   text,
   integer,
   jsonb,
   index,
+  uniqueIndex,
+  pgTable,
   pgEnum,
   type PgColumn,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+import snakeCase from "lodash-es/snakeCase";
 
 export const imageKindEnum = pgEnum("image_kind", ["raster", "svg"]);
 export const imageStatusEnum = pgEnum("image_status", [
@@ -42,6 +45,41 @@ export const images = defineTable({
   },
   extraConfig: (t) => [index("images_status_idx").on(t.status)],
 });
+
+export const defineImageGallery = ({
+  table,
+  prefix,
+}: {
+  table: AdminTable;
+  prefix: string;
+}) => {
+  const tablePrefix = snakeCase(prefix);
+  const name = `${tablePrefix}_images`;
+  const tableIdColumn = `${tablePrefix}_id`;
+
+  return pgTable(
+    name,
+    {
+      tableId: integer(tableIdColumn)
+        .notNull()
+        .references(() => table.id, { onDelete: "cascade" }),
+      imageId: integer("image_id")
+        .notNull()
+        .references(() => images.id, { onDelete: "cascade" }),
+      sortOrder: integer("sort_order").notNull().default(0),
+    },
+    (t) => [
+      uniqueIndex(`${name}_${tableIdColumn}_image_id_unique`).on(
+        t.tableId,
+        t.imageId,
+      ),
+      index(`${name}_${tableIdColumn}_sort_order_idx`).on(
+        t.tableId,
+        t.sortOrder,
+      ),
+    ],
+  );
+};
 
 // import { alias as pgAlias } from "drizzle-orm/pg-core";
 // const image = pgAlias(images, "image");
@@ -118,10 +156,11 @@ export type SelectedImage = {
   originalUrl?: string | null;
 };
 
-export const selectImageSubquery = (
+export function selectImageSubquery(
   imageCol: AnyPgColumn,
   variant: ImageVariantName = "original",
-) => sql<SelectedImage | null>`(
+) {
+  return sql<SelectedImage | null>`(
   select jsonb_build_object(
     'id', ${images.id},
     'kind', ${images.kind},
@@ -154,3 +193,4 @@ export const selectImageSubquery = (
   where ${images.id} = ${imageCol}
   limit 1
 )`;
+}

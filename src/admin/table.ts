@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import snakeCase from "lodash-es/snakeCase";
 
 import {
   index,
@@ -7,7 +8,7 @@ import {
   text,
   timestamp,
   uniqueIndex,
-  // boolean,
+  boolean,
   // jsonb,
   type AnyPgTable,
   type PgColumnBuilderBase,
@@ -24,6 +25,31 @@ import { createId } from "@paralleldrive/cuid2";
 // type FieldKey<TFields extends FieldOptions> = Extract<keyof TFields, string>;
 type ColumnKey<TColumnsMap extends Record<string, PgColumnBuilderBase>> =
   Extract<keyof TColumnsMap, string>;
+
+export const metaColumns = {
+  get visibility() {
+    return text("visibility", {
+      enum: ["draft", "published", "unlisted"],
+    })
+      .notNull()
+      .default("draft");
+  },
+  get publishedAt() {
+    return timestamp("published_at", { withTimezone: true });
+  },
+  get ogImage() {
+    return integer("og_image");
+  },
+  get draft() {
+    return boolean("draft").notNull().default(true);
+  },
+  get seoTitle() {
+    return text("seo_title").notNull().default("");
+  },
+  get seoDescription() {
+    return text("seo_description").notNull().default("");
+  },
+};
 
 // export function createColumnsFromFields<const T extends FieldOptions>(
 //   fields: T,
@@ -111,6 +137,14 @@ export type BuildTableOptions<
   extraConfig?: (table: ExtraTable<TColumnsMap>) => PgTableExtraConfigValue[];
 };
 
+export type BuildKeyTableOptions<
+  TName extends string,
+  TColumnsMap extends Record<string, PgColumnBuilderBase>,
+> = {
+  name: TName;
+  columns: TColumnsMap;
+};
+
 export const defineTable = <
   TName extends string,
   const TColumnsMap extends Record<string, PgColumnBuilderBase>,
@@ -157,10 +191,34 @@ export const defineTable = <
   return table; // as typeof table & { [defineTableBrand]: true };
 };
 
-// export type DefinedTable = ReturnType<typeof defineTable>;
-// export type MetaTable = DefinedTable;
+export const defineKeyTable = <
+  TName extends string,
+  const TColumnsMap extends Record<string, PgColumnBuilderBase>,
+>({
+  name,
+  columns,
+}: BuildKeyTableOptions<TName, TColumnsMap>) => {
+  const table = pgTable(name, {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    key: text("key").notNull().unique(),
+    createdBy: integer("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+    ...columns,
+  });
 
-export type MetaTable = AnyPgTable & {
+  return table;
+};
+
+// export type DefinedTable = ReturnType<typeof defineTable>;
+// export type AdminTable = DefinedTable;
+
+export type AdminTable = AnyPgTable & {
   id: AnyPgColumn<{ data: number; notNull: true }>;
   publicId: AnyPgColumn<{ data: string; notNull: true }>;
   createdBy: AnyPgColumn<{ data: number | null; notNull: false }>;
@@ -169,7 +227,23 @@ export type MetaTable = AnyPgTable & {
   deletedAt: AnyPgColumn<{ data: Date | null; notNull: false }>;
 };
 
-type RelationshipEntity<TName extends string, TTable extends MetaTable> = {
+export type AdminContentTable = AdminTable & {
+  visibility: AnyPgColumn<{ data: "draft" | "published" | "unlisted" }>;
+  publishedAt: AnyPgColumn<{ data: Date | null }>;
+  ogImage: AnyPgColumn<{ data: number | null }>;
+  seoTitle: AnyPgColumn<{ data: string | null }>;
+  seoDescription: AnyPgColumn<{ data: string | null }>;
+};
+
+export type AdminKeyTable = AnyPgTable & {
+  id: AnyPgColumn<{ data: number; notNull: true }>;
+  key: AnyPgColumn<{ data: string; notNull: true }>;
+  createdBy: AnyPgColumn<{ data: number | null; notNull: false }>;
+  createdAt: AnyPgColumn<{ data: Date; notNull: true }>;
+  updatedAt: AnyPgColumn<{ data: Date; notNull: true }>;
+};
+
+type RelationshipEntity<TName extends string, TTable extends AdminTable> = {
   name: TName;
   table: TTable;
 };
@@ -182,8 +256,8 @@ export function defineRelationship<
   const TName extends string,
   const TFromName extends string,
   const TToName extends string,
-  TFromTable extends MetaTable,
-  TToTable extends MetaTable,
+  TFromTable extends AdminTable,
+  TToTable extends AdminTable,
 >({
   name,
   from,
@@ -219,8 +293,4 @@ export function defineRelationship<
   });
 
   return table as typeof table & RelationshipColumns<TFromName, TToName>;
-}
-
-function snakeCase(value: string) {
-  return value.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
 }

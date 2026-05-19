@@ -3,13 +3,13 @@ import { notFound } from "next/navigation";
 import AdminList from "@kenstack/admin/List";
 import Edit from "@kenstack/admin/Edit";
 import { deps } from "@app/deps";
-import { type AdminConfig } from ".";
+import { isAdminTableConfig, type AdminDefinition } from ".";
 
 type AdminServerProps = {
   context: {
     params: Promise<{ admin: [string, string?] }>;
   };
-  adminConfig: AdminConfig;
+  admin: AdminDefinition;
 };
 
 export default function AdminServer(props: AdminServerProps) {
@@ -24,7 +24,7 @@ export default function AdminServer(props: AdminServerProps) {
 
 async function AdminServerCore({
   context: { params },
-  adminConfig,
+  admin,
 }: AdminServerProps) {
   const { admin: adminRoute } = await params;
 
@@ -39,30 +39,53 @@ async function AdminServerCore({
   }
   const isNew = id === "new";
 
-  const thrupple = adminConfig.find(([t]) => t === name);
-  if (!thrupple) {
+  const adminConfig = admin.modules[name];
+  if (!adminConfig) {
     notFound();
   }
 
-  const user = await deps.auth.requireUser({ role: "admin" });
-
-  // const admin = thrupple[2] ? merge({}, thrupple[1], thrupple[2]) : thrupple[1];
-  const adminTable = thrupple[1];
-  const { icon: Icon, title } = adminTable;
-
-  const props = { name, adminTable, userId: user.id };
+  const user = await deps.auth.requireUser("admin");
+  const Icon = adminConfig.icon;
 
   return (
     <div>
       <div className="text-md mx-auto flex items-center justify-center gap-4 text-gray-700">
         {Icon && <Icon className="size-4 text-gray-800" />}
-        <span className="font-bold">{title}</span>
+        <span className="font-bold">{adminConfig.title}</span>
       </div>
-      {isNew || id ? (
-        <Edit id={id ? parseInt(id) : undefined} isNew={isNew} {...props} />
-      ) : (
-        <AdminList {...props} />
-      )}
+      {(() => {
+        if (isAdminTableConfig(adminConfig)) {
+          if (!isNew && !id) {
+            return (
+              <AdminList
+                name={name}
+                adminConfig={adminConfig}
+                userId={user.id}
+              />
+            );
+          }
+
+          return (
+            <Edit
+              id={id ? parseInt(id) : undefined}
+              isNew={isNew}
+              name={name}
+              adminConfig={adminConfig}
+              userId={user.id}
+            />
+          );
+        }
+
+        return (
+          <Edit
+            recordKey={adminConfig.key}
+            isNew={isNew}
+            name={name}
+            adminConfig={adminConfig}
+            userId={user.id}
+          />
+        );
+      })()}
     </div>
   );
 }

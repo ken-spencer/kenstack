@@ -19,7 +19,7 @@ import {
 } from "@kenstack/components/forms/Combobox";
 import Field, { type FieldProps } from "@kenstack/forms/Field";
 import useDebounce from "@kenstack/hooks/useDebounce";
-import fetcher, { type FetchResult } from "@kenstack/lib/fetcher";
+import fetcher, { type FetchResult } from "@kenstack/api/fetcher";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 
 type RelationshipOption = {
@@ -68,7 +68,7 @@ function RelationshipControl({
     Error
   >({
     queryKey: [
-      "relationships",
+      "relationship-search",
       adminName,
       relationship,
       debouncedKeywords,
@@ -76,7 +76,7 @@ function RelationshipControl({
     ],
     queryFn: async () =>
       fetcher(apiPath, {
-        action: "relationships",
+        action: "relationship-search",
         name: adminName,
         relationship,
         keywords: debouncedKeywords,

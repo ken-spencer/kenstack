@@ -1,12 +1,12 @@
 import bcrypt from "bcrypt";
 
-import { pipeline, PipelineOptions, pipelineStage } from "@kenstack/lib/api";
+import { pipeline, PipelineOptions, pipelineStage } from "@kenstack/api";
 import schema from "@kenstack/auth/schemas/resetPassword";
 import { deps } from "@app/deps";
 import { and, eq, gte, isNull } from "drizzle-orm";
 
 import crypto from "crypto";
-import { PipelineResponse } from "@kenstack/lib/api/PipelineResponse";
+import { PipelineResponse } from "@kenstack/api/PipelineResponse";
 
 class TransactionError extends Error {
   constructor(

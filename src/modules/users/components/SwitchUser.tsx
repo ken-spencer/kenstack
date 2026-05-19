@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "@kenstack/forms/context";
 
 import Button from "@kenstack/components/Button";
-import fetcher from "@kenstack/lib/fetcher";
+import fetcher from "@kenstack/api/fetcher";
 
 export default function SwitchUser() {
   const { id, userId, apiPath, name: tableName } = useAdminEdit();

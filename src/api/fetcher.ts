@@ -25,7 +25,7 @@ export default async function fetcher<
 >(
   path: RequestInfo,
   data: Record<string, unknown> | null = null,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<FetchResult<TExtra>> {
   const { headers: initHeaders, method, cache = "no-store", ...rest } = options;
   const headers = new Headers(initHeaders);

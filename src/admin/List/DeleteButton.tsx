@@ -14,7 +14,7 @@ import { Trash, Undo2 } from "lucide-react";
 import IconButton from "@kenstack/components/IconButton";
 import { Badge } from "@kenstack/components/ui/badge";
 import { useAdminList } from "./context";
-import fetcher, { type FetchResult } from "@kenstack/lib/fetcher";
+import fetcher, { type FetchResult } from "@kenstack/api/fetcher";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { AdminListResult } from "@kenstack/admin/client";

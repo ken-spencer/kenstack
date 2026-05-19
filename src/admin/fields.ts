@@ -1,6 +1,7 @@
 import * as z from "zod";
 import { imageSchema } from "@kenstack/zod/image";
 import { gallerySchema } from "@kenstack/zod/gallery";
+import tagsSchema from "@kenstack/schemas/atoms/tags";
 
 export const relationshipValueSchema = z.object({
   id: z.number(),
@@ -33,6 +34,14 @@ type GalleryOption = {
   searchable?: false;
 };
 
+type TagsOption = {
+  kind: "tags";
+  zod?: ReturnType<typeof tagsSchema>;
+  serverZod?: ReturnType<typeof tagsSchema>;
+  default?: z.output<ReturnType<typeof tagsSchema>>;
+  searchable?: false;
+};
+
 type RelationshipOption = {
   kind: "relationship";
   zod?: typeof relationshipSchema;
@@ -45,6 +54,7 @@ export type FieldOption =
   | DefaultOption
   | ImageOption
   | GalleryOption
+  | TagsOption
   | RelationshipOption;
 export type FieldOptions = Record<string, FieldOption>;
 export type DefinedFields = Record<string, Required<FieldOption>>;
@@ -84,6 +94,19 @@ export function defineFields(options: FieldOptions) {
             ...field,
             zod: field.zod ?? relationshipSchema,
             serverZod: field.serverZod ?? relationshipSchema,
+            default: field.default ?? [],
+            searchable: false,
+          },
+        ];
+      }
+
+      if ("kind" in field && field.kind === "tags") {
+        return [
+          key,
+          {
+            ...field,
+            zod: field.zod ?? tagsSchema(),
+            serverZod: field.serverZod ?? tagsSchema(),
             default: field.default ?? [],
             searchable: false,
           },

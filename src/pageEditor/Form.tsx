@@ -3,7 +3,7 @@ import Form from "@kenstack/forms/Form";
 import Notice from "@kenstack/forms/Notice";
 import { pageEditorSchema, type ApiSchema } from "./schema";
 import { usePageEditor } from "./context";
-import fetcher from "@kenstack/lib/fetcher";
+import fetcher from "@kenstack/api/fetcher";
 
 export const PageEditorForm = ({ children }: { children: React.ReactNode }) => {
   const { content } = usePageEditor();

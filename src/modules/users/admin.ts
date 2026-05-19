@@ -3,11 +3,11 @@
 import { users } from "./tables";
 import { UsersRound } from "lucide-react";
 
-import { adminTable } from "@kenstack/admin";
+import { adminConfig } from "@kenstack/admin/config";
 import client from "./client";
 import { fields } from "./fields";
 
-export const userAdminTableOptions = {
+export const userAdminConfigOptions = {
   title: "Users",
   icon: UsersRound,
   client,
@@ -21,6 +21,6 @@ export const userAdminTableOptions = {
   },
 } as const;
 
-const config = adminTable(userAdminTableOptions);
+const config = adminConfig(userAdminConfigOptions);
 
 export default config;

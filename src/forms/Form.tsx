@@ -10,7 +10,7 @@ import {
   type StatusMessage,
   type FormSchema,
 } from "./context";
-import { type FetchResult } from "@kenstack/lib/fetcher";
+import { type FetchResult } from "@kenstack/api/fetcher";
 import { type UseFormReturn, type FieldValues } from "react-hook-form";
 
 export type SetStatusMessage = React.Dispatch<

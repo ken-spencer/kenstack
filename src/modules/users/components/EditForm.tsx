@@ -4,7 +4,7 @@ import ResetPassword from "./ResetPassword";
 
 import roles from "@app/deps/roles";
 
-export default function Form() {
+export default function EditForm() {
   return (
     <div>
       <div className="flex flex-col gap-4 md:flex-row">

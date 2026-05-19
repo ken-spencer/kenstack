@@ -6,7 +6,7 @@ import React, { createContext, useContext, useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
-import fetcher from "@kenstack/lib/fetcher";
+import fetcher from "@kenstack/api/fetcher";
 import Alert from "@kenstack/components/Alert";
 import Progress from "@kenstack/components/Progress";
 import EditForm from "./Form";
@@ -15,7 +15,9 @@ import { AdminClient, PreviewPath } from "..";
 type AdminEditProps = {
   name: string;
   id?: number;
+  recordKey?: string;
   isNew: boolean;
+  single: boolean;
   userId: number;
   defaultValues: Record<string, unknown>;
   client: AdminClient;
@@ -27,14 +29,16 @@ type EditItem = {
   id: number;
   createdAt: string;
   updatedAt: string;
-  deletedAt: string | null;
+  deletedAt?: string | null;
 } & Record<string, unknown>;
 
 type AdminEditContext = {
   name: string;
   client: AdminClient;
   id?: number;
+  recordKey?: string;
   isNew: boolean;
+  single: boolean;
   userId: number;
   apiPath: string;
   listPath: string;
@@ -49,7 +53,9 @@ const AdminEditContext = createContext<AdminEditContext | null>(null);
 export function AdminEditProvider({
   name,
   id,
+  recordKey,
   isNew,
+  single,
   userId,
   defaultValues,
   client,
@@ -63,22 +69,24 @@ export function AdminEditProvider({
     parts.pop(); // remove last segment
     return "/" + parts.join("/");
   }, [pathname]);
+  const loadTarget = single ? recordKey : id;
 
   const { data, error, isPending } = useQuery({
     queryFn: () =>
       fetcher<{ item: EditItem }>(apiPath, {
         name,
         action: "load",
-        id,
+        id: single ? undefined : id,
+        key: single ? recordKey : undefined,
       }),
-    queryKey: ["admin-edit", name, id],
-    enabled: !!id,
+    queryKey: ["admin-edit", name, loadTarget],
+    enabled: !!loadTarget,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
 
-  if (id) {
+  if (loadTarget) {
     if (error) {
       return <Alert className="my-2">{error.message}</Alert>;
     }
@@ -93,15 +101,18 @@ export function AdminEditProvider({
     defaultValues = data.item;
   }
 
+  const item = loadTarget && data?.status === "success" ? data.item : null;
   const values: AdminEditContext = {
     name,
     client,
-    id,
+    recordKey,
+    id: item?.id ?? (typeof id === "number" ? id : undefined),
     isNew,
+    single,
     apiPath,
     listPath,
     userId: userId,
-    item: id && data?.status === "success" ? data.item : null,
+    item,
     defaultValues,
     schema: client.schema,
     preview,

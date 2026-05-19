@@ -48,6 +48,14 @@ function AdminList() {
     return <Alert className="my-2">{data.message}</Alert>;
   }
 
+  if (!ListItem) {
+    return (
+      <Alert className="my-2">
+        A ListItem component is required to display this list.
+      </Alert>
+    );
+  }
+
   if (data.items.length === 0) {
     return <div className="py-2">No results</div>;
   }

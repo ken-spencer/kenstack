@@ -1,5 +1,5 @@
 import Link from "next/link";
-import MetaDates from "@kenstack/admin/MetaDates";
+import MetaDates from "@kenstack/admin/components/MetaDates";
 import { type ListItemComponent } from "@kenstack/admin/client";
 
 const ListItem: ListItemComponent<{

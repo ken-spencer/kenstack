@@ -2,19 +2,15 @@ import * as z from "zod";
 import { and, getTableName, inArray, isNotNull, isNull } from "drizzle-orm";
 import { revalidateTag } from "next/cache";
 
-import { pipelineStage } from "@kenstack/lib/api";
-import { pipeline } from "@kenstack/lib/api";
-import type { AdminApiOptions, AnyAdminTable } from "..";
+import { pipelineStage } from "@kenstack/api";
+import type { AnyAdminConfig } from "..";
+import { isAdminTableConfig } from "..";
 import { deps } from "@app/deps";
 
 const schema = z.object({
   remove: z.array(z.coerce.number()),
   mode: z.enum(["trash", "restore", "permanent"]).default("trash"),
 });
-
-const remove = ({ adminTable, ...options }: AdminApiOptions) => {
-  return pipeline(options, [removeAction(adminTable)]);
-};
 
 type RemovedRow = {
   id: number;
@@ -35,12 +31,16 @@ function impactedRecord(row: RemovedRow) {
   };
 }
 
-const removeAction = (adminTable: AnyAdminTable) =>
+export const removeAction = (adminConfig: AnyAdminConfig) =>
   pipelineStage({ role: "admin", schema }, async ({ response, user, data }) => {
+    if (!isAdminTableConfig(adminConfig)) {
+      return response.error("Single records cannot be removed.");
+    }
+
     if (data.remove.length === 0) {
       return response.error("No records provided to delete.");
     }
-    const { table } = adminTable;
+    const { table } = adminConfig;
     const { db } = deps;
     const tableName = getTableName(table);
     const deletedAtFilter =
@@ -76,9 +76,9 @@ const removeAction = (adminTable: AnyAdminTable) =>
       },
     });
 
-    if (adminTable.revalidate) {
+    if (adminConfig.revalidate) {
       for (const row of rows) {
-        adminTable.revalidate.forEach((validator) => {
+        adminConfig.revalidate.forEach((validator) => {
           if (typeof validator === "string") {
             revalidateTag(validator, "max");
           } else {
@@ -90,5 +90,3 @@ const removeAction = (adminTable: AnyAdminTable) =>
 
     return response.success({});
   });
-
-export default remove;

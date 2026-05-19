@@ -1,4 +1,5 @@
 import { CircleAlert } from "lucide-react";
+import Help from "@kenstack/components/Help";
 
 import {
   useFormContext,
@@ -29,6 +30,7 @@ type RenderProps = {
 export type FieldProps = {
   name: Path<FieldValues>;
   label?: React.ReactNode;
+  help?: React.ReactNode;
   description?: React.ReactNode;
 };
 type FieldPropsLocal = React.ComponentProps<"div"> &
@@ -39,6 +41,7 @@ type FieldPropsLocal = React.ComponentProps<"div"> &
 const Field: React.FC<FieldPropsLocal> = ({
   name,
   label,
+  help,
   description,
   render,
   ...props
@@ -52,7 +55,12 @@ const Field: React.FC<FieldPropsLocal> = ({
       name={name}
       render={({ field, fieldState }) => (
         <FormItem {...props}>
-          {label && <FormLabel className="select-text">{label}</FormLabel>}
+          {(label || help) && (
+            <div className="flex items-center gap-1 leading-none">
+              {label && <FormLabel className="select-text">{label}</FormLabel>}
+              {help && <Help message={help} />}
+            </div>
+          )}
           {render
             ? render({
                 field,

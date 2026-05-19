@@ -4,15 +4,15 @@ import Header from "./Header";
 import Footer from "./Footer";
 import List from "./List";
 
-import { type AnyAdminTable } from "@kenstack/admin";
+import { type AnyAdminTableConfig } from "@kenstack/admin";
 type AdminListProps = {
-  adminTable: AnyAdminTable;
+  adminConfig: AnyAdminTableConfig;
   userId: number;
   name: string;
 };
 
 export default function AdminListCont({
-  adminTable: { client, filterMeta, sortMeta },
+  adminConfig: { client, filterMeta, sortMeta },
   userId,
   name,
 }: AdminListProps) {

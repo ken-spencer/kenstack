@@ -23,14 +23,14 @@ import {
   // type MutationFunction,
   type UseMutationResult,
 } from "@tanstack/react-query";
-import fetcher, { type FetchResult } from "@kenstack/lib/fetcher";
+import fetcher, { type FetchResult } from "@kenstack/api/fetcher";
 
 export type FormSchema = z.ZodType<Record<string, unknown>, FieldValues>;
 
 //eslint-disable-next-line @typescript-eslint/no-explicit-any
 const FormContext = createContext<UseFormResult<any, any, any> | null>(null);
 
-import { FetchSuccess } from "@kenstack/lib/fetcher";
+import { FetchSuccess } from "@kenstack/api/fetcher";
 
 export type StatusMessage = {
   status: "error" | "success";

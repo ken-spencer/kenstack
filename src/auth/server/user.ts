@@ -106,30 +106,23 @@ export function createUser<
     return getUserBySessionToken(token.value);
   };
 
-  interface RequireUserOptions {
-    role?: TRoles[number] | readonly TRoles[number][];
-    redirectTo?: string;
-  }
-
   const requireUser = cache(
-    async (options?: RequireUserOptions): Promise<User> => {
+    async (role?: TRoles[number] | readonly TRoles[number][]): Promise<User> => {
       const user = await getCurrentUser();
 
       if (!user) {
-        redirect(options?.redirectTo || "/login");
+        redirect("/login");
       }
 
-      if (options?.role) {
-        const requiredRoles = Array.isArray(options.role)
-          ? options.role
-          : [options.role];
+      if (role) {
+        const requiredRoles = Array.isArray(role) ? role : [role];
 
         const hasPermission = user.roles.some((userRole) =>
           requiredRoles.includes(userRole),
         );
 
         if (!hasPermission) {
-          redirect(options?.redirectTo || "/login");
+          redirect("/login");
         }
       }
 

@@ -14,7 +14,7 @@ import {
 import { Trash, Undo2 } from "lucide-react";
 import IconButton from "@kenstack/components/IconButton";
 import { useAdminEdit } from "./context";
-import fetcher from "@kenstack/lib/fetcher";
+import fetcher from "@kenstack/api/fetcher";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useForm } from "@kenstack/forms/context";
@@ -54,7 +54,7 @@ export default function DeleteButton() {
 
       if ("success" === data.status) {
         queryClient.removeQueries({
-          queryKey: ["admin-edit", idToRemove],
+          queryKey: ["admin-edit", name, idToRemove],
           exact: true,
         });
         queryClient.invalidateQueries({
@@ -139,7 +139,7 @@ export function RestoreButton() {
 
       if ("success" === data.status) {
         queryClient.removeQueries({
-          queryKey: ["admin-edit", idToRestore],
+          queryKey: ["admin-edit", name, idToRestore],
           exact: true,
         });
         queryClient.invalidateQueries({

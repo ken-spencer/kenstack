@@ -6,7 +6,7 @@ import type { AdminFilterMeta, AdminSortMeta } from "@kenstack/admin";
 import * as z from "zod";
 
 const AdminListContext = createContext<UseListProps | null>(null);
-import fetcher from "@kenstack/lib/fetcher";
+import fetcher from "@kenstack/api/fetcher";
 import { useQuery, UseQueryResult } from "@tanstack/react-query";
 import useQueryStore, { type SetQueryStore } from "./useQueryStore";
 

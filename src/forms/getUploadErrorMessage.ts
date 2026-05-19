@@ -1,4 +1,4 @@
-import type { FetchError } from "@kenstack/lib/fetcher";
+import type { FetchError } from "@kenstack/api/fetcher";
 
 const uploadErrorFields = ["size", "type", "filename", "fieldname"] as const;
 

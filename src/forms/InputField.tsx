@@ -31,6 +31,7 @@ type InputProps = FieldProps &
 export default function InputField({
   name,
   label,
+  help,
   description,
   className,
   inputClass,
@@ -43,6 +44,7 @@ export default function InputField({
     <Field
       name={name}
       label={label}
+      help={help}
       description={description}
       className={className}
       render={({ field }) => (

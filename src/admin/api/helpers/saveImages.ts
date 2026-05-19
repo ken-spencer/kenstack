@@ -3,46 +3,39 @@ import type * as z from "zod";
 
 import { images } from "@kenstack/db/tables";
 import { imageSchema } from "@kenstack/zod/image";
-import type { AnyAdminTable } from "@kenstack/admin";
+import type { AnyAdminConfig } from "@kenstack/admin";
 import type { deps } from "@app/deps";
 import type { User } from "@kenstack/types";
 
 type ImageStatusQuery = (tx: TransactionDb) => Promise<unknown>;
-type TableColumns = ReturnType<typeof getTableColumns<AnyAdminTable["table"]>>;
+type TableColumns = ReturnType<typeof getTableColumns<AnyAdminConfig["table"]>>;
 type TransactionDb = Parameters<
   Parameters<(typeof deps)["db"]["transaction"]>[0]
 >[0];
 
+type ImageMetadataInput = {
+  alt?: string | null;
+  title?: string | null;
+  caption?: string | null;
+};
+
 const imageMetadataKeys = ["alt", "title", "caption"] as const;
 
-function hasImageMetadata(
-  fieldData: z.output<typeof imageSchema>,
-): fieldData is Extract<
-  NonNullable<z.output<typeof imageSchema>>,
-  { alt?: string | null }
-> {
-  return typeof fieldData === "object" && fieldData !== null;
-}
-
-function getImageMetadata(fieldData: z.output<typeof imageSchema>) {
-  if (!hasImageMetadata(fieldData)) {
-    return {};
-  }
-
+export function imageMetadata(input: ImageMetadataInput) {
   return Object.fromEntries(
-    imageMetadataKeys.map((key) => [key, fieldData[key] ?? null]),
+    imageMetadataKeys.map((key) => [key, input[key] ?? null]),
   );
 }
 
 export async function prepareImageFields({
-  adminTable,
+  adminConfig,
   columns,
   data,
   id,
   user,
   db,
 }: {
-  adminTable: AnyAdminTable;
+  adminConfig: AnyAdminConfig;
   columns: TableColumns;
   data: Record<string, unknown>;
   id?: number | null;
@@ -51,7 +44,7 @@ export async function prepareImageFields({
 }) {
   const imageStatusQueries: ImageStatusQuery[] = [];
 
-  for (const [key, field] of Object.entries(adminTable.fields)) {
+  for (const [key, field] of Object.entries(adminConfig.fields)) {
     if (field.kind !== "image") {
       continue;
     }
@@ -75,8 +68,8 @@ export async function prepareImageFields({
       data[key] = null;
       const [oldRow] = await db
         .select({ removeId: column })
-        .from(adminTable.table)
-        .where(eq(adminTable.table.id, id))
+        .from(adminConfig.table)
+        .where(eq(adminConfig.table.id, id))
         .limit(1);
 
       imageStatusQueries.push(async (tx) => {
@@ -99,7 +92,7 @@ export async function prepareImageFields({
         imageStatusQueries.push((tx) =>
           tx
             .update(images)
-            .set(getImageMetadata(fieldData))
+            .set(imageMetadata(fieldData))
             .where(eq(images.id, imageId)),
         );
       }
@@ -120,7 +113,10 @@ export async function prepareImageFields({
       imageStatusQueries.push((tx) =>
         tx
           .update(images)
-          .set({ status: "attached", ...getImageMetadata(fieldData) })
+          .set({
+            status: "attached",
+            ...imageMetadata(fieldData),
+          })
           .where(
             and(
               eq(images.publicId, fieldData.imageId),

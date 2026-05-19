@@ -2,24 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import isPlainObject from "lodash-es/isPlainObject";
 
 import { deps } from "@app/deps";
+import { pipeline } from "@kenstack/api";
 
-// import merge from "lodash-es/merge";
-
-import list from "@kenstack/admin/api/list";
-import load from "@kenstack/admin/api/load";
-import save from "@kenstack/admin/api/save";
-import remove from "@kenstack/admin/api/remove";
-import tags from "@kenstack/admin/api/tags";
-import relationships from "@kenstack/admin/api/relationships";
-import { getPresignedUrlPipeline } from "./presignedUrl";
-import { uploadCompletePipeline } from "./uploadComplete";
-import { impersonatePipeline } from "./impersonate";
+import { listAction } from "@kenstack/admin/api/list";
+import { loadAction } from "@kenstack/admin/api/load";
+import { saveAction } from "@kenstack/admin/api/save";
+import { removeAction } from "@kenstack/admin/api/remove";
+import { tagsAction } from "@kenstack/admin/api/tags";
+import { relationshipSearchAction } from "@kenstack/admin/api/relationshipSearch";
+import { getPresignedUrlAction } from "./presignedUrl";
+import { uploadCompleteAction } from "./uploadComplete";
+import { impersonateAction } from "./impersonate";
 import { pageEditorPipeline } from "@kenstack/pageEditor/api";
 
-import { type AdminConfig } from "@kenstack/admin";
-import { type FetchError } from "@kenstack/lib/fetcher";
+import { type AdminDefinition } from "@kenstack/admin";
+import { type FetchError } from "@kenstack/api/fetcher";
 
-type Options = { adminConfig: AdminConfig };
+type Options = { admin: AdminDefinition };
 
 export const adminPipeline = async (
   request: NextRequest,
@@ -31,9 +30,7 @@ export const adminPipeline = async (
   }
   // await deps.auth.revalidate();
 
-  const { adminConfig } = options;
-  // const { type, action } = await params;
-
+  const { admin } = options;
   const contentType = request.headers.get("content-type");
   if (!contentType?.startsWith("application/json")) {
     return NextResponse.json(
@@ -62,46 +59,43 @@ export const adminPipeline = async (
     return pageEditorPipeline({ request, json });
   }
 
-  const [, base /*overrides*/] = adminConfig.find(([t]) => t === name) || [];
-  if (!base) {
+  const adminConfig = admin.modules[name];
+  if (!adminConfig) {
     return NextResponse.json({
       status: "error",
-      message: `Unknown admin table name "${name}"`,
+      message: `Unknown admin config name "${name}"`,
     });
   }
 
-  // const input: [Request, typeof adminConfig] = [
-  //   request,
-  //   merge({}, base, overrides),
-  // ];
-  const input = {
-    request,
-    json,
-    adminTable: base, //merge({}, base, overrides),
-  };
+  const stage = (() => {
+    switch (action) {
+      case "list":
+        return listAction(adminConfig);
+      case "load":
+        return loadAction(adminConfig);
+      case "save":
+        return saveAction(adminConfig);
+      case "remove":
+        return removeAction(adminConfig);
+      case "get-presigned-url":
+        return getPresignedUrlAction(adminConfig);
+      case "upload-complete":
+        return uploadCompleteAction(adminConfig);
+      case "impersonate":
+        return impersonateAction();
+      case "tags":
+        return tagsAction(adminConfig);
+      case "relationship-search":
+        return relationshipSearchAction(adminConfig);
+    }
+  })();
 
-  switch (action) {
-    case "list":
-      return list(input);
-    case "load":
-      return load(input);
-    case "save":
-      return save(input);
-    case "remove":
-      return remove(input);
-    case "get-presigned-url":
-      return getPresignedUrlPipeline(input);
-    case "upload-complete":
-      return uploadCompletePipeline(input);
-    case "impersonate":
-      return impersonatePipeline(input);
-    case "tags":
-      return tags(input);
-    case "relationships":
-      return relationships(input);
+  if (!stage) {
+    return NextResponse.json({
+      status: "error",
+      message: `Unknown action ${action}`,
+    });
   }
-  return NextResponse.json({
-    status: "error",
-    message: `Unknown action ${action}`,
-  });
+
+  return pipeline({ request, json }, [stage]);
 };

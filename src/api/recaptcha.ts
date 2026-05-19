@@ -12,7 +12,7 @@ type RecaptchaVerifyResponse = {
   [k: string]: unknown;
 };
 
-import { pipelineStage } from "@kenstack/lib/api";
+import { pipelineStage } from "@kenstack/api";
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;

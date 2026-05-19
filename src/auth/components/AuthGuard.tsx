@@ -18,7 +18,7 @@ export default function AuthGuardCont(props: Props) {
 }
 
 async function AuthGuard({ role, children }: Props) {
-  const user = await deps.auth.requireUser({ role });
+  const user = await deps.auth.requireUser(role);
   if (user) {
     return children;
   }

@@ -1,4 +1,4 @@
-import { multiPipeline } from "@kenstack/lib/api";
+import { multiPipeline } from "@kenstack/api";
 import { NextRequest } from "next/server";
 import { loginPipeline } from "@kenstack/auth/handlers/login";
 import { logoutPipeline } from "@kenstack/auth/handlers/logout";

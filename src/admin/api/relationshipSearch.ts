@@ -2,8 +2,8 @@ import { and, asc, ilike, isNull, notInArray, or, sql } from "drizzle-orm";
 import * as z from "zod";
 
 import { deps } from "@app/deps";
-import type { AdminApiOptions, AnyAdminTable } from "@kenstack/admin";
-import { pipeline, pipelineStage } from "@kenstack/lib/api";
+import type { AnyAdminConfig } from "@kenstack/admin";
+import { pipelineStage } from "@kenstack/api";
 
 import type { AnyColumn } from "drizzle-orm";
 
@@ -22,13 +22,9 @@ type SoftDeleteTable = {
   deletedAt: AnyColumn;
 };
 
-const relationships = ({ adminTable, ...options }: AdminApiOptions) => {
-  return pipeline(options, [relationshipsAction(adminTable)]);
-};
-
-const relationshipsAction = (adminTable: AnyAdminTable) =>
+export const relationshipSearchAction = (adminConfig: AnyAdminConfig) =>
   pipelineStage({ role: "admin", schema }, async ({ response, data }) => {
-    const relationship = adminTable.relationships?.[data.relationship];
+    const relationship = adminConfig.relationships?.[data.relationship];
 
     if (!relationship) {
       return response.error(
@@ -72,5 +68,3 @@ const relationshipsAction = (adminTable: AnyAdminTable) =>
       items: items satisfies RelationshipResult[],
     });
   });
-
-export default relationships;

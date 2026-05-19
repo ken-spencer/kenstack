@@ -4,7 +4,7 @@ import { Tag as TagIcon } from "lucide-react";
 import Progress from "@kenstack/components/Progress";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import Alert from "@kenstack/components/Alert";
-import fetcher, { type FetchResult } from "@kenstack/lib/fetcher";
+import fetcher, { type FetchResult } from "@kenstack/api/fetcher";
 import useDebounce from "@kenstack/hooks/useDebounce";
 import { Input } from "@kenstack/components/ui/input";
 import { useAdminEdit } from "@kenstack/admin/Edit/context";

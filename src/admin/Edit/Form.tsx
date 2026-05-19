@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 // import useForm from "@kenstack/forms/useForm";
 import Form from "@kenstack/forms/Form";
 import omit from "lodash-es/omit";
-import fetcher from "@kenstack/lib/fetcher";
+import fetcher from "@kenstack/api/fetcher";
 
 import { useAdminEdit } from "./context";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
@@ -18,7 +18,9 @@ export default function AdminEditForm({
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const { defaultValues, schema, isNew, id, apiPath, name } = useAdminEdit();
+  const { defaultValues, schema, isNew, id, recordKey, single, apiPath, name } =
+    useAdminEdit();
+  const loadTarget = single ? recordKey : id;
   const basePathname = useMemo(() => {
     const parts = pathname.split("/").filter(Boolean); // removes empty strings
     parts.pop(); // remove last segment
@@ -44,7 +46,7 @@ export default function AdminEditForm({
       }}
       onSuccess={(data, variables, { form }) => {
         queryClient.invalidateQueries({ queryKey: ["admin-list"] });
-        queryClient.setQueryData(["admin-edit", data.id], {
+        queryClient.setQueryData(["admin-edit", name, loadTarget], {
           status: "success",
           id: data.id,
           item: data.values,

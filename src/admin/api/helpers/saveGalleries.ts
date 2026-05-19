@@ -6,6 +6,7 @@ import type { deps } from "@app/deps";
 import { images } from "@kenstack/db/tables";
 import type { User } from "@kenstack/types";
 import { gallerySchema } from "@kenstack/zod/gallery";
+import { imageMetadata } from "./saveImages";
 
 type GalleryValues = Record<string, z.output<typeof gallerySchema>>;
 type TransactionDb = Parameters<
@@ -87,19 +88,11 @@ export async function saveGalleries({
 
         if (image) {
           imageIds.push(image.id);
-          metadataByImageId.set(image.id, {
-            alt: item.alt ?? null,
-            title: item.title ?? null,
-            caption: item.caption ?? null,
-          });
+          metadataByImageId.set(image.id, imageMetadata(item));
         }
       } else if (typeof item.id === "number") {
         imageIds.push(item.id);
-        metadataByImageId.set(item.id, {
-          alt: item.alt ?? null,
-          title: item.title ?? null,
-          caption: item.caption ?? null,
-        });
+        metadataByImageId.set(item.id, imageMetadata(item));
       }
     }
 

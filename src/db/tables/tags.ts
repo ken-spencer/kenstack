@@ -9,7 +9,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
-import { type MetaTable } from "@kenstack/admin/table";
+import { type AdminTable } from "@kenstack/admin/table";
 
 export const tags = pgTable(
   "tags",
@@ -36,7 +36,7 @@ export const defineTags = ({
   table,
   prefix,
 }: {
-  table: MetaTable;
+  table: AdminTable;
   prefix: string;
 }) =>
   pgTable(

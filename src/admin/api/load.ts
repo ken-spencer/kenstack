@@ -1,55 +1,93 @@
-import { selectFields } from "./helpers/selectFields";
-import { pipeline, pipelineStage } from "@kenstack/lib/api";
+import { selectFields } from "@kenstack/admin/queries/selectFields";
+import { pipelineStage } from "@kenstack/api";
 import { deps } from "@app/deps";
 import { eq, asc } from "drizzle-orm";
 import { tags as tagsTable } from "@kenstack/db/tables/tags";
 import * as z from "zod";
 
-import type { AdminApiOptions, AnyAdminTable } from "..";
+import type { AnyAdminConfig } from "..";
+import { isAdminTableConfig } from "..";
 import { loadRelationships } from "./helpers/loadRelationships";
 import { loadGalleries } from "./helpers/loadGalleries";
 
-const load = ({ adminTable, ...options }: AdminApiOptions) => {
-  return pipeline(options, [loadAction(adminTable)]);
-};
-
-const loadAction = (adminTable: AnyAdminTable) =>
+export const loadAction = (adminConfig: AnyAdminConfig) =>
   pipelineStage(
-    { role: "admin", schema: z.object({ id: z.number() }) },
-    async ({ response, data: { id } }) => {
-      if (!id) {
-        return response.error("A valid id is required");
+    {
+      role: "admin",
+      schema: z.object({
+        id: z.number().optional(),
+        key: z.string().optional(),
+      }),
+    },
+    async ({ response, user, data: { id, key } }) => {
+      if (!id && !key) {
+        return response.error("A valid id or key is required");
       }
 
       const { db } = deps;
-      const { table, fields } = adminTable;
-      const tagRelations = adminTable?.tags?.table;
 
-      const select = selectFields(table, fields);
+      const select = selectFields(adminConfig.table, adminConfig.fields);
+      let rows = isAdminTableConfig(adminConfig)
+        ? !id
+          ? null
+          : await db
+              .select({ ...select, deletedAt: adminConfig.table.deletedAt })
+              .from(adminConfig.table)
+              .where(eq(adminConfig.table.id, id))
+        : key !== adminConfig.key
+          ? null
+          : await db
+              .select(select)
+              .from(adminConfig.table)
+              .where(eq(adminConfig.table.key, adminConfig.key));
 
-      const rows = await db
-        .select({ ...select, deletedAt: table.deletedAt })
-        .from(table)
-        .where(eq(table.id, id));
+      if (!rows) {
+        return response.error(
+          adminConfig.single
+            ? `Single records can only be loaded with key "${adminConfig.key}".`
+            : "A numeric id is required.",
+        );
+      }
+
+      if (!rows.length && adminConfig.single) {
+        rows = await db
+          .insert(adminConfig.table)
+          .values({
+            key: adminConfig.key,
+            ...adminConfig.defaultValues,
+            createdBy: user.id,
+          })
+          .onConflictDoNothing({ target: adminConfig.table.key })
+          .returning(select);
+
+        if (!rows.length) {
+          rows = await db
+            .select(select)
+            .from(adminConfig.table)
+            .where(eq(adminConfig.table.key, adminConfig.key));
+        }
+      }
 
       if (!rows.length) {
         return response.error("Unable to find the requested record.");
       }
 
+      const [row] = rows;
       const item: Record<string, unknown> = {
-        ...adminTable.defaultValues,
-        ...rows[0],
+        ...adminConfig.defaultValues,
+        ...row,
       };
+      const rowId = row.id;
 
-      if (tagRelations) {
+      if (adminConfig.tags?.table) {
         item.tags = await db
           .select({
             name: tagsTable.name,
             slug: tagsTable.slug,
           })
-          .from(tagRelations)
-          .innerJoin(tagsTable, eq(tagRelations.tagId, tagsTable.id))
-          .where(eq(tagRelations.tableId, id))
+          .from(adminConfig.tags.table)
+          .innerJoin(tagsTable, eq(adminConfig.tags.table.tagId, tagsTable.id))
+          .where(eq(adminConfig.tags.table.tableId, rowId))
           .orderBy(asc(tagsTable.name));
       }
 
@@ -57,8 +95,8 @@ const loadAction = (adminTable: AnyAdminTable) =>
         item,
         await loadRelationships({
           db,
-          tableId: id,
-          relationships: adminTable.relationships,
+          tableId: rowId,
+          relationships: adminConfig.relationships,
         }),
       );
 
@@ -66,8 +104,8 @@ const loadAction = (adminTable: AnyAdminTable) =>
         item,
         await loadGalleries({
           db,
-          tableId: id,
-          galleries: adminTable.galleries,
+          tableId: rowId,
+          galleries: adminConfig.galleries,
         }),
       );
 
@@ -76,5 +114,3 @@ const loadAction = (adminTable: AnyAdminTable) =>
       });
     },
   );
-
-export default load;

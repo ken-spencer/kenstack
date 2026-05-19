@@ -1,6 +1,6 @@
 import roles from "@app/deps/roles";
 
-import { defineFields } from "@kenstack/admin";
+import { defineFields } from "@kenstack/admin/fields";
 import * as z from "zod";
 import { email } from "@kenstack/schemas/atoms";
 

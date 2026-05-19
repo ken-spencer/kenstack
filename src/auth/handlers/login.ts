@@ -6,12 +6,12 @@ import {
   pipeline,
   pipelineStage,
   type PipelineOptions,
-} from "@kenstack/lib/api";
+} from "@kenstack/api";
 import loginSchema from "@kenstack/auth/schemas/login";
 import { deps } from "@app/deps";
 import { sql } from "drizzle-orm";
 
-import { PipelineResponse } from "@kenstack/lib/api/PipelineResponse";
+import { PipelineResponse } from "@kenstack/api/PipelineResponse";
 
 export const loginPipeline = () => (options: PipelineOptions) =>
   pipeline(options, [recaptcha(), login()]);

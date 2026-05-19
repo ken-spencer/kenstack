@@ -17,14 +17,15 @@ import {
   type SQL,
 } from "drizzle-orm";
 
-import { pipeline, pipelineStage } from "@kenstack/lib/api";
+import { pipelineStage } from "@kenstack/api";
 import type {
-  AdminApiOptions,
   AdminFilters,
   AdminSortField,
-  AnyAdminTable,
+  AnyAdminConfig,
+  AnyAdminTableConfig,
   SortDirection,
 } from "@kenstack/admin";
+import { isAdminTableConfig } from "@kenstack/admin";
 
 import { deps } from "@app/deps";
 
@@ -32,20 +33,22 @@ const maxTextFilterLength = 200;
 const maxDateFilterLength = 64;
 const maxListPage = 10000;
 
-const list = ({ adminTable, ...options }: AdminApiOptions) => {
-  return pipeline(options, [listAction(adminTable)]);
-};
+export const listAction = (adminConfig: AnyAdminConfig) => {
+  if (!isAdminTableConfig(adminConfig)) {
+    return pipelineStage({ role: "admin" }, async ({ response }) => {
+      return response.error("This admin config is not listable.");
+    });
+  }
 
-const listAction = (adminTable: AnyAdminTable) =>
-  pipelineStage(
-    { role: "admin", schema: getListSchema(adminTable) },
+  return pipelineStage(
+    { role: "admin", schema: getListSchema(adminConfig) },
     async ({ response, data }) => {
       const { keywords, page, trash } = data;
-      const limit = adminTable.limit || 25;
+      const limit = adminConfig.limit || 25;
       const offset = (page - 1) * limit;
 
       const { db } = deps;
-      const { table, fields } = adminTable;
+      const { table, fields } = adminConfig;
 
       const searchable = Object.entries(fields)
         .filter(([, field]) => "searchable" in field && field.searchable)
@@ -70,18 +73,18 @@ const listAction = (adminTable: AnyAdminTable) =>
         where.push(or(...searchConditions)!);
       }
 
-      where.push(...resolveFilters(adminTable.filters, data.filters));
+      where.push(...resolveFilters(adminConfig.filters, data.filters));
 
       const rows = await db
         .select({
           id: table.id,
           createdAt: table.createdAt,
           updatedAt: table.updatedAt,
-          ...adminTable.select,
+          ...adminConfig.select,
         })
         .from(table)
         .where(and(...where))
-        .orderBy(...resolveOrderBy(adminTable, data.sort, data.direction))
+        .orderBy(...resolveOrderBy(adminConfig, data.sort, data.direction))
         .limit(limit)
         .offset(offset);
 
@@ -93,6 +96,7 @@ const listAction = (adminTable: AnyAdminTable) =>
       return response.success({ total: count, items: rows });
     },
   );
+};
 
 function resolveFilters(
   filters: AdminFilters,
@@ -163,8 +167,8 @@ function resolveFilters(
   return where;
 }
 
-function getListSchema(adminTable: AnyAdminTable) {
-  const sortNames = Object.keys(adminTable.sort);
+function getListSchema(adminConfig: AnyAdminTableConfig) {
+  const sortNames = Object.keys(adminConfig.sort);
 
   return z.object({
     keywords: z.string().max(maxTextFilterLength).catch(""),
@@ -174,7 +178,7 @@ function getListSchema(adminTable: AnyAdminTable) {
       .refine((value) => sortNames.includes(value))
       .optional(),
     direction: z.enum(["asc", "desc"]).optional(),
-    filters: getFiltersSchema(adminTable.filters).catch({}),
+    filters: getFiltersSchema(adminConfig.filters).catch({}),
     page: z.coerce.number().int().positive().max(maxListPage).catch(1),
   });
 }
@@ -400,11 +404,11 @@ function parseBooleanInput(value: unknown) {
 }
 
 function resolveOrderBy(
-  adminTable: AnyAdminTable,
+  adminConfig: AnyAdminTableConfig,
   requestedSort: string | undefined,
   requestedDirection: SortDirection | undefined,
 ) {
-  const { sort, table } = adminTable;
+  const { sort, table } = adminConfig;
   const sortName =
     requestedSort && sort[requestedSort] ? requestedSort : Object.keys(sort)[0];
   const option = sort[sortName];
@@ -434,5 +438,3 @@ function getSortDirection(
     ? field.direction
     : selectedDirection;
 }
-
-export default list;

@@ -31,9 +31,11 @@ const formatDate = (date: string | Date) => {
 export default function InputField({
   name,
   label,
+  help,
   description,
   className,
   inputClass,
+  disabled,
   ...props
 }: InputProps) {
   const { watch, getValues, setValue: setFormValue } = useFormContext();
@@ -70,16 +72,22 @@ export default function InputField({
     <Field
       name={name}
       label={label}
+      help={help}
       description={description}
       className={className}
       render={({ field }) => (
         <div className="relative flex items-center">
-          <DatePicker handleDate={handleDate} value={value} />
+          <DatePicker
+            disabled={disabled}
+            handleDate={handleDate}
+            value={value}
+          />
           <FormControl>
             <Input
               {...field}
               placeholder="eg: Jan 27 or Next Thursday"
               {...props}
+              disabled={disabled}
               className={twMerge("pl-9", inputClass)}
               value={value}
               onChange={(e) => {
@@ -103,9 +111,11 @@ export default function InputField({
 }
 
 function DatePicker({
+  disabled,
   handleDate,
   value,
 }: {
+  disabled?: boolean;
   handleDate: (newDate: string | Date) => void;
   value: string;
 }) {
@@ -116,6 +126,7 @@ function DatePicker({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          disabled={disabled}
           variant="ghost"
           size="icon"
           className="absolute"

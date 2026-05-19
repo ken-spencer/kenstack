@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { type FetchError } from "../fetcher";
+import { type FetchError } from "./fetcher";
 // import { type PipelineAction } from ".";
 import { pipeline, type PipelineOptions } from ".";
 import isPlainObject from "lodash-es/isPlainObject";
@@ -15,7 +15,7 @@ type Actions = [
 
 export default async function multiPipeline(
   options: Options,
-  actions: Actions
+  actions: Actions,
 ) {
   const { request } = options;
   const contentType = request.headers.get("content-type");
@@ -25,7 +25,7 @@ export default async function multiPipeline(
         status: "error",
         message: "Invalid request. Only JSON is accepted.",
       } satisfies FetchError,
-      { status: 415 }
+      { status: 415 },
     );
   }
 
@@ -36,7 +36,7 @@ export default async function multiPipeline(
         status: "error",
         message: `Invalid JSON a plain object is expected`,
       } satisfies FetchError,
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -48,7 +48,7 @@ export default async function multiPipeline(
         status: "error",
         message: `Invalid request; action is required`,
       } satisfies FetchError,
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -60,7 +60,7 @@ export default async function multiPipeline(
         status: "error",
         message: `Invalid action ${actionName}`,
       } satisfies FetchError,
-      { status: 400 }
+      { status: 400 },
     );
   }
 

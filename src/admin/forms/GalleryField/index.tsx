@@ -9,7 +9,7 @@ import ProgressIcon from "@kenstack/icons/Progress";
 import Field, { type FieldProps } from "@kenstack/forms/Field";
 import { useForm } from "@kenstack/forms/context";
 import getUploadErrorMessage from "@kenstack/forms/getUploadErrorMessage";
-import fetcher from "@kenstack/lib/fetcher";
+import fetcher from "@kenstack/api/fetcher";
 import { rasterMimeTypes as acceptDefault } from "@kenstack/db/tables/images/mimeTypes";
 import { useAdminEdit } from "@kenstack/admin/Edit/context";
 import ImageDetailsModal, {

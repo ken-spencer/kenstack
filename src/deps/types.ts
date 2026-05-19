@@ -1,7 +1,7 @@
 // export { type ConfigDeps, type Tables } from "./createConfig";
 
 // import { type PostgresJsDatabase } from "drizzle-orm/postgres-js";
-// import { type FetchError } from "@kenstack/lib/fetcher";
+// import { type FetchError } from "@kenstack/api/fetcher";
 
 // packages/server/src/db/contracts.ts
 // import type { AnyPgColumn } from "drizzle-orm/pg-core";
@@ -33,7 +33,7 @@
 //   login: (userId: number) => Promise<void>;
 //   logout: () => Promise<void>;
 //   getCurrentUser: () => Promise<User | undefined>;
-//   requireUser: (options?: RequireUserOptions) => Promise<User>;
+//   requireUser: (role?: UserRoles | UserRoles[]) => Promise<User>;
 // };
 
 // import { type User } from "@kenstack/types";

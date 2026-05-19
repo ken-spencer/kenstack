@@ -13,7 +13,7 @@ import {
   recaptcha,
   type PipelineOptions,
   pipelineStage,
-} from "@kenstack/lib/api";
+} from "@kenstack/api";
 import schema from "@kenstack/auth/schemas/forgotPassword";
 import { type ForgotPasswordEmailProps } from "@kenstack/auth/email/ForgotPassword";
 

@@ -23,7 +23,7 @@ export type ListItemComponent<
   TExtra extends Record<string, unknown> = Record<string, unknown>,
 > = React.FC<ListItemProps<TExtra>>;
 
-import type { FetchResult } from "@kenstack/lib/fetcher";
+import type { FetchResult } from "@kenstack/api/fetcher";
 
 export type AdminListResult<
   TItem extends Record<string, unknown> | never = never,
@@ -38,7 +38,7 @@ export type AdminClientProps = {
   schema?: z.ZodObject;
   fields: DefinedFields;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ListItem: ListItemComponent<any>;
+  ListItem?: ListItemComponent<any>;
   EditForm: React.FC;
 };
 

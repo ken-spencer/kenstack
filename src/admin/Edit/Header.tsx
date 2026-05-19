@@ -16,59 +16,79 @@ export default function AdminEditHeader() {
   } = useFormContext();
 
   const { mutation, uploadingFields } = useForm();
-  const { listPath, preview, isNew, item } = useAdminEdit();
+  const { listPath, preview, isNew, single, item } = useAdminEdit();
   const hasUploads = uploadingFields.size > 0;
   const isDeleted = !!item?.deletedAt;
+  const previewPath =
+    preview && item
+      ? preview.replace(/\${(.*?)}/g, (_, key) =>
+          typeof item[key] === "string" || typeof item[key] === "number"
+            ? String(item[key])
+            : "",
+        )
+      : undefined;
+  const previewUrl = previewPath
+    ? `${previewPath}${previewPath.includes("?") ? "&" : "?"}preview`
+    : undefined;
+
   return (
     <div className="flex gap-4 border-b">
       <div className="flex grow gap-1">
-        <IconButton
-          disabled={!isDirty || mutation.isPending || hasUploads}
-          isPending={
-            mutation.isPending && mutation.variables.submitter === "new"
-          }
-          className={isDirty ? "" : "hidden"}
-          name="action"
-          value="new"
-          tooltip="New Entry"
-        >
-          <Plus className="size-6 text-gray-800" />
-        </IconButton>
-        <IconButton
-          className={isDirty ? "hidden" : ""}
-          tooltip="New Entry"
-          asChild
-        >
-          <Link
-            href={
-              listPath + "/new" + (searchParams.size ? "?" + searchParams : "")
-            }
-          >
-            <Plus className="size-6 text-gray-800" />
-          </Link>
-        </IconButton>
+        {!single && (
+          <>
+            <IconButton
+              disabled={!isDirty || mutation.isPending || hasUploads}
+              isPending={
+                mutation.isPending && mutation.variables.submitter === "new"
+              }
+              className={isDirty ? "" : "hidden"}
+              name="action"
+              value="new"
+              tooltip="New Entry"
+            >
+              <Plus className="size-6 text-gray-800" />
+            </IconButton>
+            <IconButton
+              className={isDirty ? "hidden" : ""}
+              tooltip="New Entry"
+              asChild
+            >
+              <Link
+                href={
+                  listPath +
+                  "/new" +
+                  (searchParams.size ? "?" + searchParams : "")
+                }
+              >
+                <Plus className="size-6 text-gray-800" />
+              </Link>
+            </IconButton>
 
-        <IconButton
-          disabled={!isDirty || mutation.isPending || hasUploads}
-          isPending={
-            mutation.isPending && mutation.variables.submitter === "list"
-          }
-          className={isDirty ? "" : "hidden"}
-          name="action"
-          value="list"
-          tooltip="Go To List"
-        >
-          <List className="size-6 text-gray-800" />
-        </IconButton>
-        <IconButton
-          className={isDirty ? "hidden" : ""}
-          tooltip="Go To List"
-          asChild
-        >
-          <Link href={listPath + (searchParams.size ? "?" + searchParams : "")}>
-            <List className="size-6 text-gray-800" />
-          </Link>
-        </IconButton>
+            <IconButton
+              disabled={!isDirty || mutation.isPending || hasUploads}
+              isPending={
+                mutation.isPending && mutation.variables.submitter === "list"
+              }
+              className={isDirty ? "" : "hidden"}
+              name="action"
+              value="list"
+              tooltip="Go To List"
+            >
+              <List className="size-6 text-gray-800" />
+            </IconButton>
+            <IconButton
+              className={isDirty ? "hidden" : ""}
+              tooltip="Go To List"
+              asChild
+            >
+              <Link
+                href={listPath + (searchParams.size ? "?" + searchParams : "")}
+              >
+                <List className="size-6 text-gray-800" />
+              </Link>
+            </IconButton>
+          </>
+        )}
 
         <IconButton
           disabled={!isDirty || mutation.isPending || hasUploads}
@@ -83,28 +103,23 @@ export default function AdminEditHeader() {
         </IconButton>
       </div>
       <div className="">
-        {preview && !isNew && item && !isDeleted && (
+        {previewUrl && !isNew && !isDeleted && (
           <IconButton
             type="button"
             disabled={isNew}
             tooltip="View Content"
-            onClick={() =>
-              window.open(
-                preview.replace(/\${(.*?)}/g, (_, key) =>
-                  typeof item[key] === "string" || typeof item[key] === "number"
-                    ? String(item[key])
-                    : "",
-                ),
-                "_blank",
-              )
-            }
+            onClick={() => window.open(previewUrl, "_blank")}
           >
             <ScanEye className="size-6 text-gray-800" />
           </IconButton>
         )}
 
-        <RestoreButton />
-        <DeleteButton />
+        {!single && (
+          <>
+            <RestoreButton />
+            <DeleteButton />
+          </>
+        )}
         {/* <IconButton
           disabled={isDirty || mutation.isPending}
           type="button"

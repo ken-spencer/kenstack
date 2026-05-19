@@ -1,4 +1,4 @@
-import type { AdminApiOptions, AnyAdminTable } from "..";
+import type { AnyAdminConfig } from "..";
 import type { Readable } from "node:stream";
 
 import {
@@ -11,7 +11,7 @@ import { images } from "@kenstack/db/tables/images";
 import { deps } from "@app/deps";
 import { and, eq, getTableName } from "drizzle-orm";
 
-import { pipeline, pipelineStage } from "@kenstack/lib/api";
+import { pipelineStage } from "@kenstack/api";
 
 import * as z from "zod";
 // import { imageMimeTypes } from "@kenstack/zod/image";
@@ -46,13 +46,6 @@ const uploadSchema = z.object({
   fieldname: z.string("image field name is required").min(1),
   imageId: z.string("image id is required").min(1),
 });
-
-export const uploadCompletePipeline = ({
-  adminTable,
-  ...options
-}: AdminApiOptions) => {
-  return pipeline({ ...options }, [uploadCompleteAction(adminTable)]);
-};
 
 const s3 = new S3Client({
   requestChecksumCalculation: "WHEN_REQUIRED",
@@ -113,7 +106,7 @@ const removeUploadedObject = async (key: string) => {
   );
 };
 
-const uploadCompleteAction = (adminTable: AnyAdminTable) =>
+export const uploadCompleteAction = (adminConfig: AnyAdminConfig) =>
   pipelineStage({ schema: uploadSchema }, async ({ data, response }) => {
     const { fieldname } = data;
     const user = await deps.auth.requireUser();
@@ -143,7 +136,7 @@ const uploadCompleteAction = (adminTable: AnyAdminTable) =>
     }
     const { id, key, type, baseName, prefix, filename } = pendingImage;
 
-    const field = adminTable.fields[fieldname];
+    const field = adminConfig.fields[fieldname];
     if (!field) {
       return response.error(`Unknown field name ${fieldname}`);
     }
@@ -211,7 +204,7 @@ const uploadCompleteAction = (adminTable: AnyAdminTable) =>
         .set({
           status: "uploaded",
           kind: "svg",
-          table: getTableName(adminTable.table),
+          table: getTableName(adminConfig.table),
           // sourceUrl,
           sourceSize: sanitizedSvg.length,
           sourceWidth: metadata.width ?? null,
@@ -298,7 +291,7 @@ const uploadCompleteAction = (adminTable: AnyAdminTable) =>
       .set({
         status: "uploaded",
         kind: "raster",
-        table: getTableName(adminTable.table),
+        table: getTableName(adminConfig.table),
 
         // sourceUrl: sourceUrl,
         // sourceType: type,

@@ -11,7 +11,7 @@ import {
 } from "@kenstack/components/ui/sidebar";
 import { AppSidebar } from "./app-sidebar";
 import AccountMenu from "@kenstack/components/AccountMenu";
-import { type AdminConfig } from "@kenstack/admin";
+import { type AdminDefinition } from "@kenstack/admin";
 import NavLink from "./NavLink";
 
 import Content from "./Content";
@@ -39,12 +39,12 @@ function NavLinkFallback({
 
 export default function AdminSidebar({
   // content,
-  adminConfig,
+  admin,
   logo,
   children,
 }: {
   content: React.ReactNode;
-  adminConfig: AdminConfig;
+  admin: AdminDefinition;
   logo?: React.ReactNode;
 
   children: React.ReactNode;
@@ -54,7 +54,7 @@ export default function AdminSidebar({
       <SidebarGroupLabel>Administration</SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
-          {adminConfig.map(([name, table]) => {
+          {Object.entries(admin.modules).map(([name, table]) => {
             const href = "/admin/" + name;
             const icon = table.icon ? <table.icon /> : <span className="w-3" />;
 

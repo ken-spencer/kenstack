@@ -1,7 +1,7 @@
 import { useCallback, useState, type ChangeEvent, type DragEvent } from "react";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 
-import fetcher from "@kenstack/lib/fetcher";
+import fetcher from "@kenstack/api/fetcher";
 
 import AddImageIcon from "./AddImageIcon";
 import ProgressIcon from "@kenstack/icons/Progress";
@@ -43,6 +43,7 @@ type ImageFieldRenderProps = {
 export default function ImageField({
   name,
   label,
+  help,
   description,
   ...props
 }: ImageFieldProps) {
@@ -50,6 +51,7 @@ export default function ImageField({
     <Field
       name={name}
       label={label}
+      help={help}
       description={description}
       render={imageRender({ ...props })}
     />

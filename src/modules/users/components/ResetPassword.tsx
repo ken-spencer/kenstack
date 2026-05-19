@@ -5,7 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import Button from "@kenstack/components/Button";
 import Alert from "@kenstack/components/Alert";
 
-import fetcher from "@kenstack/lib/fetcher";
+import fetcher from "@kenstack/api/fetcher";
 
 export default function ResetPassword() {
   const { id } = useAdminEdit();

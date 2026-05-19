@@ -1,6 +1,6 @@
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import type { AdminApiOptions, AnyAdminTable } from "..";
+import type { AnyAdminConfig } from "..";
 import kebabCase from "lodash-es/kebabCase";
 import { getTableName } from "drizzle-orm";
 import path from "node:path";
@@ -8,7 +8,7 @@ import unsecureId from "@kenstack/lib/unsecureId";
 import { images } from "@kenstack/db/tables";
 import { deps } from "@app/deps";
 
-import { pipeline, pipelineStage } from "@kenstack/lib/api";
+import { pipelineStage } from "@kenstack/api";
 
 import * as z from "zod";
 import { rasterMimeTypes } from "@kenstack/db/tables/images/mimeTypes";
@@ -35,14 +35,7 @@ const uploadSchema = z.object({
 
 const svgMimeType = "image/svg+xml";
 
-export const getPresignedUrlPipeline = ({
-  adminTable,
-  ...options
-}: AdminApiOptions) => {
-  return pipeline({ ...options }, [getPresignedUrl(adminTable)]);
-};
-
-const getPresignedUrl = (adminTable: AnyAdminTable) =>
+export const getPresignedUrlAction = (adminConfig: AnyAdminConfig) =>
   pipelineStage(
     { role: "admin", schema: uploadSchema },
     async ({ data, response, user }) => {
@@ -52,12 +45,12 @@ const getPresignedUrl = (adminTable: AnyAdminTable) =>
       const uploadType: string = type;
       const isSvg = uploadType === svgMimeType;
 
-      const field = adminTable.fields[fieldname];
+      const field = adminConfig.fields[fieldname];
       if (!field) {
         return response.error(`Unknown field name ${fieldname}`);
       }
 
-      const tablename = getTableName(adminTable.table);
+      const tablename = getTableName(adminConfig.table);
       const parsed = path.parse(filename);
       const baseName = kebabCase(parsed.name) || "image";
       const ext = parsed.ext.toLowerCase();

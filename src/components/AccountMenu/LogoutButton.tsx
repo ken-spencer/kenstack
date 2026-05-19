@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import fetcher from "@kenstack/lib/fetcher";
+import fetcher from "@kenstack/api/fetcher";
 
 import { LogOut } from "lucide-react";
 import { Button } from "@kenstack/components/ui/button";

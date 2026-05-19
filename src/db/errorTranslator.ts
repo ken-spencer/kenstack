@@ -1,5 +1,5 @@
 import postgres from "postgres";
-import { type FetchError } from "@kenstack/lib/fetcher";
+import { type FetchError } from "@kenstack/api/fetcher";
 
 const uniqueConstraintMessages: Record<string, [string, string]> = {
   users_email_unique_active: [
