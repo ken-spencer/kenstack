@@ -1,0 +1,80 @@
+import { pipelineStage } from "@kenstack/api";
+import type { AnyAdminConfig } from "..";
+import { deps } from "@app/deps";
+import { revisions } from "@kenstack/db/tables/revisions";
+import { and, desc, eq, getTableName, sql } from "drizzle-orm";
+import * as z from "zod";
+import { filterRevisionSnapshot } from "./helpers/revisions";
+
+export const revisionsAction = (adminConfig: AnyAdminConfig) =>
+  pipelineStage(
+    {
+      role: "admin",
+      schema: z.object({
+        id: z.number(),
+        revisionId: z.number().optional(),
+      }),
+    },
+    async ({ response, data: { id, revisionId } }) => {
+      const tableName = getTableName(adminConfig.table);
+
+      if (revisionId) {
+        const [revision] = await deps.db
+          .select({
+            id: revisions.id,
+            snapshot: revisions.snapshot,
+          })
+          .from(revisions)
+          .where(
+            and(
+              eq(revisions.id, revisionId),
+              eq(revisions.table, tableName),
+              eq(revisions.rowId, id),
+            ),
+          )
+          .limit(1);
+
+        if (!revision) {
+          return response.error("Unable to find the requested revision.");
+        }
+
+        return response.success({
+          revision: {
+            ...revision,
+            snapshot: filterRevisionSnapshot(
+              revision.snapshot,
+              adminConfig.fields,
+            ),
+          },
+        });
+      }
+
+      const { users } = deps.tables;
+      const rows = await deps.db
+        .select({
+          id: revisions.id,
+          createdAt: revisions.createdAt,
+          createdBy: revisions.createdBy,
+          createdByName: sql<string | null>`
+            coalesce(
+              nullif(trim(coalesce(${users.givenName}, '') || ' ' || coalesce(${users.familyName}, '')), ''),
+              ${users.email}
+            )
+          `,
+          changes: revisions.changes,
+        })
+        .from(revisions)
+        .leftJoin(users, eq(revisions.createdBy, users.id))
+        .where(
+          and(
+            eq(revisions.table, tableName),
+            eq(revisions.rowId, id),
+          ),
+        )
+        .orderBy(desc(revisions.createdAt));
+
+      return response.success({
+        revisions: rows,
+      });
+    },
+  );

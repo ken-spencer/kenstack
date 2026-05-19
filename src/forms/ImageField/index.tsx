@@ -210,10 +210,7 @@ const imageRender = ({
         });
         setUploading(false);
       } catch (e) {
-        setStatusMessage({
-          status: "error",
-          message: e instanceof Error ? e.message : String(e),
-        });
+        setStatusMessage(e instanceof Error ? e : String(e));
         reset();
       } finally {
         finishUploading(field.name);

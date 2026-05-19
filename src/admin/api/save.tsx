@@ -1,5 +1,6 @@
 import { selectFields } from "@kenstack/admin/queries/selectFields";
 import { pipelineStage } from "@kenstack/api";
+import { revisions } from "@kenstack/db/tables/revisions";
 import type { AnyAdminConfig } from "..";
 import { eq, getTableName, getTableColumns } from "drizzle-orm";
 import { revalidateTag } from "next/cache";
@@ -12,6 +13,7 @@ import {
   saveRelationships,
 } from "./helpers/saveRelationships";
 import { extractGalleryValues, saveGalleries } from "./helpers/saveGalleries";
+import { filterRevisionSnapshot } from "./helpers/revisions";
 
 import { deps } from "@app/deps";
 import { errorTranslator } from "@kenstack/db/errorTranslator";
@@ -24,13 +26,19 @@ export const saveAction = (adminConfig: AnyAdminConfig) =>
   pipelineStage(
     {
       role: "admin",
-      schema: adminConfig.schema.extend({
+      schema: z.object({
         id: adminConfig.single ? z.number() : z.number().nullish(),
+        changes: z.array(z.string()),
+        values: adminConfig.schema,
       }),
+      fieldsKey: "values",
     },
     async ({ response, user, data: rawData }) => {
-      const { id, tags, ...data } = rawData as Record<string, unknown> & {
-        id?: number | null;
+      const { changes, id, values } = rawData;
+      const changedFields = new Set(changes);
+      const shouldSaveField = (key: string) => !id || changedFields.has(key);
+      const { tags, ...data } = values as Record<string, unknown> & {
+        tags?: unknown;
       };
       const relationshipValues = extractRelationshipValues({
         data,
@@ -60,6 +68,7 @@ export const saveAction = (adminConfig: AnyAdminConfig) =>
         id,
         user,
         db,
+        shouldSaveField,
       });
 
       if (imageFields.status === "error") {
@@ -89,28 +98,45 @@ export const saveAction = (adminConfig: AnyAdminConfig) =>
           }
 
           if (adminConfig.tags?.table && Array.isArray(tags)) {
-            const savedTags = await saveTags({
-              db: tx,
-              tags: tags,
-              tableId: savedRow.id,
-              tagRelations: adminConfig.tags.table,
-            });
-
-            savedRow.tags = savedTags;
+            if (shouldSaveField("tags")) {
+              savedRow.tags = await saveTags({
+                db: tx,
+                tags: tags,
+                tableId: savedRow.id,
+                tagRelations: adminConfig.tags.table,
+              });
+            } else {
+              savedRow.tags = tags;
+            }
           }
 
           if (
             adminConfig.relationships &&
             Object.keys(relationshipValues).length
           ) {
-            const savedRelationships = await saveRelationships({
-              db: tx,
-              tableId: savedRow.id,
-              relationships: adminConfig.relationships,
-              values: relationshipValues,
-            });
+            const changedRelationshipValues = Object.fromEntries(
+              Object.entries(relationshipValues).filter(([key]) =>
+                shouldSaveField(key),
+              ),
+            );
+            const unchangedRelationshipValues = Object.fromEntries(
+              Object.entries(relationshipValues).filter(
+                ([key]) => !shouldSaveField(key),
+              ),
+            );
 
-            Object.assign(savedRow, savedRelationships);
+            Object.assign(savedRow, unchangedRelationshipValues);
+
+            if (Object.keys(changedRelationshipValues).length) {
+              const savedRelationships = await saveRelationships({
+                db: tx,
+                tableId: savedRow.id,
+                relationships: adminConfig.relationships,
+                values: changedRelationshipValues,
+              });
+
+              Object.assign(savedRow, savedRelationships);
+            }
           }
 
           if (imageFields.imageStatusQueries.length) {
@@ -120,16 +146,39 @@ export const saveAction = (adminConfig: AnyAdminConfig) =>
           }
 
           if (adminConfig.galleries && Object.keys(galleryValues).length) {
-            const savedGalleries = await saveGalleries({
-              db: tx,
-              tableId: savedRow.id,
-              galleries: adminConfig.galleries,
-              values: galleryValues,
-              user,
-            });
+            const changedGalleryValues = Object.fromEntries(
+              Object.entries(galleryValues).filter(([key]) =>
+                shouldSaveField(key),
+              ),
+            );
+            const unchangedGalleryValues = Object.fromEntries(
+              Object.entries(galleryValues).filter(
+                ([key]) => !shouldSaveField(key),
+              ),
+            );
 
-            Object.assign(savedRow, savedGalleries);
+            Object.assign(savedRow, unchangedGalleryValues);
+
+            if (Object.keys(changedGalleryValues).length) {
+              const savedGalleries = await saveGalleries({
+                db: tx,
+                tableId: savedRow.id,
+                galleries: adminConfig.galleries,
+                values: changedGalleryValues,
+                user,
+              });
+
+              Object.assign(savedRow, savedGalleries);
+            }
           }
+
+          await tx.insert(revisions).values({
+            table: getTableName(table),
+            rowId: savedRow.id,
+            createdBy: user.id,
+            changes,
+            snapshot: filterRevisionSnapshot(savedRow, fields),
+          });
 
           return savedRow;
         });
@@ -150,6 +199,7 @@ export const saveAction = (adminConfig: AnyAdminConfig) =>
         rowId: row.id,
         table: getTableName(table),
         action: id ? "update" : "insert",
+        data: { changes },
       });
 
       if (adminConfig.revalidate) {

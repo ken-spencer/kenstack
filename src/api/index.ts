@@ -5,6 +5,7 @@ export {
 } from "./pipeline";
 export { default as multiPipeline } from "./multiPipeline";
 export { default as recaptcha } from "./recaptcha";
+export { UserFacingError } from "./errors";
 
 // import type { NextRequest } from "next/server";
 // import { PipelineResponse } from "./PipelineResponse";

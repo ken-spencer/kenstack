@@ -34,6 +34,7 @@ export async function prepareImageFields({
   id,
   user,
   db,
+  shouldSaveField,
 }: {
   adminConfig: AnyAdminConfig;
   columns: TableColumns;
@@ -41,6 +42,7 @@ export async function prepareImageFields({
   id?: number | null;
   user: User;
   db: typeof deps.db;
+  shouldSaveField: (key: string) => boolean;
 }) {
   const imageStatusQueries: ImageStatusQuery[] = [];
 
@@ -50,6 +52,11 @@ export async function prepareImageFields({
     }
 
     const fieldData = data[key] as z.output<typeof imageSchema>;
+    if (!shouldSaveField(key)) {
+      delete data[key];
+      continue;
+    }
+
     if (typeof fieldData === "number") {
       delete data[key];
       continue;

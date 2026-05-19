@@ -23,19 +23,74 @@ import {
   // type MutationFunction,
   type UseMutationResult,
 } from "@tanstack/react-query";
-import fetcher, { type FetchResult } from "@kenstack/api/fetcher";
+import fetcher, {
+  type FetchResult,
+  type FetchSuccess,
+} from "@kenstack/api/fetcher";
+import {
+  UserFacingError,
+  getUserFacingErrorMessage,
+} from "@kenstack/api/errors";
 
 export type FormSchema = z.ZodType<Record<string, unknown>, FieldValues>;
 
 //eslint-disable-next-line @typescript-eslint/no-explicit-any
 const FormContext = createContext<UseFormResult<any, any, any> | null>(null);
 
-import { FetchSuccess } from "@kenstack/api/fetcher";
-
 export type StatusMessage = {
   status: "error" | "success";
   message: React.ReactNode;
 };
+
+type StatusMessageInput =
+  | StatusMessage
+  | FetchResult<Record<string, unknown>>
+  | Error
+  | string
+  | null
+  | undefined;
+
+export type SetStatusMessage = (message: StatusMessageInput) => void;
+
+function hasStatus(value: object): value is {
+  status: "error" | "success";
+  message?: React.ReactNode;
+} {
+  return (
+    "status" in value && (value.status === "error" || value.status === "success")
+  );
+}
+
+function normalizeStatusMessage(
+  message: StatusMessageInput,
+): StatusMessage | null {
+  if (message === null || message === undefined || message === "") {
+    return null;
+  }
+
+  if (message instanceof UserFacingError) {
+    return message.message
+      ? { status: "error", message: message.message }
+      : null;
+  }
+
+  if (message instanceof Error) {
+    const errorMessage = getUserFacingErrorMessage(message);
+    return errorMessage ? { status: "error", message: errorMessage } : null;
+  }
+
+  if (typeof message === "string") {
+    return { status: "error", message };
+  }
+
+  if (typeof message === "object" && hasStatus(message)) {
+    return message.message
+      ? { status: message.status, message: message.message }
+      : null;
+  }
+
+  return null;
+}
 
 // export type WithExtra<TResult> = TResult & { values: Record<string, unknown> };
 
@@ -60,6 +115,14 @@ export type FormProviderProps<
     variables: TVariables,
     context: { form: UseFormReturn<TValues> },
   ) => void;
+  onError?: (
+    error: Error,
+    variables: TVariables,
+    context: {
+      form: UseFormReturn<TValues>;
+      setStatusMessage: SetStatusMessage;
+    },
+  ) => void;
   children: React.ReactNode;
 };
 
@@ -71,7 +134,7 @@ export type UseFormResult<
   apiPath?: string;
   form: UseFormReturn<TValues>;
   statusMessage: StatusMessage | null;
-  setStatusMessage: React.Dispatch<React.SetStateAction<StatusMessage | null>>;
+  setStatusMessage: SetStatusMessage;
   uploadingFields: Set<string>;
   startUploading: (fieldName: string) => void;
   finishUploading: (fieldName: string) => void;
@@ -94,12 +157,15 @@ function FormProvider<
   // schema: schemaInitial,
   schema,
   mutationFn,
+  onError,
   onSuccess,
   children,
 }: FormProviderProps<TResult, TVariables, TSchema, TValues>) {
-  const [statusMessage, setStatusMessage] = useState<StatusMessage | null>(
-    null,
-  );
+  const [statusMessage, setStatusMessageState] =
+    useState<StatusMessage | null>(null);
+  const setStatusMessage = useCallback<SetStatusMessage>((message) => {
+    setStatusMessageState(normalizeStatusMessage(message));
+  }, []);
   const [uploadingFields, setUploadingFields] = useState<Set<string>>(
     () => new Set(),
   );
@@ -149,18 +215,15 @@ function FormProvider<
     onMutate: () => {
       setStatusMessage(null);
     },
-    onError: (err) => {
+    onError: (err, variables) => {
       if (err?.name === "AbortError") {
         return;
       }
-      setStatusMessage({
-        status: "error",
-        message:
-          "There was an unexpected problem handling your request. Please try again later.",
-      });
+      setStatusMessage(err);
 
       //eslint-disable-next-line no-console
       console.error(err);
+      onError?.(err, variables, { form, setStatusMessage });
     },
     onSuccess: (data, variables) => {
       if ("error" === data.status) {
@@ -189,16 +252,18 @@ function FormProvider<
           });
         }
 
-        if (typeof data.message === "string") {
+        if (typeof data.message === "string" || extraErrors.length) {
           setStatusMessage({
             status: "error",
             message: (
               <div>
-                <div>{data.message}</div>
+                {data.message && <div>{data.message}</div>}
                 {!!extraErrors.length && <ul>{extraErrors}</ul>}
               </div>
             ),
           });
+        } else {
+          setStatusMessage(data);
         }
 
         // if (formErrors.length) {
@@ -220,12 +285,7 @@ function FormProvider<
           });
         }
 
-        if (data.message) {
-          setStatusMessage({
-            status: "success",
-            message: data.message,
-          });
-        }
+        setStatusMessage(data);
         if (onSuccess) {
           //  && !("commit" in (variables as CommitVariables))) {
           onSuccess(data, variables, { form });

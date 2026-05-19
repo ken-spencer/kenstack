@@ -13,7 +13,7 @@ import {
 
 import { Trash, Undo2 } from "lucide-react";
 import IconButton from "@kenstack/components/IconButton";
-import { useAdminEdit } from "./context";
+import { useAdminEdit } from "../context";
 import fetcher from "@kenstack/api/fetcher";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
@@ -22,7 +22,8 @@ import { useForm } from "@kenstack/forms/context";
 export default function DeleteButton() {
   const { setStatusMessage } = useForm();
   const router = useRouter();
-  const { isNew, id, name, userId, apiPath, listPath, item } = useAdminEdit();
+  const { isNew, id, name, userId, apiPath, listPath, single, item } =
+    useAdminEdit();
   const queryClient = useQueryClient();
   const isDeleted = !!item?.deletedAt;
   const mutation = useMutation({
@@ -35,21 +36,14 @@ export default function DeleteButton() {
       }),
     onMutate: async () => {},
     onError: (err) => {
-      setStatusMessage({
-        status: "error",
-        message:
-          "There was an unexpected problem handling your request. Please try again later.",
-      });
+      setStatusMessage(err);
 
       // eslint-disable-next-line no-console
       console.error(err);
     },
     onSuccess: (data, idToRemove) => {
       if (data.status === "error") {
-        setStatusMessage({
-          status: "error",
-          message: data.message,
-        });
+        setStatusMessage(data);
       }
 
       if ("success" === data.status) {
@@ -65,6 +59,10 @@ export default function DeleteButton() {
       }
     },
   });
+
+  if (single) {
+    return null;
+  }
 
   return (
     <AlertDialog>
@@ -108,7 +106,7 @@ export default function DeleteButton() {
 export function RestoreButton() {
   const { setStatusMessage } = useForm();
   const router = useRouter();
-  const { isNew, id, name, apiPath, listPath, item } = useAdminEdit();
+  const { isNew, id, name, apiPath, listPath, single, item } = useAdminEdit();
   const queryClient = useQueryClient();
   const isDeleted = !!item?.deletedAt;
   const mutation = useMutation({
@@ -118,23 +116,16 @@ export function RestoreButton() {
         action: "remove",
         mode: "restore",
         remove: [idToRestore],
-      }),
+    }),
     onError: (err) => {
-      setStatusMessage({
-        status: "error",
-        message:
-          "There was an unexpected problem handling your request. Please try again later.",
-      });
+      setStatusMessage(err);
 
       // eslint-disable-next-line no-console
       console.error(err);
     },
     onSuccess: (data, idToRestore) => {
       if (data.status === "error") {
-        setStatusMessage({
-          status: "error",
-          message: data.message,
-        });
+        setStatusMessage(data);
       }
 
       if ("success" === data.status) {
@@ -151,7 +142,7 @@ export function RestoreButton() {
     },
   });
 
-  if (!isDeleted) {
+  if (single || !isDeleted) {
     return null;
   }
 

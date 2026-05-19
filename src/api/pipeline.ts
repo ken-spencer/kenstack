@@ -1,4 +1,5 @@
 import errorLog from "@kenstack/lib/errorLog";
+import { UserFacingError } from "./errors";
 import { NextRequest, NextResponse } from "next/server";
 import type { ObjectSchema } from ".";
 
@@ -61,6 +62,19 @@ type PipelineStageCallback<
   arg: PipelineStageContext<TSchema, TRole>,
 ) => Promise<PipelineStageResult> | PipelineStageResult;
 
+type PipelineStageOptions<
+  TSchema extends ObjectSchema | undefined,
+  TRole,
+> = {
+  schema?: TSchema;
+  role?: TRole;
+  fieldsKey?: string;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return isPlainObject(value);
+}
+
 export default async function pipeline(
   options: PipelineOptions,
   actions: PipelineStage[] = [],
@@ -108,6 +122,15 @@ export default async function pipeline(
         throw e;
       }
 
+      if (e instanceof UserFacingError) {
+        return response
+          .error({
+            message: e.message,
+            status: e.status,
+          })
+          .toNextResponse();
+      }
+
       if (e instanceof Error) {
         errorLog(e, `Fatal error on pipeline key ${key}`);
       } else {
@@ -145,24 +168,69 @@ export const pipelineStage =
     TSchema extends ObjectSchema | undefined = undefined,
     const TRole extends UserRole | undefined = undefined,
   >(
-    { schema, role }: { schema?: TSchema; role?: TRole },
+    { schema, role, fieldsKey }: PipelineStageOptions<TSchema, TRole>,
     action: PipelineStageCallback<TSchema, TRole>,
   ) =>
   async (ctx: PipelineContext) => {
     let data: PipelineStageContext<TSchema, TRole>["data"];
 
     if (schema) {
-      const parsed = await schema.safeParseAsync(ctx.dataIn);
-      if (!parsed.success) {
-        const { fieldErrors } = z.flattenError(parsed.error);
+      if (fieldsKey) {
+        if (!(schema instanceof z.ZodObject)) {
+          throw new Error("pipelineStage fieldsKey requires an object schema");
+        }
 
-        return ctx.response.error({
-          message: "Please review the form and correct the highlighted fields.",
-          fieldErrors: fieldErrors as Record<string, string[]>,
-        });
+        const { [fieldsKey]: valuesSchema, ...metaShape } = schema.shape;
+
+        if (!valuesSchema) {
+          throw new Error(
+            `pipelineStage fieldsKey "${fieldsKey}" is not in the schema`,
+          );
+        }
+
+        const metaSchema = z.object(metaShape);
+        const parsedMeta = await metaSchema.safeParseAsync(ctx.dataIn);
+        if (!parsedMeta.success) {
+          // eslint-disable-next-line no-console
+          console.error("Invalid form metadata", parsedMeta.error);
+
+          return ctx.response.error(
+            "There was an unexpected problem with your submission. The metadata received was invalid.",
+          );
+        }
+
+        const valuesInput = isRecord(ctx.dataIn)
+          ? ctx.dataIn[fieldsKey]
+          : undefined;
+        const parsedValues = await valuesSchema.safeParseAsync(valuesInput);
+        if (!parsedValues.success) {
+          const { fieldErrors } = z.flattenError(parsedValues.error);
+
+          return ctx.response.error({
+            message:
+              "Please review the form and correct the highlighted fields.",
+            fieldErrors: fieldErrors as Record<string, string[]>,
+          });
+        }
+
+        data = {
+          ...parsedMeta.data,
+          [fieldsKey]: parsedValues.data,
+        } as PipelineStageContext<TSchema, TRole>["data"];
+      } else {
+        const parsed = await schema.safeParseAsync(ctx.dataIn);
+        if (!parsed.success) {
+          const { fieldErrors } = z.flattenError(parsed.error);
+
+          return ctx.response.error({
+            message:
+              "Please review the form and correct the highlighted fields.",
+            fieldErrors: fieldErrors as Record<string, string[]>,
+          });
+        }
+
+        data = parsed.data as PipelineStageContext<TSchema, TRole>["data"];
       }
-
-      data = parsed.data as PipelineStageContext<TSchema, TRole>["data"];
     } else {
       data = undefined as PipelineStageContext<TSchema, TRole>["data"];
     }

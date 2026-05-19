@@ -3,7 +3,6 @@ import { useQueryClient } from "@tanstack/react-query";
 // import FormContainer from "@kenstack/forms/FormContainer";
 // import useForm from "@kenstack/forms/useForm";
 import Form from "@kenstack/forms/Form";
-import omit from "lodash-es/omit";
 import fetcher from "@kenstack/api/fetcher";
 
 import { useAdminEdit } from "./context";
@@ -18,8 +17,16 @@ export default function AdminEditForm({
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const { defaultValues, schema, isNew, id, recordKey, single, apiPath, name } =
-    useAdminEdit();
+  const {
+    defaultValues,
+    schema,
+    isNew,
+    id,
+    recordKey,
+    single,
+    apiPath,
+    name,
+  } = useAdminEdit();
   const loadTarget = single ? recordKey : id;
   const basePathname = useMemo(() => {
     const parts = pathname.split("/").filter(Boolean); // removes empty strings
@@ -32,7 +39,7 @@ export default function AdminEditForm({
       schema={schema}
       defaultValues={defaultValues}
       apiPath={apiPath}
-      mutationFn={async (vars) => {
+      mutationFn={async ({ changes, values }) => {
         return fetcher<{ id: number; values: Record<string, unknown> }>(
           apiPath,
           {
@@ -40,7 +47,8 @@ export default function AdminEditForm({
             name,
             id,
             isNew,
-            ...omit(vars, ["meta"]),
+            changes,
+            values,
           },
         );
       }}
@@ -50,6 +58,10 @@ export default function AdminEditForm({
           status: "success",
           id: data.id,
           item: data.values,
+        });
+        queryClient.removeQueries({
+          queryKey: ["admin-edit", name, loadTarget, "revisions"],
+          exact: true,
         });
 
         if (variables.submitter === "list") {
@@ -75,14 +87,15 @@ export default function AdminEditForm({
           );
         }
       }}
-      onSubmit={({ data, mutation, event }) => {
+      onSubmit={({ data, mutation, event, form }) => {
+        const changes = Object.keys(form.formState.dirtyFields);
         const button = (event?.nativeEvent as SubmitEvent)
           ?.submitter as HTMLButtonElement;
-        if (button && button.name === "action") {
-          return mutation.mutateAsync({ submitter: button.value, ...data });
-        } else {
-          return mutation.mutateAsync(data);
-        }
+        return mutation.mutateAsync({
+          changes,
+          submitter: button?.name === "action" ? button.value : undefined,
+          values: data,
+        });
       }}
     >
       {children}

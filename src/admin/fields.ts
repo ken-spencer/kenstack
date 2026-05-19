@@ -16,6 +16,7 @@ export type DefaultOption = {
   serverZod?: z.ZodType;
   default: unknown;
   searchable?: boolean;
+  revisions?: boolean;
 };
 
 type ImageOption = {
@@ -24,6 +25,7 @@ type ImageOption = {
   serverZod?: never;
   default?: null;
   searchable?: false;
+  revisions?: boolean;
 };
 
 type GalleryOption = {
@@ -32,6 +34,7 @@ type GalleryOption = {
   serverZod?: typeof gallerySchema;
   default?: z.output<typeof gallerySchema>;
   searchable?: false;
+  revisions?: boolean;
 };
 
 type TagsOption = {
@@ -40,6 +43,7 @@ type TagsOption = {
   serverZod?: ReturnType<typeof tagsSchema>;
   default?: z.output<ReturnType<typeof tagsSchema>>;
   searchable?: false;
+  revisions?: boolean;
 };
 
 type RelationshipOption = {
@@ -48,6 +52,7 @@ type RelationshipOption = {
   serverZod?: typeof relationshipSchema;
   default?: z.output<typeof relationshipSchema>;
   searchable?: false;
+  revisions?: boolean;
 };
 
 export type FieldOption =
@@ -70,6 +75,7 @@ export function defineFields(options: FieldOptions) {
             zod: field.zod ?? imageSchema,
             default: field.default ?? null,
             searchable: false,
+            revisions: field.revisions ?? true,
           },
         ];
       }
@@ -83,6 +89,7 @@ export function defineFields(options: FieldOptions) {
             serverZod: field.serverZod ?? gallerySchema,
             default: field.default ?? [],
             searchable: false,
+            revisions: field.revisions ?? true,
           },
         ];
       }
@@ -96,6 +103,7 @@ export function defineFields(options: FieldOptions) {
             serverZod: field.serverZod ?? relationshipSchema,
             default: field.default ?? [],
             searchable: false,
+            revisions: field.revisions ?? true,
           },
         ];
       }
@@ -109,6 +117,7 @@ export function defineFields(options: FieldOptions) {
             serverZod: field.serverZod ?? tagsSchema(),
             default: field.default ?? [],
             searchable: false,
+            revisions: field.revisions ?? true,
           },
         ];
       }
@@ -118,6 +127,7 @@ export function defineFields(options: FieldOptions) {
         {
           ...field,
           searchable: field.searchable === true,
+          revisions: field.revisions ?? true,
         },
       ];
     }),

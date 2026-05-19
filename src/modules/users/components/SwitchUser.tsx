@@ -25,11 +25,17 @@ export default function SwitchUser() {
     },
     onSuccess: (res) => {
       if (res.status === "error") {
-        setStatusMessage({ status: "error", message: res.message });
+        setStatusMessage(res);
       } else {
         queryClient.invalidateQueries({ queryKey: ["user-info"] });
         router.push("/");
       }
+    },
+    onError: (err) => {
+      setStatusMessage(err);
+
+      // eslint-disable-next-line no-console
+      console.error(err);
     },
   });
 

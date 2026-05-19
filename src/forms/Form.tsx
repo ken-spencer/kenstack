@@ -7,15 +7,11 @@ import {
   FormProvider,
   useForm,
   type FormProviderProps,
-  type StatusMessage,
+  type SetStatusMessage,
   type FormSchema,
 } from "./context";
 import { type FetchResult } from "@kenstack/api/fetcher";
 import { type UseFormReturn, type FieldValues } from "react-hook-form";
-
-export type SetStatusMessage = React.Dispatch<
-  React.SetStateAction<StatusMessage | null>
->;
 
 import type { UseMutationResult } from "@tanstack/react-query";
 type SubmitData<
@@ -70,6 +66,7 @@ export default function FormContainer<
   onChange,
   apiPath,
   mutationFn,
+  onError,
   onSuccess,
   schema,
   ...props
@@ -81,6 +78,7 @@ export default function FormContainer<
       apiPath={apiPath}
       schema={schema}
       defaultValues={defaultValues}
+      onError={onError}
       onSuccess={onSuccess}
     >
       <Form<TResult, TVariables, TSchema, TValues>

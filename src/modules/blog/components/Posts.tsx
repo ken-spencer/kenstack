@@ -37,7 +37,7 @@ export default async function Posts({
 
         const query = searchParams.toString();
         const href = `${basePath}/${slug}${query ? `?${query}` : ""}`;
-        const date = publishedAt.toLocaleDateString("en-US", {
+        const date = publishedAt?.toLocaleDateString("en-US", {
           month: "long",
           day: "numeric",
           year: "numeric",
@@ -66,12 +66,14 @@ export default async function Posts({
             ) : (
               <div className="aspect-square rounded-md bg-gray-100" />
             )}
-            <time
-              className="text-muted-foreground text-sm"
-              dateTime={publishedAt.toISOString()}
-            >
-              {date}
-            </time>
+            {publishedAt && (
+              <time
+                className="text-muted-foreground text-sm"
+                dateTime={publishedAt.toISOString()}
+              >
+                {date}
+              </time>
+            )}
             <NextLink
               href={href}
               className="text-2xl leading-tight whitespace-normal"

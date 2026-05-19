@@ -1,5 +1,7 @@
 "use client";
 
+import { UserFacingError } from "./errors";
+
 // type ReservedKeys = "status" | "message" | "fieldErrors" | "success" | "error";
 // type WithoutReserved<T extends Record<string, unknown>> = Omit<T, ReservedKeys>;
 
@@ -16,12 +18,14 @@ export type FetchError = {
   redirect?: string;
 };
 
-export type FetchResult<TExtra extends Record<string, unknown> = {}> =
+export type FetchResult<
+  TExtra extends Record<string, unknown> = Record<string, never>,
+> =
   | FetchSuccess<TExtra>
   | FetchError;
 
 export default async function fetcher<
-  TExtra extends Record<string, unknown> = {},
+  TExtra extends Record<string, unknown> = Record<string, never>,
 >(
   path: RequestInfo,
   data: Record<string, unknown> | null = null,
@@ -47,24 +51,19 @@ export default async function fetcher<
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "";
-    return {
-      status: "error",
-      message: `There was an unexpected problem with your request. ${message}`,
-    } satisfies FetchError;
+    throw UserFacingError(
+      `There was an unexpected problem with your request. ${message}`,
+    );
   }
 
   const ct = response.headers.get("content-type") ?? "";
   if (!ct.includes("application/json")) {
     if (response.status === 404) {
-      return {
-        status: "error",
-        message: `We were unable to find the requested resource.`,
-      } satisfies FetchError;
+      throw UserFacingError("We were unable to find the requested resource.");
     }
-    return {
-      status: "error",
-      message: `There was an unexpected problem with your request. Server error: ${response.status} ${response.statusText}`,
-    } satisfies FetchError;
+    throw UserFacingError(
+      `There was an unexpected problem with your request. Server error: ${response.status} ${response.statusText}`,
+    );
   }
 
   let json;
@@ -72,10 +71,9 @@ export default async function fetcher<
     json = await response.json();
   } catch (err) {
     const message = err instanceof Error ? err.message : "";
-    return {
-      status: "error",
-      message: `There was an unexpected problem with the response from the server: ${message}`,
-    } satisfies FetchError;
+    throw UserFacingError(
+      `There was an unexpected problem with the response from the server: ${message}`,
+    );
   }
 
   if (
@@ -84,10 +82,16 @@ export default async function fetcher<
     (json.status !== "success" && json.status !== "error") ||
     (response.ok === false && json.status !== "error")
   ) {
-    return {
-      status: "error",
-      message: "The response from the server was invalid",
-    } satisfies FetchError;
+    throw UserFacingError("The response from the server was invalid");
+  }
+
+  if (json.status === "error" && response.status >= 500) {
+    throw UserFacingError(
+      typeof json.message === "string"
+        ? json.message
+        : "There was an unexpected problem with your request.",
+      { status: response.status },
+    );
   }
 
   if (json.redirect) {

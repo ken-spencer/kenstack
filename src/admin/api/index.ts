@@ -8,6 +8,7 @@ import { listAction } from "@kenstack/admin/api/list";
 import { loadAction } from "@kenstack/admin/api/load";
 import { saveAction } from "@kenstack/admin/api/save";
 import { removeAction } from "@kenstack/admin/api/remove";
+import { revisionsAction } from "@kenstack/admin/api/revisions";
 import { tagsAction } from "@kenstack/admin/api/tags";
 import { relationshipSearchAction } from "@kenstack/admin/api/relationshipSearch";
 import { getPresignedUrlAction } from "./presignedUrl";
@@ -77,6 +78,8 @@ export const adminPipeline = async (
         return saveAction(adminConfig);
       case "remove":
         return removeAction(adminConfig);
+      case "revisions":
+        return revisionsAction(adminConfig);
       case "get-presigned-url":
         return getPresignedUrlAction(adminConfig);
       case "upload-complete":

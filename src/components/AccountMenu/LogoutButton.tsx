@@ -24,6 +24,13 @@ export default function LogoutButton() {
             router.push("/");
             router.refresh();
           }
+        }).catch((error) => {
+          window.alert(
+            "There was an unexpected problem handling your request. Please try again later.",
+          );
+
+          // eslint-disable-next-line no-console
+          console.error(error);
         });
       }}
     >

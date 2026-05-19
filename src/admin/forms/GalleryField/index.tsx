@@ -151,10 +151,7 @@ const galleryRender = ({
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        setStatusMessage({
-          status: "error",
-          message,
-        });
+        setStatusMessage(error instanceof Error ? error : message);
         updateLocalImage(localId, { uploadState: "error" });
         return { status: "error", message } as const;
       }
@@ -265,10 +262,7 @@ const galleryRender = ({
             } catch (error) {
               const message =
                 error instanceof Error ? error.message : String(error);
-              setStatusMessage({
-                status: "error",
-                message,
-              });
+              setStatusMessage(error instanceof Error ? error : message);
               updateLocalImage(pending.localId, { uploadState: "error" });
               failedLocalIds.add(pending.localId);
               failedMessages.add(message);
