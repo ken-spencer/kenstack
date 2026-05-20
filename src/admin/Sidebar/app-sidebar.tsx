@@ -1,7 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
-
 import {
   useSidebar,
   SidebarTrigger,
@@ -10,21 +8,13 @@ import {
   SidebarContent,
 } from "@kenstack/components/ui/sidebar";
 
-import cookies from "js-cookie";
-
 import { X } from "lucide-react";
 import { Button } from "@kenstack/components/ui/button";
 import KenstackLogo from "./KenstackLogo";
 
 export function AppSidebar({ content }: { content: React.ReactNode }) {
-  const { toggleSidebar, open, isMobile, openMobile } = useSidebar();
-  const visible = isMobile ? openMobile : open;
-  useEffect(() => {
-    // window.sessionStorage.setItem("sidebar-open", visible ? "1" : "0");
-    cookies.set("sidebarOpen", visible ? "1" : "0", {
-      expires: 365,
-    });
-  }, [visible]);
+  const { toggleSidebar, isMobile } = useSidebar();
+
   return (
     <Sidebar className="border-none">
       <SidebarHeader className="bg-gray-100">

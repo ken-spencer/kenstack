@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import {
   SidebarProvider,
   SidebarGroup,
@@ -15,6 +16,8 @@ import { type AdminDefinition } from "@kenstack/admin";
 import NavLink from "./NavLink";
 
 import Content from "./Content";
+
+const sidebarCookieName = "sidebar_state";
 
 function NavLinkFallback({
   href,
@@ -37,7 +40,7 @@ function NavLinkFallback({
   );
 }
 
-export default function AdminSidebar({
+export default async function AdminSidebar({
   admin,
   accountMenu,
   logo,
@@ -49,6 +52,9 @@ export default function AdminSidebar({
 
   children: React.ReactNode;
 }) {
+  const cookieStore = await cookies();
+  const defaultOpen = cookieStore.get(sidebarCookieName)?.value !== "false";
+
   const sidebarNav = (
     <SidebarGroup>
       <SidebarGroupLabel>Administration</SidebarGroupLabel>
@@ -79,10 +85,7 @@ export default function AdminSidebar({
   );
 
   return (
-    <SidebarProvider
-      className="flex"
-      // defaultOpen={false}
-    >
+    <SidebarProvider className="flex" defaultOpen={defaultOpen}>
       <AppSidebar content={sidebarNav} />
       <Content
         logo={logo}
