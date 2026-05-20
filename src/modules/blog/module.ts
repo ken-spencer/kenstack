@@ -20,7 +20,7 @@ export type CreateBlogModuleOptions = {
 
 export function createBlogModule({
   tables = blogTables,
-  name = tables.prefix,
+  name = kebabCase(tables.tableName),
   title = startCase(name),
   icon = NotebookPen,
   basePath = `/${kebabCase(name)}`,

@@ -24,7 +24,7 @@ type BlogPostTable = typeof blogTables.posts;
 export function resolveBlogQuerySource(
   tableName = blogTables.tableName,
   {
-    name = pluralize.singular(tableName),
+    name = tableName,
     prefix = pluralize.singular(tableName),
   }: BlogQuerySourceOptions = {},
 ): BlogQuerySource {

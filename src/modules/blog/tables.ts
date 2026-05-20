@@ -10,7 +10,7 @@ export type BlogTablesOptions = {
 };
 
 export function defineBlogTables(
-  tableName = "blogs",
+  tableName = "blog",
   { prefix = pluralize.singular(tableName) }: BlogTablesOptions = {},
 ) {
   const posts = defineTable({
@@ -44,6 +44,6 @@ export function defineBlogTables(
 }
 
 export const blogTables = defineBlogTables();
-export const blogs = blogTables.posts;
+export const blog = blogTables.posts;
 export const blog_tags = blogTables.tags;
 export const blog_images = blogTables.images;
