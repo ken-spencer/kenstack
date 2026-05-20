@@ -13,12 +13,15 @@ New APIs:
 
 - `@kenstack/components/AccountMenu` accepts an `items` prop.
 - `AccountMenuItems` is exported from `@kenstack/components/AccountMenu`.
+- `items` can be either static menu items or a user-aware resolver.
+- `@kenstack/admin/Sidebar` accepts an `accountMenu` prop for site-provided account menu UI.
 
 Migration steps:
 
 - Move account menu item configuration from `createDeps(...)` to the site component that renders `AccountMenu`.
-- Import `AccountMenuItems` from `@kenstack/components/AccountMenu` when a typed item list is useful.
-- Pass items directly, for example `<AccountMenu items={accountMenuItems} fallback={...} />`.
+- Import `AccountMenuItems` or `AccountMenuItemsResolver` from `@kenstack/components/AccountMenu` when a typed item list or resolver is useful.
+- Pass items directly, for example `<AccountMenu items={accountMenuItems} fallback={...} />`, or pass a resolver when items depend on the current user.
+- Pass site-provided account menu UI to admin layouts with `<Sidebar accountMenu={<SiteAccountMenu fallback={null} />} ... />`.
 
 ## Unreleased: Admin Config Naming
 

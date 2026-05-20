@@ -38,12 +38,12 @@ function NavLinkFallback({
 }
 
 export default function AdminSidebar({
-  // content,
   admin,
+  accountMenu,
   logo,
   children,
 }: {
-  content: React.ReactNode;
+  accountMenu?: React.ReactNode;
   admin: AdminDefinition;
   logo?: React.ReactNode;
 
@@ -88,7 +88,7 @@ export default function AdminSidebar({
         logo={logo}
         accountMenu={
           <Suspense>
-            <AccountMenu fallback={null} />
+            {accountMenu ?? <AccountMenu fallback={null} />}
           </Suspense>
         }
       >

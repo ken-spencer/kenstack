@@ -3,7 +3,7 @@ import { deps } from "@app/deps";
 import Menu from "./Menu";
 import Link from "next/link";
 import { Button } from "@kenstack/components/ui/button";
-import type { AccountMenuItems } from "./types";
+import type { AccountMenuItems, AccountMenuItemsResolver } from "./types";
 
 // import UnAuthenticated from "./UnAuthenticated";
 
@@ -12,7 +12,7 @@ export default async function AccountMenuLoader({
   items,
 }: {
   fallback: React.ReactNode;
-  items?: AccountMenuItems;
+  items?: AccountMenuItems | AccountMenuItemsResolver;
 }) {
   const user = await deps.auth.getCurrentUser();
 
@@ -20,10 +20,13 @@ export default async function AccountMenuLoader({
     return fallback ?? null;
   }
 
+  const resolvedItems =
+    typeof items === "function" ? await items(user) : items;
+
   return (
     <Menu user={user}>
-      {items &&
-        items.map(([href, text, Icon], key) => (
+      {resolvedItems &&
+        resolvedItems.map(([href, text, Icon], key) => (
           <Button key={href + key} variant="link" asChild>
             <Link className="w-full justify-start" href={href}>
               <Icon />

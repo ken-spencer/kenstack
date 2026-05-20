@@ -1,11 +1,15 @@
 import { Html, Head, Body, Container } from "@react-email/components";
 
-const EmailCont = ({
-  children,
-  // preview = false,
-}: {
+export type EmailContainerProps = {
   children: React.ReactNode;
   preview?: boolean;
+};
+
+export type EmailContainer = React.FC<EmailContainerProps>;
+
+const EmailCont: EmailContainer = ({
+  children,
+  // preview = false,
 }) => (
   <Html>
     <Head>

@@ -2,6 +2,7 @@ import { createDb } from "@kenstack/db";
 import { Logger } from "@kenstack/logger";
 import { createAuth } from "@kenstack/auth/server";
 import Email from "./components/Email";
+import type { EmailContainer } from "./components/Email";
 
 import { type Users } from "@kenstack/modules/users/tables";
 import { type Sessions } from "@kenstack/db/tables/sessions";
@@ -40,6 +41,11 @@ export const createDeps = <
   roles?: TRoles;
   multiTenant?: boolean;
   tables: TSchema;
+  siteUrl?: string;
+  email?: {
+    EmailCont: EmailContainer;
+    attachments: Attachment[];
+  };
   uploadMaxImageSize?: number;
   uploadMaxImageSizeMessage?: string;
 }) => {
