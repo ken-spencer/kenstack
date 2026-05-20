@@ -2,18 +2,36 @@ import Image from "next/image";
 import NextLink from "next/link";
 import { ArrowRight } from "lucide-react";
 
+import type { BlogModule } from "@kenstack/modules/blog";
 import { listBlogs } from "@kenstack/modules/blog/queries";
 
-export default async function Posts({
-  basePath,
-  preview,
-  tag,
-}: {
-  basePath: string;
-  preview?: boolean;
-  tag?: string;
-}) {
-  const posts = await listBlogs({ preview, tag });
+type PostsProps = {
+  module: BlogModule;
+  searchParams?: Record<string, unknown> | Promise<Record<string, unknown>>;
+};
+
+function getStringParam(value: unknown) {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (Array.isArray(value) && typeof value[0] === "string") {
+    return value[0];
+  }
+
+  return undefined;
+}
+
+export default async function Posts({ module, searchParams = {} }: PostsProps) {
+  const query = await searchParams;
+  const preview = query.preview !== undefined;
+  const tag = getStringParam(query.tag);
+  const posts = await listBlogs(module.tables.tableName, {
+    preview,
+    tag,
+    name: module.name,
+    prefix: module.tables.prefix,
+  });
 
   if (posts.length === 0) {
     return (
@@ -36,7 +54,7 @@ export default async function Posts({
         }
 
         const query = searchParams.toString();
-        const href = `${basePath}/${slug}${query ? `?${query}` : ""}`;
+        const href = `${module.basePath}/${slug}${query ? `?${query}` : ""}`;
         const date = publishedAt?.toLocaleDateString("en-US", {
           month: "long",
           day: "numeric",

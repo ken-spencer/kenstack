@@ -1,3 +1,3 @@
-export * from "./list";
-export * from "./page";
-export * from "./tags";
+export { listBlogs } from "./list";
+export { getBlog } from "./page";
+export { getBlogTag, getBlogTags } from "./tags";

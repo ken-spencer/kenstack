@@ -1,48 +1,69 @@
-import { blogImages, blogs, blogTags } from "./tables";
 import { NotebookPen } from "lucide-react";
+import type { ComponentType, SVGProps } from "react";
 
-import { adminConfig } from "@kenstack/admin";
+import { adminConfig, type PreviewPath } from "@kenstack/admin";
 import { selectImageSubquery } from "@kenstack/db/tables";
 import client from "./client";
 import { fields } from "./fields";
+import { blogTables, defineBlogTables } from "./tables";
 
-const config = adminConfig({
-  client,
-  fields,
-  title: "Blog",
-  icon: NotebookPen,
-  table: blogs,
-  revalidate: ["blog", ({ slug }) => `blog:${slug}`],
-  sort: {
-    title: {
-      fields: [blogs.title],
+type BlogTables = ReturnType<typeof defineBlogTables>;
+
+export function defineBlogAdmin({
+  tables = blogTables,
+  name = "blog",
+  title = "Blog",
+  icon = NotebookPen,
+  previewPath = "/blog/${slug}",
+}: {
+  tables?: BlogTables;
+  name?: string;
+  title?: string;
+  icon?: ComponentType<SVGProps<SVGSVGElement>>;
+  previewPath?: PreviewPath;
+} = {}) {
+  const { posts, tags, images } = tables;
+
+  return adminConfig({
+    client,
+    fields,
+    title,
+    icon,
+    table: posts,
+    revalidate: [name, ({ slug }) => `${name}:${slug}`],
+    sort: {
+      title: {
+        fields: [posts.title],
+      },
     },
-  },
-  filters: {
-    publishedAt: {
-      field: blogs.publishedAt,
-      kind: "date-range",
-      label: "Published",
+    filters: {
+      publishedAt: {
+        field: posts.publishedAt,
+        kind: "date-range",
+        label: "Published",
+      },
     },
-  },
-  select: {
-    title: blogs.title,
-    image: selectImageSubquery(blogs.image, "square"),
-    publishedAt: blogs.publishedAt,
-  },
-  preview: "/blog/${slug}",
-  tags: { table: blogTags },
-  galleries: {
-    gallery: {
-      table: blogImages,
-      tableIdKey: "tableId",
-      tableId: blogImages.tableId,
-      imageIdKey: "imageId",
-      imageId: blogImages.imageId,
-      sortOrderKey: "sortOrder",
-      sortOrder: blogImages.sortOrder,
+    select: {
+      title: posts.title,
+      image: selectImageSubquery(posts.image, "square"),
+      publishedAt: posts.publishedAt,
     },
-  },
-});
+    preview: previewPath,
+    tags: { table: tags },
+    galleries: {
+      gallery: {
+        table: images,
+        tableIdKey: "tableId",
+        tableId: images.tableId,
+        imageIdKey: "imageId",
+        imageId: images.imageId,
+        sortOrderKey: "sortOrder",
+        sortOrder: images.sortOrder,
+      },
+    },
+  });
+}
+
+const config = defineBlogAdmin();
 
 export default config;

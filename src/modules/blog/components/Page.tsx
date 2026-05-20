@@ -4,30 +4,48 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 import Markdown from "@kenstack/components/Markdown";
+import type { BlogModule } from "@kenstack/modules/blog";
 import { getBlog } from "@kenstack/modules/blog/queries";
 
-type BlogPostProps = {
-  basePath: string;
-  preview?: boolean;
+export type BlogPostProps = {
+  module: BlogModule;
   slug: string;
-  tag?: string;
+  searchParams?: Record<string, unknown> | Promise<Record<string, unknown>>;
 };
 
+function getStringParam(value: unknown) {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (Array.isArray(value) && typeof value[0] === "string") {
+    return value[0];
+  }
+
+  return undefined;
+}
+
 export default async function BlogPost({
-  basePath,
-  preview = false,
+  module,
   slug,
-  tag,
+  searchParams = {},
 }: BlogPostProps) {
-  const post = await getBlog(slug, { preview });
+  const query = await searchParams;
+  const preview = query.preview !== undefined;
+  const tag = getStringParam(query.tag);
+  const post = await getBlog(module.tables.tableName, slug, {
+    preview,
+    name: module.name,
+    prefix: module.tables.prefix,
+  });
 
   if (!post) {
     notFound();
   }
 
   const backHref = tag
-    ? `${basePath}?tag=${encodeURIComponent(tag)}`
-    : basePath;
+    ? `${module.basePath}?tag=${encodeURIComponent(tag)}`
+    : module.basePath;
   const hasContent = post.content.trim().length > 0;
   const publishedDate = post.publishedAt
     ? post.publishedAt.toLocaleDateString("en-US", {
@@ -86,7 +104,7 @@ export default async function BlogPost({
             />
           ) : null}
         </div>
-        <Tags basePath={basePath} tags={post.tags} />
+        <Tags basePath={module.basePath} tags={post.tags} />
       </article>
     </main>
   );

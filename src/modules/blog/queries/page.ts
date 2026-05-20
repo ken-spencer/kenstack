@@ -5,40 +5,61 @@ import { cacheLife, cacheTag } from "next/cache";
 import { metaSelect } from "@kenstack/admin";
 import { pageWhere } from "@kenstack/admin/queries";
 import { deps } from "@app/deps";
-import { blogs } from "../tables";
+import {
+  getBlogQueryTables,
+  resolveBlogQuerySource,
+  type BlogQuerySource,
+  type BlogQuerySourceOptions,
+} from "./source";
 import { getBlogTags } from "./tags";
 
 type BlogQueryOptions = {
   preview?: boolean;
 };
 
-export function getBlog(slug: string, options: BlogQueryOptions = {}) {
-  return options.preview ? loadBlog(slug, options) : loadCachedBlog(slug);
+type BlogSourceOptions = BlogQueryOptions & BlogQuerySourceOptions;
+
+export function getBlog(
+  tableName: string,
+  slug: string,
+  options: BlogSourceOptions = {},
+) {
+  const { preview = false } = options;
+  const source = resolveBlogQuerySource(tableName, options);
+
+  return preview
+    ? loadBlog(source, slug, options)
+    : loadCachedBlog(source, slug);
 }
 
-async function loadCachedBlog(slug: string) {
+async function loadCachedBlog(source: BlogQuerySource, slug: string) {
   "use cache";
   cacheLife("hours");
-  cacheTag("blog", `blog:${slug}`);
+  cacheTag(source.name, `${source.name}:${slug}`);
 
-  return loadBlog(slug);
+  return loadBlog(source, slug);
 }
 
-async function loadBlog(slug: string, options: BlogQueryOptions = {}) {
-  const visibility = await pageWhere(blogs, options);
+async function loadBlog(
+  source: BlogQuerySource,
+  slug: string,
+  options: BlogQueryOptions = {},
+) {
+  const { posts } = getBlogQueryTables(source);
+  const visibility = await pageWhere(posts, options);
   const [row] = await deps.db
     .select({
-      id: blogs.id,
-      title: blogs.title,
-      slug: blogs.slug,
-      publishedAt: blogs.publishedAt,
-      image: selectImageSubquery(blogs.image, "original"),
-      description: blogs.description,
-      content: blogs.content,
-      ...metaSelect(blogs),
+      id: posts.id,
+      title: posts.title,
+      slug: posts.slug,
+      publishedAt: posts.publishedAt,
+      image: selectImageSubquery(posts.image, "original"),
+      description: posts.description,
+      content: posts.content,
+      ...metaSelect(posts),
     })
-    .from(blogs)
-    .where(and(visibility, eq(blogs.slug, slug)))
+    .from(posts)
+    .where(and(visibility, eq(posts.slug, slug)))
     .limit(1);
 
   if (!row) {
@@ -47,6 +68,10 @@ async function loadBlog(slug: string, options: BlogQueryOptions = {}) {
 
   return {
     ...row,
-    tags: await getBlogTags(row.id, options),
+    tags: await getBlogTags(source.tableName, row.id, {
+      ...options,
+      name: source.name,
+      prefix: source.prefix,
+    }),
   };
 }
