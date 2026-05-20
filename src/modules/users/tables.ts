@@ -23,6 +23,7 @@ const userColumns = {
 };
 
 export const defineUsersTable = <
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   const TColumnsMap extends Record<string, PgColumnBuilderBase> = {},
 >({
   columns,

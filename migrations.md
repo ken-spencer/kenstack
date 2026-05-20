@@ -2,6 +2,24 @@
 
 Use this file to document breaking Kenstack API changes that downstream sites may need to apply.
 
+## Unreleased: Account Menu Items Prop
+
+Old APIs:
+
+- `createDeps({ accountMenu: { getItems } })`
+- `deps.accountMenu?.getItems()` consumed by `@kenstack/components/AccountMenu`
+
+New APIs:
+
+- `@kenstack/components/AccountMenu` accepts an `items` prop.
+- `AccountMenuItems` is exported from `@kenstack/components/AccountMenu`.
+
+Migration steps:
+
+- Move account menu item configuration from `createDeps(...)` to the site component that renders `AccountMenu`.
+- Import `AccountMenuItems` from `@kenstack/components/AccountMenu` when a typed item list is useful.
+- Pass items directly, for example `<AccountMenu items={accountMenuItems} fallback={...} />`.
+
 ## Unreleased: Admin Config Naming
 
 Old APIs:

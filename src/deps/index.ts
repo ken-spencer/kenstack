@@ -12,12 +12,6 @@ export type Tables = { users: Users; sessions: Sessions } & Record<
   unknown
 >;
 
-export type AccountMenuItems = [
-  href: string,
-  title: string,
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>,
-][];
-
 export const defaultRoles = ["admin", "member"] as const;
 
 const formatFileSize = (bytes: number) => {
@@ -46,7 +40,6 @@ export const createDeps = <
   roles?: TRoles;
   multiTenant?: boolean;
   tables: TSchema;
-  accountMenu?: { getItems: () => AccountMenuItems };
   uploadMaxImageSize?: number;
   uploadMaxImageSizeMessage?: string;
 }) => {
