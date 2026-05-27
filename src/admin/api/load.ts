@@ -19,7 +19,7 @@ export const loadAction = (name: string, adminConfig: AnyAdminConfig) =>
         fields: adminConfig.fields,
         defaults: adminConfig.defaultValues,
         query: async ({ db, select }) => {
-          if (adminConfig.single === true) {
+          if (!("list" in adminConfig)) {
             const [row] = await db
               .select(select)
               .from(adminConfig.table)
@@ -37,7 +37,7 @@ export const loadAction = (name: string, adminConfig: AnyAdminConfig) =>
         },
       });
 
-      if (adminConfig.single === false && !result.row) {
+      if ("list" in adminConfig && !result.row) {
         return response.error("Unable to find the requested record.");
       }
 

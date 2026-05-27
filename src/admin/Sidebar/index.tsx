@@ -12,7 +12,7 @@ import {
 } from "@kenstack/components/ui/sidebar";
 import { AppSidebar } from "./app-sidebar";
 import AccountMenu from "@kenstack/components/AccountMenu";
-import { type AdminDefinition } from "@kenstack/admin";
+import { type DefinedAdmin } from "@kenstack/admin";
 import NavLink from "./NavLink";
 
 import Content from "./Content";
@@ -42,7 +42,7 @@ function NavLinkFallback({
 
 type AdminSidebarProps = {
   accountMenu?: React.ReactNode;
-  admin: AdminDefinition;
+  admin: DefinedAdmin;
   logo?: React.ReactNode;
   children: React.ReactNode;
 };
@@ -74,13 +74,17 @@ function AdminSidebarContent({
       <SidebarGroupLabel>Administration</SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
-          {Object.entries(admin).flatMap(([name, table]) => {
-            if (!table.records) {
+          {Object.entries(admin).flatMap(([name, module]) => {
+            if (!module.admin) {
               return [];
             }
 
             const href = "/admin/" + name;
-            const icon = table.icon ? <table.icon /> : <span className="w-3" />;
+            const icon = module.icon ? (
+              <module.icon />
+            ) : (
+              <span className="w-3" />
+            );
 
             return (
               <Suspense
@@ -89,11 +93,11 @@ function AdminSidebarContent({
                   <NavLinkFallback
                     href={href}
                     icon={icon}
-                    title={table.title}
+                    title={module.title}
                   />
                 }
               >
-                <NavLink href={href} icon={icon} title={table.title} />
+                <NavLink href={href} icon={icon} title={module.title} />
               </Suspense>
             );
           })}

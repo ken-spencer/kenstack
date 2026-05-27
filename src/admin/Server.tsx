@@ -3,13 +3,13 @@ import { notFound } from "next/navigation";
 import AdminList from "@kenstack/admin/List";
 import Edit from "@kenstack/admin/Edit";
 import { deps } from "@app/deps";
-import { type AdminDefinition } from ".";
+import { type DefinedAdmin } from ".";
 
 type AdminServerProps = {
   context: {
     params: Promise<{ admin: [string, string?] }>;
   };
-  admin: AdminDefinition;
+  admin: DefinedAdmin;
 };
 
 export default function AdminServer(props: AdminServerProps) {
@@ -39,27 +39,30 @@ async function AdminServerCore({
   }
   const isNew = id === "new";
 
-  const adminConfig = admin[name];
-  if (!adminConfig || !adminConfig.records) {
+  const moduleConfig = admin[name];
+  const adminConfig = moduleConfig?.admin;
+  const client = moduleConfig?.client?.admin;
+  if (!moduleConfig || !adminConfig || !client) {
     notFound();
   }
 
   const user = await deps.auth.requireUser("admin");
-  const Icon = adminConfig.icon;
+  const Icon = moduleConfig.icon;
 
   return (
     <div>
       <div className="text-md mx-auto flex items-center justify-center gap-4 text-gray-700">
         {Icon && <Icon className="size-4 text-gray-800" />}
-        <span className="font-bold">{adminConfig.title}</span>
+        <span className="font-bold">{moduleConfig.title}</span>
       </div>
       {(() => {
-        if (adminConfig.single === false) {
+        if ("list" in adminConfig) {
           if (!isNew && !id) {
             return (
               <AdminList
                 name={name}
                 adminConfig={adminConfig}
+                client={client}
                 userId={user.id}
               />
             );
@@ -71,6 +74,7 @@ async function AdminServerCore({
               isNew={isNew}
               name={name}
               adminConfig={adminConfig}
+              client={client}
               userId={user.id}
             />
           );
@@ -80,7 +84,14 @@ async function AdminServerCore({
           notFound();
         }
 
-        return <Edit name={name} adminConfig={adminConfig} userId={user.id} />;
+        return (
+          <Edit
+            name={name}
+            adminConfig={adminConfig}
+            client={client}
+            userId={user.id}
+          />
+        );
       })()}
     </div>
   );

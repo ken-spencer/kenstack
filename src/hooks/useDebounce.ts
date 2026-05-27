@@ -22,12 +22,6 @@ export default function useDebounce(
     [debouncedFunction]
   );
 
-  /*
-  const setDebouncedValue = useCallback(
-    debounce((value) => setDebouncedValueBase(value), delay),
-    [delay],
-  );
-  */
   const setValue = useCallback(
     (newValue: string): void => {
       setValueBase(newValue);

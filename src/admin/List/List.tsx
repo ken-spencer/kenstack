@@ -10,9 +10,11 @@ import Alert from "@kenstack/components/Alert";
 import { Checkbox } from "@kenstack/components/ui/checkbox";
 import MetaDates from "@kenstack/admin/components/MetaDates";
 import VisibilityStatus from "./VisibilityStatus";
-import type { BaseListItem, ListItems } from "@kenstack/admin/client";
+import type { AdminClient, BaseListItem } from "@kenstack/admin/client";
 import type { SelectedImage } from "@kenstack/db/tables";
 import { cn } from "@kenstack/lib/utils";
+
+type ListItems = NonNullable<AdminClient["listItems"]>;
 
 export default function AdminListWrapper() {
   return (

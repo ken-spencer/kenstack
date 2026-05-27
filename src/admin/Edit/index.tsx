@@ -6,6 +6,7 @@ import FormRender from "./FormRender";
 import canUpload from "@kenstack/lib/canUpload";
 
 import { type AnyAdminConfig } from "..";
+import type { AdminClient } from "@kenstack/admin/client";
 
 export default function AdminEdit({
   name,
@@ -13,21 +14,23 @@ export default function AdminEdit({
   isNew = false,
   userId,
   adminConfig,
+  client,
 }: {
   name: string;
   id?: number;
   isNew?: boolean;
   userId: number;
   adminConfig: AnyAdminConfig;
+  client: AdminClient;
 }) {
-  const { defaultValues, preview, client } = adminConfig;
+  const { defaultValues, preview } = adminConfig;
 
   return (
     <AdminEditProvider
       name={name}
       id={id}
       isNew={isNew}
-      single={adminConfig.single}
+      single={!("list" in adminConfig)}
       userId={userId}
       canUpload={canUpload()}
       defaultValues={defaultValues ?? {}}

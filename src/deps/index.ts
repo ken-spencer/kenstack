@@ -30,12 +30,6 @@ const formatFileSize = (bytes: number) => {
   return `${Number.isInteger(size) ? size : size.toFixed(1)} ${units[unitIndex]}`;
 };
 
-// type BaseDeps<TRoles extends readonly string[]> = {
-//   roles?: TRoles;
-//   multiTenant?: boolean;
-//   tables: Record<string, unknown>;
-// };
-
 export const createDeps = <
   TSchema extends Tables,
   const TRoles extends readonly string[] = typeof defaultRoles,

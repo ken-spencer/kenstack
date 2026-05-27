@@ -34,12 +34,16 @@ Treat existing behavior as intentional unless the user explicitly asks to remove
 - Prefer existing `lodash-es` utilities for common transformations and collection helpers instead of writing local one-off utility functions.
 - Do not export types, helpers, components, or configuration solely to satisfy linting, TypeScript convenience, or anticipated future use. Keep new API surface limited to values that are used now or explicitly requested.
 - Prefer inferred types unless explicit types improve clarity.
+- Do not move complexity around to make an error disappear. If a change only shifts awkward typing, runtime guards, duplicated data shaping, or config translation to another file, stop and simplify the underlying shape instead.
+- If TypeScript pressure leads toward complex conditional types, overloads, casts, duplicated `Resolved*` types, or helper types that mirror inferred values, pause and reassess. Prefer changing the API shape so inference works naturally; ask for guidance before committing to type machinery.
+- When a function derives extra properties such as `schema`, `defaultValues`, or normalized config, type the input shape directly and let the return value infer. Do not define a resolved output type only to use `Omit` or a parallel props type for the unresolved input; derive consumer types from the function return when a named type is truly needed.
 - For generic helpers, query builders, Drizzle selections, and callback-mapped results, rely on TypeScript inference wherever possible. Avoid adding explicit return generics or result annotations that restate what the compiler can infer from the call site.
 - Do not specify component generics at call sites when props such as `schema`, `defaultValues`, `mutationFn`, or callbacks can infer them. Prefer fixing the component/helper typing over repeating type arguments at each use.
 - Avoid type casts. A cast is usually a sign that the design or generic boundary has gone off track. If a cast feels necessary, first look for an inference-friendly shape; if a cast still appears to be the only orthodox solution, keep it narrow and be ready to flag the tradeoff before proceeding.
 - Before adding local type declarations, shims, or small wrappers for an external package, first check whether the package ships its own types or whether the workspace already has appropriate types installed. If types are missing, check npm for the relevant `@types/*` package and install it when available. Use a narrow local boundary only when package/workspace types are not available.
 - Do not add alternate return shapes, overloads, or configuration options just to avoid returning a few unused fields or doing a tiny local fallback. Prefer one consistent data shape unless the second shape removes meaningful complexity at several call sites.
 - Do not make required values optional in lower-level APIs just to throw runtime errors when they are missing. Let TypeScript describe the real requirement, and validate optional runtime configuration at the boundary that reads or supplies it.
+- Do not add runtime fail branches for states that TypeScript should make impossible, such as a required module config missing from a module that defines it. Fix the type shape instead of adding a defensive throw.
 - Do not make breaking API or call-site shape changes without checking in first. If a cleanup or type fix would require changing an agreed API, stop and ask before proceeding.
 - Keep patches narrow.
 - Do not refactor unrelated code.
@@ -52,7 +56,6 @@ Before finishing a code change, run the narrowest relevant checks:
 
 - TypeScript check for type changes
 - lint for style changes
-- build for Next.js/runtime-sensitive changes
 
 Before finalizing code changes, read `agents/review.md` and compare the generated code against that checklist. Fix issues that are clearly local and low-risk. If the checklist points to something that would require a broader refactor or a tradeoff, call it out instead of forcing a messy cleanup.
 
@@ -72,11 +75,9 @@ Keep top-level files in broad feature folders, such as `src/admin`, reserved for
 
 Folders named `modules` are for actual module definitions and module-owned files. Do not put helper code that builds, loads, renders, or works with modules in `modules`; place that infrastructure under the feature it belongs to, such as `admin/moduleSettings`.
 
+Within a module, reserve `fields` for the primary record fields exported from `fields.ts`. Use a specific name for secondary field sets, such as `settingsFields`, so imports stay consistent and the role of each field set is clear.
+
 Field definitions, field helpers, field handlers, field lifecycle code, and field-based record save helpers belong in `src/fields`, not under `src/admin`. Admin may re-export field APIs for ergonomics, but the canonical implementation should stay outside admin when it can be used by non-admin workflows.
-
-Organize field APIs by runtime boundary: client-safe field helpers and form metadata belong under `src/fields/client`, while server field behavior such as load, save, select, filter, and preSave belongs under `src/fields/server`. Do not recreate a separate helpers/handlers split for fields.
-
-Server field helpers that need configuration should return resolver functions that receive the resolved client field internally. Keep call sites declarative, for example `imageField({ variant: "original" })`, instead of requiring callers to pass the client field or generic patch objects.
 
 Do not create a folder just to hold a single `index.ts` or `index.tsx`. Use a direct file, such as `admin/modules.ts`, unless the folder already groups multiple files that work together or the current change is adding those sibling files as part of the same feature.
 
@@ -84,7 +85,11 @@ Avoid spreading a simple change across multiple locations when it can be express
 
 Do not introduce pass-through configuration constants that are only handed to a typed API call, such as `const fieldOptions = { ... }; defineFields(fieldOptions)`. Inline those objects in the typed call so contextual typing, excess property checks, and editor hints work at the point where the shape is validated. Extract only when the value is reused independently or the extraction creates a real boundary.
 
+Prefer named exports for reusable configuration pieces that are assembled into larger config objects, especially when the export name can match the config role at the call site. Use default exports only when the file has one primary value and callers do not benefit from a role-specific imported name.
+
 Inline simple expressions when they are used once, especially in JSX props. Do not introduce a local variable only to rename a direct function call, property access, or simple boolean expression. Use a local variable when it avoids repeated work, clarifies a non-obvious expression, prevents a long line from becoming hard to read, or gives a meaningful name to a concept reused in nearby logic.
+
+Inline small object parameter types for private functions when the type is used once and the fields are easier to understand at the function boundary. Extract a named type when it is exported, reused, large enough to distract from the function body, or represents a real domain concept.
 
 Prefer complete initial declarations over immediate follow-up mutation. If an array or object always includes a value, include it in the literal instead of declaring first and then calling `push`, assigning a property, or spreading into it on the next line.
 

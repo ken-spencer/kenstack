@@ -9,7 +9,6 @@ import {
   timestamp,
   uniqueIndex,
   boolean,
-  // jsonb,
   type AnyPgTable,
   type PgColumnBuilderBase,
   type PgTableExtraConfigValue,
@@ -17,12 +16,6 @@ import {
 } from "drizzle-orm/pg-core";
 import { createId } from "@paralleldrive/cuid2";
 
-// declare const defineTableBrand: unique symbol;
-
-// type SearchableKey<TColumnsMap extends Record<string, PgColumnBuilderBase>> =
-//   Extract<keyof TColumnsMap, string>;
-
-// type FieldKey<TFields extends FieldOptions> = Extract<keyof TFields, string>;
 type ColumnKey<TColumnsMap extends Record<string, PgColumnBuilderBase>> =
   Extract<keyof TColumnsMap, string>;
 
@@ -66,18 +59,10 @@ export type ExtraTable<
 
 export type BuildTableOptions<
   TName extends string,
-  // TFields extends FieldOptions,
   TColumnsMap extends Record<string, PgColumnBuilderBase>,
-  // TPublicId extends boolean = false,
 > = {
   name: TName;
-  // fields?: TFields;
   columns: TColumnsMap;
-  // publicId?: TPublicId;
-  // searchable?: readonly [
-  //   SearchableKey<TColumnsMap>,
-  //   ...SearchableKey<TColumnsMap>[],
-  // ];
   extraConfig?: (table: ExtraTable<TColumnsMap>) => PgTableExtraConfigValue[];
 };
 
@@ -94,11 +79,8 @@ export const defineTable = <
   const TColumnsMap extends Record<string, PgColumnBuilderBase>,
 >({
   name,
-  // fields,
   columns,
-  // publicId = false as TPublicId,
   extraConfig,
-  // searchable = undefined,
 }: BuildTableOptions<TName, TColumnsMap>) => {
   const table = pgTable(
     name,
@@ -118,7 +100,6 @@ export const defineTable = <
         .notNull()
         .$onUpdate(() => new Date()),
       deletedAt: timestamp("deleted_at", { withTimezone: true }),
-      // ...(fields ? createColumnsFromFields(fields) : {}),
       ...columns,
     },
     (t) => [
@@ -132,7 +113,7 @@ export const defineTable = <
     ],
   );
 
-  return table; // as typeof table & { [defineTableBrand]: true };
+  return table;
 };
 
 export const defineKeyTable = <
@@ -158,9 +139,6 @@ export const defineKeyTable = <
 
   return table;
 };
-
-// export type DefinedTable = ReturnType<typeof defineTable>;
-// export type AdminTable = DefinedTable;
 
 export type AdminTable = AnyPgTable & {
   id: AnyPgColumn<{ data: number; notNull: true }>;

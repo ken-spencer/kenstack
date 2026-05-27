@@ -20,7 +20,7 @@ export const saveAction = (name: string, adminConfig: AnyAdminConfig) =>
       const { changes, id, values } = rawData;
 
       const result =
-        adminConfig.single === true
+        !("list" in adminConfig)
           ? await saveRecord({
               action: id ? "update" : "insert",
               table: adminConfig.table,

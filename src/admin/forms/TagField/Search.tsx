@@ -32,15 +32,6 @@ export default function TagSearcht({ field }: { field: AnyField }) {
   const [keywords, debouncedValue, setKeywords] = useDebounce();
   const [focusing, setFocusing] = useState(false);
   const [commandValue, setCommandValue] = useState("no-value");
-  // const setKeywords = useCallback(
-  //   (v) => {
-  //     setKeywordsBase(v);
-  //     setCommandValue("no-value");
-  //   },
-  //   [setKeywordsBase]
-  // );
-
-  // const [keywords, debouncedKeywords, setKeywords] = useDebounce("", 500);
   const { apiPath, name: adminName } = useAdminEdit();
 
   const { data, error, isPending } = useQuery<
@@ -82,7 +73,6 @@ export default function TagSearcht({ field }: { field: AnyField }) {
           <div className="flex items-center">
             <TagIcon className="size-6 text-gray-600" />
             <Input
-              // className="flex-1 min-w-36 p-0 appearance-none border-none  bg-transparent focus:outline-none focus:ring-0"
               className="-ml-9 rounded-none border-0 border-b pl-10"
               placeholder="Enter tag"
               value={keywords}

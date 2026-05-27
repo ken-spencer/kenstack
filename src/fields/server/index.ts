@@ -168,12 +168,7 @@ export function serverFields<const TFields extends DefinedFields>(
 export function resolveServerFields<const TFields extends DefinedFields>(
   fields: TFields,
 ): ServerDefinedFieldsFrom<TFields>;
-export function resolveServerFields<const TFields extends ServerDefinedFields>(
-  fields: TFields,
-): ServerDefinedFieldsFrom<TFields>;
-export function resolveServerFields(
-  fields: DefinedFields | ServerDefinedFields,
-) {
+export function resolveServerFields(fields: DefinedFields) {
   return Object.fromEntries(
     Object.entries(fields).map(([key, field]) => {
       const defaults = getDefaultServerField(field);

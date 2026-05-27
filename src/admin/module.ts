@@ -1,7 +1,5 @@
 import type { ComponentType, SVGProps } from "react";
-import type * as z from "zod";
 import startCase from "lodash-es/startCase";
-import omit from "lodash-es/omit";
 import type { AnyColumn, InferSelectModel, SQL } from "drizzle-orm";
 import { getTableColumns } from "drizzle-orm";
 
@@ -14,19 +12,20 @@ import type {
   AdminSortOptions,
   ResolvedAdminSortField,
 } from "@kenstack/admin/types/list";
-import type { AdminClient, ModuleClient } from "@kenstack/admin/client";
+import type { defineClient } from "@kenstack/admin/client";
 import { createDefaultValues } from "@kenstack/fields/createDefaultValues";
 import { createZodSchema } from "@kenstack/fields/createZodSchema";
 import {
   resolveServerFields,
+  type ServerField,
   type ServerDefinedFields,
 } from "@kenstack/fields/server";
 import type { AdminKeyTable, AdminTable } from "@kenstack/admin/table";
 import { visibilityOptions } from "./metadata";
 
 type SelectValue = AnyColumn | SQL | SQL.Aliased;
-export type SelectShape = Record<string, SelectValue>;
-export type AdminManagedTable = AdminTable | AdminKeyTable;
+type SelectShape = Record<string, SelectValue>;
+type AdminManagedTable = AdminTable | AdminKeyTable;
 
 type RevalidateCallback<TTable extends AdminManagedTable> = {
   bivarianceHack(row: InferSelectModel<TTable>): string;
@@ -35,160 +34,139 @@ type RevalidateCallback<TTable extends AdminManagedTable> = {
 export type PreviewPath = `/${string}`;
 
 type AdminConfigBase<TTable extends AdminManagedTable> = {
-  client: AdminClient;
-  title: string;
-  icon?: ComponentType<SVGProps<SVGSVGElement>>;
   table: TTable;
   revalidate?: (string | RevalidateCallback<TTable>)[];
   fields: ServerDefinedFields;
   preview?: PreviewPath;
 };
 
-export type AdminConfig<
+type AdminListConfig<
   TTable extends AdminTable,
   TListSelect extends SelectShape | undefined = undefined,
 > = AdminConfigBase<TTable> & {
-  filters?: AdminFilterOptions;
-  limit?: number;
-  sort?: AdminSortOptions;
-  select?: TListSelect;
+  list: {
+    filters?: AdminFilterOptions;
+    limit?: number;
+    sort?: AdminSortOptions;
+    select?: TListSelect;
+  };
 };
 
-export type AdminSingleConfig<TTable extends AdminKeyTable> =
-  AdminConfigBase<TTable> & {
-    filters?: never;
-    limit?: never;
-    sort?: never;
-    select?: never;
-  };
+type AdminSingleConfig<TTable extends AdminKeyTable> = AdminConfigBase<TTable>;
 
-export type ResolvedAdminConfig<
-  TTable extends AdminTable,
-  TListSelect extends SelectShape | undefined = undefined,
-> = Omit<AdminConfig<TTable, TListSelect>, "sort" | "filters"> & {
-  single: false;
-  schema: z.ZodObject;
-  defaultValues: Record<string, unknown>;
-  sort: AdminSort;
-  filters: AdminFilters;
+export type AnyAdminConfig = NonNullable<ReturnType<typeof resolveAdmin>>;
+type AdminConfig =
+  | AdminListConfig<AdminTable, SelectShape | undefined>
+  | AdminSingleConfig<AdminKeyTable>;
+type ClientConfig = ReturnType<typeof defineClient>;
+
+type ModuleSettingsConfig<
+  TTable extends AdminKeyTable = AdminKeyTable,
+  TFields extends ModuleSettingsFields<TTable> = ModuleSettingsFields<TTable>,
+> = {
+  table: TTable;
+  fields: TFields;
+  cacheTag: string;
 };
 
-export type ResolvedAdminSingleConfig<TTable extends AdminKeyTable> =
-  AdminSingleConfig<TTable> & {
-    single: true;
-    schema: z.ZodObject;
-    defaultValues: Record<string, unknown>;
-  };
-
-export type AnyAdminTableConfig = ResolvedAdminConfig<
-  AdminTable,
-  SelectShape | undefined
+type ModuleSettingsRow<TTable extends AdminKeyTable> = Omit<
+  InferSelectModel<TTable>,
+  "id" | "key" | "createdBy" | "createdAt" | "updatedAt"
 >;
 
-export type AnyAdminSingleConfig = ResolvedAdminSingleConfig<AdminKeyTable>;
-
-export type AnyAdminConfig = AnyAdminTableConfig | AnyAdminSingleConfig;
-
-export type ModuleSettingsConfig<TTable extends AdminKeyTable = AdminKeyTable> =
-  {
-    table: TTable;
-    fields: ServerDefinedFields;
+type ModuleSettingsFields<TTable extends AdminKeyTable> = {
+  [K in keyof ModuleSettingsRow<TTable>]: ServerField & {
+    default: ModuleSettingsRow<TTable>[K];
   };
-
-export type ResolvedModuleSettingsConfig<
-  TTable extends AdminKeyTable = AdminKeyTable,
-> = ModuleSettingsConfig<TTable> & {
-  schema: z.ZodObject;
-  defaultValues: Record<string, unknown>;
 };
 
-export type ModuleDefinition<
-  TSettings extends ModuleSettingsConfig | undefined =
-    | ModuleSettingsConfig
-    | undefined,
-  TClient extends ModuleClient | undefined = ModuleClient | undefined,
-> = {
+export type ResolvedModuleSettings = NonNullable<
+  ReturnType<typeof resolveSettings>
+>;
+
+type ModuleOptions = {
   name: string;
   title?: string;
   icon?: ComponentType<SVGProps<SVGSVGElement>>;
-  client?: TClient;
-  table?: AdminManagedTable;
-  fields?: ServerDefinedFields;
-  filters?: AdminFilterOptions;
-  sort?: AdminSortOptions;
-  settings?: TSettings;
+  admin?: AdminConfig;
+  settings?: ModuleSettingsConfig;
+  client?: ClientConfig;
 };
 
-export type DefinedModuleConfig = ModuleDefinition<
-  ResolvedModuleSettingsConfig | undefined
-> & {
-  title: string;
-  records: false;
-};
-
-export type AdminModuleConfig = Omit<DefinedModuleConfig, "records"> & {
-  records: true;
-} & AnyAdminConfig;
-
-export type AdminDefinition = Record<
+export type DefinedAdmin = Record<
   string,
-  DefinedModuleConfig | AdminModuleConfig
+  {
+    name: string;
+    title: string;
+    icon?: ComponentType<SVGProps<SVGSVGElement>>;
+    client?: ClientConfig;
+    admin?: AnyAdminConfig;
+    settings?: ResolvedModuleSettings;
+  }
 >;
 
-export function defineModule<
-  const TModule extends ModuleDefinition<
-    ModuleSettingsConfig | undefined,
-    ModuleClient | undefined
-  >,
->(options: TModule) {
-  const moduleOptions = omit(options, ["sort", "filters"]);
-  let adminOptions;
+export function defineModule<const TModule extends ModuleOptions>(
+  options: TModule,
+) {
+  return {
+    title: options.title ?? startCase(options.name),
+    ...options,
+    admin: resolveAdmin(options.admin),
+    settings: resolveSettings(options.settings),
+  } satisfies DefinedAdmin[string];
+}
 
-  if (options.fields && options.table) {
-    const fields = resolveServerFields(options.fields);
+function resolveSettings(settings: ModuleSettingsConfig | undefined) {
+  if (!settings) {
+    return undefined;
+  }
 
-    adminOptions = {
-      records: true,
+  const fields = resolveServerFields(settings.fields);
+
+  return {
+    ...settings,
+    fields,
+    schema: createZodSchema(fields),
+    defaultValues: createDefaultValues(fields),
+  };
+}
+
+function resolveAdmin(admin: AdminConfig | undefined) {
+  if (!admin) {
+    return undefined;
+  }
+
+  const resolveBase = <TTable extends AdminManagedTable>(
+    config: AdminConfigBase<TTable>,
+  ) => {
+    const fields = resolveServerFields(config.fields);
+
+    return {
+      table: config.table,
+      revalidate: config.revalidate,
+      preview: config.preview,
       fields,
       schema: createZodSchema(fields),
       defaultValues: createDefaultValues(fields),
     };
+  };
 
-    if ("key" in options.table) {
-      adminOptions = {
-        ...adminOptions,
-        single: true,
-      };
-    } else {
-      adminOptions = {
-        ...adminOptions,
-        single: false,
-        sort: defineSort(options.table, fields, options.sort),
-        filters: defineFilters(options.table, fields, options.filters),
-      };
-    }
-  }
+  if ("list" in admin) {
+    const { table, list } = admin;
+    const { sort, filters, ...listOptions } = list;
+    const resolvedAdmin = resolveBase(admin);
 
-  let settingsOptions;
-
-  if (options.settings) {
-    const fields = resolveServerFields(options.settings.fields);
-    settingsOptions = {
-      settings: {
-        ...options.settings,
-        fields,
-        schema: createZodSchema(fields),
-        defaultValues: createDefaultValues(fields),
+    return {
+      ...resolvedAdmin,
+      list: {
+        ...listOptions,
+        sort: defineSort(table, resolvedAdmin.fields, sort),
+        filters: defineFilters(table, resolvedAdmin.fields, filters),
       },
     };
   }
 
-  return {
-    title: startCase(options.name),
-    ...moduleOptions,
-    ...adminOptions,
-    ...settingsOptions,
-  };
+  return resolveBase(admin);
 }
 
 function defineSort<TTable extends AdminTable>(
@@ -364,12 +342,4 @@ function resolveFieldReference(table: AdminTable, field: AdminFieldReference) {
   }
 
   return column;
-}
-
-export function defineAdmin<const TModules extends readonly { name: string }[]>(
-  modules: TModules,
-): AdminDefinition {
-  return Object.fromEntries(
-    modules.map((module) => [module.name, module]),
-  ) as AdminDefinition;
 }

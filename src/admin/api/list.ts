@@ -20,25 +20,32 @@ import {
 import { pipelineStage } from "@kenstack/api";
 import type {
   AdminFilters,
-  AnyAdminTableConfig,
+  AdminSort,
+  AnyAdminConfig,
   SortDirection,
 } from "@kenstack/admin";
 import { createListRequestSchema } from "@kenstack/admin/lib/listQuerySchema";
 
 import { deps } from "@app/deps";
 
-export const listAction = (adminConfig: AnyAdminTableConfig) =>
-  pipelineStage(
+export const listAction = (adminConfig: AnyAdminConfig) => {
+  if (!("list" in adminConfig)) {
+    return pipelineStage({ role: "admin" }, async ({ response }) =>
+      response.error("This admin config is not listable."),
+    );
+  }
+
+  return pipelineStage(
     {
       role: "admin",
       schema: createListRequestSchema({
-        filters: adminConfig.filters,
-        sort: adminConfig.sort,
+        filters: adminConfig.list.filters,
+        sort: adminConfig.list.sort,
       }),
     },
     async ({ response, data }) => {
       const { keywords, page, trash } = data;
-      const limit = adminConfig.limit || 25;
+      const limit = adminConfig.list.limit || 25;
       const offset = (page - 1) * limit;
 
       const { db } = deps;
@@ -50,7 +57,7 @@ export const listAction = (adminConfig: AnyAdminTableConfig) =>
 
       const where = [
         trash ? isNotNull(table.deletedAt) : isNull(table.deletedAt),
-        ...resolveFilters(adminConfig.filters, data.filters),
+        ...resolveFilters(adminConfig.list.filters, data.filters),
       ];
 
       if (keywords && searchable.length) {
@@ -80,11 +87,18 @@ export const listAction = (adminConfig: AnyAdminTableConfig) =>
             createdAt: table.createdAt,
             updatedAt: table.updatedAt,
             ...listSelect,
-            ...adminConfig.select,
+            ...(adminConfig.list.select ?? {}),
           })
           .from(table)
           .where(whereClause)
-          .orderBy(...resolveOrderBy(adminConfig, data.sort, data.direction))
+          .orderBy(
+            ...resolveOrderBy(
+              table,
+              adminConfig.list.sort,
+              data.sort,
+              data.direction,
+            ),
+          )
           .limit(limit)
           .offset(offset),
         db
@@ -96,10 +110,11 @@ export const listAction = (adminConfig: AnyAdminTableConfig) =>
       return response.success({ total: count, items: rows });
     },
   );
+};
 
 function getListSelect(
-  table: AnyAdminTableConfig["table"],
-  fields: AnyAdminTableConfig["fields"],
+  table: AnyAdminConfig["table"],
+  fields: AnyAdminConfig["fields"],
 ) {
   const columns = getTableColumns(table);
   const select: Record<string, (typeof columns)[keyof typeof columns] | SQL> =
@@ -281,11 +296,11 @@ function parseTextFilter(value: unknown) {
 }
 
 function resolveOrderBy(
-  adminConfig: AnyAdminTableConfig,
+  table: AnyAdminConfig["table"],
+  sort: AdminSort,
   requestedSort: string | undefined,
   requestedDirection: SortDirection | undefined,
 ) {
-  const { sort, table } = adminConfig;
   const sortName =
     requestedSort && sort[requestedSort] ? requestedSort : Object.keys(sort)[0];
   const option = sort[sortName];

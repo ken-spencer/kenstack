@@ -21,10 +21,10 @@ import {
   saveModuleSettingsAction,
 } from "./moduleSettings";
 
-import { type AdminDefinition } from "@kenstack/admin";
+import { type DefinedAdmin } from "@kenstack/admin";
 import { type FetchError } from "@kenstack/api/fetcher";
 
-type Options = { admin: AdminDefinition };
+type Options = { admin: DefinedAdmin };
 
 export const adminPipeline = async (
   request: NextRequest,
@@ -90,16 +90,20 @@ export const adminPipeline = async (
 
   switch (action) {
     case "load-module-settings":
-      if (!moduleConfig.settings) {
-        return NextResponse.json({
-          status: "error",
-          message: `Module "${name}" does not have settings.`,
-        });
-      }
+      {
+        const settings = moduleConfig.settings;
 
-      return pipeline({ request, json }, [
-        loadModuleSettingsAction(name, moduleConfig.settings),
-      ]);
+        if (!settings) {
+          return NextResponse.json({
+            status: "error",
+            message: `Module "${name}" does not have settings.`,
+          });
+        }
+
+        return pipeline({ request, json }, [
+          loadModuleSettingsAction({ name: moduleConfig.name, settings }),
+        ]);
+      }
     case "save-module-settings":
       if (!moduleConfig.settings) {
         return NextResponse.json({
@@ -113,7 +117,8 @@ export const adminPipeline = async (
       ]);
   }
 
-  if (!moduleConfig.records) {
+  const adminConfig = moduleConfig.admin;
+  if (!adminConfig) {
     return NextResponse.json({
       status: "error",
       message: `Module "${name}" does not have admin records.`,
@@ -122,33 +127,26 @@ export const adminPipeline = async (
 
   switch (action) {
     case "list":
-      if (moduleConfig.single === true) {
-        return NextResponse.json({
-          status: "error",
-          message: "This admin config is not listable.",
-        });
-      }
-
-      return pipeline({ request, json }, [listAction(moduleConfig)]);
+      return pipeline({ request, json }, [listAction(adminConfig)]);
     case "load":
-      return pipeline({ request, json }, [loadAction(name, moduleConfig)]);
+      return pipeline({ request, json }, [loadAction(name, adminConfig)]);
     case "save":
-      return pipeline({ request, json }, [saveAction(name, moduleConfig)]);
+      return pipeline({ request, json }, [saveAction(name, adminConfig)]);
     case "remove":
-      return pipeline({ request, json }, [removeAction(moduleConfig)]);
+      return pipeline({ request, json }, [removeAction(adminConfig)]);
     case "revisions":
-      return pipeline({ request, json }, [revisionsAction(moduleConfig)]);
+      return pipeline({ request, json }, [revisionsAction(adminConfig)]);
     case "get-presigned-url":
-      return pipeline({ request, json }, [getPresignedUrlAction(moduleConfig)]);
+      return pipeline({ request, json }, [getPresignedUrlAction(adminConfig)]);
     case "upload-complete":
-      return pipeline({ request, json }, [uploadCompleteAction(moduleConfig)]);
+      return pipeline({ request, json }, [uploadCompleteAction(adminConfig)]);
     case "impersonate":
       return pipeline({ request, json }, [impersonateAction()]);
     case "tags":
-      return pipeline({ request, json }, [tagsAction(moduleConfig)]);
+      return pipeline({ request, json }, [tagsAction(adminConfig)]);
     case "relationship-search":
       return pipeline({ request, json }, [
-        relationshipSearchAction(moduleConfig),
+        relationshipSearchAction(adminConfig),
       ]);
   }
 

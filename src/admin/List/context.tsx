@@ -7,13 +7,14 @@ import {
   createListQueryStoreSchema,
   type ListQueryStoreState,
 } from "@kenstack/admin/lib/listQuerySchema";
+import type { FetchResult } from "@kenstack/api/fetcher";
 
 const AdminListContext = createContext<UseListProps | null>(null);
 import fetcher from "@kenstack/api/fetcher";
-import { useQuery, UseQueryResult } from "@tanstack/react-query";
+import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import useQueryStore, { type SetQueryStore } from "./useQueryStore";
 
-import { AdminClient, type AdminListResult } from "@kenstack/admin/client";
+import type { AdminClient, BaseListItem } from "@kenstack/admin/client";
 
 type AdminListProps = {
   client: AdminClient;
@@ -26,7 +27,16 @@ type AdminListProps = {
 
 type QueryKey = [string, string, ListQueryStoreState, number];
 
-type UseListProps<TDoc extends Record<string, unknown> = never> = {
+export type AdminListQueryData<
+  TDoc extends Record<string, unknown> = Record<string, unknown>,
+> = FetchResult<{
+  total: number;
+  items: (BaseListItem & TDoc)[];
+}>;
+
+type UseListProps<
+  TDoc extends Record<string, unknown> = Record<string, unknown>,
+> = {
   client: AdminClient;
   sort: AdminSortMeta[];
   filter: AdminFilterMeta[];
@@ -39,7 +49,7 @@ type UseListProps<TDoc extends Record<string, unknown> = never> = {
   setFilters: SetQueryStore<ListQueryStoreState>;
   userId: number;
   page: number;
-  query: UseQueryResult<AdminListResult<TDoc>, Error>;
+  query: UseQueryResult<AdminListQueryData<TDoc>, Error>;
   limit: number;
 };
 
@@ -83,7 +93,10 @@ export function AdminListProvider({
 
   const query = useQuery({
     queryFn: () =>
-      fetcher<AdminListResult>(apiPath, {
+      fetcher<{
+        total: number;
+        items: (BaseListItem & Record<string, unknown>)[];
+      }>(apiPath, {
         action: "list",
         name,
         ...debouncedFilters,

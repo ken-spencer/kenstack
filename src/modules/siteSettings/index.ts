@@ -10,7 +10,9 @@ export default defineModule({
   title: "Site Settings",
   icon: Settings,
   client,
-  fields,
-  table: siteSettings,
-  revalidate: ["site-settings"],
+  admin: {
+    fields,
+    table: siteSettings,
+    revalidate: ["site-settings"],
+  },
 });

@@ -54,29 +54,29 @@ export type AdminFilterOption = readonly [
   description?: string,
 ];
 
-type AdminFilterBase = {
-  label?: string;
-};
-
 export type AdminFilterOptions = Record<
   string,
-  | (AdminFilterBase & {
+  | {
+      label?: string;
       kind: "date-range";
       field: AdminFieldReference;
-    })
-  | (AdminFilterBase & {
+    }
+  | {
+      label?: string;
       kind: "boolean";
       field: AdminFieldReference;
-    })
-  | (AdminFilterBase & {
+    }
+  | {
+      label?: string;
       kind: "enum" | "includes";
       field: AdminFieldReference;
       options: readonly AdminFilterOption[];
-    })
-  | (AdminFilterBase & {
+    }
+  | {
+      label?: string;
       kind: "text";
       field: AdminFieldReference;
-    })
+    }
 >;
 
 export type AdminFilters = Record<
@@ -84,23 +84,23 @@ export type AdminFilters = Record<
   {
     label: string;
   } & (
-    | (AdminFilterBase & {
+    | {
         kind: "date-range";
         field: AnyColumn;
-      })
-    | (AdminFilterBase & {
+      }
+    | {
         kind: "boolean";
         field: AnyColumn;
-      })
-    | (AdminFilterBase & {
+      }
+    | {
         kind: "enum" | "includes";
         field: AnyColumn;
         options: readonly AdminFilterOption[];
-      })
-    | (AdminFilterBase & {
+      }
+    | {
         kind: "text";
         field: AnyColumn;
-      })
+      }
   )
 >;
 

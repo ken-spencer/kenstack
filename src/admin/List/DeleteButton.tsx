@@ -13,24 +13,17 @@ import {
 import { Trash, Undo2 } from "lucide-react";
 import IconButton from "@kenstack/components/IconButton";
 import { Badge } from "@kenstack/components/ui/badge";
-import { useAdminList } from "./context";
-import fetcher, { type FetchResult } from "@kenstack/api/fetcher";
+import { type AdminListQueryData, useAdminList } from "./context";
+import fetcher from "@kenstack/api/fetcher";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-
-import { AdminListResult } from "@kenstack/admin/client";
 
 export default function DeleteButton() {
   const { name, selected, setSelected, apiPath, queryKey, filters } =
     useAdminList();
   const queryClient = useQueryClient();
   const inTrash = filters.trash;
-  const mutation = useMutation<
-    FetchResult,
-    Error,
-    number[],
-    { previous: unknown }
-  >({
-    mutationFn: async (variables) =>
+  const mutation = useMutation({
+    mutationFn: async (variables: number[]) =>
       fetcher(apiPath, {
         name,
         action: "remove",
@@ -40,7 +33,7 @@ export default function DeleteButton() {
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey });
 
-      const previous = queryClient.getQueryData<AdminListResult>(queryKey);
+      const previous = queryClient.getQueryData<AdminListQueryData>(queryKey);
 
       if (previous && "items" in previous) {
         queryClient.setQueryData(queryKey, {
@@ -120,13 +113,8 @@ export function RestoreButton() {
     useAdminList();
   const queryClient = useQueryClient();
   const inTrash = filters.trash;
-  const mutation = useMutation<
-    FetchResult,
-    Error,
-    number[],
-    { previous: unknown }
-  >({
-    mutationFn: async (variables) =>
+  const mutation = useMutation({
+    mutationFn: async (variables: number[]) =>
       fetcher(apiPath, {
         name,
         action: "remove",
@@ -136,7 +124,7 @@ export function RestoreButton() {
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey });
 
-      const previous = queryClient.getQueryData<AdminListResult>(queryKey);
+      const previous = queryClient.getQueryData<AdminListQueryData>(queryKey);
 
       if (previous && "items" in previous) {
         queryClient.setQueryData(queryKey, {

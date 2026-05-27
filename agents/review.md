@@ -8,6 +8,7 @@ Use this checklist before finalizing code changes. It is meant to catch project 
 - Keep necessary casts narrow and at real generic, Drizzle, React polymorphic, or untyped external boundaries.
 - Prefer inferred return types when the implementation already expresses the type clearly.
 - Prefer `satisfies` for validating returned object shapes without forcing a function return annotation.
+- Check `Resolved*`, `Defined*`, and similarly named output types that mirror a builder or resolver. Prefer deriving broad consumer types from `ReturnType<typeof builder>` or letting the call site infer the specific shape; keep a named resolved type only when it is reused independently or documents a real public contract that cannot be inferred cleanly.
 - Do not specify component or form generics at call sites when props and callbacks can infer them.
 - Do not add runtime throws, guards, or branches only to satisfy a TypeScript tuple, generic, or narrowing shape. If the runtime can handle the value gracefully, fix the type boundary or move validation to the caller that actually requires the stricter invariant.
 
@@ -22,6 +23,7 @@ Use this checklist before finalizing code changes. It is meant to catch project 
 - Check one-line `is*`, `get*`, and `has*` helpers. Remove them when they only hide a direct discriminator check, property lookup, or local ternary and do not provide meaningful reuse, validation, or type narrowing across an unsafe boundary.
 - When touching a file, review nearby private helpers that predate the current change. Inline helpers that only return an optional property, defaulted object, mapped key list, or one local branch. Keep helpers that provide real generic narrowing, validation of external/unknown data, shared behavior, or a meaningful domain boundary.
 - Review each newly added function, type, helper, and local alias one by one. Keep it only if it meaningfully improves inference, readability, reuse, validation, or a real boundary; remove it if it merely renames a direct expression, works around a local type issue, or anticipates future use.
+- Review types with `Base` in the name. Keep them only when the shared base is meaningfully reused and makes the composed types easier to understand; inline them when they only factor out one small property group or exist for anticipated reuse.
 - Flatten nested guard `if` statements when the inner branch only returns, throws, continues, or breaks and the combined condition remains readable.
 - Inline typed configuration objects at the typed call site so contextual typing and excess property checks work there.
 - Avoid creating alternate return shapes, enhanced schemas, or parallel config objects when the original can be defined correctly at the point of use.

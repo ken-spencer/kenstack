@@ -30,12 +30,14 @@ function impactedRecord(row: RemovedRow) {
   };
 }
 
-export const removeAction = (adminConfig: AnyAdminConfig) =>
-  pipelineStage({ role: "admin", schema }, async ({ response, user, data }) => {
-    if (adminConfig.single === true) {
-      return response.error("Single records cannot be removed.");
-    }
+export const removeAction = (adminConfig: AnyAdminConfig) => {
+  if (!("list" in adminConfig)) {
+    return pipelineStage({ role: "admin" }, async ({ response }) =>
+      response.error("This admin config is not removable."),
+    );
+  }
 
+  return pipelineStage({ role: "admin", schema }, async ({ response, user, data }) => {
     if (data.remove.length === 0) {
       return response.error("No records provided to delete.");
     }
@@ -100,3 +102,4 @@ export const removeAction = (adminConfig: AnyAdminConfig) =>
 
     return response.success({});
   });
+};

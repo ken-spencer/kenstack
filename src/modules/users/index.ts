@@ -10,14 +10,18 @@ const usersModule = defineModule({
   title: "Users",
   icon: UsersRound,
   client,
-  fields,
-  table: users,
-  sort: {
-    name: {
-      fields: ["givenName", "familyName"],
-    },
-    email: {
-      fields: ["email"],
+  admin: {
+    fields,
+    table: users,
+    list: {
+      sort: {
+        name: {
+          fields: ["givenName", "familyName"],
+        },
+        email: {
+          fields: ["email"],
+        },
+      },
     },
   },
 });
