@@ -1,10 +1,8 @@
-import type { ComponentType, SVGProps } from "react";
+import type { FC, ReactNode } from "react";
 import * as z from "zod";
-import {
-  // createDefaultValues,
-  createZodSchema,
-  type DefinedFields,
-} from "./fields";
+import type { FetchResult } from "@kenstack/api/fetcher";
+import { createZodSchema } from "@kenstack/fields/createZodSchema";
+import type { DefinedFields } from "@kenstack/fields/types";
 
 export type BaseListItem = {
   id: number;
@@ -12,18 +10,26 @@ export type BaseListItem = {
   updatedAt: string;
 };
 
-export type ListItemProps<
+export type ListItemRow<
   TExtra extends Record<string, unknown> = Record<string, unknown>,
-> = {
-  path: string;
-  item: BaseListItem & TExtra;
+> = BaseListItem & TExtra & { path: string };
+
+export type ListItemOptions = {
+  className?: string;
+  column?: string;
 };
 
-export type ListItemComponent<
+export type ListItemRenderer<
   TExtra extends Record<string, unknown> = Record<string, unknown>,
-> = React.FC<ListItemProps<TExtra>>;
+> = (row: ListItemRow<TExtra>) => ReactNode;
 
-import type { FetchResult } from "@kenstack/api/fetcher";
+export type ListItem<
+  TExtra extends Record<string, unknown> = Record<string, unknown>,
+> = readonly [render: ListItemRenderer<TExtra>, options?: ListItemOptions];
+
+export type ListItems<
+  TExtra extends Record<string, unknown> = Record<string, unknown>,
+> = readonly ListItem<TExtra>[];
 
 export type AdminListResult<
   TItem extends Record<string, unknown> | never = never,
@@ -32,22 +38,66 @@ export type AdminListResult<
   items: [TItem] extends [never] ? BaseListItem[] : (BaseListItem & TItem)[];
 }>;
 
-export type AdminClientProps = {
-  /** SVG icon component (e.g. Lucide icons) */
-  icon?: ComponentType<SVGProps<SVGSVGElement>>;
-  schema?: z.ZodObject;
+export type AdminClientProps<
+  TListItem extends Record<string, unknown> = Record<string, unknown>,
+> = {
   fields: DefinedFields;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ListItem?: ListItemComponent<any>;
-  EditForm: React.FC;
+  listItems?: ListItems<TListItem>;
+  EditForm: FC;
 };
 
-export type AdminClient = ReturnType<typeof adminClient>;
+export type AdminClient<
+  TListItem extends Record<string, unknown> = Record<string, unknown>,
+> = AdminClientProps<TListItem> & {
+  schema: z.ZodObject;
+};
 
-export function adminClient(options: AdminClientProps) {
+export type SettingsClientProps = {
+  fields: DefinedFields;
+};
+
+export type SettingsClient = SettingsClientProps & {
+  schema: z.ZodObject;
+};
+
+export type ModuleClientProps<
+  TListItem extends Record<string, unknown> = Record<string, unknown>,
+> =
+  | (AdminClientProps<TListItem> & {
+      settings?: SettingsClientProps | SettingsClient;
+    })
+  | {
+      settings: SettingsClientProps | SettingsClient;
+    };
+
+export type ModuleClient = Partial<AdminClient> & {
+  settings?: SettingsClient;
+};
+
+export function defineClient<
+  TListItem extends Record<string, unknown> = Record<string, unknown>,
+>(
+  options: AdminClientProps<TListItem> & {
+    settings?: SettingsClientProps | SettingsClient;
+  },
+): AdminClient<TListItem> & { settings?: SettingsClient };
+
+export function defineClient(options: {
+  settings: SettingsClientProps | SettingsClient;
+}): ModuleClient;
+
+export function defineClient({
+  settings,
+  ...options
+}: ModuleClientProps): ModuleClient {
   return {
     ...options,
-    schema: createZodSchema(options.fields),
-    // defaultValues: createDefaultValues(options.fields),
+    schema:
+      "fields" in options && "EditForm" in options
+        ? createZodSchema(options.fields)
+        : undefined,
+    settings: settings
+      ? { ...settings, schema: createZodSchema(settings.fields) }
+      : undefined,
   };
 }

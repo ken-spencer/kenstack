@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import AdminList from "@kenstack/admin/List";
 import Edit from "@kenstack/admin/Edit";
 import { deps } from "@app/deps";
-import { isAdminTableConfig, type AdminDefinition } from ".";
+import { type AdminDefinition } from ".";
 
 type AdminServerProps = {
   context: {
@@ -39,8 +39,8 @@ async function AdminServerCore({
   }
   const isNew = id === "new";
 
-  const adminConfig = admin.modules[name];
-  if (!adminConfig) {
+  const adminConfig = admin[name];
+  if (!adminConfig || !adminConfig.records) {
     notFound();
   }
 
@@ -54,7 +54,7 @@ async function AdminServerCore({
         <span className="font-bold">{adminConfig.title}</span>
       </div>
       {(() => {
-        if (isAdminTableConfig(adminConfig)) {
+        if (adminConfig.single === false) {
           if (!isNew && !id) {
             return (
               <AdminList
@@ -76,15 +76,11 @@ async function AdminServerCore({
           );
         }
 
-        return (
-          <Edit
-            recordKey={adminConfig.key}
-            isNew={isNew}
-            name={name}
-            adminConfig={adminConfig}
-            userId={user.id}
-          />
-        );
+        if (id) {
+          notFound();
+        }
+
+        return <Edit name={name} adminConfig={adminConfig} userId={user.id} />;
       })()}
     </div>
   );

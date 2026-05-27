@@ -38,14 +38,14 @@ interface Options {
   from: string | { name: string; addr: string };
   subject: string;
   html: string;
-  attachments: Attachment[];
+  attachments?: Attachment[];
 }
 
 export default async function rawMailer({
   to,
   cc,
   bcc,
-  from = { name: "Do Not Reply", addr: "do.not.reply@thaumazo.org" },
+  from,
   subject = "",
   html = "",
   attachments = [],

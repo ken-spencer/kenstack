@@ -15,10 +15,10 @@ import { AdminClient, PreviewPath } from "..";
 type AdminEditProps = {
   name: string;
   id?: number;
-  recordKey?: string;
   isNew: boolean;
   single: boolean;
   userId: number;
+  canUpload: boolean;
   defaultValues: Record<string, unknown>;
   client: AdminClient;
   children: React.ReactNode;
@@ -36,10 +36,10 @@ type AdminEditContext = {
   name: string;
   client: AdminClient;
   id?: number;
-  recordKey?: string;
   isNew: boolean;
   single: boolean;
   userId: number;
+  canUpload: boolean;
   apiPath: string;
   listPath: string;
   item: null | EditItem;
@@ -53,10 +53,10 @@ const AdminEditContext = createContext<AdminEditContext | null>(null);
 export function AdminEditProvider({
   name,
   id,
-  recordKey,
   isNew,
   single,
   userId,
+  canUpload,
   defaultValues,
   client,
   preview,
@@ -69,7 +69,7 @@ export function AdminEditProvider({
     parts.pop(); // remove last segment
     return "/" + parts.join("/");
   }, [pathname]);
-  const loadTarget = single ? recordKey : id;
+  const loadTarget = single ? name : id;
 
   const { data, error, isPending } = useQuery({
     queryFn: () =>
@@ -77,7 +77,6 @@ export function AdminEditProvider({
         name,
         action: "load",
         id: single ? undefined : id,
-        key: single ? recordKey : undefined,
       }),
     queryKey: ["admin-edit", name, loadTarget],
     enabled: !!loadTarget,
@@ -105,10 +104,10 @@ export function AdminEditProvider({
   const values: AdminEditContext = {
     name,
     client,
-    recordKey,
     id: item?.id ?? (typeof id === "number" ? id : undefined),
     isNew,
     single,
+    canUpload,
     apiPath,
     listPath,
     userId: userId,

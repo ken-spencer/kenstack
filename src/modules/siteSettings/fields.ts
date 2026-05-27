@@ -1,12 +1,13 @@
-import { defineFields } from "@kenstack/admin/fields";
+import { defineFields } from "@kenstack/fields";
+import { imageField, textField } from "@kenstack/fields/client";
 import * as z from "zod";
 
 export const fields = defineFields({
-  title: {
+  title: textField({
     default: "Kenstack",
     zod: z.string().trim().min(1, "Title is required"),
-  },
-  titleTemplate: {
+  }),
+  titleTemplate: textField({
     default: "",
     zod: z.literal("").or(
       z
@@ -17,6 +18,6 @@ export const fields = defineFields({
           'Title template must include "%s".',
         ),
     ),
-  },
-  ogImage: { kind: "image" },
+  }),
+  ogImage: imageField(),
 });

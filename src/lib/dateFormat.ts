@@ -1,12 +1,5 @@
+import { format } from "date-fns";
+
 export const dateFormat = (dateString: string) => {
-  const date = new Date(dateString);
-  return date
-    .toLocaleString(undefined, {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "numeric",
-    })
-    .replace(/\./g, "");
+  return format(new Date(dateString), "MMM d, yyyy, h:mm a");
 };

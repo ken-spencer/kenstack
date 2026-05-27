@@ -4,6 +4,7 @@ import { loginPipeline } from "@kenstack/auth/handlers/login";
 import { logoutPipeline } from "@kenstack/auth/handlers/logout";
 import { resetPasswordPipeline } from "@kenstack/auth/handlers/resetPassword";
 import { sendPasswordResetPipeline } from "@kenstack/auth/handlers/sendPasswordReset";
+import { deps } from "@app/deps";
 import {
   forgotPasswordPipeline,
   type ForgotPasswordProps,
@@ -19,13 +20,13 @@ import FpEmail, {
 type AuthPipelineOptions = { forgotPassword?: ForgotPasswordProps };
 const defaults = {
   forgotPassword: {
-    from: "unmonitored@nowhere.com",
+    from: deps.email.from,
     Email: FpEmail,
     attachments: FpAttachments,
   },
 } satisfies Required<AuthPipelineOptions>;
 
-export const authPipeline = (props: AuthPipelineOptions) => {
+export const authPipeline = (props: AuthPipelineOptions = {}) => {
   const options = merge({}, defaults, props);
   const POST = (request: NextRequest) =>
     multiPipeline({ request }, [

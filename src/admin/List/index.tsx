@@ -5,6 +5,8 @@ import Footer from "./Footer";
 import List from "./List";
 
 import { type AnyAdminTableConfig } from "@kenstack/admin";
+import { getFilterMeta, getSortMeta } from "@kenstack/admin";
+
 type AdminListProps = {
   adminConfig: AnyAdminTableConfig;
   userId: number;
@@ -12,7 +14,7 @@ type AdminListProps = {
 };
 
 export default function AdminListCont({
-  adminConfig: { client, filterMeta, sortMeta },
+  adminConfig: { client, filters, sort },
   userId,
   name,
 }: AdminListProps) {
@@ -21,8 +23,8 @@ export default function AdminListCont({
       name={name}
       client={client}
       userId={userId}
-      sort={sortMeta}
-      filter={filterMeta}
+      sort={getSortMeta(sort)}
+      filter={getFilterMeta(filters)}
     >
       <section>
         <Header />

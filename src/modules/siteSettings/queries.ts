@@ -33,7 +33,7 @@ export async function loadSiteSettings() {
   };
 }
 
-export async function loadSiteSettingsMetadata(): Promise<Metadata> {
+export async function loadSiteSettingsMetadata() {
   const settings = await loadSiteSettings();
 
   return {
@@ -55,5 +55,5 @@ export async function loadSiteSettingsMetadata(): Promise<Metadata> {
           ],
         }
       : undefined,
-  };
+  } satisfies Metadata;
 }

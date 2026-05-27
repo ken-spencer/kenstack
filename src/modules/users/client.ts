@@ -1,11 +1,18 @@
 "use client";
 
-import { adminClient } from "@kenstack/admin/client";
-import ListItem from "./components/ListItem";
+import { defineClient } from "@kenstack/admin/client";
 import EditForm from "./components/EditForm";
-// import { schema } from './shared/schema';
 import { fields } from "./fields";
+import { UserEmailListItem, UserNameListItem } from "./components/ListItems";
 
-export const userClientOptions = { fields, ListItem, EditForm } as const;
-
-export default adminClient(userClientOptions);
+export default defineClient({
+  fields,
+  listItems: [
+    [(row) => UserNameListItem({ row }), { column: "auto" }],
+    [
+      (row) => UserEmailListItem({ row }),
+      { className: "hidden self-center sm:block" },
+    ],
+  ],
+  EditForm,
+});

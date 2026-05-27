@@ -11,6 +11,7 @@ import { twMerge } from "tailwind-merge";
 import Field, { type FieldProps } from "@kenstack/forms/Field";
 import getUploadErrorMessage from "@kenstack/forms/getUploadErrorMessage";
 import IconButton from "@kenstack/components/IconButton";
+import Help from "@kenstack/components/Help";
 import { useForm } from "@kenstack/forms/context";
 
 import { rasterMimeTypes as acceptDefault } from "@kenstack/db/tables/images/mimeTypes";
@@ -30,6 +31,9 @@ type ImageRenderProps = {
   imageClass?: string;
   accept?: readonly string[];
   className?: string;
+  canUpload?: boolean;
+  presignedUrlAction?: string;
+  uploadCompleteAction?: string;
 };
 
 export type ImageFieldProps = FieldProps &
@@ -67,6 +71,9 @@ const imageRender = ({
   imageClass,
   className,
   accept = acceptDefault,
+  canUpload = true,
+  presignedUrlAction = "get-presigned-url",
+  uploadCompleteAction = "upload-complete",
 }: ImageRenderProps) =>
   function ImageFieldRender({ field }: ImageFieldRenderProps) {
     const { finishUploading, form, setStatusMessage, startUploading } =
@@ -85,6 +92,7 @@ const imageRender = ({
         : "object-scale-down object-center w-full h-full",
       imageClass,
     );
+    const disabledHelp = canUpload ? null : <UploadDisabledHelp />;
 
     const [uploading, setUploading] = useState(false);
     const [src, setSrc] = useState<string>("");
@@ -122,7 +130,7 @@ const imageRender = ({
           id: string;
         }>(apiPath, {
           ...(extraData ? extraData : {}),
-          action: "get-presigned-url",
+          action: presignedUrlAction,
           filename: file.name,
           type: file.type,
           fieldname: field.name,
@@ -180,7 +188,7 @@ const imageRender = ({
           originalUrl?: string;
         }>(apiPath, {
           ...(extraData ? extraData : {}),
-          action: "upload-complete",
+          action: uploadCompleteAction,
           fieldname: field.name,
           imageId: res.id,
         });
@@ -286,6 +294,15 @@ const imageRender = ({
     }
 
     if (field.value) {
+      if (!canUpload) {
+        return (
+          <div className={contClass}>
+            <img alt="" className={imgClass} src={field.value.url} />
+            {disabledHelp}
+          </div>
+        );
+      }
+
       return (
         <div className={contClass} {...dragEvents}>
           <IconButton
@@ -343,6 +360,21 @@ const imageRender = ({
       );
     }
 
+    if (!canUpload) {
+      return (
+        <div className={contClass}>
+          <div className="h-full w-full opacity-50">
+            {placeholder ?? (
+              <div className={imgClass + " flex items-center justify-center"}>
+                <AddImageIcon className="h-16 w-16 text-gray-600" />
+              </div>
+            )}
+          </div>
+          {disabledHelp}
+        </div>
+      );
+    }
+
     return (
       <label className={twMerge(contClass, "cursor-pointer")} {...dragEvents}>
         {placeholder ?? (
@@ -355,3 +387,11 @@ const imageRender = ({
       </label>
     );
   };
+
+function UploadDisabledHelp() {
+  return (
+    <div className="absolute top-1 right-1 rounded-full bg-white/90 shadow-sm ring-1 ring-black/10">
+      <Help message="Image uploads require the following environment variables to be set: AWS_S3_BUCKET, AWS_ACCESS_KEY_ID, and AWS_SECRET_ACCESS_KEY." />
+    </div>
+  );
+}

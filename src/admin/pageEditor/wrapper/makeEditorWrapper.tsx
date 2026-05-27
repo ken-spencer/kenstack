@@ -1,0 +1,92 @@
+import React from "react";
+import { usePageEditor } from "@kenstack/admin/pageEditor/context";
+import { useAdminUi } from "@kenstack/admin/components/PageControls/useAdminUi";
+import { PageEditorForm } from "../Form";
+
+import type {
+  EditorWrapperProps,
+  PageEditorAdminProps,
+  Name,
+} from "@kenstack/admin/pageEditor/types";
+
+type DynamicComponent<P> = React.ComponentType<P> & {
+  preload?: () => void;
+};
+
+export function makeEditorWrapper(
+  Editor: DynamicComponent<PageEditorAdminProps>,
+) {
+  return function EditorWrapper({
+    tag,
+    name,
+    placeholder,
+    Component,
+    componentProps,
+  }: EditorWrapperProps) {
+    const { content, editing } = usePageEditor();
+    const { showAdminControls } = useAdminUi();
+    const displayValue = content.display[name];
+
+    if (!showAdminControls) {
+      return (
+        <Component
+          tag={tag}
+          {...componentProps}
+          placeholder={placeholder}
+          content={displayValue}
+        />
+      );
+    }
+
+    if (editing === name) {
+      return (
+        <Toggle name={name}>
+          <PageEditorForm>
+            <Editor
+              name={name}
+              // value={value}
+              // setValue={setValue}
+              placeholder={placeholder}
+              className={componentProps.className}
+            />
+          </PageEditorForm>
+        </Toggle>
+      );
+    }
+
+    return (
+      <Toggle name={name}>
+        <Component
+          tag={tag}
+          {...componentProps}
+          placeholder={placeholder}
+          content={displayValue}
+        />
+      </Toggle>
+    );
+  };
+}
+
+function Toggle({ name, children }: { name: Name; children: React.ReactNode }) {
+  const { editing, setEditing } = usePageEditor();
+
+  return (
+    <div className="relative">
+      {children}
+      <button
+        type="button"
+        className={
+          "absolute -top-3 right-0 z-10 size-6 cursor-pointer rounded-full bg-white/85 shadow ring-1 ring-black/10 sm:-right-6 sm:bg-transparent sm:shadow-none sm:ring-0 dark:bg-gray-950/85 sm:dark:bg-transparent " +
+          (editing === name
+            ? "!bg-fuchsia-800/85 text-white ring-fuchsia-800/60"
+            : "")
+        }
+        onClick={() => {
+          setEditing(editing === name ? null : name);
+        }}
+      >
+        ✎
+      </button>
+    </div>
+  );
+}

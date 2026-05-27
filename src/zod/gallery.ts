@@ -1,4 +1,5 @@
 import * as z from "zod";
+import { squareCropSchema } from "./image";
 
 const galleryImageFields = z.object({
   id: z.number().optional(),
@@ -15,6 +16,7 @@ const galleryImageFields = z.object({
   sourceWidth: z.number().nullable().optional(),
   sourceHeight: z.number().nullable().optional(),
   originalUrl: z.string().nullish(),
+  squareCrop: squareCropSchema,
 });
 
 const upload = galleryImageFields.extend({

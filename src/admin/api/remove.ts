@@ -4,7 +4,6 @@ import { revalidateTag } from "next/cache";
 
 import { pipelineStage } from "@kenstack/api";
 import type { AnyAdminConfig } from "..";
-import { isAdminTableConfig } from "..";
 import { deps } from "@app/deps";
 
 const schema = z.object({
@@ -33,7 +32,7 @@ function impactedRecord(row: RemovedRow) {
 
 export const removeAction = (adminConfig: AnyAdminConfig) =>
   pipelineStage({ role: "admin", schema }, async ({ response, user, data }) => {
-    if (!isAdminTableConfig(adminConfig)) {
+    if (adminConfig.single === true) {
       return response.error("Single records cannot be removed.");
     }
 
@@ -58,6 +57,17 @@ export const removeAction = (adminConfig: AnyAdminConfig) =>
     }
 
     if (data.mode === "permanent") {
+      for (const row of rows) {
+        for (const [fieldKey, field] of Object.entries(adminConfig.fields)) {
+          await field.behavior?.delete?.({
+            db,
+            key: fieldKey,
+            tableId: row.id,
+            row,
+          });
+        }
+      }
+
       await db.delete(table).where(targetFilter);
     } else {
       await db

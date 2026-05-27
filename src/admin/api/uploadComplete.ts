@@ -1,4 +1,3 @@
-import type { AnyAdminConfig } from "..";
 import type { Readable } from "node:stream";
 
 import {
@@ -9,11 +8,14 @@ import {
 } from "@aws-sdk/client-s3";
 import { images } from "@kenstack/db/tables/images";
 import { deps } from "@app/deps";
+import canUpload from "@kenstack/lib/canUpload";
 import { and, eq, getTableName } from "drizzle-orm";
+import type { AnyPgTable } from "drizzle-orm/pg-core";
 
 import { pipelineStage } from "@kenstack/api";
 
 import * as z from "zod";
+import type { ServerDefinedFields } from "@kenstack/fields/server";
 // import { imageMimeTypes } from "@kenstack/zod/image";
 
 const region = process.env.AWS_S3_REGION ?? process.env.AWS_REGION;
@@ -51,6 +53,11 @@ const s3 = new S3Client({
   requestChecksumCalculation: "WHEN_REQUIRED",
   region,
 }); // region & creds auto-loaded from AWS_* env vars
+
+type ImageUploadConfig = {
+  table: AnyPgTable;
+  fields: ServerDefinedFields;
+};
 
 const streamToBuffer = async (stream: Readable): Promise<Buffer> => {
   const chunks: Buffer[] = [];
@@ -106,8 +113,12 @@ const removeUploadedObject = async (key: string) => {
   );
 };
 
-export const uploadCompleteAction = (adminConfig: AnyAdminConfig) =>
+export const uploadCompleteAction = (adminConfig: ImageUploadConfig) =>
   pipelineStage({ schema: uploadSchema }, async ({ data, response }) => {
+    if (!canUpload()) {
+      return response.error("Image uploads are not configured.");
+    }
+
     const { fieldname } = data;
     const user = await deps.auth.requireUser();
 
@@ -140,6 +151,11 @@ export const uploadCompleteAction = (adminConfig: AnyAdminConfig) =>
     if (!field) {
       return response.error(`Unknown field name ${fieldname}`);
     }
+
+    if (!field.behavior?.upload) {
+      return response.error(`Field "${fieldname}" does not support uploads.`);
+    }
+
     if (!bucket) {
       return response.error("Missing AWS_S3_BUCKET");
     }

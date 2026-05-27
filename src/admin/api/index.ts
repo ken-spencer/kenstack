@@ -14,7 +14,12 @@ import { relationshipSearchAction } from "@kenstack/admin/api/relationshipSearch
 import { getPresignedUrlAction } from "./presignedUrl";
 import { uploadCompleteAction } from "./uploadComplete";
 import { impersonateAction } from "./impersonate";
-import { pageEditorPipeline } from "@kenstack/pageEditor/api";
+import { pageEditAction } from "@kenstack/admin/pageEditor/api";
+import { pageEditorServerFields } from "@kenstack/admin/pageEditor/serverFields";
+import {
+  loadModuleSettingsAction,
+  saveModuleSettingsAction,
+} from "./moduleSettings";
 
 import { type AdminDefinition } from "@kenstack/admin";
 import { type FetchError } from "@kenstack/api/fetcher";
@@ -56,49 +61,99 @@ export const adminPipeline = async (
 
   const { action, name, ...json } = rawJson;
 
-  if (action === "page-editor") {
-    return pageEditorPipeline({ request, json });
+  switch (action) {
+    case "page-editor":
+      return pipeline({ request, json }, [pageEditAction()]);
+    case "page-editor-get-presigned-url":
+      return pipeline({ request, json }, [
+        getPresignedUrlAction({
+          table: deps.tables.content,
+          fields: pageEditorServerFields,
+        }),
+      ]);
+    case "page-editor-upload-complete":
+      return pipeline({ request, json }, [
+        uploadCompleteAction({
+          table: deps.tables.content,
+          fields: pageEditorServerFields,
+        }),
+      ]);
   }
 
-  const adminConfig = admin.modules[name];
-  if (!adminConfig) {
+  const moduleConfig = admin[name];
+  if (!moduleConfig) {
     return NextResponse.json({
       status: "error",
-      message: `Unknown admin config name "${name}"`,
+      message: `Unknown module name "${name}"`,
     });
   }
 
-  const stage = (() => {
-    switch (action) {
-      case "list":
-        return listAction(adminConfig);
-      case "load":
-        return loadAction(adminConfig);
-      case "save":
-        return saveAction(adminConfig);
-      case "remove":
-        return removeAction(adminConfig);
-      case "revisions":
-        return revisionsAction(adminConfig);
-      case "get-presigned-url":
-        return getPresignedUrlAction(adminConfig);
-      case "upload-complete":
-        return uploadCompleteAction(adminConfig);
-      case "impersonate":
-        return impersonateAction();
-      case "tags":
-        return tagsAction(adminConfig);
-      case "relationship-search":
-        return relationshipSearchAction(adminConfig);
-    }
-  })();
+  switch (action) {
+    case "load-module-settings":
+      if (!moduleConfig.settings) {
+        return NextResponse.json({
+          status: "error",
+          message: `Module "${name}" does not have settings.`,
+        });
+      }
 
-  if (!stage) {
+      return pipeline({ request, json }, [
+        loadModuleSettingsAction(name, moduleConfig.settings),
+      ]);
+    case "save-module-settings":
+      if (!moduleConfig.settings) {
+        return NextResponse.json({
+          status: "error",
+          message: `Module "${name}" does not have settings.`,
+        });
+      }
+
+      return pipeline({ request, json }, [
+        saveModuleSettingsAction(name, moduleConfig.settings),
+      ]);
+  }
+
+  if (!moduleConfig.records) {
     return NextResponse.json({
       status: "error",
-      message: `Unknown action ${action}`,
+      message: `Module "${name}" does not have admin records.`,
     });
   }
 
-  return pipeline({ request, json }, [stage]);
+  switch (action) {
+    case "list":
+      if (moduleConfig.single === true) {
+        return NextResponse.json({
+          status: "error",
+          message: "This admin config is not listable.",
+        });
+      }
+
+      return pipeline({ request, json }, [listAction(moduleConfig)]);
+    case "load":
+      return pipeline({ request, json }, [loadAction(name, moduleConfig)]);
+    case "save":
+      return pipeline({ request, json }, [saveAction(name, moduleConfig)]);
+    case "remove":
+      return pipeline({ request, json }, [removeAction(moduleConfig)]);
+    case "revisions":
+      return pipeline({ request, json }, [revisionsAction(moduleConfig)]);
+    case "get-presigned-url":
+      return pipeline({ request, json }, [getPresignedUrlAction(moduleConfig)]);
+    case "upload-complete":
+      return pipeline({ request, json }, [uploadCompleteAction(moduleConfig)]);
+    case "impersonate":
+      return pipeline({ request, json }, [impersonateAction()]);
+    case "tags":
+      return pipeline({ request, json }, [tagsAction(moduleConfig)]);
+    case "relationship-search":
+      return pipeline({ request, json }, [
+        relationshipSearchAction(moduleConfig),
+      ]);
+  }
+
+  return NextResponse.json({
+    status: "error",
+    message: `Unknown action ${action}`,
+  });
 };

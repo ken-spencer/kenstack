@@ -51,62 +51,6 @@ export const metaColumns = {
   },
 };
 
-// export function createColumnsFromFields<const T extends FieldOptions>(
-//   fields: T,
-// ) {
-//   const entries = Object.entries(fields)
-//     .filter(([, field]) => field.kind !== "virtual")
-//     .map(([key, field]) => {
-//       const columnName = field.column ?? key;
-
-//       let column;
-
-//       switch (field.kind) {
-//         case "boolean": {
-//           column = boolean(columnName);
-//           break;
-//         }
-//         case "integer": {
-//           column = integer(columnName);
-//           break;
-//         }
-//         case "timestamp": {
-//           column = timestamp(columnName, { withTimezone: true });
-//           break;
-//         }
-//         case "integer-array": {
-//           column = integer(columnName).array();
-//           break;
-//         }
-//         case "text-array": {
-//           column = text(columnName).array();
-//           break;
-//         }
-//         case "jsonb": {
-//           column = jsonb(columnName);
-//           break;
-//         }
-//         case "text":
-//         default: {
-//           column = text(columnName);
-//           break;
-//         }
-//       }
-
-//       if (!field.nullable) {
-//         column = column.notNull();
-//       }
-
-//       if (field.unique) {
-//         column = column.unique();
-//       }
-
-//       return [key, column];
-//     });
-
-//   return Object.fromEntries(entries);
-// }
-
 export type ExtraTable<
   TColumnsMap extends Record<string, PgColumnBuilderBase>,
 > = {

@@ -8,6 +8,8 @@ import { type Users } from "@kenstack/modules/users/tables";
 import { type Sessions } from "@kenstack/db/tables/sessions";
 import { type Attachment } from "@kenstack/lib/mailer";
 
+export type EmailFrom = string | { name: string; addr: string };
+
 export type Tables = { users: Users; sessions: Sessions } & Record<
   string,
   unknown
@@ -43,12 +45,14 @@ export const createDeps = <
   tables: TSchema;
   siteUrl?: string;
   email?: {
-    EmailCont: EmailContainer;
-    attachments: Attachment[];
+    EmailCont?: EmailContainer;
+    attachments?: Attachment[];
+    from?: EmailFrom;
   };
   uploadMaxImageSize?: number;
   uploadMaxImageSizeMessage?: string;
 }) => {
+  const { email, ...depsOptions } = options;
   const db = createDb({ schema: options.tables });
   const logger = new Logger<TSchema>({ db });
   const roles = (options.roles ?? defaultRoles) as TRoles;
@@ -70,11 +74,13 @@ export const createDeps = <
     auth,
     roles,
     db,
+    ...depsOptions,
     email: {
       EmailCont: Email,
       attachments: [] as Attachment[],
+      from: undefined as EmailFrom | undefined,
+      ...email,
     },
-    ...options,
   };
 };
 

@@ -134,8 +134,6 @@ export default function TagSearcht({ field }: { field: AnyField }) {
                 if (!d || !d.contains(evt.relatedTarget)) {
                   setFocusing(false);
                 }
-                // delay to give enough time to click on the dialog before removing it.
-                setTimeout(() => {}, 50);
               }}
             />
           </div>

@@ -3,6 +3,7 @@ import * as z from "zod";
 
 import { deps } from "@app/deps";
 import type { AnyAdminConfig } from "@kenstack/admin";
+import { isRelationshipField } from "@kenstack/fields/server";
 import { pipelineStage } from "@kenstack/api";
 
 import type { AnyColumn } from "drizzle-orm";
@@ -24,7 +25,10 @@ type SoftDeleteTable = {
 
 export const relationshipSearchAction = (adminConfig: AnyAdminConfig) =>
   pipelineStage({ role: "admin", schema }, async ({ response, data }) => {
-    const relationship = adminConfig.relationships?.[data.relationship];
+    const field = adminConfig.fields[data.relationship];
+    const relationship = isRelationshipField(field)
+      ? field.behavior.relationship
+      : undefined;
 
     if (!relationship) {
       return response.error(

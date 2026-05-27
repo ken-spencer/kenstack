@@ -4,7 +4,7 @@ import { deps } from "@app/deps";
 import { revisions } from "@kenstack/db/tables/revisions";
 import { and, desc, eq, getTableName, sql } from "drizzle-orm";
 import * as z from "zod";
-import { filterRevisionSnapshot } from "./helpers/revisions";
+import { filterRevisionSnapshot } from "@kenstack/fields/records";
 
 export const revisionsAction = (adminConfig: AnyAdminConfig) =>
   pipelineStage(
@@ -65,12 +65,7 @@ export const revisionsAction = (adminConfig: AnyAdminConfig) =>
         })
         .from(revisions)
         .leftJoin(users, eq(revisions.createdBy, users.id))
-        .where(
-          and(
-            eq(revisions.table, tableName),
-            eq(revisions.rowId, id),
-          ),
-        )
+        .where(and(eq(revisions.table, tableName), eq(revisions.rowId, id)))
         .orderBy(desc(revisions.createdAt));
 
       return response.success({

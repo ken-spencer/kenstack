@@ -23,6 +23,7 @@ type SubmitData<
   event?: React.BaseSyntheticEvent;
   mutation: UseMutationResult<FetchResult<TResult>, Error, TVariables>;
   isDirty: boolean;
+  changes: string[];
   form: UseFormReturn<TValues>;
   setStatusMessage: SetStatusMessage;
 };
@@ -129,6 +130,7 @@ export function Form<
             event: submitEvent,
             mutation,
             isDirty,
+            changes: Object.keys(form.formState.dirtyFields),
             form,
             setStatusMessage,
           }),

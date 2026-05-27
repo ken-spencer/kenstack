@@ -1,7 +1,6 @@
 "use client";
 import { type User } from "@kenstack/types";
-import { useLayoutEffect, useRef } from "react";
-import { useAdminUi } from "@kenstack/hooks/useAdminUi";
+import { useRef } from "react";
 // import Link from "next/link";
 import Avatar from "@kenstack/components/Avatar";
 
@@ -23,12 +22,6 @@ export default function AccountMenu({
   children: React.ReactNode;
 }) {
   const ref = useRef<HTMLButtonElement | null>(null);
-  const { setCanEdit } = useAdminUi();
-  useLayoutEffect(() => {
-    if (user?.roles.includes("admin")) {
-      setCanEdit(true);
-    }
-  }, [user, setCanEdit]);
 
   return (
     <div className="flex items-center gap-4">

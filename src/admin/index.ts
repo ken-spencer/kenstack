@@ -1,30 +1,10 @@
-export * from "./fields";
+export * from "@kenstack/fields";
 export * from "./metadata";
 export * from "./table";
-export * from "./config";
+export * from "./types/list";
+export * from "./client";
+export * from "./modules";
 
-import type { AnyAdminConfig } from "./config";
-import siteSettingsAdminConfig from "@kenstack/modules/siteSettings/admin";
-import usersAdminConfig from "@kenstack/modules/users/admin";
+import type { AdminDefinition } from "./modules";
 
-export type AdminModuleMap = Record<string, AnyAdminConfig>;
-
-export type AdminOptions<TModules extends AdminModuleMap = AdminModuleMap> = {
-  modules?: TModules;
-};
-
-export type AdminDefinition = {
-  modules: AdminModuleMap;
-};
-
-export function defineAdmin<TModules extends AdminModuleMap>(
-  options: AdminOptions<TModules>,
-): AdminDefinition {
-  return {
-    modules: {
-      users: usersAdminConfig,
-      siteSettings: siteSettingsAdminConfig,
-      ...options.modules,
-    },
-  };
-}
+export type { AdminDefinition };

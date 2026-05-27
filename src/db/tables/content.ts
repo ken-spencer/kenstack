@@ -11,14 +11,9 @@ import {
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 
-import { image } from "@kenstack/schemas/atoms";
-import * as z from "zod";
-
 type AnyPgTableWithId = AnyPgTable & {
   id: AnyPgColumn;
 };
-
-type Image = z.infer<ReturnType<typeof image>>;
 
 // type OrgTableWithId = AnyPgTable & { id: AnyColumn };
 
@@ -29,7 +24,8 @@ const fields = {
 
   title: text("title"),
   description: text("description"),
-  image: jsonb("image").$type<Image>(),
+  image: integer("image"),
+  ogImage: integer("og_image"),
   content: text("content"),
 
   seoTitle: text("seo_title"),
@@ -53,11 +49,11 @@ const createContentWithoutOrg = () =>
     {
       ...fields,
     },
-    (t) => [uniqueIndex("content_slug_unique").on(t.slug)]
+    (t) => [uniqueIndex("content_slug_unique").on(t.slug)],
   );
 
 const createContentWithOrg = <TOrg extends AnyPgTableWithId>(
-  organizations: TOrg
+  organizations: TOrg,
 ) =>
   pgTable(
     "content",
@@ -67,7 +63,7 @@ const createContentWithOrg = <TOrg extends AnyPgTableWithId>(
         .notNull()
         .references(() => organizations.id),
     },
-    (t) => [uniqueIndex("content_org_slug_unique").on(t.orgId, t.slug)]
+    (t) => [uniqueIndex("content_org_slug_unique").on(t.orgId, t.slug)],
   );
 
 export function createContent<TOrg extends AnyPgTableWithId>(args: {

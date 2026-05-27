@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { X } from "lucide-react";
 
 import IconButton from "@kenstack/components/IconButton";
+import type { SquareCrop } from "@kenstack/db/tables/images/types";
 
 export type ImageDetailsValue = {
   id?: number;
@@ -19,6 +20,7 @@ export type ImageDetailsValue = {
   sourceWidth?: number | null;
   sourceHeight?: number | null;
   originalUrl?: string | null;
+  squareCrop?: SquareCrop | null;
 };
 
 function formatFileSize(size?: number | null) {

@@ -2,7 +2,7 @@ import mdToHtml from "./mdToHtml";
 
 import { twMerge } from "tailwind-merge";
 
-import { type ComponentProps } from "@kenstack/pageEditor/types";
+import { type ComponentProps } from "@kenstack/admin/pageEditor/types";
 
 export async function Markdown({
   content,

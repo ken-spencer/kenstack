@@ -1,3 +1,5 @@
+"use client";
+
 import { twMerge } from "tailwind-merge";
 import Field, { type FieldProps } from "@kenstack/forms/Field";
 import { Checkbox } from "@kenstack/components/ui/checkbox";

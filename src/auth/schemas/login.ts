@@ -1,9 +1,10 @@
 import * as z from "zod";
-import { password, email } from "@kenstack/schemas/atoms";
+import { email } from "@kenstack/zod/email";
+import { password } from "@kenstack/zod/password";
 
 const loginSchema = z.object({
-  email: email(),
-  password: password().min(1, "Password is required"),
+  email,
+  password: password.min(1, "Password is required"),
 });
 
 export default loginSchema;

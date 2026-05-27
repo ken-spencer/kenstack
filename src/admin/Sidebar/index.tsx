@@ -40,27 +40,45 @@ function NavLinkFallback({
   );
 }
 
-export default async function AdminSidebar({
+type AdminSidebarProps = {
+  accountMenu?: React.ReactNode;
+  admin: AdminDefinition;
+  logo?: React.ReactNode;
+  children: React.ReactNode;
+};
+
+export default function AdminSidebar(props: AdminSidebarProps) {
+  return (
+    <Suspense fallback={<AdminSidebarContent {...props} defaultOpen={true} />}>
+      <AdminSidebarLoader {...props} />
+    </Suspense>
+  );
+}
+
+async function AdminSidebarLoader(props: AdminSidebarProps) {
+  const cookieStore = await cookies();
+  const defaultOpen = cookieStore.get(sidebarCookieName)?.value !== "false";
+
+  return <AdminSidebarContent {...props} defaultOpen={defaultOpen} />;
+}
+
+function AdminSidebarContent({
   admin,
   accountMenu,
   logo,
   children,
-}: {
-  accountMenu?: React.ReactNode;
-  admin: AdminDefinition;
-  logo?: React.ReactNode;
-
-  children: React.ReactNode;
-}) {
-  const cookieStore = await cookies();
-  const defaultOpen = cookieStore.get(sidebarCookieName)?.value !== "false";
-
+  defaultOpen,
+}: AdminSidebarProps & { defaultOpen: boolean }) {
   const sidebarNav = (
     <SidebarGroup>
       <SidebarGroupLabel>Administration</SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
-          {Object.entries(admin.modules).map(([name, table]) => {
+          {Object.entries(admin).flatMap(([name, table]) => {
+            if (!table.records) {
+              return [];
+            }
+
             const href = "/admin/" + name;
             const icon = table.icon ? <table.icon /> : <span className="w-3" />;
 
@@ -90,9 +108,7 @@ export default async function AdminSidebar({
       <Content
         logo={logo}
         accountMenu={
-          <Suspense>
-            {accountMenu ?? <AccountMenu fallback={null} />}
-          </Suspense>
+          <Suspense>{accountMenu ?? <AccountMenu fallback={null} />}</Suspense>
         }
       >
         {children}

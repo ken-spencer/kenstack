@@ -6,6 +6,11 @@ import { eq } from "drizzle-orm";
 
 import { type User } from "@kenstack/types";
 
+export type AuthAccess<TRole extends string> =
+  | "authenticated"
+  | TRole
+  | readonly TRole[];
+
 export function createAuth<
   TSchema extends Tables,
   TRoles extends readonly string[],
@@ -167,22 +172,31 @@ export function createAuth<
     });
   };
 
-  const hasRole = cache(async (role: TRoles | TRoles[number]) => {
-    const user = await getCurrentUser();
+  const isAuthenticated = cache(async () => {
+    return Boolean(await getCurrentUser());
+  });
 
-    if (!user) {
-      return false;
-    }
+  const hasRole = cache(
+    async (role: TRoles[number] | readonly TRoles[number][]) => {
+      const user = await getCurrentUser();
 
-    if (role) {
+      if (!user) {
+        return false;
+      }
+
       const requiredRoles = Array.isArray(role) ? role : [role];
 
-      const hasPermission = user.roles.some((userRole) =>
-        requiredRoles.includes(userRole),
-      );
+      return user.roles.some((userRole) => requiredRoles.includes(userRole));
+    },
+  );
 
-      return hasPermission;
+  const hasAccess = cache(async (access: AuthAccess<TRoles[number]>) => {
+    if (access === "authenticated") {
+      return isAuthenticated();
     }
+
+    return hasRole(access);
   });
-  return { login, impersonate, logout, hasRole };
+
+  return { login, impersonate, logout, isAuthenticated, hasRole, hasAccess };
 }

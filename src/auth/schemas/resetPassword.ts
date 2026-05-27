@@ -1,10 +1,10 @@
-import { password } from "@kenstack/schemas/atoms";
+import { password } from "@kenstack/zod/password";
 import * as z from "zod";
 
 const schema = z
   .object({
-    password: password().min(8, "Password must be at least 8 characters"),
-    confirmPassword: password(),
+    password: password.min(8, "Password must be at least 8 characters"),
+    confirmPassword: password,
     token: z.string().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {

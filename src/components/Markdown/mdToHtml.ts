@@ -2,6 +2,7 @@ import { remark } from "remark";
 import remarkGfm from "remark-gfm";
 
 import remarkRehype from "remark-rehype";
+import rehypeSanitize from "rehype-sanitize";
 import rehypeStringify from "rehype-stringify";
 import remarkBreaks from "remark-breaks";
 // import { remarkShiftHeadings } from "./plugins";
@@ -24,7 +25,7 @@ export default async function mdToHtml(content: string) {
     .use(remarkRehype)
     // .use(remarkRehype, { allowDangerousHtml: true })
     // .use(rehypeRaw)
-    // .use(rehypeSanitize, customSchema)
+    .use(rehypeSanitize)
     .use(rehypeStringify)
     .process(content);
   return processedContent.toString();

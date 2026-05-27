@@ -1,8 +1,8 @@
-import * as z from "zod";
 import {
   sql,
   desc,
   asc,
+  getTableColumns,
   arrayOverlaps,
   isNull,
   isNotNull,
@@ -20,28 +20,22 @@ import {
 import { pipelineStage } from "@kenstack/api";
 import type {
   AdminFilters,
-  AdminSortField,
-  AnyAdminConfig,
   AnyAdminTableConfig,
   SortDirection,
 } from "@kenstack/admin";
-import { isAdminTableConfig } from "@kenstack/admin";
+import { createListRequestSchema } from "@kenstack/admin/lib/listQuerySchema";
 
 import { deps } from "@app/deps";
 
-const maxTextFilterLength = 200;
-const maxDateFilterLength = 64;
-const maxListPage = 10000;
-
-export const listAction = (adminConfig: AnyAdminConfig) => {
-  if (!isAdminTableConfig(adminConfig)) {
-    return pipelineStage({ role: "admin" }, async ({ response }) => {
-      return response.error("This admin config is not listable.");
-    });
-  }
-
-  return pipelineStage(
-    { role: "admin", schema: getListSchema(adminConfig) },
+export const listAction = (adminConfig: AnyAdminTableConfig) =>
+  pipelineStage(
+    {
+      role: "admin",
+      schema: createListRequestSchema({
+        filters: adminConfig.filters,
+        sort: adminConfig.sort,
+      }),
+    },
     async ({ response, data }) => {
       const { keywords, page, trash } = data;
       const limit = adminConfig.limit || 25;
@@ -56,47 +50,95 @@ export const listAction = (adminConfig: AnyAdminConfig) => {
 
       const where = [
         trash ? isNotNull(table.deletedAt) : isNull(table.deletedAt),
+        ...resolveFilters(adminConfig.filters, data.filters),
       ];
 
-      const keyword = keywords.trim();
-      if (keyword && searchable.length) {
-        const searchableColumns = searchable
+      if (keywords && searchable.length) {
+        const searchConditions = searchable
           .filter(
             (key): key is Extract<keyof typeof table, string> => key in table,
           )
-          .map((key) => table[key]);
+          .map((key) => ilike(sql`${table[key]}`, `%${keywords}%`));
 
-        const searchConditions = searchableColumns.map((column) => {
-          return ilike(sql`${column}`, `%${keyword}%`);
-        });
-
-        where.push(or(...searchConditions)!);
+        if (searchConditions.length === 1) {
+          where.push(searchConditions[0]);
+        } else if (searchConditions.length > 1) {
+          where.push(or(...searchConditions) ?? searchConditions[0]);
+        }
       }
 
-      where.push(...resolveFilters(adminConfig.filters, data.filters));
+      const listSelect = getListSelect(table, fields);
+      if (!Object.keys(listSelect).length) {
+        return response.error("This admin config has no list columns.");
+      }
 
-      const rows = await db
-        .select({
-          id: table.id,
-          createdAt: table.createdAt,
-          updatedAt: table.updatedAt,
-          ...adminConfig.select,
-        })
-        .from(table)
-        .where(and(...where))
-        .orderBy(...resolveOrderBy(adminConfig, data.sort, data.direction))
-        .limit(limit)
-        .offset(offset);
-
-      const [{ count }] = await db
-        .select({ count: sql`count(*)`.mapWith(Number) })
-        .from(table)
-        .where(and(...where));
+      const whereClause = and(...where);
+      const [rows, [{ count }]] = await Promise.all([
+        db
+          .select({
+            id: table.id,
+            createdAt: table.createdAt,
+            updatedAt: table.updatedAt,
+            ...listSelect,
+            ...adminConfig.select,
+          })
+          .from(table)
+          .where(whereClause)
+          .orderBy(...resolveOrderBy(adminConfig, data.sort, data.direction))
+          .limit(limit)
+          .offset(offset),
+        db
+          .select({ count: sql`count(*)`.mapWith(Number) })
+          .from(table)
+          .where(whereClause),
+      ]);
 
       return response.success({ total: count, items: rows });
     },
   );
-};
+
+function getListSelect(
+  table: AnyAdminTableConfig["table"],
+  fields: AnyAdminTableConfig["fields"],
+) {
+  const columns = getTableColumns(table);
+  const select: Record<string, (typeof columns)[keyof typeof columns] | SQL> =
+    {};
+
+  for (const [key, field] of Object.entries(fields)) {
+    if (!field.list) {
+      continue;
+    }
+
+    const column = columns[key];
+    const fieldSelect = field.behavior?.listSelect?.({
+      key,
+      field,
+      column,
+      columns,
+    });
+
+    if (fieldSelect || column) {
+      select[key] = fieldSelect ?? column;
+    }
+  }
+
+  if (!Object.keys(select).length) {
+    if ("title" in columns) {
+      select.title = columns.title;
+    }
+
+    if ("visibility" in columns) {
+      select.visibility = columns.visibility;
+    }
+
+    if ("publishedAt" in columns) {
+      select.publishedAt = columns.publishedAt;
+    }
+  }
+
+  return select;
+}
 
 function resolveFilters(
   filters: AdminFilters,
@@ -113,23 +155,22 @@ function resolveFilters(
     switch (filter.kind) {
       case "date-range": {
         const range = parseDateRange(rawValue);
-        if (range?.from) {
+        if (range.from) {
           where.push(gte(filter.field, range.from));
         }
-        if (range?.to) {
+        if (range.to) {
           where.push(lte(filter.field, range.to));
         }
         break;
       }
       case "boolean": {
-        const value = parseBoolean(rawValue);
-        if (value !== null) {
-          where.push(eq(filter.field, value));
+        if (typeof rawValue === "boolean") {
+          where.push(eq(filter.field, rawValue));
         }
         break;
       }
       case "enum": {
-        const selected = parseOptionFilterValue(rawValue);
+        const selected = parseOptionFilterValue(filter, rawValue);
         if (selected.include.length === 1) {
           where.push(eq(filter.field, selected.include[0]));
         } else if (selected.include.length > 1) {
@@ -141,7 +182,7 @@ function resolveFilters(
         break;
       }
       case "includes": {
-        const selected = parseOptionFilterValue(rawValue);
+        const selected = parseOptionFilterValue(filter, rawValue);
         if (selected.include.length > 0) {
           where.push(arrayOverlaps(filter.field, selected.include));
         }
@@ -167,169 +208,62 @@ function resolveFilters(
   return where;
 }
 
-function getListSchema(adminConfig: AnyAdminTableConfig) {
-  const sortNames = Object.keys(adminConfig.sort);
-
-  return z.object({
-    keywords: z.string().max(maxTextFilterLength).catch(""),
-    trash: z.preprocess(parseBooleanInput, z.boolean()).catch(false),
-    sort: z
-      .string()
-      .refine((value) => sortNames.includes(value))
-      .optional(),
-    direction: z.enum(["asc", "desc"]).optional(),
-    filters: getFiltersSchema(adminConfig.filters).catch({}),
-    page: z.coerce.number().int().positive().max(maxListPage).catch(1),
-  });
-}
-
-function getFiltersSchema(filters: AdminFilters) {
-  return z
-    .object(
-      Object.fromEntries(
-        Object.entries(filters).map(([name, filter]) => [
-          name,
-          getFilterSchema(filter),
-        ]),
-      ),
-    )
-    .partial()
-    .strip()
-    .transform(compactFilterValues);
-}
-
-function getFilterSchema(filter: AdminFilters[string]) {
-  return z.unknown().transform((value) => sanitizeFilterValue(filter, value));
-}
-
-function sanitizeFilterValue(filter: AdminFilters[string], value: unknown) {
-  switch (filter.kind) {
-    case "date-range": {
-      if (!value || typeof value !== "object" || Array.isArray(value)) {
-        return undefined;
-      }
-
-      const range = value as { from?: unknown; to?: unknown };
-      const next = {
-        from: sanitizeDateInput(range.from),
-        to: sanitizeDateInput(range.to),
-      };
-      return hasFilterValue(next) ? next : undefined;
-    }
-    case "boolean":
-      return parseBoolean(value) ?? undefined;
-    case "enum":
-    case "includes":
-      return sanitizeOptionFilterValue(filter, value);
-    case "text":
-      return sanitizeTextInput(value);
+function parseDateRange(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
   }
+
+  const range = value as { from?: unknown; to?: unknown };
+
+  return {
+    from: parseDateValue(range.from),
+    to: parseDateValue(range.to, true),
+  };
 }
 
-function sanitizeDateInput(value: unknown) {
-  return typeof value === "string" && value.length <= maxDateFilterLength
-    ? value
-    : undefined;
-}
-
-function sanitizeTextInput(value: unknown) {
-  if (typeof value !== "string") {
+function parseDateValue(value: unknown, endOfDay = false) {
+  if (typeof value !== "string" || !value) {
     return undefined;
   }
 
-  const trimmed = value.trim();
-  return trimmed && trimmed.length <= maxTextFilterLength ? value : undefined;
+  const date = new Date(value);
+  if (Number.isNaN(date.valueOf())) {
+    return undefined;
+  }
+
+  if (endOfDay) {
+    date.setHours(23, 59, 59, 999);
+  }
+
+  return date;
 }
 
-function sanitizeOptionFilterValue(
+function parseOptionFilterValue(
   filter: Extract<AdminFilters[string], { kind: "enum" | "includes" }>,
   value: unknown,
 ) {
   const options = new Set(filter.options.map(([value]) => value));
-
-  if (Array.isArray(value)) {
-    const next = Object.fromEntries(
-      value
+  const entries = Array.isArray(value)
+    ? value
         .filter((option): option is string => typeof option === "string")
         .filter((option) => options.has(option))
-        .map((option) => [option, "+"]),
-    );
-    return hasFilterValue(next) ? next : undefined;
-  }
-
-  if (!value || typeof value !== "object") {
-    return undefined;
-  }
-
-  const next = Object.fromEntries(
-    Object.entries(value).filter(
-      ([option, state]) =>
-        options.has(option) && (state === "+" || state === "-"),
-    ),
-  );
-  return hasFilterValue(next) ? next : undefined;
-}
-
-function compactFilterValues(filters: Record<string, unknown>) {
-  return Object.fromEntries(
-    Object.entries(filters).filter(([, value]) => hasFilterValue(value)),
-  );
-}
-
-function hasFilterValue(value: unknown) {
-  if (typeof value === "boolean") {
-    return true;
-  }
-
-  if (typeof value === "string") {
-    return value.trim().length > 0;
-  }
-
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return false;
-  }
-
-  const range = value as { from?: unknown; to?: unknown };
-  if (range.from || range.to) {
-    return true;
-  }
-
-  return Object.values(value).some((item) => item === "+" || item === "-");
-}
-
-function parseStringArray(value: unknown) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value.filter((item): item is string => typeof item === "string");
-}
-
-function parseOptionFilterValue(value: unknown) {
-  if (Array.isArray(value)) {
-    return {
-      include: parseStringArray(value),
-      exclude: [],
-    };
-  }
-
-  if (!value || typeof value !== "object") {
-    return {
-      include: [],
-      exclude: [],
-    };
-  }
-
+        .map((option) => [option, "+"])
+    : value && typeof value === "object"
+      ? Object.entries(value).filter(
+          ([option, state]) =>
+            options.has(option) && (state === "+" || state === "-"),
+        )
+      : [];
   const include: string[] = [];
   const exclude: string[] = [];
-  for (const [optionValue, state] of Object.entries(value)) {
+
+  entries.forEach(([option, state]) => {
     if (state === "+") {
-      include.push(optionValue);
+      include.push(option);
+    } else if (state === "-") {
+      exclude.push(option);
     }
-    if (state === "-") {
-      exclude.push(optionValue);
-    }
-  }
+  });
 
   return { include, exclude };
 }
@@ -341,66 +275,9 @@ function parseTextFilter(value: unknown) {
 
   const trimmed = value.trim();
   const exclude = trimmed.startsWith("!");
-  const parsedValue = exclude ? trimmed.slice(1).trim() : trimmed;
-  if (!parsedValue) {
-    return null;
-  }
+  const text = exclude ? trimmed.slice(1).trim() : trimmed;
 
-  return {
-    exclude,
-    value: parsedValue,
-  };
-}
-
-function parseDateRange(value: unknown) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return null;
-  }
-
-  const { from, to } = value as { from?: unknown; to?: unknown };
-
-  return {
-    from: parseDateValue(from),
-    to: parseDateValue(to, true),
-  };
-}
-
-function parseDateValue(value: unknown, endOfDay = false) {
-  if (typeof value !== "string" || !value) {
-    return null;
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.valueOf())) {
-    return null;
-  }
-
-  if (endOfDay) {
-    date.setHours(23, 59, 59, 999);
-  }
-
-  return date;
-}
-
-function parseBoolean(value: unknown) {
-  const parsed = parseBooleanInput(value);
-  return typeof parsed === "boolean" ? parsed : null;
-}
-
-function parseBooleanInput(value: unknown) {
-  if (typeof value === "boolean") {
-    return value;
-  }
-
-  if (value === "true") {
-    return true;
-  }
-
-  if (value === "false") {
-    return false;
-  }
-
-  return value;
+  return text ? { exclude, value: text } : null;
 }
 
 function resolveOrderBy(
@@ -414,27 +291,20 @@ function resolveOrderBy(
   const option = sort[sortName];
   const direction = requestedDirection ?? option.defaultDirection;
   const orderBy = option.fields.map((field) => {
-    const column = getSortColumn(field);
-    const fieldDirection = getSortDirection(field, direction);
+    const column = "field" in field ? field.field : field;
+    const fieldDirection =
+      "field" in field && field.direction ? field.direction : direction;
+
     return fieldDirection === "asc" ? asc(column) : desc(column);
   });
 
-  if (!option.fields.some((field) => getSortColumn(field) === table.id)) {
+  if (
+    !option.fields.some(
+      (field) => ("field" in field ? field.field : field) === table.id,
+    )
+  ) {
     orderBy.push(desc(table.id));
   }
 
   return orderBy;
-}
-
-function getSortColumn(field: AdminSortField) {
-  return "field" in field ? field.field : field;
-}
-
-function getSortDirection(
-  field: AdminSortField,
-  selectedDirection: SortDirection,
-) {
-  return "field" in field && field.direction
-    ? field.direction
-    : selectedDirection;
 }

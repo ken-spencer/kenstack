@@ -17,17 +17,9 @@ export default function AdminEditForm({
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const {
-    defaultValues,
-    schema,
-    isNew,
-    id,
-    recordKey,
-    single,
-    apiPath,
-    name,
-  } = useAdminEdit();
-  const loadTarget = single ? recordKey : id;
+  const { defaultValues, schema, isNew, id, single, apiPath, name } =
+    useAdminEdit();
+  const loadTarget = single ? name : id;
   const basePathname = useMemo(() => {
     const parts = pathname.split("/").filter(Boolean); // removes empty strings
     parts.pop(); // remove last segment
@@ -87,8 +79,7 @@ export default function AdminEditForm({
           );
         }
       }}
-      onSubmit={({ data, mutation, event, form }) => {
-        const changes = Object.keys(form.formState.dirtyFields);
+      onSubmit={({ data, mutation, event, changes }) => {
         const button = (event?.nativeEvent as SubmitEvent)
           ?.submitter as HTMLButtonElement;
         return mutation.mutateAsync({

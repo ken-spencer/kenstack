@@ -1,5 +1,15 @@
 import * as z from "zod";
 
+export const squareCropSchema = z
+  .object({
+    mode: z.enum(["center", "manual"]),
+    x: z.number(),
+    y: z.number(),
+    zoom: z.number().optional(),
+  })
+  .nullable()
+  .optional();
+
 const imageFields = z.object({
   id: z.number().optional(),
   url: z.string(),
@@ -15,6 +25,7 @@ const imageFields = z.object({
   sourceWidth: z.number().nullable().optional(),
   sourceHeight: z.number().nullable().optional(),
   originalUrl: z.string().nullish(),
+  squareCrop: squareCropSchema,
 });
 
 const upload = imageFields.extend({

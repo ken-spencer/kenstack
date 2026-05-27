@@ -253,19 +253,22 @@ function FilterEditor({
       <div className="flex max-h-56 flex-col gap-2 overflow-auto pr-1">
         {option.options?.map((item) => {
           const state = selected[item.value];
+          const optionId = `filter-${option.name}-${item.value.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+
           return (
             <div
               key={item.value}
-              className="flex items-start gap-2 text-sm text-gray-800"
+              className="flex items-center gap-2 text-sm text-gray-800"
             >
               <FilterOptionCheckbox
+                id={optionId}
                 checked={state === "-" ? "indeterminate" : state === "+"}
                 aria-label={`${item.label}: ${formatOptionState(state)}`}
                 onCheckedChange={() =>
                   onChange(cycleOptionState(selected, item.value))
                 }
               />
-              <span>
+              <label className="cursor-pointer" htmlFor={optionId}>
                 <span
                   className={
                     state === "-"
@@ -280,7 +283,7 @@ function FilterEditor({
                     {item.description}
                   </span>
                 ) : null}
-              </span>
+              </label>
             </div>
           );
         })}

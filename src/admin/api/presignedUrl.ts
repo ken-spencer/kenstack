@@ -1,12 +1,14 @@
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import type { AnyAdminConfig } from "..";
 import kebabCase from "lodash-es/kebabCase";
 import { getTableName } from "drizzle-orm";
+import type { AnyPgTable } from "drizzle-orm/pg-core";
 import path from "node:path";
 import unsecureId from "@kenstack/lib/unsecureId";
 import { images } from "@kenstack/db/tables";
 import { deps } from "@app/deps";
+import canUpload from "@kenstack/lib/canUpload";
+import type { ServerDefinedFields } from "@kenstack/fields/server";
 
 import { pipelineStage } from "@kenstack/api";
 
@@ -35,10 +37,19 @@ const uploadSchema = z.object({
 
 const svgMimeType = "image/svg+xml";
 
-export const getPresignedUrlAction = (adminConfig: AnyAdminConfig) =>
+type ImageUploadConfig = {
+  table: AnyPgTable;
+  fields: ServerDefinedFields;
+};
+
+export const getPresignedUrlAction = (adminConfig: ImageUploadConfig) =>
   pipelineStage(
     { role: "admin", schema: uploadSchema },
     async ({ data, response, user }) => {
+      if (!canUpload()) {
+        return response.error("Image uploads are not configured.");
+      }
+
       const { fieldname, filename, type } = data;
       // Raster uploads are the current default. Keep the SVG-aware branches here
       // because this stage will later accept configurable MIME types per field.
@@ -48,6 +59,10 @@ export const getPresignedUrlAction = (adminConfig: AnyAdminConfig) =>
       const field = adminConfig.fields[fieldname];
       if (!field) {
         return response.error(`Unknown field name ${fieldname}`);
+      }
+
+      if (!field.behavior?.upload) {
+        return response.error(`Field "${fieldname}" does not support uploads.`);
       }
 
       const tablename = getTableName(adminConfig.table);

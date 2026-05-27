@@ -4,7 +4,7 @@ import mdToHtml from "./mdToHtml";
 import { twMerge } from "tailwind-merge";
 import { useEffect, useState } from "react";
 
-import { type ComponentProps } from "@kenstack/pageEditor/types";
+import { type ComponentProps } from "@kenstack/admin/pageEditor/types";
 
 export default function MarkdownClient({
   content,

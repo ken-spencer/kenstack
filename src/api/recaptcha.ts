@@ -17,6 +17,31 @@ import { pipelineStage } from "@kenstack/api";
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
+type RecaptchaConfig = string | { message: string };
+
+const getRecaptchaConfig = (): RecaptchaConfig | undefined => {
+  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY?.trim();
+  const secretKey = process.env.RECAPTCHA_SECRET_KEY?.trim();
+
+  if (siteKey && secretKey) {
+    return secretKey;
+  }
+
+  if (!siteKey && !secretKey) {
+    return;
+  }
+
+  if (!siteKey) {
+    return {
+      message: "NEXT_PUBLIC_RECAPTCHA_SITE_KEY is required for recaptcha",
+    };
+  }
+
+  return {
+    message: "RECAPTCHA_SECRET_KEY environment variable is not set",
+  };
+};
+
 const recaptcha = ({
   field = "recaptchaToken",
   threshold = 0.3,
@@ -27,11 +52,14 @@ const recaptcha = ({
       return;
     }
 
-    const secretKey = process.env.RECAPTCHA_SECRET_KEY;
-    if (!secretKey) {
-      return response.error(
-        "RECAPTCHA_SECRET_KEY environment variable is not set",
-      );
+    const config = getRecaptchaConfig();
+
+    if (!config) {
+      return;
+    }
+
+    if (typeof config !== "string") {
+      return response.error(config.message);
     }
 
     const token = isObject(dataIn) && dataIn[field];
@@ -44,7 +72,7 @@ const recaptcha = ({
       {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: `secret=${encodeURIComponent(secretKey)}&response=${encodeURIComponent(token)}`,
+        body: `secret=${encodeURIComponent(config)}&response=${encodeURIComponent(token)}`,
       },
     );
 

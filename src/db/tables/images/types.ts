@@ -18,16 +18,19 @@ export type Variant = {
   height: number;
 };
 
+export type SquareCrop = {
+  mode: "center" | "manual";
+  x: number;
+  y: number;
+  zoom?: number;
+};
+
 type SquareVariant = Variant & {
   square: true;
-  crop?: {
-    mode: "center" | "manual";
-    x: number;
-    y: number;
-  };
 };
 
 export type ImageVariants = {
+  squareCrop?: SquareCrop | null;
   original: Variant;
   square: SquareVariant;
 };

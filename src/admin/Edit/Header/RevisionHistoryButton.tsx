@@ -42,9 +42,9 @@ export default function RevisionHistoryButton() {
   } | null>(null);
   const { reset, setValue } = useFormContext<Record<string, unknown>>();
   const { mutation, setStatusMessage } = useForm();
-  const { apiPath, defaultValues, id, isNew, name, recordKey, schema, single } =
+  const { apiPath, defaultValues, id, isNew, name, schema, single } =
     useAdminEdit();
-  const revisionsLoadTarget = single ? recordKey : id;
+  const revisionsLoadTarget = single ? name : id;
   const selectedRevisionId =
     selectedRevision && selectedRevision.selectedAt > mutation.submittedAt
       ? selectedRevision.id

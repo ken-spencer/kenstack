@@ -16,6 +16,7 @@ import {
 } from "@kenstack/api";
 import schema from "@kenstack/auth/schemas/forgotPassword";
 import { type ForgotPasswordEmailProps } from "@kenstack/auth/email/ForgotPassword";
+import type { EmailFrom } from "@kenstack/deps";
 
 import DefaultEmail, {
   attachments as defaultAttachments,
@@ -24,7 +25,7 @@ import DefaultEmail, {
 export type ForgotPasswordProps = {
   Email?: React.FC<ForgotPasswordEmailProps>;
   attachments?: Attachment[];
-  from: string;
+  from?: EmailFrom;
 };
 
 export const forgotPasswordPipeline =
@@ -34,9 +35,13 @@ export const forgotPasswordPipeline =
 export const forgottenPasswordAction = ({
   Email = DefaultEmail,
   attachments = defaultAttachments,
-  from,
+  from = deps.email.from,
 }: ForgotPasswordProps) =>
   pipelineStage({ schema }, async ({ request, response, data }) => {
+    if (!from) {
+      return response.error("Password reset email sender is not configured.");
+    }
+
     if (!data) {
       throw Error("data is required");
     }
@@ -185,7 +190,7 @@ export const forgottenPasswordAction = ({
 
     await mailer({
       to: email,
-      from: from,
+      from,
       subject: "Forgotten password request",
       html: emailHtml,
       attachments,

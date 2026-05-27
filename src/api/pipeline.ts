@@ -14,7 +14,6 @@ import { PipelineResponse } from "./PipelineResponse";
 import { deps } from "@app/deps";
 import type { User } from "@kenstack/types";
 
-// import { objectId } from "@kenstack/schemas/atoms";
 // const idSchema = objectId("server").default(null);
 
 export type PipelineOptions = {
@@ -62,10 +61,7 @@ type PipelineStageCallback<
   arg: PipelineStageContext<TSchema, TRole>,
 ) => Promise<PipelineStageResult> | PipelineStageResult;
 
-type PipelineStageOptions<
-  TSchema extends ObjectSchema | undefined,
-  TRole,
-> = {
+type PipelineStageOptions<TSchema extends ObjectSchema | undefined, TRole> = {
   schema?: TSchema;
   role?: TRole;
   fieldsKey?: string;

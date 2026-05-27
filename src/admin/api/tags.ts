@@ -1,25 +1,25 @@
-import { tags as tagSchema } from "@kenstack/schemas/atoms";
 import * as z from "zod";
 import type { AnyAdminConfig } from "..";
+import { tagsSchema } from "@kenstack/zod/tags";
 import { tags as tagsTable } from "@kenstack/db/tables/tags";
 import { and, count, desc, eq, ilike, notInArray } from "drizzle-orm";
 import { deps } from "@app/deps";
 
 import { pipelineStage } from "@kenstack/api";
+import { isTagField } from "@kenstack/fields/server";
 
-const schema = z.object({ exclude: tagSchema(), keywords: z.string() });
+const schema = z.object({ exclude: tagsSchema, keywords: z.string() });
 
 export const tagsAction = (adminConfig: AnyAdminConfig) =>
   pipelineStage({ role: "admin", schema }, async ({ response, data }) => {
     const { keywords, exclude } = data;
     const excludedSlugs = exclude.map((e) => e.slug);
 
-    const tagRelations = adminConfig?.tags?.table;
+    const tagRelations = Object.values(adminConfig.fields).find(isTagField)
+      ?.behavior.tagRelations;
 
     if (!tagRelations) {
-      return response.error(
-        "ensure that admin.tags.table is defined tu use tags",
-      );
+      return response.error("A tag field handler is required to use tags.");
     }
 
     const where = [];

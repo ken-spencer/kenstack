@@ -1,35 +1,18 @@
 import { useMemo } from "react";
+import { format, isSameYear, parseISO } from "date-fns";
 
-import { DateTime } from "luxon";
 export default function DateFormatted({
   date,
   ...props
 }: React.ComponentProps<"time"> & { date: string }) {
-  // const [formatted, setFormatted] = useState('');
-
   const formatted = useMemo(() => {
-    const dt = DateTime.fromISO(date);
-    const now = DateTime.local();
+    const dt = parseISO(date);
 
-    const dateStr = dt.hasSame(now, "year")
-      ? dt.toFormat("MMM d")
-      : dt.toFormat("MMM d, yyyy");
+    const dateStr = isSameYear(dt, new Date())
+      ? format(dt, "MMM d")
+      : format(dt, "MMM d, yyyy");
 
-    const timeStr = dt.toFormat("h:mm a").toLowerCase();
-
-    // const dt = new Date(date);
-    // const dateStr = new Intl.DateTimeFormat(undefined, {
-    //   year: 'numeric',
-    //   month: 'short',
-    //   day: '2-digit',
-    //   // hour: '2-digit',
-    //   // minute: '2-digit',
-    // }).format(dt)
-
-    // const timeStr = new Intl.DateTimeFormat(undefined, {
-    //   hour: '2-digit',
-    //   minute: '2-digit',
-    // }).format(dt)
+    const timeStr = format(dt, "h:mm a").toLowerCase();
 
     return dateStr + " @ " + timeStr;
   }, [date]);

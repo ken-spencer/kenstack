@@ -2,21 +2,28 @@
 
 import { type ReactNode } from "react";
 
-import { GoogleReCaptchaProvider } from "react-google-recaptcha-v3";
+import {
+  GoogleReCaptchaContext,
+  GoogleReCaptchaProvider,
+} from "react-google-recaptcha-v3";
 
 export default function RecaptchaProvider({
   children,
 }: {
   children: ReactNode;
 }) {
-  if (!process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY) {
-    throw Error(`NEXT_PUBLIC_RECAPTCHA_SITE_KEY is required for recaptcha`);
+  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY?.trim();
+
+  if (!siteKey) {
+    return (
+      <GoogleReCaptchaContext.Provider value={{}}>
+        {children}
+      </GoogleReCaptchaContext.Provider>
+    );
   }
 
   return (
-    <GoogleReCaptchaProvider
-      reCaptchaKey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
-    >
+    <GoogleReCaptchaProvider reCaptchaKey={siteKey}>
       {children}
     </GoogleReCaptchaProvider>
   );

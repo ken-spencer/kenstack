@@ -1,4 +1,4 @@
-import type { ImageVariants } from "./types";
+import type { ImageVariants, SquareCrop } from "./types";
 import { defineTable, type AdminTable } from "@kenstack/admin/table";
 import {
   text,
@@ -154,6 +154,7 @@ export type SelectedImage = {
   sourceWidth?: number | null;
   sourceHeight?: number | null;
   originalUrl?: string | null;
+  squareCrop?: SquareCrop | null;
 };
 
 export function selectImageSubquery(
@@ -187,7 +188,8 @@ export function selectImageSubquery(
     'originalUrl', case
       when ${images.kind} = 'svg' then ${images.sourceUrl}
       else ${images.variants}->'original'->>'url'
-    end
+    end,
+    'squareCrop', ${images.variants}->'squareCrop'
   )
   from ${images}
   where ${images.id} = ${imageCol}
