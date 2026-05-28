@@ -144,10 +144,11 @@ function DefaultTitleCell({
 }) {
   const title = getDefaultTitle(row);
   const image = getDefaultImage(row);
+  const hasImageSlot = image || "image" in row;
 
   return (
     <div className="flex min-w-0 items-center gap-2">
-      {image ? <ImageCell image={image} path={row.path} /> : null}
+      {hasImageSlot ? <ImageCell image={image} path={row.path} /> : null}
       <div className="flex min-w-0 flex-col">
         <Link className="text-lg" href={row.path}>
           {title}
@@ -175,11 +176,11 @@ function ImageCell({
 }) {
   return (
     <div className="flex items-center">
-      {image ? (
-        <Link
-          className="relative size-10 shrink-0 overflow-hidden rounded bg-gray-100 ring-1 ring-gray-200 dark:bg-gray-900 dark:ring-gray-800"
-          href={path}
-        >
+      <Link
+        className="relative size-10 shrink-0 overflow-hidden rounded bg-gray-100 ring-1 ring-gray-200 dark:bg-gray-900 dark:ring-gray-800"
+        href={path}
+      >
+        {image ? (
           <Image
             src={image.url}
             alt=""
@@ -187,8 +188,8 @@ function ImageCell({
             className="object-contain p-1"
             sizes="40px"
           />
-        </Link>
-      ) : null}
+        ) : null}
+      </Link>
     </div>
   );
 }
