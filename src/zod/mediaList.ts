@@ -21,9 +21,9 @@ const mediaImageFields = z.object({
 
 const upload = mediaImageFields.extend({
   action: z.literal("upload"),
-  imageId: z.string(),
+  mediaId: z.string(),
 });
 
-export const mediaImageSchema = z.union([upload, mediaImageFields]);
+const mediaListImageSchema = z.union([upload, mediaImageFields]);
 
-export const mediaSchema = z.array(mediaImageSchema);
+export const mediaListSchema = z.array(mediaListImageSchema);

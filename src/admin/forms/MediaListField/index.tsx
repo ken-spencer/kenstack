@@ -10,7 +10,7 @@ import Field, { type FieldProps } from "@kenstack/forms/Field";
 import { useForm } from "@kenstack/forms/context";
 import getUploadErrorMessage from "@kenstack/forms/getUploadErrorMessage";
 import fetcher from "@kenstack/api/fetcher";
-import { rasterMimeTypes as acceptDefault } from "@kenstack/db/tables/images/mimeTypes";
+import { rasterMimeTypes as acceptDefault } from "@kenstack/db/tables/media/mimeTypes";
 import { useAdminEdit } from "@kenstack/admin/Edit/context";
 import ImageDetailsModal, {
   type ImageDetailsValue,
@@ -21,7 +21,7 @@ type MediaImage = ImageDetailsValue & {
   previewUrl?: string;
   uploadState?: "pending" | "uploading" | "done" | "error";
   action?: "upload";
-  imageId?: string;
+  mediaId?: string;
 };
 
 type MediaRenderProps = {
@@ -31,23 +31,19 @@ type MediaRenderProps = {
   className?: string;
 };
 
-export type MediaFieldProps = FieldProps &
+type MediaListFieldProps = FieldProps &
   React.ComponentProps<"div"> &
   Omit<MediaRenderProps, "apiPath" | "data">;
-
-type MediaFieldRenderProps = {
-  field: ControllerRenderProps<FieldValues, string>;
-};
 
 const buttonClass =
   "inline-flex size-6 items-center justify-center rounded-full border bg-gray-200/80 hover:bg-gray-400";
 
-export default function MediaField({
+export default function MediaListField({
   name,
   label,
   description,
   ...props
-}: MediaFieldProps) {
+}: MediaListFieldProps) {
   const { apiPath, name: adminName } = useAdminEdit();
   const data = {
     name: adminName,
@@ -69,7 +65,11 @@ const mediaRender = ({
   accept = acceptDefault,
   className,
 }: MediaRenderProps) =>
-  function MediaFieldRender({ field }: MediaFieldRenderProps) {
+  function MediaListFieldRender({
+    field,
+  }: {
+    field: ControllerRenderProps<FieldValues, string>;
+  }) {
     const { form, finishUploading, setStatusMessage, startUploading } =
       useForm();
     const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -193,7 +193,7 @@ const mediaRender = ({
         previewUrl: undefined,
         uploadState: "done",
         action: "upload" as const,
-        imageId: complete.imageId,
+        mediaId: complete.imageId,
       });
       return { status: "success" } as const;
     };
@@ -354,7 +354,7 @@ const mediaRender = ({
       >
         {value.map((image, index) => (
           <div
-            key={image.id ?? image.imageId ?? image.url}
+            key={image.id ?? image.mediaId ?? image.url}
             draggable
             className={
               "relative size-28 cursor-grab overflow-hidden rounded border border-gray-200 bg-gray-100 active:cursor-grabbing dark:border-gray-800 dark:bg-gray-900" +

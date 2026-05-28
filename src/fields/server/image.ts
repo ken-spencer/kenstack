@@ -3,7 +3,7 @@ import type * as z from "zod";
 import isEqual from "lodash-es/isEqual";
 
 import { selectImageSubquery } from "@kenstack/db/tables";
-import { images } from "@kenstack/db/tables/images";
+import { media } from "@kenstack/db/tables/media";
 import { imageSchema } from "@kenstack/zod/image";
 import type { DefinedField } from "../types";
 import type {
@@ -80,9 +80,9 @@ export async function prepareImageSave({
     afterSave.push(async (tx) => {
       if (oldRow && typeof oldRow.removeId === "number") {
         return tx
-          .update(images)
+          .update(media)
           .set({ status: "removed" })
-          .where(eq(images.id, oldRow.removeId));
+          .where(eq(media.id, oldRow.removeId));
       }
     });
     return { status: "success", value: null, afterSave };
@@ -96,12 +96,12 @@ export async function prepareImageSave({
       const metadata = imageMetadata(fieldData);
       const [image] = await db
         .select({
-          alt: images.alt,
-          title: images.title,
-          caption: images.caption,
+          alt: media.alt,
+          title: media.title,
+          caption: media.caption,
         })
-        .from(images)
-        .where(eq(images.id, imageId))
+        .from(media)
+        .where(eq(media.id, imageId))
         .limit(1);
 
       if (
@@ -114,36 +114,36 @@ export async function prepareImageSave({
       ) {
         afterSave.push((tx) =>
           tx
-            .update(images)
+            .update(media)
             .set(metadata)
-            .where(eq(images.id, imageId)),
+            .where(eq(media.id, imageId)),
         );
       }
     }
     return { status: "success", remove: true, afterSave };
   } else if (fieldData.action === "upload") {
     const imageIdQuery = db
-      .select({ id: images.id })
-      .from(images)
+      .select({ id: media.id })
+      .from(media)
       .where(
         and(
-          eq(images.publicId, fieldData.imageId),
-          eq(images.createdBy, user.id),
+          eq(media.publicId, fieldData.imageId),
+          eq(media.createdBy, user.id),
         ),
       )
       .limit(1);
 
     afterSave.push((tx) =>
       tx
-        .update(images)
+        .update(media)
         .set({
           status: "attached",
           ...imageMetadata(fieldData),
         })
         .where(
           and(
-            eq(images.publicId, fieldData.imageId),
-            eq(images.createdBy, user.id),
+            eq(media.publicId, fieldData.imageId),
+            eq(media.createdBy, user.id),
           ),
         ),
     );

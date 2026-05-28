@@ -5,7 +5,7 @@ import { getTableName } from "drizzle-orm";
 import type { AnyPgTable } from "drizzle-orm/pg-core";
 import path from "node:path";
 import unsecureId from "@kenstack/lib/unsecureId";
-import { images } from "@kenstack/db/tables";
+import { media } from "@kenstack/db/tables";
 import { deps } from "@app/deps";
 import canUpload from "@kenstack/lib/canUpload";
 import type { ServerDefinedFields } from "@kenstack/fields/server";
@@ -13,7 +13,7 @@ import type { ServerDefinedFields } from "@kenstack/fields/server";
 import { pipelineStage } from "@kenstack/api";
 
 import * as z from "zod";
-import { rasterMimeTypes } from "@kenstack/db/tables/images/mimeTypes";
+import { rasterMimeTypes } from "@kenstack/db/tables/media/mimeTypes";
 
 const region = process.env.AWS_S3_REGION ?? process.env.AWS_REGION;
 const bucket = process.env.AWS_S3_BUCKET;
@@ -84,7 +84,7 @@ export const getPresignedUrlAction = (adminConfig: ImageUploadConfig) =>
       const publicUrl = `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
 
       const [image] = await deps.db
-        .insert(images)
+        .insert(media)
         .values({
           createdBy: user.id,
           status: "pending",
@@ -96,7 +96,7 @@ export const getPresignedUrlAction = (adminConfig: ImageUploadConfig) =>
           sourceUrl: publicUrl,
           sourceType: type,
         })
-        .returning({ id: images.publicId });
+        .returning({ id: media.publicId });
 
       return response.success({ uploadUrl, id: image.id });
     },

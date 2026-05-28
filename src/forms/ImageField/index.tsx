@@ -14,7 +14,7 @@ import IconButton from "@kenstack/components/IconButton";
 import Help from "@kenstack/components/Help";
 import { useForm } from "@kenstack/forms/context";
 
-import { rasterMimeTypes as acceptDefault } from "@kenstack/db/tables/images/mimeTypes";
+import { rasterMimeTypes as acceptDefault } from "@kenstack/db/tables/media/mimeTypes";
 import ImageDetailsModal, {
   type ImageDetailsValue,
 } from "@kenstack/admin/forms/ImageDetailsModal";

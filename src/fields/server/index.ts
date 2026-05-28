@@ -16,7 +16,7 @@ export { booleanField } from "./boolean";
 export { checkboxListField } from "./checkboxList";
 export { dateTimeField } from "./dateTime";
 export { imageField } from "./image";
-export { mediaField } from "./media";
+export { mediaListField } from "./mediaList";
 export { relationshipField, isRelationshipField } from "./relationship";
 export { tagField, isTagField } from "./tags";
 export { textField } from "./text";

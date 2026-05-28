@@ -2,6 +2,34 @@
 
 Use this file to document breaking Kenstack API changes that downstream sites may need to apply.
 
+## Unreleased: Media Table And Media List Field Naming
+
+Old APIs:
+
+- `images` database table.
+- `image_kind` and `image_status` enum names.
+- `defineMedia(...)` for ordered media join tables.
+- `mediaField(...)` and `<MediaField />` for ordered multi-media fields.
+- Internal field kind `"media"`.
+- Ordered media join tables used `image_id` and index/FK names such as `blog_media_blog_id_image_id_unique`.
+
+New APIs:
+
+- `media` database table.
+- `media_kind` and `media_status` enum names.
+- `defineMediaList(...)` for ordered media join tables.
+- `mediaListField(...)` and `<MediaListField />` for ordered multi-media fields.
+- Internal field kind `"media-list"`.
+- Ordered media join tables use `media_id`, `blog_media_unique`, `blog_media_sort_order_idx`, `blog_media_blog_fk`, and `blog_media_media_fk` style names.
+
+Migration steps:
+
+- Rename `images` to `media`, `image_kind` to `media_kind`, and `image_status` to `media_status`.
+- Rename ordered media join columns from `image_id` to `media_id`.
+- Rename imports from `defineMedia` to `defineMediaList`.
+- Rename field helper and component imports from `mediaField` / `MediaField` to `mediaListField` / `MediaListField`.
+- Keep singular image fields such as `image`, `ogImage`, or `avatar` named for their domain role; those fields can still store ids from the generalized `media` table.
+
 ## Unreleased: Admin Module And Page Editor Imports
 
 Old APIs:

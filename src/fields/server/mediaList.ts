@@ -4,9 +4,9 @@ import type { AnyPgColumn, AnyPgTable } from "drizzle-orm/pg-core";
 import isEqual from "lodash-es/isEqual";
 
 import type { deps } from "@app/deps";
-import { images, selectImageSubquery } from "@kenstack/db/tables";
+import { media as mediaTable, selectImageSubquery } from "@kenstack/db/tables";
 import type { User } from "@kenstack/types";
-import { mediaSchema } from "@kenstack/zod/media";
+import { mediaListSchema } from "@kenstack/zod/mediaList";
 import type { ServerField, ServerFieldDefaults, ServerFieldResolver } from ".";
 import { imageMetadata } from "./image";
 
@@ -14,15 +14,15 @@ type MediaConfig = {
   table: AnyPgTable;
   tableIdKey: string;
   tableId: AnyPgColumn<{ data: number }>;
-  imageIdKey: string;
-  imageId: AnyPgColumn<{ data: number }>;
+  mediaIdKey: string;
+  mediaId: AnyPgColumn<{ data: number }>;
   sortOrderKey: string;
   sortOrder: AnyPgColumn<{ data: number }>;
 };
 
 type MediaTable = AnyPgTable & {
   tableId: AnyPgColumn<{ data: number }>;
-  imageId: AnyPgColumn<{ data: number }>;
+  mediaId: AnyPgColumn<{ data: number }>;
   sortOrder: AnyPgColumn<{ data: number }>;
 };
 
@@ -30,29 +30,29 @@ type MediaHandlerConfig = {
   table: MediaTable;
   tableIdKey?: string;
   tableId?: AnyPgColumn<{ data: number }>;
-  imageIdKey?: string;
-  imageId?: AnyPgColumn<{ data: number }>;
+  mediaIdKey?: string;
+  mediaId?: AnyPgColumn<{ data: number }>;
   sortOrderKey?: string;
   sortOrder?: AnyPgColumn<{ data: number }>;
 };
 
-export function mediaField(
+export function mediaListField(
   {
     table,
     tableIdKey = "tableId",
     tableId = table.tableId,
-    imageIdKey = "imageId",
-    imageId = table.imageId,
+    mediaIdKey = "mediaId",
+    mediaId = table.mediaId,
     sortOrderKey = "sortOrder",
     sortOrder = table.sortOrder,
   }: MediaHandlerConfig,
-): ServerFieldResolver<ServerField & { kind: "media" }> {
+): ServerFieldResolver<ServerField & { kind: "media-list" }> {
   const media = {
     table,
     tableIdKey,
     tableId,
-    imageIdKey,
-    imageId,
+    mediaIdKey,
+    mediaId,
     sortOrderKey,
     sortOrder,
   };
@@ -74,7 +74,7 @@ export function mediaField(
           db,
           tableId,
           media: { [key]: media },
-          values: { [key]: value as z.output<typeof mediaSchema> },
+          values: { [key]: value as z.output<typeof mediaListSchema> },
           user,
         });
 
@@ -84,7 +84,7 @@ export function mediaField(
   });
 }
 
-type MediaValues = Record<string, z.output<typeof mediaSchema>>;
+type MediaValues = Record<string, z.output<typeof mediaListSchema>>;
 type TransactionDb = Parameters<
   Parameters<(typeof deps)["db"]["transaction"]>[0]
 >[0];
@@ -107,24 +107,24 @@ async function loadMedia({
   for (const [key, mediaConfig] of Object.entries(media)) {
     const rows = await db
       .select({
-        id: mediaConfig.imageId,
-        image: selectImageSubquery(mediaConfig.imageId, "square"),
-        filename: images.filename,
-        sourceType: images.sourceType,
-        sourceSize: images.sourceSize,
-        sourceWidth: images.sourceWidth,
-        sourceHeight: images.sourceHeight,
+        id: mediaConfig.mediaId,
+        image: selectImageSubquery(mediaConfig.mediaId, "square"),
+        filename: mediaTable.filename,
+        sourceType: mediaTable.sourceType,
+        sourceSize: mediaTable.sourceSize,
+        sourceWidth: mediaTable.sourceWidth,
+        sourceHeight: mediaTable.sourceHeight,
         originalUrl: sql<string | null>`
           case
-            when ${images.kind} = 'svg' then ${images.sourceUrl}
-            else ${images.variants}->'original'->>'url'
+            when ${mediaTable.kind} = 'svg' then ${mediaTable.sourceUrl}
+            else ${mediaTable.variants}->'original'->>'url'
           end
         `,
-        title: images.title,
-        caption: images.caption,
+        title: mediaTable.title,
+        caption: mediaTable.caption,
       })
       .from(mediaConfig.table)
-      .innerJoin(images, eq(mediaConfig.imageId, images.id))
+      .innerJoin(mediaTable, eq(mediaConfig.mediaId, mediaTable.id))
       .where(eq(mediaConfig.tableId, tableId))
       .orderBy(asc(mediaConfig.sortOrder));
 
@@ -170,60 +170,60 @@ async function saveMedia({
 
     const oldRows = await db
       .select({
-        imageId: mediaConfig.imageId,
-        alt: images.alt,
-        title: images.title,
-        caption: images.caption,
+        mediaId: mediaConfig.mediaId,
+        alt: mediaTable.alt,
+        title: mediaTable.title,
+        caption: mediaTable.caption,
       })
       .from(mediaConfig.table)
-      .innerJoin(images, eq(mediaConfig.imageId, images.id))
+      .innerJoin(mediaTable, eq(mediaConfig.mediaId, mediaTable.id))
       .where(eq(mediaConfig.tableId, tableId))
       .orderBy(asc(mediaConfig.sortOrder));
 
-    const oldImageIds = oldRows
-      .map((row) => row.imageId)
-      .filter((imageId): imageId is number => typeof imageId === "number");
-    const imageIds: number[] = [];
-    const metadataByImageId = new Map<
+    const oldMediaIds = oldRows
+      .map((row) => row.mediaId)
+      .filter((mediaId): mediaId is number => typeof mediaId === "number");
+    const mediaIds: number[] = [];
+    const metadataByMediaId = new Map<
       number,
       { alt?: string | null; title?: string | null; caption?: string | null }
     >();
 
     for (const item of selected) {
       if ("action" in item && item.action === "upload") {
-        const [image] = await db
-          .select({ id: images.id })
-          .from(images)
+        const [media] = await db
+          .select({ id: mediaTable.id })
+          .from(mediaTable)
           .where(
             and(
-              eq(images.publicId, item.imageId),
-              eq(images.createdBy, user.id),
+              eq(mediaTable.publicId, item.mediaId),
+              eq(mediaTable.createdBy, user.id),
             ),
           )
           .limit(1);
 
-        if (image) {
-          imageIds.push(image.id);
-          metadataByImageId.set(image.id, imageMetadata(item));
+        if (media) {
+          mediaIds.push(media.id);
+          metadataByMediaId.set(media.id, imageMetadata(item));
         }
       } else if (typeof item.id === "number") {
-        imageIds.push(item.id);
-        metadataByImageId.set(item.id, imageMetadata(item));
+        mediaIds.push(item.id);
+        metadataByMediaId.set(item.id, imageMetadata(item));
       }
     }
 
-    const addedImageIds = imageIds.filter(
-      (imageId) => !oldImageIds.includes(imageId),
+    const addedMediaIds = mediaIds.filter(
+      (mediaId) => !oldMediaIds.includes(mediaId),
     );
-    const removedImageIds = oldImageIds.filter(
-      (imageId) => !imageIds.includes(imageId),
+    const removedMediaIds = oldMediaIds.filter(
+      (mediaId) => !mediaIds.includes(mediaId),
     );
-    const movedImageIds = imageIds.filter((imageId, index) => {
-      return oldImageIds.includes(imageId) && oldImageIds[index] !== imageId;
+    const movedMediaIds = mediaIds.filter((mediaId, index) => {
+      return oldMediaIds.includes(mediaId) && oldMediaIds[index] !== mediaId;
     });
-    const changedMetadata = [...metadataByImageId.entries()].filter(
-      ([imageId, metadata]) => {
-        const row = oldRows.find((oldRow) => oldRow.imageId === imageId);
+    const changedMetadata = [...metadataByMediaId.entries()].filter(
+      ([mediaId, metadata]) => {
+        const row = oldRows.find((oldRow) => oldRow.mediaId === mediaId);
         return (
           !row ||
           !isEqual(metadata, {
@@ -235,52 +235,52 @@ async function saveMedia({
       },
     );
 
-    if (addedImageIds.length) {
+    if (addedMediaIds.length) {
       await db.insert(mediaConfig.table).values(
-        addedImageIds.map((imageId) => ({
+        addedMediaIds.map((mediaId) => ({
           [mediaConfig.tableIdKey]: tableId,
-          [mediaConfig.imageIdKey]: imageId,
-          [mediaConfig.sortOrderKey]: imageIds.indexOf(imageId),
+          [mediaConfig.mediaIdKey]: mediaId,
+          [mediaConfig.sortOrderKey]: mediaIds.indexOf(mediaId),
         })),
       );
 
       await db
-        .update(images)
+        .update(mediaTable)
         .set({ status: "attached" })
-        .where(inArray(images.id, addedImageIds));
+        .where(inArray(mediaTable.id, addedMediaIds));
     }
 
     await Promise.all([
-      ...movedImageIds.map((imageId) =>
+      ...movedMediaIds.map((mediaId) =>
         db
           .update(mediaConfig.table)
-          .set({ [mediaConfig.sortOrderKey]: imageIds.indexOf(imageId) })
+          .set({ [mediaConfig.sortOrderKey]: mediaIds.indexOf(mediaId) })
           .where(
             and(
               eq(mediaConfig.tableId, tableId),
-              eq(mediaConfig.imageId, imageId),
+              eq(mediaConfig.mediaId, mediaId),
             ),
           ),
       ),
-      ...changedMetadata.map(([imageId, metadata]) =>
-        db.update(images).set(metadata).where(eq(images.id, imageId)),
+      ...changedMetadata.map(([mediaId, metadata]) =>
+        db.update(mediaTable).set(metadata).where(eq(mediaTable.id, mediaId)),
       ),
     ]);
 
-    if (removedImageIds.length) {
+    if (removedMediaIds.length) {
       await db
         .delete(mediaConfig.table)
         .where(
           and(
             eq(mediaConfig.tableId, tableId),
-            inArray(mediaConfig.imageId, removedImageIds),
+            inArray(mediaConfig.mediaId, removedMediaIds),
           ),
         );
 
       await db
-        .update(images)
+        .update(mediaTable)
         .set({ status: "removed" })
-        .where(inArray(images.id, removedImageIds));
+        .where(inArray(mediaTable.id, removedMediaIds));
     }
 
     savedValues[key] = selected;

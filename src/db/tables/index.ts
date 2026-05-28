@@ -3,5 +3,5 @@ export * from "@kenstack/db/tables/audit";
 export * from "@kenstack/db/tables/revisions";
 export * from "@kenstack/db/tables/content";
 export * from "@kenstack/modules/siteSettings/tables";
-export * from "./images";
+export * from "./media";
 export * from "./tags";

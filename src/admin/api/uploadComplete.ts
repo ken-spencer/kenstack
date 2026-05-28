@@ -6,7 +6,7 @@ import {
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
-import { images } from "@kenstack/db/tables/images";
+import { media } from "@kenstack/db/tables/media";
 import { deps } from "@app/deps";
 import canUpload from "@kenstack/lib/canUpload";
 import { and, eq, getTableName } from "drizzle-orm";
@@ -124,19 +124,19 @@ export const uploadCompleteAction = (adminConfig: ImageUploadConfig) =>
 
     const [pendingImage] = await deps.db
       .select({
-        id: images.id,
-        key: images.sourceKey,
-        prefix: images.prefix,
-        baseName: images.baseName,
-        filename: images.filename,
-        type: images.sourceType,
+        id: media.id,
+        key: media.sourceKey,
+        prefix: media.prefix,
+        baseName: media.baseName,
+        filename: media.filename,
+        type: media.sourceType,
       })
-      .from(images)
+      .from(media)
       .where(
         and(
-          eq(images.publicId, data.imageId),
-          eq(images.status, "pending"),
-          eq(images.createdBy, user.id),
+          eq(media.publicId, data.imageId),
+          eq(media.status, "pending"),
+          eq(media.createdBy, user.id),
         ),
       );
 
@@ -180,8 +180,8 @@ export const uploadCompleteAction = (adminConfig: ImageUploadConfig) =>
     ) {
       await removeUploadedObject(key);
       await deps.db
-        .delete(images)
-        .where(and(eq(images.id, id), eq(images.createdBy, user.id)));
+        .delete(media)
+        .where(and(eq(media.id, id), eq(media.createdBy, user.id)));
       return response.error(deps.uploadMaxImageSizeMessage);
     }
 
@@ -192,8 +192,8 @@ export const uploadCompleteAction = (adminConfig: ImageUploadConfig) =>
     if (originalBuffer.length > deps.uploadMaxImageSize) {
       await removeUploadedObject(key);
       await deps.db
-        .delete(images)
-        .where(and(eq(images.id, id), eq(images.createdBy, user.id)));
+        .delete(media)
+        .where(and(eq(media.id, id), eq(media.createdBy, user.id)));
       return response.error(deps.uploadMaxImageSizeMessage);
     }
 
@@ -216,7 +216,7 @@ export const uploadCompleteAction = (adminConfig: ImageUploadConfig) =>
       );
 
       const [image] = await deps.db
-        .update(images)
+        .update(media)
         .set({
           status: "uploaded",
           kind: "svg",
@@ -226,14 +226,14 @@ export const uploadCompleteAction = (adminConfig: ImageUploadConfig) =>
           sourceWidth: metadata.width ?? null,
           sourceHeight: metadata.height ?? null,
         })
-        .where(eq(images.id, id))
+        .where(eq(media.id, id))
         .returning({
-          imageId: images.publicId,
-          url: images.sourceUrl,
-          width: images.sourceWidth,
-          height: images.sourceHeight,
-          sourceType: images.sourceType,
-          sourceSize: images.sourceSize,
+          imageId: media.publicId,
+          url: media.sourceUrl,
+          width: media.sourceWidth,
+          height: media.sourceHeight,
+          sourceType: media.sourceType,
+          sourceSize: media.sourceSize,
         });
 
       return response.success({
@@ -303,7 +303,7 @@ export const uploadCompleteAction = (adminConfig: ImageUploadConfig) =>
     }
 
     const [image] = await deps.db
-      .update(images)
+      .update(media)
       .set({
         status: "uploaded",
         kind: "raster",
@@ -335,8 +335,8 @@ export const uploadCompleteAction = (adminConfig: ImageUploadConfig) =>
           },
         },
       })
-      .where(eq(images.id, id))
-      .returning({ imageId: images.publicId, variants: images.variants });
+      .where(eq(media.id, id))
+      .returning({ imageId: media.publicId, variants: media.variants });
 
     if (!image.variants) {
       throw Error("No variants on image");

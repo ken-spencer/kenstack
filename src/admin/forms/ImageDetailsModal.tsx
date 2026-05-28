@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { X } from "lucide-react";
 
 import IconButton from "@kenstack/components/IconButton";
-import type { SquareCrop } from "@kenstack/db/tables/images/types";
+import type { SquareCrop } from "@kenstack/db/tables/media/types";
 
 export type ImageDetailsValue = {
   id?: number;

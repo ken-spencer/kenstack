@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import * as z from "zod";
 
-import { selectImageSubquery } from "@kenstack/db/tables/images";
+import { selectImageSubquery } from "@kenstack/db/tables/media";
 import { dateTimeField, imageField, textField } from "@kenstack/fields/client";
 import { isPreview } from "./lib/searchParams";
 import type { AdminContentTable } from "./table";

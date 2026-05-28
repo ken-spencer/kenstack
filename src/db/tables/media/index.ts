@@ -6,6 +6,7 @@ import {
   jsonb,
   index,
   uniqueIndex,
+  foreignKey,
   pgTable,
   pgEnum,
   type PgColumn,
@@ -14,19 +15,19 @@ import {
 import { sql } from "drizzle-orm";
 import snakeCase from "lodash-es/snakeCase";
 
-export const imageKindEnum = pgEnum("image_kind", ["raster", "svg"]);
-export const imageStatusEnum = pgEnum("image_status", [
+export const mediaKindEnum = pgEnum("media_kind", ["raster", "svg", "file"]);
+export const mediaStatusEnum = pgEnum("media_status", [
   "pending",
   "uploaded",
   "attached",
   "removed",
 ]);
 
-export const images = defineTable({
-  name: "images",
+export const media = defineTable({
+  name: "media",
   columns: {
-    status: imageStatusEnum("status").notNull(),
-    kind: imageKindEnum("kind").notNull(),
+    status: mediaStatusEnum("status").notNull(),
+    kind: mediaKindEnum("kind").notNull(),
     table: text("table"),
     field: text("field"),
     filename: text("filename").notNull(),
@@ -43,10 +44,10 @@ export const images = defineTable({
     sourceHeight: integer("source_height"),
     variants: jsonb("variants").$type<ImageVariants>(),
   },
-  extraConfig: (t) => [index("images_status_idx").on(t.status)],
+  extraConfig: (t) => [index("media_status_idx").on(t.status)],
 });
 
-export const defineMedia = ({
+export const defineMediaList = ({
   table,
   prefix,
 }: {
@@ -60,30 +61,30 @@ export const defineMedia = ({
   return pgTable(
     name,
     {
-      tableId: integer(tableIdColumn)
-        .notNull()
-        .references(() => table.id, { onDelete: "cascade" }),
-      imageId: integer("image_id")
-        .notNull()
-        .references(() => images.id, { onDelete: "cascade" }),
+      tableId: integer(tableIdColumn).notNull(),
+      mediaId: integer("media_id").notNull(),
       sortOrder: integer("sort_order").notNull().default(0),
     },
     (t) => [
-      uniqueIndex(`${name}_${tableIdColumn}_image_id_unique`).on(
-        t.tableId,
-        t.imageId,
-      ),
-      index(`${name}_${tableIdColumn}_sort_order_idx`).on(
-        t.tableId,
-        t.sortOrder,
-      ),
+      foreignKey({
+        columns: [t.tableId],
+        foreignColumns: [table.id],
+        name: `${name}_${tablePrefix}_fk`,
+      }).onDelete("cascade"),
+      foreignKey({
+        columns: [t.mediaId],
+        foreignColumns: [media.id],
+        name: `${name}_media_fk`,
+      }).onDelete("cascade"),
+      uniqueIndex(`${name}_unique`).on(t.tableId, t.mediaId),
+      index(`${name}_sort_order_idx`).on(t.tableId, t.sortOrder),
     ],
   );
 };
 
 // import { alias as pgAlias } from "drizzle-orm/pg-core";
-// const image = pgAlias(images, "image");
-// const avatar = pgAlias(images, "avatar");
+// const image = pgAlias(media, "image");
+// const avatar = pgAlias(media, "avatar");
 // .leftJoin(image, eq(posts.imageId, image.id))
 
 type LooseImageColumn<TColumn extends PgColumn> = AnyPgColumn<{
@@ -107,7 +108,7 @@ type ImageAliasKey =
   | "caption";
 
 type ImageAlias = {
-  [Key in ImageAliasKey]: LooseImageColumn<(typeof images)[Key]>;
+  [Key in ImageAliasKey]: LooseImageColumn<(typeof media)[Key]>;
 };
 
 type ImageVariantName = "original" | "square";
@@ -141,7 +142,7 @@ export const selectImage = (
 
 export type SelectedImage = {
   id?: number;
-  kind: "raster" | "svg";
+  kind: "raster" | "svg" | "file";
   url: string;
   width: number | null;
   height: number | null;
@@ -163,36 +164,36 @@ export function selectImageSubquery(
 ) {
   return sql<SelectedImage | null>`(
   select jsonb_build_object(
-    'id', ${images.id},
-    'kind', ${images.kind},
+    'id', ${media.id},
+    'kind', ${media.kind},
     'url', case
-      when ${images.kind} = 'svg' then ${images.sourceUrl}
-      else ${images.variants}->${variant}->>'url'
+      when ${media.kind} = 'svg' then ${media.sourceUrl}
+      else ${media.variants}->${variant}->>'url'
     end,
     'width', case
-      when ${images.kind} = 'svg' then ${images.sourceWidth}
-      else (${images.variants}->${variant}->>'width')::int
+      when ${media.kind} = 'svg' then ${media.sourceWidth}
+      else (${media.variants}->${variant}->>'width')::int
     end,
     'height', case
-      when ${images.kind} = 'svg' then ${images.sourceHeight}
-      else (${images.variants}->${variant}->>'height')::int
+      when ${media.kind} = 'svg' then ${media.sourceHeight}
+      else (${media.variants}->${variant}->>'height')::int
     end,
-    'alt', ${images.alt},
-    'title', ${images.title},
-    'caption', ${images.caption},
-    'filename', ${images.filename},
-    'sourceType', ${images.sourceType},
-    'sourceSize', ${images.sourceSize},
-    'sourceWidth', ${images.sourceWidth},
-    'sourceHeight', ${images.sourceHeight},
+    'alt', ${media.alt},
+    'title', ${media.title},
+    'caption', ${media.caption},
+    'filename', ${media.filename},
+    'sourceType', ${media.sourceType},
+    'sourceSize', ${media.sourceSize},
+    'sourceWidth', ${media.sourceWidth},
+    'sourceHeight', ${media.sourceHeight},
     'originalUrl', case
-      when ${images.kind} = 'svg' then ${images.sourceUrl}
-      else ${images.variants}->'original'->>'url'
+      when ${media.kind} = 'svg' then ${media.sourceUrl}
+      else ${media.variants}->'original'->>'url'
     end,
-    'squareCrop', ${images.variants}->'squareCrop'
+    'squareCrop', ${media.variants}->'squareCrop'
   )
-  from ${images}
-  where ${images.id} = ${imageCol}
+  from ${media}
+  where ${media.id} = ${imageCol}
   limit 1
 )`;
 }
