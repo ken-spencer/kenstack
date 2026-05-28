@@ -19,6 +19,7 @@ Use this checklist before finalizing code changes. It is meant to catch project 
 - Remove intermediate arrays or objects that only name one step in a fluent transformation before being immediately consumed.
 - Check repeated loops over the same collection. Combine them when one pass can gather the needed values without making the code harder to read.
 - Remove pass-through helpers, wrappers, constants, and barrels unless they reduce real repeated complexity or expose a requested public API.
+- Do not pass through unused option fields just because a shared options type supports them. Keep function parameters to the fields the function reads, and split or narrow option types when forwarding extra fields would obscure ownership.
 - Before keeping local string/date/collection formatting logic, check whether an existing installed utility already owns that behavior, such as `lodash-es`, `pluralize`, `date-fns`, `chrono-node`, or `validator`.
 - Check one-line `is*`, `get*`, and `has*` helpers. Remove them when they only hide a direct discriminator check, property lookup, or local ternary and do not provide meaningful reuse, validation, or type narrowing across an unsafe boundary.
 - When touching a file, review nearby private helpers that predate the current change. Inline helpers that only return an optional property, defaulted object, mapped key list, or one local branch. Keep helpers that provide real generic narrowing, validation of external/unknown data, shared behavior, or a meaningful domain boundary.
@@ -57,4 +58,5 @@ Use this checklist before finalizing code changes. It is meant to catch project 
 
 - Run the narrowest relevant checks: TypeScript for type changes, lint for style changes, and build only for runtime-sensitive Next.js changes unless instructed otherwise.
 - Review the diff for unrelated formatting, file moves, or broad refactors.
+- Do not flag staged-vs-unstaged split state as a review finding by itself. Treat it as normal WIP unless the actual code in the working tree is broken or the user explicitly asks for staging hygiene.
 - If a checklist item would make the code more complex for the same result, leave the code alone and mention the tradeoff.

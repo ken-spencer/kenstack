@@ -1,10 +1,10 @@
 import * as z from "zod";
 
 import { email } from "@kenstack/zod/email";
-import { gallerySchema } from "@kenstack/zod/gallery";
 import { imageSchema } from "@kenstack/zod/image";
+import { mediaSchema } from "@kenstack/zod/media";
 import { tagsSchema } from "@kenstack/zod/tags";
-import GalleryField from "@kenstack/admin/forms/GalleryField";
+import MediaField from "@kenstack/admin/forms/MediaField";
 import AdminImageField from "@kenstack/admin/forms/ImageField";
 import RelationshipField from "@kenstack/admin/forms/RelationshipField";
 import TagField from "@kenstack/admin/forms/TagField";
@@ -110,8 +110,8 @@ function ImageFieldComponent(props: FieldComponentProps) {
   return <AdminImageField {...props} />;
 }
 
-function GalleryFieldComponent(props: FieldComponentProps) {
-  return <GalleryField {...props} />;
+function MediaFieldComponent(props: FieldComponentProps) {
+  return <MediaField {...props} />;
 }
 
 function TagFieldComponent(props: FieldComponentProps) {
@@ -266,15 +266,15 @@ export function imageField(
   };
 }
 
-export function galleryField(): FieldOptionOfKind<"gallery", []> {
+export function mediaField(): FieldOptionOfKind<"media", []> {
   return {
     __kenstackField: true,
-    kind: "gallery",
-    component: GalleryFieldComponent,
+    kind: "media",
+    component: MediaFieldComponent,
     default: [],
     searchable: false,
     revisions: true,
-    zod: gallerySchema,
+    zod: mediaSchema,
   };
 }
 

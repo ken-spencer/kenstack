@@ -9,8 +9,20 @@ type AdminServerProps = {
   context: {
     params: Promise<{ admin: [string, string?] }>;
   };
-  admin: DefinedAdmin;
+  adminConfig: DefinedAdmin;
 };
+
+type AdminPageContext = AdminServerProps["context"];
+
+export function createAdminPage({
+  adminConfig,
+}: {
+  adminConfig: DefinedAdmin;
+}) {
+  return function AdminPage(context: AdminPageContext) {
+    return <AdminServer context={context} adminConfig={adminConfig} />;
+  };
+}
 
 export default function AdminServer(props: AdminServerProps) {
   return (
@@ -24,7 +36,7 @@ export default function AdminServer(props: AdminServerProps) {
 
 async function AdminServerCore({
   context: { params },
-  admin,
+  adminConfig: admin,
 }: AdminServerProps) {
   const { admin: adminRoute } = await params;
 
@@ -41,8 +53,8 @@ async function AdminServerCore({
 
   const moduleConfig = admin[name];
   const adminConfig = moduleConfig?.admin;
-  const client = moduleConfig?.client?.admin;
-  if (!moduleConfig || !adminConfig || !client) {
+  const clientConfig = moduleConfig?.client;
+  if (!moduleConfig || !adminConfig || !clientConfig) {
     notFound();
   }
 
@@ -62,7 +74,7 @@ async function AdminServerCore({
               <AdminList
                 name={name}
                 adminConfig={adminConfig}
-                client={client}
+                clientConfig={clientConfig}
                 userId={user.id}
               />
             );
@@ -74,7 +86,7 @@ async function AdminServerCore({
               isNew={isNew}
               name={name}
               adminConfig={adminConfig}
-              client={client}
+              clientConfig={clientConfig}
               userId={user.id}
             />
           );
@@ -88,7 +100,7 @@ async function AdminServerCore({
           <Edit
             name={name}
             adminConfig={adminConfig}
-            client={client}
+            clientConfig={clientConfig}
             userId={user.id}
           />
         );

@@ -44,11 +44,12 @@ export default function MetaFields({
 }: {
   fields?: MetaFieldOptions;
 }) {
-  const { watch } = useFormContext();
+  const { setValue, watch } = useFormContext();
   const visibility = watch("visibility");
   const publishedAt = watch("publishedAt");
+  const isDraft = visibility === "draft";
   const publishSummary =
-    visibility === "published" ? formatPublishedAt(publishedAt) : "Not listed";
+    isDraft ? "Not listed" : formatPublishedAt(publishedAt);
   const showAccordion =
     fields.publishedAt ||
     fields.seoTitle ||
@@ -77,6 +78,17 @@ export default function MetaFields({
                     className="peer sr-only"
                     onChange={() => {
                       field.onChange(value);
+                      if (
+                        value !== "draft" &&
+                        fields.publishedAt &&
+                        !publishedAt
+                      ) {
+                        setValue("publishedAt", new Date().toISOString(), {
+                          shouldDirty: true,
+                          shouldTouch: true,
+                          shouldValidate: true,
+                        });
+                      }
                     }}
                   />
                   <span className="flex min-h-9 items-center justify-center gap-1 rounded border border-gray-200 px-2 text-center transition peer-checked:border-fuchsia-800 peer-checked:bg-fuchsia-800/85 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-fuchsia-800 peer-focus-visible:ring-offset-2 hover:bg-gray-50 peer-checked:hover:bg-fuchsia-800">
@@ -108,7 +120,7 @@ export default function MetaFields({
             <AccordionContent className="space-y-4">
               {fields.publishedAt ? (
                 <DateField
-                  disabled={visibility !== "published"}
+                  disabled={isDraft}
                   name="publishedAt"
                   label="Publish On"
                 />

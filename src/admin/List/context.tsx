@@ -14,10 +14,14 @@ import fetcher from "@kenstack/api/fetcher";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import useQueryStore, { type SetQueryStore } from "./useQueryStore";
 
-import type { AdminClient, BaseListItem } from "@kenstack/admin/client";
+import type {
+  AdminClient,
+  BaseListItem,
+  ClientConfig,
+} from "@kenstack/admin/client";
 
 type AdminListProps = {
-  client: AdminClient;
+  clientConfig: ClientConfig;
   userId: number;
   name: string;
   sort: AdminSortMeta[];
@@ -54,13 +58,18 @@ type UseListProps<
 };
 
 export function AdminListProvider({
-  client,
+  clientConfig,
   userId,
   name,
   sort,
   filter,
   children,
 }: AdminListProps) {
+  const client = clientConfig.admin;
+  if (!client) {
+    throw new Error("Admin client config is required for admin list routes.");
+  }
+
   const [selected, setSelected] = useState<number[]>([]);
   const defaultSort = sort[0];
   const defaultFilterState = {

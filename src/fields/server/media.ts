@@ -6,11 +6,11 @@ import isEqual from "lodash-es/isEqual";
 import type { deps } from "@app/deps";
 import { images, selectImageSubquery } from "@kenstack/db/tables";
 import type { User } from "@kenstack/types";
-import { gallerySchema } from "@kenstack/zod/gallery";
+import { mediaSchema } from "@kenstack/zod/media";
 import type { ServerField, ServerFieldDefaults, ServerFieldResolver } from ".";
 import { imageMetadata } from "./image";
 
-type ImageGalleryConfig = {
+type MediaConfig = {
   table: AnyPgTable;
   tableIdKey: string;
   tableId: AnyPgColumn<{ data: number }>;
@@ -20,14 +20,14 @@ type ImageGalleryConfig = {
   sortOrder: AnyPgColumn<{ data: number }>;
 };
 
-type ImageGalleryTable = AnyPgTable & {
+type MediaTable = AnyPgTable & {
   tableId: AnyPgColumn<{ data: number }>;
   imageId: AnyPgColumn<{ data: number }>;
   sortOrder: AnyPgColumn<{ data: number }>;
 };
 
-type ImageGalleryHandlerConfig = {
-  table: ImageGalleryTable;
+type MediaHandlerConfig = {
+  table: MediaTable;
   tableIdKey?: string;
   tableId?: AnyPgColumn<{ data: number }>;
   imageIdKey?: string;
@@ -36,7 +36,7 @@ type ImageGalleryHandlerConfig = {
   sortOrder?: AnyPgColumn<{ data: number }>;
 };
 
-export function galleryField(
+export function mediaField(
   {
     table,
     tableIdKey = "tableId",
@@ -45,9 +45,9 @@ export function galleryField(
     imageId = table.imageId,
     sortOrderKey = "sortOrder",
     sortOrder = table.sortOrder,
-  }: ImageGalleryHandlerConfig,
-): ServerFieldResolver<ServerField & { kind: "gallery" }> {
-  const gallery = {
+  }: MediaHandlerConfig,
+): ServerFieldResolver<ServerField & { kind: "media" }> {
+  const media = {
     table,
     tableIdKey,
     tableId,
@@ -61,20 +61,20 @@ export function galleryField(
     behavior: {
       upload: true,
       async load({ db, key, tableId }) {
-        const values = await loadGalleries({
+        const values = await loadMedia({
           db,
           tableId,
-          galleries: { [key]: gallery },
+          media: { [key]: media },
         });
 
         return values[key] ?? [];
       },
       async save({ db, key, tableId, value, user }) {
-        const values = await saveGalleries({
+        const values = await saveMedia({
           db,
           tableId,
-          galleries: { [key]: gallery },
-          values: { [key]: value as z.output<typeof gallerySchema> },
+          media: { [key]: media },
+          values: { [key]: value as z.output<typeof mediaSchema> },
           user,
         });
 
@@ -84,31 +84,31 @@ export function galleryField(
   });
 }
 
-type GalleryValues = Record<string, z.output<typeof gallerySchema>>;
+type MediaValues = Record<string, z.output<typeof mediaSchema>>;
 type TransactionDb = Parameters<
   Parameters<(typeof deps)["db"]["transaction"]>[0]
 >[0];
 
-async function loadGalleries({
+async function loadMedia({
   db,
   tableId,
-  galleries,
+  media,
 }: {
   db: Pick<typeof deps.db, "select">;
   tableId: number;
-  galleries?: Record<string, ImageGalleryConfig>;
+  media?: Record<string, MediaConfig>;
 }) {
   const values: Record<string, unknown[]> = {};
 
-  if (!galleries) {
+  if (!media) {
     return values;
   }
 
-  for (const [key, gallery] of Object.entries(galleries)) {
+  for (const [key, mediaConfig] of Object.entries(media)) {
     const rows = await db
       .select({
-        id: gallery.imageId,
-        image: selectImageSubquery(gallery.imageId, "square"),
+        id: mediaConfig.imageId,
+        image: selectImageSubquery(mediaConfig.imageId, "square"),
         filename: images.filename,
         sourceType: images.sourceType,
         sourceSize: images.sourceSize,
@@ -123,10 +123,10 @@ async function loadGalleries({
         title: images.title,
         caption: images.caption,
       })
-      .from(gallery.table)
-      .innerJoin(images, eq(gallery.imageId, images.id))
-      .where(eq(gallery.tableId, tableId))
-      .orderBy(asc(gallery.sortOrder));
+      .from(mediaConfig.table)
+      .innerJoin(images, eq(mediaConfig.imageId, images.id))
+      .where(eq(mediaConfig.tableId, tableId))
+      .orderBy(asc(mediaConfig.sortOrder));
 
     values[key] = rows
       .filter((row) => row.image)
@@ -147,38 +147,38 @@ async function loadGalleries({
   return values;
 }
 
-async function saveGalleries({
+async function saveMedia({
   db,
   tableId,
-  galleries,
+  media,
   values,
   user,
 }: {
   db: TransactionDb;
   tableId: number;
-  galleries: Record<string, ImageGalleryConfig>;
-  values: GalleryValues;
+  media: Record<string, MediaConfig>;
+  values: MediaValues;
   user: User;
 }) {
-  const savedValues: GalleryValues = {};
+  const savedValues: MediaValues = {};
 
   for (const [key, selected] of Object.entries(values)) {
-    const gallery = galleries[key];
-    if (!gallery) {
+    const mediaConfig = media[key];
+    if (!mediaConfig) {
       continue;
     }
 
     const oldRows = await db
       .select({
-        imageId: gallery.imageId,
+        imageId: mediaConfig.imageId,
         alt: images.alt,
         title: images.title,
         caption: images.caption,
       })
-      .from(gallery.table)
-      .innerJoin(images, eq(gallery.imageId, images.id))
-      .where(eq(gallery.tableId, tableId))
-      .orderBy(asc(gallery.sortOrder));
+      .from(mediaConfig.table)
+      .innerJoin(images, eq(mediaConfig.imageId, images.id))
+      .where(eq(mediaConfig.tableId, tableId))
+      .orderBy(asc(mediaConfig.sortOrder));
 
     const oldImageIds = oldRows
       .map((row) => row.imageId)
@@ -236,11 +236,11 @@ async function saveGalleries({
     );
 
     if (addedImageIds.length) {
-      await db.insert(gallery.table).values(
+      await db.insert(mediaConfig.table).values(
         addedImageIds.map((imageId) => ({
-          [gallery.tableIdKey]: tableId,
-          [gallery.imageIdKey]: imageId,
-          [gallery.sortOrderKey]: imageIds.indexOf(imageId),
+          [mediaConfig.tableIdKey]: tableId,
+          [mediaConfig.imageIdKey]: imageId,
+          [mediaConfig.sortOrderKey]: imageIds.indexOf(imageId),
         })),
       );
 
@@ -253,12 +253,12 @@ async function saveGalleries({
     await Promise.all([
       ...movedImageIds.map((imageId) =>
         db
-          .update(gallery.table)
-          .set({ [gallery.sortOrderKey]: imageIds.indexOf(imageId) })
+          .update(mediaConfig.table)
+          .set({ [mediaConfig.sortOrderKey]: imageIds.indexOf(imageId) })
           .where(
             and(
-              eq(gallery.tableId, tableId),
-              eq(gallery.imageId, imageId),
+              eq(mediaConfig.tableId, tableId),
+              eq(mediaConfig.imageId, imageId),
             ),
           ),
       ),
@@ -269,11 +269,11 @@ async function saveGalleries({
 
     if (removedImageIds.length) {
       await db
-        .delete(gallery.table)
+        .delete(mediaConfig.table)
         .where(
           and(
-            eq(gallery.tableId, tableId),
-            inArray(gallery.imageId, removedImageIds),
+            eq(mediaConfig.tableId, tableId),
+            inArray(mediaConfig.imageId, removedImageIds),
           ),
         );
 

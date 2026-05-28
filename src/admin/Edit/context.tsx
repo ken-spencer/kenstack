@@ -10,7 +10,7 @@ import fetcher from "@kenstack/api/fetcher";
 import Alert from "@kenstack/components/Alert";
 import Progress from "@kenstack/components/Progress";
 import EditForm from "./Form";
-import { AdminClient, PreviewPath } from "..";
+import { AdminClient, type ClientConfig, PreviewPath } from "..";
 
 type AdminEditProps = {
   name: string;
@@ -20,7 +20,7 @@ type AdminEditProps = {
   userId: number;
   canUpload: boolean;
   defaultValues: Record<string, unknown>;
-  client: AdminClient;
+  clientConfig: ClientConfig;
   children: React.ReactNode;
   preview?: PreviewPath;
 };
@@ -58,10 +58,15 @@ export function AdminEditProvider({
   userId,
   canUpload,
   defaultValues,
-  client,
+  clientConfig,
   preview,
   children,
 }: AdminEditProps) {
+  const client = clientConfig.admin;
+  if (!client) {
+    throw new Error("Admin client config is required for admin edit routes.");
+  }
+
   const pathname = usePathname();
   const apiPath = "/api/admin";
   const listPath = useMemo(() => {
@@ -100,7 +105,10 @@ export function AdminEditProvider({
     defaultValues = data.item;
   }
 
-  const item = loadTarget && data?.status === "success" ? data.item : null;
+  const item =
+    loadTarget && data?.status === "success" && data.item.id
+      ? data.item
+      : null;
   const values: AdminEditContext = {
     name,
     client,

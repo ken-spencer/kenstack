@@ -52,6 +52,7 @@ export function defineClient<
 }
 
 export type AdminClient = NonNullable<ReturnType<typeof defineClient>["admin"]>;
+export type ClientConfig = ReturnType<typeof defineClient>;
 export type SettingsClient = NonNullable<
   ReturnType<typeof defineClient>["settings"]
 >;

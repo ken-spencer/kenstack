@@ -1,11 +1,11 @@
 "use client";
 
-import type { AdminClient } from "@kenstack/admin";
+import { useAdminEdit } from "./context";
 
-export default function FormRender({
-  client: { EditForm },
-}: {
-  client: AdminClient;
-}) {
+export default function FormRender() {
+  const {
+    client: { EditForm },
+  } = useAdminEdit();
+
   return <EditForm />;
 }

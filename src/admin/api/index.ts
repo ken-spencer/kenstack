@@ -24,11 +24,10 @@ import {
 import { type DefinedAdmin } from "@kenstack/admin";
 import { type FetchError } from "@kenstack/api/fetcher";
 
-type Options = { admin: DefinedAdmin };
+type Options = { adminConfig: DefinedAdmin };
 
-export const adminPipeline = async (
+const runAdminPipeline = async (
   request: NextRequest,
-  context: Record<string, unknown>,
   options: Options,
 ) => {
   if (!(await deps.auth.hasRole("admin"))) {
@@ -36,7 +35,6 @@ export const adminPipeline = async (
   }
   // await deps.auth.revalidate();
 
-  const { admin } = options;
   const contentType = request.headers.get("content-type");
   if (!contentType?.startsWith("application/json")) {
     return NextResponse.json(
@@ -80,7 +78,7 @@ export const adminPipeline = async (
       ]);
   }
 
-  const moduleConfig = admin[name];
+  const moduleConfig = options.adminConfig[name];
   if (!moduleConfig) {
     return NextResponse.json({
       status: "error",
@@ -155,3 +153,7 @@ export const adminPipeline = async (
     message: `Unknown action ${action}`,
   });
 };
+
+export const adminPipeline = (options: Options) => ({
+  POST: (request: NextRequest) => runAdminPipeline(request, options),
+});

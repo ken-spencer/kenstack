@@ -1,7 +1,7 @@
 import * as z from "zod";
 import { squareCropSchema } from "./image";
 
-const galleryImageFields = z.object({
+const mediaImageFields = z.object({
   id: z.number().optional(),
   url: z.string(),
   kind: z.string().nullish(),
@@ -19,11 +19,11 @@ const galleryImageFields = z.object({
   squareCrop: squareCropSchema,
 });
 
-const upload = galleryImageFields.extend({
+const upload = mediaImageFields.extend({
   action: z.literal("upload"),
   imageId: z.string(),
 });
 
-export const galleryImageSchema = z.union([upload, galleryImageFields]);
+export const mediaImageSchema = z.union([upload, mediaImageFields]);
 
-export const gallerySchema = z.array(galleryImageSchema);
+export const mediaSchema = z.array(mediaImageSchema);

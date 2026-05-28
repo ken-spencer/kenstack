@@ -46,7 +46,7 @@ export const images = defineTable({
   extraConfig: (t) => [index("images_status_idx").on(t.status)],
 });
 
-export const defineImageGallery = ({
+export const defineMedia = ({
   table,
   prefix,
 }: {
@@ -54,7 +54,7 @@ export const defineImageGallery = ({
   prefix: string;
 }) => {
   const tablePrefix = snakeCase(prefix);
-  const name = `${tablePrefix}_images`;
+  const name = `${tablePrefix}_media`;
   const tableIdColumn = `${tablePrefix}_id`;
 
   return pgTable(

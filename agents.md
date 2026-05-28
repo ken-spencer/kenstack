@@ -44,6 +44,7 @@ Treat existing behavior as intentional unless the user explicitly asks to remove
 - Do not add alternate return shapes, overloads, or configuration options just to avoid returning a few unused fields or doing a tiny local fallback. Prefer one consistent data shape unless the second shape removes meaningful complexity at several call sites.
 - Do not make required values optional in lower-level APIs just to throw runtime errors when they are missing. Let TypeScript describe the real requirement, and validate optional runtime configuration at the boundary that reads or supplies it.
 - Do not add runtime fail branches for states that TypeScript should make impossible, such as a required module config missing from a module that defines it. Fix the type shape instead of adding a defensive throw.
+- Normalize submitted values at the Zod/input boundary when practical, such as trimming strings in field schemas, instead of adding downstream query or render checks for empty-looking values the schema should already have cleaned up.
 - Do not make breaking API or call-site shape changes without checking in first. If a cleanup or type fix would require changing an agreed API, stop and ask before proceeding.
 - Keep patches narrow.
 - Do not refactor unrelated code.
@@ -79,7 +80,7 @@ Within a module, reserve `fields` for the primary record fields exported from `f
 
 Field definitions, field helpers, field handlers, field lifecycle code, and field-based record save helpers belong in `src/fields`, not under `src/admin`. Admin may re-export field APIs for ergonomics, but the canonical implementation should stay outside admin when it can be used by non-admin workflows.
 
-Do not create a folder just to hold a single `index.ts` or `index.tsx`. Use a direct file, such as `admin/modules.ts`, unless the folder already groups multiple files that work together or the current change is adding those sibling files as part of the same feature.
+Do not create a folder just to hold a single file or an index barrel. Use a direct file, such as `admin/modules.ts` or `queries.ts`, unless the folder already groups multiple files that work together or the current change is adding those sibling files as part of the same feature. Do not add an index barrel only to preserve an import path.
 
 Avoid spreading a simple change across multiple locations when it can be expressed clearly in one local place. A small amount of inline repetition is acceptable when it keeps the code easier to read and reason about.
 

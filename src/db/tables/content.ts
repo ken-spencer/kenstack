@@ -4,18 +4,8 @@ import {
   text,
   jsonb,
   timestamp,
-  // varchar,
-  // index,
   uniqueIndex,
-  type AnyPgTable,
-  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
-
-type AnyPgTableWithId = AnyPgTable & {
-  id: AnyPgColumn;
-};
-
-// type OrgTableWithId = AnyPgTable & { id: AnyColumn };
 
 const fields = {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
@@ -43,37 +33,10 @@ const fields = {
     .$onUpdate(() => new Date()),
 };
 
-const createContentWithoutOrg = () =>
-  pgTable(
-    "content",
-    {
-      ...fields,
-    },
-    (t) => [uniqueIndex("content_slug_unique").on(t.slug)],
-  );
-
-const createContentWithOrg = <TOrg extends AnyPgTableWithId>(
-  organizations: TOrg,
-) =>
-  pgTable(
-    "content",
-    {
-      ...fields,
-      orgId: integer("org_id")
-        .notNull()
-        .references(() => organizations.id),
-    },
-    (t) => [uniqueIndex("content_org_slug_unique").on(t.orgId, t.slug)],
-  );
-
-export function createContent<TOrg extends AnyPgTableWithId>(args: {
-  organizations: TOrg;
-}): ReturnType<typeof createContentWithOrg>;
-export function createContent(): ReturnType<typeof createContentWithoutOrg>;
-export function createContent(args?: { organizations?: AnyPgTableWithId }) {
-  if (args?.organizations) {
-    return createContentWithOrg(args.organizations);
-  }
-
-  return createContentWithoutOrg();
-}
+export const content = pgTable(
+  "content",
+  {
+    ...fields,
+  },
+  (t) => [uniqueIndex("content_slug_unique").on(t.slug)],
+);

@@ -10,7 +10,7 @@ export type FieldKind =
   | "datetime"
   | "checkbox-list"
   | "image"
-  | "gallery"
+  | "media"
   | "tags"
   | "relationship";
 

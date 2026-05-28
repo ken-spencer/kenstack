@@ -16,7 +16,7 @@ import ImageDetailsModal, {
   type ImageDetailsValue,
 } from "@kenstack/admin/forms/ImageDetailsModal";
 
-type GalleryImage = ImageDetailsValue & {
+type MediaImage = ImageDetailsValue & {
   localId?: string;
   previewUrl?: string;
   uploadState?: "pending" | "uploading" | "done" | "error";
@@ -24,30 +24,30 @@ type GalleryImage = ImageDetailsValue & {
   imageId?: string;
 };
 
-type GalleryRenderProps = {
+type MediaRenderProps = {
   apiPath: string;
   data?: Record<string, unknown>;
   accept?: readonly string[];
   className?: string;
 };
 
-export type GalleryFieldProps = FieldProps &
+export type MediaFieldProps = FieldProps &
   React.ComponentProps<"div"> &
-  Omit<GalleryRenderProps, "apiPath" | "data">;
+  Omit<MediaRenderProps, "apiPath" | "data">;
 
-type GalleryFieldRenderProps = {
+type MediaFieldRenderProps = {
   field: ControllerRenderProps<FieldValues, string>;
 };
 
 const buttonClass =
   "inline-flex size-6 items-center justify-center rounded-full border bg-gray-200/80 hover:bg-gray-400";
 
-export default function GalleryField({
+export default function MediaField({
   name,
   label,
   description,
   ...props
-}: GalleryFieldProps) {
+}: MediaFieldProps) {
   const { apiPath, name: adminName } = useAdminEdit();
   const data = {
     name: adminName,
@@ -58,29 +58,29 @@ export default function GalleryField({
       name={name}
       label={label}
       description={description}
-      render={galleryRender({ ...props, apiPath, data })}
+      render={mediaRender({ ...props, apiPath, data })}
     />
   );
 }
 
-const galleryRender = ({
+const mediaRender = ({
   apiPath,
   data: extraData,
   accept = acceptDefault,
   className,
-}: GalleryRenderProps) =>
-  function GalleryFieldRender({ field }: GalleryFieldRenderProps) {
+}: MediaRenderProps) =>
+  function MediaFieldRender({ field }: MediaFieldRenderProps) {
     const { form, finishUploading, setStatusMessage, startUploading } =
       useForm();
     const [dragIndex, setDragIndex] = useState<number | null>(null);
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
     const acceptStr = accept.join(", ");
     const value = Array.isArray(field.value)
-      ? (field.value as GalleryImage[])
+      ? (field.value as MediaImage[])
       : [];
 
     const setImages = useCallback(
-      (images: GalleryImage[]) => {
+      (images: MediaImage[]) => {
         field.onChange(images);
       },
       [field],
@@ -88,12 +88,12 @@ const galleryRender = ({
 
     const getImages = () => {
       const current = form.getValues(field.name);
-      return Array.isArray(current) ? (current as GalleryImage[]) : [];
+      return Array.isArray(current) ? (current as MediaImage[]) : [];
     };
 
     const updateLocalImage = (
       localId: string,
-      image: Partial<GalleryImage>,
+      image: Partial<MediaImage>,
     ) => {
       setImages(
         getImages().map((item) =>
@@ -213,7 +213,7 @@ const galleryRender = ({
       setImages(next);
     };
 
-    const updateImage = (index: number, image: GalleryImage) => {
+    const updateImage = (index: number, image: MediaImage) => {
       setImages(value.map((item, key) => (key === index ? image : item)));
     };
 
@@ -300,8 +300,8 @@ const galleryRender = ({
             type: "validate",
             message:
               failedLocalIds.size === 1
-                ? `${message ?? "One image could not be uploaded."} The image was removed from the gallery.`
-                : `${failedLocalIds.size} images could not be uploaded and were removed from the gallery.`,
+                ? `${message ?? "One image could not be uploaded."} The image was removed from media.`
+                : `${failedLocalIds.size} images could not be uploaded and were removed from media.`,
           });
         }
 
@@ -363,7 +363,7 @@ const galleryRender = ({
             onDragStart={(evt) => {
               setDragIndex(index);
               evt.dataTransfer.effectAllowed = "move";
-              evt.dataTransfer.setData("action", "moveGalleryImage");
+              evt.dataTransfer.setData("action", "moveMediaImage");
             }}
             onDragEnd={() => {
               setDragIndex(null);

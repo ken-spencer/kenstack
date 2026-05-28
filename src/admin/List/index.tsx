@@ -6,18 +6,18 @@ import List from "./List";
 
 import { type AnyAdminConfig } from "@kenstack/admin";
 import { getFilterMeta, getSortMeta } from "@kenstack/admin";
-import type { AdminClient } from "@kenstack/admin/client";
+import type { ClientConfig } from "@kenstack/admin/client";
 
 type AdminListProps = {
   adminConfig: AnyAdminConfig;
-  client: AdminClient;
+  clientConfig: ClientConfig;
   userId: number;
   name: string;
 };
 
 export default function AdminListCont({
   adminConfig,
-  client,
+  clientConfig,
   userId,
   name,
 }: AdminListProps) {
@@ -30,7 +30,7 @@ export default function AdminListCont({
   return (
     <AdminListProvider
       name={name}
-      client={client}
+      clientConfig={clientConfig}
       userId={userId}
       sort={getSortMeta(sort)}
       filter={getFilterMeta(filters)}
