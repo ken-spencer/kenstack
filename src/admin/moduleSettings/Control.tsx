@@ -14,7 +14,7 @@ type ModuleSettingsControlProps = {
 
 export default function ModuleSettingsControl(props: ModuleSettingsControlProps) {
   if (!props.client) {
-    return <>{props.children}</>;
+    return props.children;
   }
 
   return (

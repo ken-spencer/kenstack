@@ -17,6 +17,7 @@ Use this checklist before finalizing code changes. It is meant to catch project 
 - Remove single-use variables that only rename a direct call, property access, or simple expression.
 - Move immediate follow-up mutations into the initial array or object declaration when the value is unconditional.
 - Remove intermediate arrays or objects that only name one step in a fluent transformation before being immediately consumed.
+- Remove JSX fragments with zero or one meaningful child; return the child directly instead.
 - Check repeated loops over the same collection. Combine them when one pass can gather the needed values without making the code harder to read.
 - Remove pass-through helpers, wrappers, constants, and barrels unless they reduce real repeated complexity or expose a requested public API.
 - Do not pass through unused option fields just because a shared options type supports them. Keep function parameters to the fields the function reads, and split or narrow option types when forwarding extra fields would obscure ownership.

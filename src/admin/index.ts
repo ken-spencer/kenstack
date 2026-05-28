@@ -1,4 +1,5 @@
 export * from "@kenstack/fields";
+export * from "./lib/searchParams";
 export * from "./metadata";
 export * from "./table";
 export * from "./types/list";

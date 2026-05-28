@@ -62,45 +62,43 @@ function AdminList() {
   } as CSSProperties & { "--list-item-columns": string };
 
   return (
-    <>
-      <div
-        className="grid [grid-template-columns:min-content_var(--list-item-columns)] gap-x-2"
-        style={listStyle}
-      >
-        {data.items.map((item, key) => {
-          const path =
-            pathname +
-            "/" +
-            item.id +
-            (searchParams.size ? "?" + searchParams : "");
-          return (
-            <Fragment key={item.id}>
-              <div className="flex items-center justify-self-start px-1 py-2">
-                <Checkbox
-                  checked={selected.includes(item.id)}
-                  onCheckedChange={(checked) => {
-                    return checked
-                      ? setSelected([...selected, item.id])
-                      : setSelected(
-                          selected.filter((value) => value !== item.id),
-                        );
-                  }}
-                />
-              </div>
-              <ListItemCells
-                item={{ ...item, path }}
-                listItems={resolvedListItems}
+    <div
+      className="grid [grid-template-columns:min-content_var(--list-item-columns)] gap-x-2"
+      style={listStyle}
+    >
+      {data.items.map((item, key) => {
+        const path =
+          pathname +
+          "/" +
+          item.id +
+          (searchParams.size ? "?" + searchParams : "");
+        return (
+          <Fragment key={item.id}>
+            <div className="flex items-center justify-self-start px-1 py-2">
+              <Checkbox
+                checked={selected.includes(item.id)}
+                onCheckedChange={(checked) => {
+                  return checked
+                    ? setSelected([...selected, item.id])
+                    : setSelected(
+                        selected.filter((value) => value !== item.id),
+                      );
+                }}
               />
-              {data.items.length > key + 1 ? (
-                <div className="col-span-full border-t" />
-              ) : (
-                <div className="col-span-full mt-2" />
-              )}
-            </Fragment>
-          );
-        })}
-      </div>
-    </>
+            </div>
+            <ListItemCells
+              item={{ ...item, path }}
+              listItems={resolvedListItems}
+            />
+            {data.items.length > key + 1 ? (
+              <div className="col-span-full border-t" />
+            ) : (
+              <div className="col-span-full mt-2" />
+            )}
+          </Fragment>
+        );
+      })}
+    </div>
   );
 }
 
@@ -127,20 +125,16 @@ function ListItemCells({
   item: BaseListItem & Record<string, unknown> & { path: string };
   listItems: ListItems;
 }) {
-  return (
-    <>
-      {listItems.map(([render, options], key) => {
-        return (
-          <div
-            key={key}
-            className={cn("min-w-0 py-2 md:px-2", options?.className)}
-          >
-            {render(item)}
-          </div>
-        );
-      })}
-    </>
-  );
+  return listItems.map(([render, options], key) => {
+    return (
+      <div
+        key={key}
+        className={cn("min-w-0 py-2 md:px-2", options?.className)}
+      >
+        {render(item)}
+      </div>
+    );
+  });
 }
 
 function DefaultTitleCell({

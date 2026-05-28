@@ -29,29 +29,25 @@ export default function Tags({
       }: {
         field: ControllerRenderProps<FieldValues, string>;
       }) => (
-        <>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            {field.value?.map((tag: Tag) => {
-              return (
-                <span key={tag.name} className="inline-flex items-center gap-2">
-                  {tag.name}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const newValue = field.value.filter(
-                        (v: Tag) => v !== tag,
-                      );
-                      field.onChange(newValue);
-                    }}
-                  >
-                    <X className="text-gray-800" />
-                  </button>
-                </span>
-              );
-            })}
-            <Search field={field} />
-          </div>
-        </>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          {field.value?.map((tag: Tag) => {
+            return (
+              <span key={tag.name} className="inline-flex items-center gap-2">
+                {tag.name}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newValue = field.value.filter((v: Tag) => v !== tag);
+                    field.onChange(newValue);
+                  }}
+                >
+                  <X className="text-gray-800" />
+                </button>
+              </span>
+            );
+          })}
+          <Search field={field} />
+        </div>
       )}
     />
   );
