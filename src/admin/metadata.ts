@@ -3,7 +3,7 @@ import * as z from "zod";
 
 import { selectImageSubquery } from "@kenstack/db/tables/images";
 import { dateTimeField, imageField, textField } from "@kenstack/fields/client";
-import { isPreviewRequest } from "./lib/searchParams";
+import { isPreview } from "./lib/searchParams";
 import type { AdminContentTable } from "./table";
 import { visibilityValues } from "./lib/visibility";
 
@@ -99,7 +99,7 @@ export function createMetadataLoader(
   }) {
     const [routeParams, preview] = await Promise.all([
       params,
-      isPreviewRequest(searchParams),
+      isPreview(searchParams),
     ]);
 
     return buildMetadata(

@@ -19,6 +19,6 @@ export function getSearchParam(searchParams: unknown, key: string) {
   return typeof value === "string" ? value : undefined;
 }
 
-export async function isPreviewRequest(searchParams: unknown | Promise<unknown>) {
+export async function isPreview(searchParams: unknown | Promise<unknown>) {
   return hasSearchParam(await searchParams, "preview");
 }
