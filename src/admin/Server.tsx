@@ -74,6 +74,9 @@ async function AdminServerCore({
               <AdminList
                 name={name}
                 adminConfig={adminConfig}
+                basePath={
+                  adminConfig.preview ? moduleConfig.basePath : undefined
+                }
                 clientConfig={clientConfig}
                 userId={user.id}
               />

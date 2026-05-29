@@ -1,9 +1,11 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { Eye, Plus } from "lucide-react";
 import IconButton from "@kenstack/components/IconButton";
 import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { draftModePath } from "@kenstack/admin/lib/searchParams";
+import { useAdminList } from "./context";
 import DeleteButton, { RestoreButton } from "./DeleteButton";
 import FilterControl from "./FilterControl";
 import KeywordSearch from "./KeywordSearch";
@@ -13,6 +15,7 @@ import TrashToggle from "./TrashToggle";
 export default function AdminListHeader() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { basePath } = useAdminList();
 
   return (
     <header>
@@ -34,6 +37,17 @@ export default function AdminListHeader() {
         <KeywordSearch />
         <FilterControl />
         <RestoreButton />
+        {basePath ? (
+          <IconButton tooltip="View Content" asChild>
+            <a
+              href={draftModePath("enable-draft", basePath)}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <Eye className="size-6 text-gray-800" />
+            </a>
+          </IconButton>
+        ) : null}
         <TrashToggle />
         <DeleteButton />
       </div>

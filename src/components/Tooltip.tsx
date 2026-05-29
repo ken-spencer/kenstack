@@ -1,5 +1,3 @@
-import { twMerge } from "tailwind-merge";
-
 import {
   Tooltip,
   TooltipContent,
@@ -22,11 +20,7 @@ export default function TooltipCont({
         <TooltipTrigger suppressHydrationWarning asChild>
           {children}
         </TooltipTrigger>
-        <TooltipContent
-          className={twMerge("border bg-white text-gray-800", className)}
-        >
-          {content}
-        </TooltipContent>
+        <TooltipContent className={className}>{content}</TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );

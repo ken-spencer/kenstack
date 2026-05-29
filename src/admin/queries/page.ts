@@ -4,14 +4,14 @@ import { deps } from "@app/deps";
 import type { AdminContentTable } from "@kenstack/admin/table";
 
 type PageWhereOptions = {
-  preview?: boolean;
+  draft?: boolean;
 };
 
 export async function pageWhere<TTable extends AdminContentTable>(
   table: TTable,
   options: PageWhereOptions = {},
 ) {
-  if (options.preview) {
+  if (options.draft) {
     await deps.auth.requireUser("admin");
     return isNull(table.deletedAt);
   }

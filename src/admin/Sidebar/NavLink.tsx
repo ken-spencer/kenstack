@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@kenstack/components/ui/sidebar";
 
 export default function NavLink({
@@ -18,6 +19,7 @@ export default function NavLink({
   title: string;
 }) {
   const pathname = usePathname();
+  const { isMobile, setOpenMobile } = useSidebar();
   const isActive = pathname === href || pathname.startsWith(`${href}/`);
   const [isHovered, setIsHovered] = useState(false);
   const textClassName =
@@ -35,6 +37,11 @@ export default function NavLink({
           }}
           onMouseLeave={() => {
             setIsHovered(false);
+          }}
+          onClick={() => {
+            if (isMobile) {
+              setOpenMobile(false);
+            }
           }}
         >
           {icon}

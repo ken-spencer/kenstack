@@ -75,6 +75,9 @@
   },
   "description": "Content management for Next.js",
   "main": "next.config.js",
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/ken-spencer/kenstack"
@@ -113,7 +116,7 @@
     "react-dom": "^19.2.0",
     "react-google-recaptcha-v3": "^1.11.0",
     "tailwindcss": "^4.0.14",
-    "typescript": "^5.6.3"
+    "typescript": ">=6.0.0"
   },
   "overrides": {
     "dompurify": "3.4.3"

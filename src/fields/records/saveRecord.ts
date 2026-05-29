@@ -274,7 +274,7 @@ async function defaultSaveRecordQuery<TTable extends SaveRecordTable>({
     const updateData = {
       ...data,
       updatedAt: new Date(),
-    } as Partial<InferInsertModel<TTable>>;
+    };
 
     const [row] = await tx
       .update(table)

@@ -2,6 +2,50 @@
 
 Use this file to document breaking Kenstack API changes that downstream sites may need to apply.
 
+## Unreleased: Node 24 Runtime Floor
+
+New requirement:
+
+- Kenstack now requires Node.js 24 or newer.
+
+Migration steps:
+
+- Update app/package engines, local runtime managers, deployment settings, and CI images to Node.js 24 or newer.
+
+## Unreleased: Draft Mode Preview Transport
+
+Old APIs:
+
+- Public preview URLs used a `?preview` search parameter.
+- `isPreview(searchParams)` checked the preview search parameter.
+- Public page/list queries accepted options such as `{ preview: boolean }`.
+- `pageWhere(table, { preview })` used the preview flag to include drafts.
+- `createMetadataLoader` was exported from `@kenstack/admin` and `@kenstack/admin/metadata`.
+- Site admin API routes only needed to expose `POST` from `adminPipeline(...)`.
+
+New APIs:
+
+- Preview uses Next.js Draft Mode through the admin API GET route.
+- Admin preview links use `/api/admin?action=enable-draft&next=/path`.
+- Draft Mode can be disabled with `/api/admin?action=disable-draft&next=/path`.
+- Modules with a `slug` field default to `/${name}/${slug}` preview paths.
+- `draftMode()` from `next/headers` checks the current request's Draft Mode state.
+- Public page/list queries should accept options such as `{ draft: boolean }`.
+- `pageWhere(table, { draft })` uses the Draft Mode flag to include drafts.
+- `createMetadataLoader` is available from `@kenstack/admin/queries` so server-only Draft Mode imports do not leak through the main admin barrel.
+- Site admin API routes must expose both `GET` and `POST` from `adminPipeline(...)`.
+
+Migration steps:
+
+- Update site admin API routes from `export const { POST } = adminPipeline({ adminConfig })` to `export const { GET, POST } = adminPipeline({ adminConfig })`.
+- Replace `isPreview(searchParams)` with `(await draftMode()).isEnabled` from `next/headers`.
+- Replace `createMetadataLoader` imports from `@kenstack/admin` or `@kenstack/admin/metadata` with `@kenstack/admin/queries`.
+- Rename local query options from `preview` to `draft` and pass `{ draft }` to `pageWhere(...)`.
+- Remove `preview` search parameter propagation from public links, breadcrumbs, back buttons, tag links, and list/detail links.
+- Keep module `admin.preview` path templates; they still define the preview target path, but the admin preview button now routes through Draft Mode before redirecting to that path.
+- Remove explicit `admin.preview` when it only matches the default `/${name}/${slug}` path.
+- Use normal links or anchors, not prefetched Next links, for disable-draft URLs so prefetching cannot clear Draft Mode before the user clicks.
+
 ## Unreleased: Media Table And Media List Field Naming
 
 Old APIs:

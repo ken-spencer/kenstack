@@ -5,6 +5,7 @@ import NewButton from "./NewButton";
 import PreviewButton from "./PreviewButton";
 import RevisionHistoryButton from "./RevisionHistoryButton";
 import SaveButton from "./SaveButton";
+import SwitchUserButton from "./SwitchUserButton";
 
 export default function AdminEditHeader() {
   return (
@@ -16,6 +17,7 @@ export default function AdminEditHeader() {
       </div>
       <div className="flex gap-1">
         <PreviewButton />
+        <SwitchUserButton />
         <RevisionHistoryButton />
         <RestoreButton />
         <DeleteButton />

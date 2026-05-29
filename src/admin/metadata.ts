@@ -3,7 +3,6 @@ import * as z from "zod";
 
 import { selectImageSubquery } from "@kenstack/db/tables/media";
 import { dateTimeField, imageField, textField } from "@kenstack/fields/client";
-import { isPreview } from "./lib/searchParams";
 import type { AdminContentTable } from "./table";
 import { visibilityValues } from "./lib/visibility";
 
@@ -81,29 +80,4 @@ export function buildMetadata(
         }
       : undefined,
   } satisfies Metadata;
-}
-
-export function createMetadataLoader(
-  load: (
-    value: string,
-    options: { preview: boolean },
-  ) => Promise<Parameters<typeof buildMetadata>[0]>,
-  { field = "slug" }: { field?: string } = {},
-) {
-  return async function generateMetadata({
-    params,
-    searchParams,
-  }: {
-    params: Promise<Record<string, string>>;
-    searchParams: Promise<unknown>;
-  }) {
-    const [routeParams, preview] = await Promise.all([
-      params,
-      isPreview(searchParams),
-    ]);
-
-    return buildMetadata(
-      await load(routeParams[field], { preview }),
-    );
-  };
 }

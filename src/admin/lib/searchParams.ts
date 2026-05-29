@@ -19,6 +19,10 @@ export function getSearchParam(searchParams: unknown, key: string) {
   return typeof value === "string" ? value : undefined;
 }
 
-export async function isPreview(searchParams: unknown | Promise<unknown>) {
-  return hasSearchParam(await searchParams, "preview");
+type DraftModeAction = "enable-draft" | "disable-draft";
+
+export function draftModePath(action: DraftModeAction, next: string) {
+  const params = new URLSearchParams({ action, next });
+
+  return `/api/admin?${params.toString()}`;
 }

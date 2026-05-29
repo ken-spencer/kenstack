@@ -2,11 +2,12 @@
 
 import { useCallback, useState, type ChangeEvent, type DragEvent } from "react";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
-import { ImagePlus, Upload, X } from "lucide-react";
+import { Upload, X } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 
 import ProgressIcon from "@kenstack/icons/Progress";
 import Field, { type FieldProps } from "@kenstack/forms/Field";
+import AddImageIcon from "@kenstack/forms/ImageField/AddImageIcon";
 import { useForm } from "@kenstack/forms/context";
 import getUploadErrorMessage from "@kenstack/forms/getUploadErrorMessage";
 import fetcher from "@kenstack/api/fetcher";
@@ -29,6 +30,7 @@ type MediaRenderProps = {
   data?: Record<string, unknown>;
   accept?: readonly string[];
   className?: string;
+  placeholder?: React.ReactNode;
 };
 
 type MediaListFieldProps = FieldProps &
@@ -64,6 +66,7 @@ const mediaRender = ({
   data: extraData,
   accept = acceptDefault,
   className,
+  placeholder,
 }: MediaRenderProps) =>
   function MediaListFieldRender({
     field,
@@ -438,7 +441,7 @@ const mediaRender = ({
           {value.length ? (
             <Upload className="size-8" />
           ) : (
-            <ImagePlus className="size-10" />
+            placeholder ?? <AddImageIcon className="h-16 w-16 text-gray-600" />
           )}
           {input}
         </label>

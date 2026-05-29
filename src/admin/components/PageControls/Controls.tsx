@@ -1,3 +1,5 @@
+import { draftMode } from "next/headers";
+
 import AuthGuard from "@kenstack/auth/components/AuthGuard";
 import PageControlsClient from "./ControlsClient";
 
@@ -8,7 +10,16 @@ type PageControlsProps = {
 export default function PageControls(props: PageControlsProps) {
   return (
     <AuthGuard access="admin">
-      <PageControlsClient {...props} />
+      <PageControlsContent {...props} />
     </AuthGuard>
+  );
+}
+
+async function PageControlsContent(props: PageControlsProps) {
+  return (
+    <PageControlsClient
+      {...props}
+      draftModeEnabled={(await draftMode()).isEnabled}
+    />
   );
 }

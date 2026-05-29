@@ -10,6 +10,7 @@ import type { ClientConfig } from "@kenstack/admin/client";
 
 type AdminListProps = {
   adminConfig: AnyAdminConfig;
+  basePath?: string;
   clientConfig: ClientConfig;
   userId: number;
   name: string;
@@ -17,6 +18,7 @@ type AdminListProps = {
 
 export default function AdminListCont({
   adminConfig,
+  basePath,
   clientConfig,
   userId,
   name,
@@ -30,6 +32,7 @@ export default function AdminListCont({
   return (
     <AdminListProvider
       name={name}
+      basePath={basePath}
       clientConfig={clientConfig}
       userId={userId}
       sort={getSortMeta(sort)}

@@ -1,7 +1,8 @@
 "use client";
 
 import IconButton from "@kenstack/components/IconButton";
-import { ScanEye } from "lucide-react";
+import { Eye } from "lucide-react";
+import { draftModePath } from "@kenstack/admin/lib/searchParams";
 import { useAdminEdit } from "../context";
 
 export default function PreviewButton() {
@@ -16,7 +17,7 @@ export default function PreviewButton() {
         )
       : undefined;
   const previewUrl = previewPath
-    ? `${previewPath}${previewPath.includes("?") ? "&" : "?"}preview`
+    ? draftModePath("enable-draft", previewPath)
     : undefined;
 
   if (!previewUrl || isNew || isDeleted) {
@@ -24,12 +25,10 @@ export default function PreviewButton() {
   }
 
   return (
-    <IconButton
-      type="button"
-      tooltip="View Content"
-      onClick={() => window.open(previewUrl, "_blank")}
-    >
-      <ScanEye className="size-6 text-gray-800" />
+    <IconButton tooltip="View Content" asChild>
+      <a href={previewUrl} target="_blank" rel="noreferrer">
+        <Eye className="size-6 text-gray-800" />
+      </a>
     </IconButton>
   );
 }

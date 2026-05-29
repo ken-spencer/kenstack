@@ -87,6 +87,7 @@ export type ResolvedModuleSettings = NonNullable<
 type ModuleOptions = {
   name: string;
   title?: string;
+  basePath?: PreviewPath;
   icon?: ComponentType<SVGProps<SVGSVGElement>>;
   admin?: AdminConfig;
   settings?: ModuleSettingsConfig;
@@ -98,6 +99,7 @@ export type DefinedAdmin = Record<
   {
     name: string;
     title: string;
+    basePath: PreviewPath;
     icon?: ComponentType<SVGProps<SVGSVGElement>>;
     client?: ClientConfig;
     admin?: AnyAdminConfig;
@@ -108,10 +110,13 @@ export type DefinedAdmin = Record<
 export function defineModule<const TModule extends ModuleOptions>(
   options: TModule,
 ) {
+  const basePath = options.basePath ?? `/${options.name}`;
+
   return {
     title: options.title ?? startCase(options.name),
     ...options,
-    admin: resolveAdmin(options.admin),
+    basePath,
+    admin: resolveAdmin(options.admin, basePath),
     settings: resolveSettings(options.settings),
   } satisfies DefinedAdmin[string];
 }
@@ -131,7 +136,7 @@ function resolveSettings(settings: ModuleSettingsConfig | undefined) {
   };
 }
 
-function resolveAdmin(admin: AdminConfig | undefined) {
+function resolveAdmin(admin: AdminConfig | undefined, basePath: PreviewPath) {
   if (!admin) {
     return undefined;
   }
@@ -140,11 +145,14 @@ function resolveAdmin(admin: AdminConfig | undefined) {
     config: AdminConfigBase<TTable>,
   ) => {
     const fields = resolveServerFields(config.fields);
+    const preview: PreviewPath | undefined =
+      config.preview ??
+      ("slug" in fields ? `${basePath}/${"${slug}"}` : undefined);
 
     return {
       table: config.table,
       revalidate: config.revalidate,
-      preview: config.preview,
+      preview,
       fields,
       schema: createZodSchema(fields),
       defaultValues: createDefaultValues(fields),

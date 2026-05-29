@@ -20,6 +20,7 @@ Use this checklist before finalizing code changes. It is meant to catch project 
 - Remove JSX fragments with zero or one meaningful child; return the child directly instead.
 - Check repeated loops over the same collection. Combine them when one pass can gather the needed values without making the code harder to read.
 - Remove pass-through helpers, wrappers, constants, and barrels unless they reduce real repeated complexity or expose a requested public API.
+- Avoid thin wrappers around stable library APIs when the wrapper only renames the library function or hides a one-line call. Keep a wrapper only when it enforces project policy, preserves a boundary such as server/client separation, normalizes repeated nontrivial behavior, or isolates an unstable dependency.
 - Do not pass through unused option fields just because a shared options type supports them. Keep function parameters to the fields the function reads, and split or narrow option types when forwarding extra fields would obscure ownership.
 - Before keeping local string/date/collection formatting logic, check whether an existing installed utility already owns that behavior, such as `lodash-es`, `pluralize`, `date-fns`, `chrono-node`, or `validator`.
 - Check one-line `is*`, `get*`, and `has*` helpers. Remove them when they only hide a direct discriminator check, property lookup, or local ternary and do not provide meaningful reuse, validation, or type narrowing across an unsafe boundary.

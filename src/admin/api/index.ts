@@ -4,6 +4,10 @@ import isPlainObject from "lodash-es/isPlainObject";
 import { deps } from "@app/deps";
 import { pipeline } from "@kenstack/api";
 
+import {
+  disableDraftModeAction,
+  enableDraftModeAction,
+} from "@kenstack/admin/api/draftMode";
 import { listAction } from "@kenstack/admin/api/list";
 import { loadAction } from "@kenstack/admin/api/load";
 import { saveAction } from "@kenstack/admin/api/save";
@@ -25,6 +29,25 @@ import { type DefinedAdmin } from "@kenstack/admin";
 import { type FetchError } from "@kenstack/api/fetcher";
 
 type Options = { adminConfig: DefinedAdmin };
+
+const runAdminGet = async (request: NextRequest, options: Options) => {
+  const action = request.nextUrl.searchParams.get("action");
+
+  switch (action) {
+    case "enable-draft":
+      return enableDraftModeAction(request);
+    case "disable-draft":
+      return disableDraftModeAction(request, options);
+  }
+
+  return NextResponse.json(
+    {
+      status: "error",
+      message: `Unknown action ${action}`,
+    } satisfies FetchError,
+    { status: 404 },
+  );
+};
 
 const runAdminPipeline = async (
   request: NextRequest,
@@ -155,5 +178,6 @@ const runAdminPipeline = async (
 };
 
 export const adminPipeline = (options: Options) => ({
+  GET: (request: NextRequest) => runAdminGet(request, options),
   POST: (request: NextRequest) => runAdminPipeline(request, options),
 });

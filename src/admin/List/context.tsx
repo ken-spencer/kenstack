@@ -21,6 +21,7 @@ import type {
 } from "@kenstack/admin/client";
 
 type AdminListProps = {
+  basePath?: string;
   clientConfig: ClientConfig;
   userId: number;
   name: string;
@@ -46,6 +47,7 @@ type UseListProps<
   filter: AdminFilterMeta[];
   selected: number[];
   name: string;
+  basePath?: string;
   setSelected: React.Dispatch<React.SetStateAction<number[]>>;
   apiPath: string;
   queryKey: QueryKey;
@@ -58,6 +60,7 @@ type UseListProps<
 };
 
 export function AdminListProvider({
+  basePath,
   clientConfig,
   userId,
   name,
@@ -117,6 +120,7 @@ export function AdminListProvider({
 
   const values: UseListProps = {
     client,
+    basePath,
     sort,
     filter,
     name,

@@ -5,24 +5,45 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 export interface AdminUiState {
+  adminControlCount: number;
   hasAdminControl: boolean;
   showAdminControls: boolean;
+  pageSettingsAction: (() => void) | null;
   pageEditorError: string | null;
 
-  setHasAdminControl: (hasAdminControl: boolean) => void;
+  registerAdminControl: () => void;
+  unregisterAdminControl: () => void;
   setShowAdminControls: (showAdminControls: boolean) => void;
+  setPageSettingsAction: (pageSettingsAction: (() => void) | null) => void;
+  clearPageSettingsAction: (pageSettingsAction: () => void) => void;
   setPageEditorError: (pageEditorError: string | null) => void;
 }
 
 export const useAdminUi = create<AdminUiState>()(
   persist(
     (set) => ({
+      adminControlCount: 0,
       hasAdminControl: false,
       showAdminControls: false,
+      pageSettingsAction: null,
       pageEditorError: null,
 
-      setHasAdminControl: (hasAdminControl) => {
-        set({ hasAdminControl });
+      registerAdminControl: () => {
+        set(({ adminControlCount }) => ({
+          adminControlCount: adminControlCount + 1,
+          hasAdminControl: true,
+        }));
+      },
+
+      unregisterAdminControl: () => {
+        set(({ adminControlCount }) => {
+          const nextCount = Math.max(0, adminControlCount - 1);
+
+          return {
+            adminControlCount: nextCount,
+            hasAdminControl: nextCount > 0,
+          };
+        });
       },
 
       setShowAdminControls: (showAdminControls) => {
@@ -30,6 +51,18 @@ export const useAdminUi = create<AdminUiState>()(
           showAdminControls,
           ...(!showAdminControls ? { pageEditorError: null } : {}),
         });
+      },
+
+      setPageSettingsAction: (pageSettingsAction) => {
+        set({ pageSettingsAction });
+      },
+
+      clearPageSettingsAction: (pageSettingsAction) => {
+        set((state) =>
+          state.pageSettingsAction === pageSettingsAction
+            ? { pageSettingsAction: null }
+            : {},
+        );
       },
 
       setPageEditorError: (pageEditorError) => {
@@ -45,11 +78,17 @@ export const useAdminUi = create<AdminUiState>()(
 );
 
 export function useAdminControl() {
-  const { setHasAdminControl, showAdminControls } = useAdminUi();
+  const {
+    registerAdminControl,
+    showAdminControls,
+    unregisterAdminControl,
+  } = useAdminUi();
 
   useEffect(() => {
-    setHasAdminControl(true);
-  }, [setHasAdminControl]);
+    registerAdminControl();
+
+    return unregisterAdminControl;
+  }, [registerAdminControl, unregisterAdminControl]);
 
   return { showAdminControls };
 }
