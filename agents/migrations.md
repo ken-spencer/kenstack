@@ -31,7 +31,7 @@ New APIs:
 - Modules with a `slug` field default to `/${name}/${slug}` preview paths.
 - `draftMode()` from `next/headers` checks the current request's Draft Mode state.
 - Public page/list queries should accept options such as `{ draft: boolean }`.
-- `pageWhere(table, { draft })` uses the Draft Mode flag to include drafts.
+- `listWhere(table, { draft })` and `pageWhere(table, { draft })` use the Draft Mode flag to include drafts while preserving their distinct public list/page visibility rules.
 - `createMetadataLoader` is available from `@kenstack/admin/queries` so server-only Draft Mode imports do not leak through the main admin barrel.
 - Site admin API routes must expose both `GET` and `POST` from `adminPipeline(...)`.
 
@@ -40,7 +40,7 @@ Migration steps:
 - Update site admin API routes from `export const { POST } = adminPipeline({ adminConfig })` to `export const { GET, POST } = adminPipeline({ adminConfig })`.
 - Replace `isPreview(searchParams)` with `(await draftMode()).isEnabled` from `next/headers`.
 - Replace `createMetadataLoader` imports from `@kenstack/admin` or `@kenstack/admin/metadata` with `@kenstack/admin/queries`.
-- Rename local query options from `preview` to `draft` and pass `{ draft }` to `pageWhere(...)`.
+- Rename local query options from `preview` to `draft`; pass `{ draft }` to `listWhere(...)` for list queries and `pageWhere(...)` for detail/page queries.
 - Remove `preview` search parameter propagation from public links, breadcrumbs, back buttons, tag links, and list/detail links.
 - Keep module `admin.preview` path templates; they still define the preview target path, but the admin preview button now routes through Draft Mode before redirecting to that path.
 - Remove explicit `admin.preview` when it only matches the default `/${name}/${slug}` path.
