@@ -143,13 +143,13 @@ function getListSelect(
       select.title = columns.title;
     }
 
-    if ("visibility" in columns) {
-      select.visibility = columns.visibility;
-    }
-
     if ("publishedAt" in columns) {
       select.publishedAt = columns.publishedAt;
     }
+  }
+
+  if ("visibility" in columns) {
+    select.visibility ??= columns.visibility;
   }
 
   return select;

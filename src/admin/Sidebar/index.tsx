@@ -69,35 +69,37 @@ function AdminSidebarContent({
   children,
   defaultOpen,
 }: AdminSidebarProps & { defaultOpen: boolean }) {
+  const adminModules = Object.entries(admin).flatMap(([name, module]) => {
+    if (!module.admin) {
+      return [];
+    }
+
+    return [
+      {
+        href: "/admin/" + name,
+        headerIcon: module.icon ? (
+          <module.icon className="size-4 text-gray-800" />
+        ) : null,
+        icon: module.icon ? <module.icon /> : <span className="w-3" />,
+        title: module.title,
+      },
+    ];
+  });
+
   const sidebarNav = (
     <SidebarGroup>
       <SidebarGroupLabel>Administration</SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
-          {Object.entries(admin).flatMap(([name, module]) => {
-            if (!module.admin) {
-              return [];
-            }
-
-            const href = "/admin/" + name;
-            const icon = module.icon ? (
-              <module.icon />
-            ) : (
-              <span className="w-3" />
-            );
-
+          {adminModules.map(({ href, icon, title }) => {
             return (
               <Suspense
-                key={name}
+                key={href}
                 fallback={
-                  <NavLinkFallback
-                    href={href}
-                    icon={icon}
-                    title={module.title}
-                  />
+                  <NavLinkFallback href={href} icon={icon} title={title} />
                 }
               >
-                <NavLink href={href} icon={icon} title={module.title} />
+                <NavLink href={href} icon={icon} title={title} />
               </Suspense>
             );
           })}
@@ -111,6 +113,11 @@ function AdminSidebarContent({
       <AppSidebar content={sidebarNav} />
       <Content
         logo={logo}
+        moduleLinks={adminModules.map(({ headerIcon, href, title }) => ({
+          href,
+          icon: headerIcon,
+          title,
+        }))}
         accountMenu={
           <Suspense>{accountMenu ?? <AccountMenu fallback={null} />}</Suspense>
         }

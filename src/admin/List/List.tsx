@@ -111,7 +111,7 @@ function getDefaultListItems(
       ? ([
           [
             (row) => <VisibilityStatusCell row={row} />,
-            { className: "flex justify-end", column: "auto" },
+            { className: "flex items-center justify-end", column: "auto" },
           ],
         ] satisfies ListItems)
       : []),
@@ -127,10 +127,7 @@ function ListItemCells({
 }) {
   return listItems.map(([render, options], key) => {
     return (
-      <div
-        key={key}
-        className={cn("min-w-0 py-2 md:px-2", options?.className)}
-      >
+      <div key={key} className={cn("min-w-0 py-2 md:px-2", options?.className)}>
         {render(item)}
       </div>
     );
