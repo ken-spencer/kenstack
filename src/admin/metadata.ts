@@ -3,7 +3,7 @@ import * as z from "zod";
 
 import { selectImageSubquery } from "@kenstack/db/tables/media";
 import { dateTimeField, imageField, textField } from "@kenstack/fields/client";
-import type { AdminContentTable } from "./table";
+import type { AdminSeoTable } from "./table";
 import { visibilityValues } from "./lib/visibility";
 
 export { visibilityOptions, visibilityValues } from "./lib/visibility";
@@ -26,7 +26,7 @@ export const metaFieldOptions = {
   }),
 } as const;
 
-export function metaSelect<TTable extends AdminContentTable>(table: TTable) {
+export function metaSelect<TTable extends AdminSeoTable>(table: TTable) {
   return {
     seoTitle: table.seoTitle,
     seoDescription: table.seoDescription,

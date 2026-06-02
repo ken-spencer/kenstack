@@ -3,6 +3,7 @@ import * as z from "zod";
 import { email } from "@kenstack/zod/email";
 import { imageSchema } from "@kenstack/zod/image";
 import { mediaListSchema } from "@kenstack/zod/mediaList";
+import { phone } from "@kenstack/zod/phone";
 import { tagsSchema } from "@kenstack/zod/tags";
 import MediaListField from "@kenstack/admin/forms/MediaListField";
 import AdminImageField from "@kenstack/admin/forms/ImageField";
@@ -11,11 +12,19 @@ import TagField from "@kenstack/admin/forms/TagField";
 import CheckboxField from "@kenstack/forms/CheckboxField";
 import CheckboxList from "@kenstack/forms/CheckboxList";
 import DateField from "@kenstack/forms/DateField";
+import DateTimeField from "@kenstack/forms/DateTimeField";
 import InputField from "@kenstack/forms/InputField";
+import PhoneField from "@kenstack/forms/PhoneField";
 import SlugField from "@kenstack/forms/SlugField";
 import TextareaField from "@kenstack/forms/TextareaField";
 import { relationshipSchema } from "./relationshipSchema";
-import type { FieldComponentProps, FieldKind, FieldOption } from "./types";
+import type {
+  FieldComponentProps,
+  FieldInputOption,
+  FieldKind,
+  FieldOption,
+  FieldRecordRefinement,
+} from "./types";
 
 type FieldOptionOfKind<TKind extends FieldKind, TDefault> = FieldOption<
   TKind,
@@ -27,6 +36,7 @@ type CommonFieldOptions<TDefault = unknown> = {
   default?: TDefault;
   label?: string;
   description?: string;
+  recordRefinement?: FieldRecordRefinement;
   searchable?: boolean;
   revisions?: boolean;
   list?: boolean;
@@ -47,11 +57,7 @@ type CheckboxListFieldOptions = Omit<
   CommonFieldOptions,
   "zod" | "default" | "searchable" | "sort"
 > & {
-  options: readonly (readonly [
-    value: string,
-    label: string,
-    description?: string,
-  ])[];
+  options: readonly FieldInputOption[];
   zod?: z.ZodType;
   default?: string[];
 };
@@ -70,12 +76,40 @@ type RelationshipFieldOptions = DisplayFieldOptions & {
   filter?: boolean;
 };
 
+const dateTimeSchema = z.union([
+  z.date().transform((value) => value.toISOString()),
+  z.string().datetime({ precision: 3 }),
+  z.literal(""),
+  z.null().transform(() => ""),
+  z.undefined().transform(() => ""),
+]);
+
+const dateSchema = z.union([
+  z.iso.date(),
+  z
+    .string()
+    .datetime({ precision: 3 })
+    .transform((value) => value.slice(0, 10)),
+  z.date().transform((value) => value.toISOString().slice(0, 10)),
+  z.literal(""),
+  z.null().transform(() => ""),
+  z.undefined().transform(() => ""),
+]);
+
 function TextFieldComponent(props: FieldComponentProps) {
   return <InputField {...props} />;
 }
 
+function NumberFieldComponent(props: FieldComponentProps) {
+  return <InputField {...props} type="number" />;
+}
+
 function EmailFieldComponent(props: FieldComponentProps) {
   return <InputField {...props} type="email" />;
+}
+
+function PhoneFieldComponent(props: FieldComponentProps) {
+  return <PhoneField {...props} />;
 }
 
 function TextareaFieldComponent(props: FieldComponentProps) {
@@ -93,12 +127,16 @@ function CheckboxListFieldComponent({
   return (
     <CheckboxList
       {...props}
-      options={options?.map(([value, label]) => [value, label]) ?? []}
+      options={options?.map(({ label, value }) => ({ label, value })) ?? []}
     />
   );
 }
 
 function DateTimeFieldComponent(props: FieldComponentProps) {
+  return <DateTimeField {...props} />;
+}
+
+function DateFieldComponent(props: FieldComponentProps) {
   return <DateField {...props} />;
 }
 
@@ -137,6 +175,21 @@ export function textField(
   };
 }
 
+export function numberField(
+  options: CommonFieldOptions<number> = {},
+): FieldOptionOfKind<"number", number> {
+  return {
+    __kenstackField: true,
+    kind: "number",
+    component: NumberFieldComponent,
+    default: 0,
+    searchable: false,
+    revisions: true,
+    zod: z.coerce.number(),
+    ...options,
+  };
+}
+
 export function emailField(
   options: CommonFieldOptions<string> = {},
 ): FieldOptionOfKind<"email", string> {
@@ -148,6 +201,21 @@ export function emailField(
     searchable: false,
     revisions: true,
     zod: email,
+    ...options,
+  };
+}
+
+export function phoneField(
+  options: CommonFieldOptions<string> = {},
+): FieldOptionOfKind<"text", string> {
+  return {
+    __kenstackField: true,
+    kind: "text",
+    component: PhoneFieldComponent,
+    default: "",
+    searchable: false,
+    revisions: true,
+    zod: phone,
     ...options,
   };
 }
@@ -228,7 +296,22 @@ export function dateTimeField(
     default: "",
     searchable: false,
     revisions: true,
-    zod: z.string().datetime({ precision: 3 }).or(z.literal("")),
+    zod: dateTimeSchema,
+    ...options,
+  };
+}
+
+export function dateField(
+  options: CommonFieldOptions<string> = {},
+): FieldOptionOfKind<"date", string> {
+  return {
+    __kenstackField: true,
+    kind: "date",
+    component: DateFieldComponent,
+    default: "",
+    searchable: false,
+    revisions: true,
+    zod: dateSchema,
     ...options,
   };
 }
@@ -246,7 +329,7 @@ export function checkboxListField({
     filter,
     searchable: false,
     revisions: true,
-    zod: z.array(z.enum(options.options.map(([value]) => value))),
+    zod: z.array(z.enum(options.options.map(({ value }) => value))),
     ...options,
   };
 }

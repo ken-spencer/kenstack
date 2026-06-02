@@ -12,7 +12,10 @@ import {
 
 import { useFormContext } from "react-hook-form";
 
-export type CheckboxListOptions = [key: string, label: string][];
+export type CheckboxListOptions = readonly {
+  label: string;
+  value: string;
+}[];
 
 type InputProps = FieldProps &
   React.ComponentProps<"input"> & {
@@ -38,36 +41,38 @@ export default function CheckboxField({
       description={description}
       render={() => (
         <div className={twMerge("grid grid-cols-2 gap-4", grid)} tabIndex={-1}>
-          {options.map(([key, text]) => (
+          {options.map((option) => (
             <FormField
-              key={key}
+              key={option.value}
               control={control}
               name={name}
               render={({ field }) => (
                 <FormItem
-                  key={key}
+                  key={option.value}
                   className="flex flex-row items-center gap-2"
                 >
                   <FormControl>
                     <Checkbox
                       {...field}
-                      value={key}
-                      checked={field.value.includes(key)}
+                      value={option.value}
+                      checked={field.value.includes(option.value)}
                       onCheckedChange={(checked) => {
                         if (readOnly) {
                           return;
                         }
                         return checked
-                          ? field.onChange([...field.value, key])
+                          ? field.onChange([...field.value, option.value])
                           : field.onChange(
                               field.value?.filter(
-                                (value: string) => value !== key,
+                                (value: string) => value !== option.value,
                               ),
                             );
                       }}
                     />
                   </FormControl>
-                  <FormLabel className="text-sm font-normal">{text}</FormLabel>
+                  <FormLabel className="text-sm font-normal">
+                    {option.label}
+                  </FormLabel>
                 </FormItem>
               )}
             />

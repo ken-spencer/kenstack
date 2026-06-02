@@ -4,11 +4,13 @@ import Alerts from "./Alerts";
 import Footer from "./Footer";
 import FormRender from "./FormRender";
 import canUpload from "@kenstack/lib/canUpload";
+import { notFound } from "next/navigation";
 
 import { type AnyAdminConfig } from "..";
 import type { ClientConfig } from "@kenstack/admin/client";
+import { loadAdminEdit } from "@kenstack/admin/queries/load";
 
-export default function AdminEdit({
+export default async function AdminEdit({
   name,
   id,
   isNew = false,
@@ -24,6 +26,16 @@ export default function AdminEdit({
   clientConfig: ClientConfig;
 }) {
   const { defaultValues, preview } = adminConfig;
+  const item = await loadAdminEdit({
+    adminConfig,
+    id,
+    isNew,
+    name,
+  });
+
+  if ("list" in adminConfig && !isNew && !item) {
+    notFound();
+  }
 
   return (
     <AdminEditProvider
@@ -34,6 +46,7 @@ export default function AdminEdit({
       userId={userId}
       canUpload={canUpload()}
       defaultValues={defaultValues ?? {}}
+      item={item}
       preview={preview}
       clientConfig={clientConfig}
     >

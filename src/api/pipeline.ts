@@ -14,12 +14,10 @@ import { PipelineResponse } from "./PipelineResponse";
 import { deps } from "@app/deps";
 import type { User } from "@kenstack/types";
 
-// const idSchema = objectId("server").default(null);
-
 export type PipelineOptions = {
   request: NextRequest;
   json?: Record<string, unknown>;
-}; //& Record<string, unknown>;
+};
 
 type Roles = typeof deps.roles;
 type UserRole = Roles[number] | readonly Roles[number][];
@@ -73,9 +71,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 export default async function pipeline(
   options: PipelineOptions,
-  actions: PipelineStage[] = [],
+  actions: PipelineStage | PipelineStage[] = [],
 ) {
   const { request, ...localOptions } = options;
+  const pipelineActions = Array.isArray(actions) ? actions : [actions];
 
   const contentType = request.headers.get("content-type");
   if (!contentType?.startsWith("application/json")) {
@@ -109,7 +108,7 @@ export default async function pipeline(
     dataIn: json,
   } satisfies PipelineContext;
 
-  for (const [key, action] of actions.entries()) {
+  for (const [key, action] of pipelineActions.entries()) {
     let result;
     try {
       result = await action(context);

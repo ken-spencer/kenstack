@@ -24,7 +24,7 @@ export default function ResetPasswordForm({ token }: { token?: string }) {
       defaultValues={defaultValues}
       onSubmit={async ({ data, mutation, form }) => {
         return mutation
-          .mutateAsync({ ...data, token, _action: "reset-password" })
+          .mutateAsync({ ...data, token, action: "reset-password" })
           .then((res) => {
             if ("success" === res.status) {
               form.reset();

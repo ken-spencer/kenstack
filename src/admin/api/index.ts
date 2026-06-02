@@ -9,7 +9,7 @@ import {
   enableDraftModeAction,
 } from "@kenstack/admin/api/draftMode";
 import { listAction } from "@kenstack/admin/api/list";
-import { loadAction } from "@kenstack/admin/api/load";
+import { neighborsAction } from "@kenstack/admin/api/neighbors";
 import { saveAction } from "@kenstack/admin/api/save";
 import { removeAction } from "@kenstack/admin/api/remove";
 import { revisionsAction } from "@kenstack/admin/api/revisions";
@@ -25,19 +25,16 @@ import {
   saveModuleSettingsAction,
 } from "./moduleSettings";
 
-import { type DefinedAdmin } from "@kenstack/admin";
 import { type FetchError } from "@kenstack/api/fetcher";
 
-type Options = { adminConfig: DefinedAdmin };
-
-const runAdminGet = async (request: NextRequest, options: Options) => {
+const runAdminGet = async (request: NextRequest) => {
   const action = request.nextUrl.searchParams.get("action");
 
   switch (action) {
     case "enable-draft":
       return enableDraftModeAction(request);
     case "disable-draft":
-      return disableDraftModeAction(request, options);
+      return disableDraftModeAction(request);
   }
 
   return NextResponse.json(
@@ -49,14 +46,10 @@ const runAdminGet = async (request: NextRequest, options: Options) => {
   );
 };
 
-const runAdminPipeline = async (
-  request: NextRequest,
-  options: Options,
-) => {
+const runAdminPipeline = async (request: NextRequest) => {
   if (!(await deps.auth.hasRole("admin"))) {
     return NextResponse.json({ redirect: "/login" });
   }
-  // await deps.auth.revalidate();
 
   const contentType = request.headers.get("content-type");
   if (!contentType?.startsWith("application/json")) {
@@ -74,7 +67,7 @@ const runAdminPipeline = async (
     return NextResponse.json(
       {
         status: "error",
-        message: `Invalid JSON a plain object is expected`,
+        message: "Invalid JSON. A plain object is expected.",
       } satisfies FetchError,
       { status: 400 },
     );
@@ -84,24 +77,27 @@ const runAdminPipeline = async (
 
   switch (action) {
     case "page-editor":
-      return pipeline({ request, json }, [pageEditAction()]);
+      return pipeline({ request, json }, pageEditAction());
     case "page-editor-get-presigned-url":
-      return pipeline({ request, json }, [
+      return pipeline(
+        { request, json },
         getPresignedUrlAction({
           table: deps.tables.content,
           fields: pageEditorServerFields,
         }),
-      ]);
+      );
     case "page-editor-upload-complete":
-      return pipeline({ request, json }, [
+      return pipeline(
+        { request, json },
         uploadCompleteAction({
           table: deps.tables.content,
           fields: pageEditorServerFields,
         }),
-      ]);
+      );
   }
 
-  const moduleConfig = options.adminConfig[name];
+  const moduleConfig =
+    typeof name === "string" ? deps.modules[name] : undefined;
   if (!moduleConfig) {
     return NextResponse.json({
       status: "error",
@@ -110,22 +106,7 @@ const runAdminPipeline = async (
   }
 
   switch (action) {
-    case "load-module-settings":
-      {
-        const settings = moduleConfig.settings;
-
-        if (!settings) {
-          return NextResponse.json({
-            status: "error",
-            message: `Module "${name}" does not have settings.`,
-          });
-        }
-
-        return pipeline({ request, json }, [
-          loadModuleSettingsAction({ name: moduleConfig.name, settings }),
-        ]);
-      }
-    case "save-module-settings":
+    case "load-module-settings": {
       if (!moduleConfig.settings) {
         return NextResponse.json({
           status: "error",
@@ -133,9 +114,24 @@ const runAdminPipeline = async (
         });
       }
 
-      return pipeline({ request, json }, [
-        saveModuleSettingsAction(name, moduleConfig.settings),
-      ]);
+      return pipeline(
+        { request, json },
+        loadModuleSettingsAction(moduleConfig),
+      );
+    }
+    case "save-module-settings": {
+      if (!moduleConfig.settings) {
+        return NextResponse.json({
+          status: "error",
+          message: `Module "${name}" does not have settings.`,
+        });
+      }
+
+      return pipeline(
+        { request, json },
+        saveModuleSettingsAction(moduleConfig),
+      );
+    }
   }
 
   const adminConfig = moduleConfig.admin;
@@ -148,27 +144,25 @@ const runAdminPipeline = async (
 
   switch (action) {
     case "list":
-      return pipeline({ request, json }, [listAction(adminConfig)]);
-    case "load":
-      return pipeline({ request, json }, [loadAction(name, adminConfig)]);
+      return pipeline({ request, json }, listAction(adminConfig));
+    case "neighbors":
+      return pipeline({ request, json }, neighborsAction(adminConfig));
     case "save":
-      return pipeline({ request, json }, [saveAction(name, adminConfig)]);
+      return pipeline({ request, json }, saveAction(moduleConfig));
     case "remove":
-      return pipeline({ request, json }, [removeAction(adminConfig)]);
+      return pipeline({ request, json }, removeAction(moduleConfig));
     case "revisions":
-      return pipeline({ request, json }, [revisionsAction(adminConfig)]);
+      return pipeline({ request, json }, revisionsAction(adminConfig));
     case "get-presigned-url":
-      return pipeline({ request, json }, [getPresignedUrlAction(adminConfig)]);
+      return pipeline({ request, json }, getPresignedUrlAction(adminConfig));
     case "upload-complete":
-      return pipeline({ request, json }, [uploadCompleteAction(adminConfig)]);
+      return pipeline({ request, json }, uploadCompleteAction(adminConfig));
     case "impersonate":
-      return pipeline({ request, json }, [impersonateAction()]);
+      return pipeline({ request, json }, impersonateAction());
     case "tags":
-      return pipeline({ request, json }, [tagsAction(adminConfig)]);
+      return pipeline({ request, json }, tagsAction(adminConfig));
     case "relationship-search":
-      return pipeline({ request, json }, [
-        relationshipSearchAction(adminConfig),
-      ]);
+      return pipeline({ request, json }, relationshipSearchAction(adminConfig));
   }
 
   return NextResponse.json({
@@ -177,7 +171,7 @@ const runAdminPipeline = async (
   });
 };
 
-export const adminPipeline = (options: Options) => ({
-  GET: (request: NextRequest) => runAdminGet(request, options),
-  POST: (request: NextRequest) => runAdminPipeline(request, options),
+export const adminPipeline = () => ({
+  GET: (request: NextRequest) => runAdminGet(request),
+  POST: (request: NextRequest) => runAdminPipeline(request),
 });

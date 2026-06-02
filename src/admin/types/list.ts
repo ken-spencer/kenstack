@@ -48,11 +48,11 @@ export type AdminFilterKind =
   | "includes"
   | "text";
 
-export type AdminFilterOption = readonly [
-  value: string,
-  label: string,
-  description?: string,
-];
+export type AdminFilterOption = {
+  description?: string;
+  label: string;
+  value: string;
+};
 
 export type AdminFilterOptions = Record<
   string,
@@ -108,11 +108,7 @@ export type AdminFilterMeta = {
   name: string;
   label: string;
   kind: AdminFilterKind;
-  options?: {
-    value: string;
-    label: string;
-    description?: string;
-  }[];
+  options?: AdminFilterOption[];
 };
 
 export function getSortMeta(sort: AdminSort): AdminSortMeta[] {
@@ -130,10 +126,10 @@ export function getFilterMeta(filters: AdminFilters): AdminFilterMeta[] {
     kind: filter.kind,
     options:
       "options" in filter
-        ? filter.options.map(([value, label, description]) => ({
-            value,
-            label,
+        ? filter.options.map(({ description, label, value }) => ({
             description,
+            label,
+            value,
           }))
         : undefined,
   }));

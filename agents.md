@@ -11,6 +11,7 @@ Before any Next.js work, find and read the relevant doc in `node_modules/next/di
 - Keep data loading on the server unless the UI requires client-side updates.
 - Use route handlers for API endpoints.
 - In cached functions or components, place `cacheTag(...)` as high as it can go without changing behavior, near `"use cache"` and `cacheLife(...)`, so cache identity is visible with the other cache setup.
+- Keep admin data cacheable, but do not let admin mutations serve stale data while the affected cache entries regenerate. Configure that behavior at the invalidation point with blocking expiration, such as `revalidateTag(tag, { expire: 0 })`, rather than by forcing custom cache profiles on cached loaders or host sites.
 
 ## Preserve Existing Capabilities
 
@@ -33,7 +34,10 @@ Treat existing behavior as intentional unless the user explicitly asks to remove
 - Use curly braces for all conditionals.
 - Prefer existing `lodash-es` utilities for common transformations and collection helpers instead of writing local one-off utility functions.
 - Do not export types, helpers, components, or configuration solely to satisfy linting, TypeScript convenience, or anticipated future use. Keep new API surface limited to values that are used now or explicitly requested.
+- Do not extract or share small structural types solely because several call sites have similarly named properties. A shared type should mean every consumer supports the full contract. If consumers only share a subset of fields, or some consumers ignore fields the type allows, keep local types or define narrower explicit variants.
 - Prefer inferred types unless explicit types improve clarity.
+- Treat each new local type alias as suspect until proven useful. Before adding one, confirm it is exported, reused, materially simplifies a noisy function signature, documents a real domain contract, or protects a real generic/external boundary. Otherwise inline the shape and let inference carry it.
+- Do not build a top-of-file type block by habit. Keep one-off private object shapes at the function boundary, and avoid naming result, error, row, option, or callback shapes that are used only once.
 - Do not move complexity around to make an error disappear. If a change only shifts awkward typing, runtime guards, duplicated data shaping, or config translation to another file, stop and simplify the underlying shape instead.
 - If TypeScript pressure leads toward complex conditional types, overloads, casts, duplicated `Resolved*` types, or helper types that mirror inferred values, pause and reassess. Prefer changing the API shape so inference works naturally; ask for guidance before committing to type machinery.
 - When a function derives extra properties such as `schema`, `defaultValues`, or normalized config, type the input shape directly and let the return value infer. Do not define a resolved output type only to use `Omit` or a parallel props type for the unresolved input; derive consumer types from the function return when a named type is truly needed.
@@ -46,6 +50,7 @@ Treat existing behavior as intentional unless the user explicitly asks to remove
 - Do not add runtime fail branches for states that TypeScript should make impossible, such as a required module config missing from a module that defines it. Fix the type shape instead of adding a defensive throw.
 - Normalize submitted values at the Zod/input boundary when practical, such as trimming strings in field schemas, instead of adding downstream query or render checks for empty-looking values the schema should already have cleaned up.
 - Do not make breaking API or call-site shape changes without checking in first. If a cleanup or type fix would require changing an agreed API, stop and ask before proceeding.
+- When renaming or reshaping code that only exists in uncommitted work, update the affected call sites directly. Do not add compatibility aliases, shim exports, or temporary re-export paths for APIs that have not shipped or been committed.
 - Keep patches narrow.
 - Do not refactor unrelated code.
 - Follow existing naming and folder conventions.
@@ -59,6 +64,12 @@ Before finishing a code change, run the narrowest relevant checks:
 - lint for style changes
 
 Before finalizing code changes, read `agents/review.md` and compare the generated code against that checklist. Fix issues that are clearly local and low-risk. If the checklist points to something that would require a broader refactor or a tradeoff, call it out instead of forcing a messy cleanup.
+
+Before finalizing any touched TypeScript file, explicitly audit every new or changed `type` alias, interface, overload, generic, and cast in that file. Remove it unless it has a current, concrete reason under the code style rules above.
+
+After each focused edit, quickly compare the touched hunk against `agents/review.md` before moving on. Catch small local issues while the context is fresh, especially duplicated branches, unnecessary helpers, unclear type extraction, and effects that are not synchronizing with an external system.
+
+For browser/UI verification, check whether a local dev server is already running before asking to start one. Probe the obvious localhost port or inspect listening TCP ports first, since this workspace often already has `next dev` running.
 
 ## Safety rules
 
@@ -90,6 +101,10 @@ Prefer named exports for reusable configuration pieces that are assembled into l
 
 Inline simple expressions when they are used once, especially in JSX props. Do not introduce a local variable only to rename a direct function call, property access, or simple boolean expression. Use a local variable when it avoids repeated work, clarifies a non-obvious expression, prevents a long line from becoming hard to read, or gives a meaningful name to a concept reused in nearby logic.
 
+Use the clearest string construction for the expression. Prefer plain concatenation when a template literal would mostly wrap a conditional or short fragments in punctuation; use template literals when interpolation makes the result easier to read.
+
+Prefer destructuring callback parameters or local objects when it removes one-off property aliases and lets JSX return directly, especially in `map` callbacks. Keep an explicit callback body when it needs meaningful setup, branching, or reused derived values.
+
 Inline small object parameter types for private functions when the type is used once and the fields are easier to understand at the function boundary. Extract a named type when it is exported, reused, large enough to distract from the function body, or represents a real domain concept.
 
 Prefer complete initial declarations over immediate follow-up mutation. If an array or object always includes a value, include it in the literal instead of declaring first and then calling `push`, assigning a property, or spreading into it on the next line.
@@ -104,17 +119,15 @@ When branching between several peer cases outside JSX, such as named actions, mo
 
 Prefer rendering markup directly in JSX over breaking it into separate variables. If direct JSX would require a complex nested ternary, use an inline function pattern with explicit `return` branches so the markup stays local but the control flow remains readable. Extract markup only when it materially improves readability, removes meaningful duplication, or creates a real reusable component.
 
+Avoid `useEffect` unless synchronizing with an external system or browser API that cannot be handled during render, event handling, or by the data library itself. Do not add effects only to mirror derived state, react to `useQuery` data/errors, log query results, or trigger follow-up work that belongs in a query function, mutation callback, route action, or explicit user event.
+
 When multiple components or files are designed to work together as one unit, put them in a dedicated folder and avoid repeating the folder concept in each filename when the shorter names remain clear. For example, prefer `components/AdminShortcutLink/index.tsx` and `components/AdminShortcutLink/Client.tsx` over sibling files named `AdminShortcutLink.tsx` and `AdminShortcutLinkClient.tsx`.
 
 When adding configurable options, choose the shallowest shape that is likely to remain clear. Do not add nested option objects only because future settings might exist. If names are already specific, such as `uploadMaxImageSize`, prefer flat options over `{ upload: { maxImageSize } }` unless there is already an established nested configuration pattern.
 
-Before adding a helper, ask whether the helper meaningfully hides complexity or whether it only forces the reader to jump elsewhere. Do not add pass-through helpers that only rename or lightly wrap an existing API without reducing real complexity. Prefer direct, readable code over abstraction for abstraction’s sake.
+Avoid narrow styling mode props such as `framed`, `compact`, or `plain` when they only toggle a small class set. Prefer `className` with `twMerge`, explicit composition, or a local wrapper so callers control presentation without adding component-specific styling vocabulary.
 
-Do not add lookup helpers or type-guard wrappers that only hide direct property access, such as `getThing(map, key) { return map[key]; }`, or a one-call wrapper around `map[key] && isThing(map[key])`. Inline the lookup at the call site unless the helper is reused enough to establish a real boundary or it performs meaningful validation, normalization, caching, logging, or error handling.
-
-Prefer direct discriminator checks over one-line type-guard helpers when the value is already a resolved discriminated union. For example, use `config.single === false` instead of `isAdminTableConfig(config)` when `single` is the canonical discriminator. Add a type guard only when it performs meaningful runtime validation, narrows an unknown or external value, or avoids repeated complex checks.
-
-When a query or helper can return the desired shape directly, do that inline. Do not split simple logic into separate column-builder, mapper, normalizer, converter, or adapter functions unless those functions remove meaningful repeated complexity or express a real reusable boundary. A helper that exists only to shuffle data from one local shape to another is an unnecessary layer.
+Before adding a helper, ask whether it meaningfully hides complexity or only forces the reader to jump elsewhere. Avoid pass-through helpers, type guards, mappers, normalizers, and adapters that only rename a direct lookup, discriminator check, API call, or local data reshaping. Prefer direct readable code unless the helper provides meaningful reuse, validation, normalization, caching, logging, or a real boundary.
 
 ## Configuration defaults
 

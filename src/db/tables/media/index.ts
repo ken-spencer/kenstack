@@ -113,32 +113,40 @@ type ImageAlias = {
 
 type ImageVariantName = "original" | "square";
 
+function imageVariantKey(variant: ImageVariantName) {
+  return variant === "square" ? sql.raw("'square'") : sql.raw("'original'");
+}
+
 export const selectImage = (
   alias: ImageAlias,
   variant: ImageVariantName = "original",
-) => ({
-  // id: alias.publicId,
-  kind: alias.kind,
-  url: sql<string>`
+) => {
+  const variantKey = imageVariantKey(variant);
+
+  return {
+    // id: alias.publicId,
+    kind: alias.kind,
+    url: sql<string>`
       case
         when ${alias.kind} = 'svg' then ${alias.sourceUrl}
-        else ${alias.variants}->${variant}->>'url'
+        else ${alias.variants}->${variantKey}->>'url'
       end
     `,
-  width: sql<number | null>`
+    width: sql<number | null>`
       case
         when ${alias.kind} = 'svg' then ${alias.sourceWidth}
-        else (${alias.variants}->${variant}->>'width')::int
+        else (${alias.variants}->${variantKey}->>'width')::int
       end
     `,
-  height: sql<number | null>`
+    height: sql<number | null>`
       case
         when ${alias.kind} = 'svg' then ${alias.sourceHeight}
-        else (${alias.variants}->${variant}->>'height')::int
+        else (${alias.variants}->${variantKey}->>'height')::int
       end
     `,
-  alt: alias.alt,
-});
+    alt: alias.alt,
+  };
+};
 
 export type SelectedImage = {
   id?: number;
@@ -162,21 +170,23 @@ export function selectImageSubquery(
   imageCol: AnyPgColumn,
   variant: ImageVariantName = "original",
 ) {
+  const variantKey = imageVariantKey(variant);
+
   return sql<SelectedImage | null>`(
   select jsonb_build_object(
     'id', ${media.id},
     'kind', ${media.kind},
     'url', case
       when ${media.kind} = 'svg' then ${media.sourceUrl}
-      else ${media.variants}->${variant}->>'url'
+      else ${media.variants}->${variantKey}->>'url'
     end,
     'width', case
       when ${media.kind} = 'svg' then ${media.sourceWidth}
-      else (${media.variants}->${variant}->>'width')::int
+      else (${media.variants}->${variantKey}->>'width')::int
     end,
     'height', case
       when ${media.kind} = 'svg' then ${media.sourceHeight}
-      else (${media.variants}->${variant}->>'height')::int
+      else (${media.variants}->${variantKey}->>'height')::int
     end,
     'alt', ${media.alt},
     'title', ${media.title},

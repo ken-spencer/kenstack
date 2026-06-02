@@ -6,6 +6,7 @@ const uniqueConstraintMessages: Record<string, [string, string]> = {
     "email",
     "An account with this email already exists.",
   ],
+  users_slug_unique: ["slug", "This public path is already in use."],
 };
 
 function isPostgresError(err: unknown): err is postgres.PostgresError {
@@ -36,7 +37,7 @@ export const errorTranslator = (err: unknown): FetchError | undefined => {
       return {
         status: "error",
         message:
-          "We couldn't conplete your request. See the highlighted field below for more information.",
+          "We couldn't complete your request. See the highlighted field below for more information.",
         fieldErrors: { [fieldName]: [message] },
       };
     } else {

@@ -7,6 +7,7 @@ import type { EmailContainer } from "./components/Email";
 import { type Users } from "@kenstack/modules/users/tables";
 import { type Sessions } from "@kenstack/db/tables/sessions";
 import { type Attachment } from "@kenstack/lib/mailer";
+import type { DefinedAdmin } from "@kenstack/admin/module";
 
 export type EmailFrom = string | { name: string; addr: string };
 
@@ -33,9 +34,11 @@ const formatFileSize = (bytes: number) => {
 export const createDeps = <
   TSchema extends Tables,
   const TRoles extends readonly string[] = typeof defaultRoles,
+  const TModules extends DefinedAdmin = DefinedAdmin,
 >(options: {
   roles?: TRoles;
   multiTenant?: boolean;
+  modules?: TModules;
   tables: TSchema;
   siteUrl?: string;
   email?: {
@@ -46,7 +49,7 @@ export const createDeps = <
   uploadMaxImageSize?: number;
   uploadMaxImageSizeMessage?: string;
 }) => {
-  const { email, ...depsOptions } = options;
+  const { email, modules = {} as TModules, ...depsOptions } = options;
   const db = createDb({ schema: options.tables });
   const logger = new Logger<TSchema>({ db });
   const roles = (options.roles ?? defaultRoles) as TRoles;
@@ -68,6 +71,7 @@ export const createDeps = <
     auth,
     roles,
     db,
+    modules,
     ...depsOptions,
     email: {
       EmailCont: Email,
@@ -81,4 +85,5 @@ export const createDeps = <
 export type Deps<
   TSchema extends Tables = Tables,
   TRoles extends readonly string[] = typeof defaultRoles,
-> = ReturnType<typeof createDeps<TSchema, TRoles>>;
+  TModules extends DefinedAdmin = DefinedAdmin,
+> = ReturnType<typeof createDeps<TSchema, TRoles, TModules>>;

@@ -62,7 +62,7 @@ export function ForgotPasswordForm() {
           .mutateAsync({
             ...data,
             recaptchaToken,
-            _action: "forgot-password",
+            action: "forgot-password",
           })
           .then((res) => {
             if ("success" === res.status) {

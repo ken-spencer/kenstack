@@ -1,8 +1,9 @@
 import { deps } from "@app/deps";
 import { filterRevisionSnapshot } from "./revisions";
+import type { AdminKeyTable, AdminTable } from "@kenstack/admin/table";
 import { selectFields } from "@kenstack/fields/select";
 import type {
-  FieldPreSaveResult,
+  FieldAfterSave,
   ServerDefinedFields,
 } from "@kenstack/fields/server";
 import { revisions } from "@kenstack/db/tables/revisions";
@@ -16,130 +17,71 @@ import {
   type InferSelectModel,
 } from "drizzle-orm";
 import { revalidateTag } from "next/cache";
-import type { AnyPgColumn, AnyPgTable } from "drizzle-orm/pg-core";
 
 type TransactionDb = Parameters<
   Parameters<(typeof deps)["db"]["transaction"]>[0]
 >[0];
 
-type SaveRecordTable = AnyPgTable & {
-  id: AnyPgColumn<{ data: number; notNull: true }>;
-  createdAt: AnyPgColumn<{ data: Date; notNull: true }>;
-  updatedAt: AnyPgColumn<{ data: Date; notNull: true }>;
-};
-
-type DefaultSaveRecordTable = SaveRecordTable & {
-  createdBy: AnyPgColumn<{ data: number | null; notNull: false }>;
-};
-
-type SavedRow = {
-  id: number;
-} & Record<string, unknown>;
-
-type SaveRecordSelect = ReturnType<
-  typeof selectFields<SaveRecordTable, ServerDefinedFields>
->;
-
-type RevalidateCallback<TTable extends SaveRecordTable> = {
-  bivarianceHack(row: InferSelectModel<TTable>): string;
-}["bivarianceHack"];
-
-type SaveRecordResult =
-  | {
-      status: "success";
-      row?: SavedRow;
-      values: Record<string, unknown>;
-    }
-  | {
-      status: "error";
-      error: SaveRecordError;
-    };
-
-type SaveRecordError =
-  | string
-  | {
-      message: string;
-      status?: number;
-      formErrors?: string[];
-      fieldErrors?: Record<string, string | string[]>;
-    };
-
-type SaveRecordQuery = (ctx: {
-  tx: TransactionDb;
-  data: Record<string, unknown>;
-  select: SaveRecordSelect;
-  user: User;
-}) => Promise<SavedRow | undefined>;
+type SaveRecordTable = AdminTable | AdminKeyTable;
 
 type SaveRecordOptions<TTable extends SaveRecordTable> = {
-  action: string;
+  actionPrefix: string;
   table: TTable;
   fields: ServerDefinedFields;
   values: Record<string, unknown>;
   changes?: string[];
   id?: number | null;
-  revalidate?: (string | RevalidateCallback<TTable>)[];
+  revalidate?: (string | ((row: InferSelectModel<TTable>) => string))[];
+  query?: (ctx: {
+    tx: TransactionDb;
+    data: Record<string, unknown>;
+    select: ReturnType<typeof selectFields<TTable, ServerDefinedFields>>;
+    user: User;
+  }) => Promise<{ id: number } | undefined>;
 };
 
-type CustomSaveRecordOptions<TTable extends SaveRecordTable> =
-  SaveRecordOptions<TTable> & {
-    query: SaveRecordQuery;
-  };
-
-type DefaultSaveRecordOptions<TTable extends DefaultSaveRecordTable> =
-  SaveRecordOptions<TTable> & {
-    query?: undefined;
-  };
-
-export function saveRecord<TTable extends DefaultSaveRecordTable>(
-  options: DefaultSaveRecordOptions<TTable>,
-): Promise<SaveRecordResult>;
-export function saveRecord<TTable extends SaveRecordTable>(
-  options: CustomSaveRecordOptions<TTable>,
-): Promise<SaveRecordResult>;
-export async function saveRecord<
-  TDefaultTable extends DefaultSaveRecordTable,
-  TCustomTable extends SaveRecordTable,
->(
-  options:
-    | DefaultSaveRecordOptions<TDefaultTable>
-    | CustomSaveRecordOptions<TCustomTable>,
-): Promise<SaveRecordResult> {
-  const { action, table, fields, values, changes, id, revalidate } = options;
-  const changedFields = changes ? new Set(changes) : undefined;
-  const shouldSaveField = (key: string) =>
-    !changedFields || changedFields.has(key);
-  const data = Object.fromEntries(
-    Object.entries(values).filter(([key]) => shouldSaveField(key)),
-  );
+export async function saveRecord<TTable extends SaveRecordTable>(
+  options: SaveRecordOptions<TTable>,
+) {
+  const { actionPrefix, table, fields, values, changes, id, revalidate } =
+    options;
+  const action = actionPrefix + "-" + (id ? "update" : "insert");
   const revisionChanges = changes ?? Object.keys(values);
-  const shouldWrite = !changes || changes.length > 0;
-  const handledValues = Object.fromEntries(
-    Object.entries(data)
-      .filter(([key]) => Boolean(fields[key]?.behavior?.save))
-      .map(([key, value]) => [key, value]),
-  );
-
-  for (const key of Object.keys(handledValues)) {
-    delete data[key];
-  }
-
-  const columns = getTableColumns(table);
   const user = await deps.auth.requireUser();
 
-  if (!shouldWrite) {
+  if (changes && changes.length === 0) {
     return {
-      status: "success",
-      ...(id ? { row: { id, ...values } } : {}),
+      status: "success" as const,
+      ...(id ? { row: { id } } : {}),
       values,
     };
   }
 
+  const changedFields = changes ? new Set(changes) : undefined;
+  const shouldSaveField = (key: string) =>
+    !changedFields || changedFields.has(key);
+  const data: Record<string, unknown> = {};
+  const handledValues: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(values)) {
+    if (!shouldSaveField(key)) {
+      continue;
+    }
+
+    if (fields[key]?.behavior?.save) {
+      handledValues[key] = value;
+    } else {
+      data[key] = value;
+    }
+  }
+
+  const tableName = getTableName(table);
+
   try {
-    const row = await deps.db.transaction(async (tx) => {
+    const result = await deps.db.transaction(async (tx) => {
       const preSave = await preSaveFields({
         fields,
-        columns,
+        columns: getTableColumns(table),
         data,
         id,
         user,
@@ -156,31 +98,48 @@ export async function saveRecord<
         };
       }
 
-      let savedRow;
+      const select = selectFields(table, fields);
+      let savedRow: { id: number } | undefined;
 
       if (options.query) {
         savedRow = await options.query({
           tx,
           data,
-          select: selectFields(options.table, fields),
+          select,
           user,
         });
+      } else if (id) {
+        const updateData = {
+          ...data,
+          updatedAt: new Date(),
+        };
+
+        const [row] = await tx
+          .update(table)
+          .set(updateData)
+          .where(eq(table.id, id))
+          .returning(select);
+
+        savedRow = row;
       } else {
-        savedRow = await defaultSaveRecordQuery({
-          tx,
-          data,
-          select: selectFields(options.table, fields),
-          user,
-          table: options.table,
-          id,
-        });
+        const [row] = await tx
+          .insert(table)
+          .values({
+            ...data,
+            createdBy: user.id,
+          } as InferInsertModel<TTable>)
+          .returning(select);
+
+        savedRow = row;
       }
+
       if (!savedRow) {
         return {
           status: "error" as const,
           error: "Unable to save this record.",
         };
       }
+      const savedValues: Record<string, unknown> = { ...savedRow };
 
       if (preSave.afterSave.length) {
         await Promise.all(preSave.afterSave.map((afterSave) => afterSave(tx)));
@@ -192,7 +151,7 @@ export async function saveRecord<
           continue;
         }
 
-        savedRow[fieldKey] = await behavior.save({
+        savedValues[fieldKey] = await behavior.save({
           db: tx,
           key: fieldKey,
           tableId: savedRow.id,
@@ -203,48 +162,51 @@ export async function saveRecord<
       }
 
       await tx.insert(revisions).values({
-        table: getTableName(table),
+        table: tableName,
         rowId: savedRow.id,
         createdBy: user.id,
         changes: revisionChanges,
-        snapshot: filterRevisionSnapshot(savedRow, fields),
+        snapshot: filterRevisionSnapshot(savedValues, fields),
       });
 
       return {
         status: "success" as const,
         row: savedRow,
-        values: savedRow,
+        values: savedValues,
       };
     });
 
-    if (row.status !== "success") {
-      return row;
+    if (result.status !== "success") {
+      return result;
     }
 
     await deps.logger.audit({
       action,
-      table: getTableName(table),
-      rowId: row.row?.id,
+      table: tableName,
+      rowId: result.row?.id,
       data: { changes: revisionChanges },
     });
 
-    revalidate?.forEach((validator) => {
+    for (const validator of revalidate ?? []) {
       if (typeof validator === "string") {
-        revalidateTag(validator, "max");
-      } else if (row.row) {
+        revalidateTag(validator, { expire: 0 });
+        continue;
+      }
+
+      if (result.row) {
         revalidateTag(
-          validator(row.row as InferSelectModel<TDefaultTable & TCustomTable>),
-          "max",
+          validator(result.row as InferSelectModel<typeof table>),
+          { expire: 0 },
         );
       }
-    });
+    }
 
-    return row;
+    return result;
   } catch (err) {
     const error = errorTranslator(err);
     if (error) {
       return {
-        status: "error",
+        status: "error" as const,
         error: {
           message: error.message ?? "We couldn't complete your request.",
           ...(error.fieldErrors ? { fieldErrors: error.fieldErrors } : {}),
@@ -253,46 +215,6 @@ export async function saveRecord<
     }
     throw err;
   }
-}
-
-async function defaultSaveRecordQuery<TTable extends SaveRecordTable>({
-  tx,
-  data,
-  select,
-  user,
-  table,
-  id,
-}: {
-  tx: TransactionDb;
-  data: Record<string, unknown>;
-  select: SaveRecordSelect;
-  user: User;
-  table: TTable;
-  id?: number | null;
-}): Promise<SavedRow | undefined> {
-  if (id) {
-    const updateData = {
-      ...data,
-      updatedAt: new Date(),
-    };
-
-    const [row] = await tx
-      .update(table)
-      .set(updateData)
-      .where(eq(table.id, id))
-      .returning(select);
-
-    return row;
-  }
-
-  const insertData = {
-    ...data,
-    createdBy: user.id,
-  } as InferInsertModel<TTable>;
-
-  const [row] = await tx.insert(table).values(insertData).returning(select);
-
-  return row;
 }
 
 async function preSaveFields<TTable extends SaveRecordTable>({
@@ -316,9 +238,7 @@ async function preSaveFields<TTable extends SaveRecordTable>({
   values: Record<string, unknown>;
   shouldSaveField: (key: string) => boolean;
 }) {
-  const afterSave: NonNullable<
-    Extract<FieldPreSaveResult, { status: "success" }>["afterSave"]
-  > = [];
+  const afterSave: FieldAfterSave[] = [];
 
   for (const [key, value] of Object.entries(data)) {
     const field = fields[key];

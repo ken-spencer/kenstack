@@ -29,16 +29,18 @@ const defaults = {
 export const authPipeline = (props: AuthPipelineOptions = {}) => {
   const options = merge({}, defaults, props);
   const POST = (request: NextRequest) =>
-    multiPipeline({ request }, [
-      ["login", loginPipeline()],
-      ["logout", logoutPipeline()],
-      ["forgot-password", forgotPasswordPipeline(options.forgotPassword)],
-      ["reset-password", resetPasswordPipeline()],
-      [
-        "send-password-reset",
-        sendPasswordResetPipeline(options.forgotPassword),
-      ],
-    ]);
+    multiPipeline(
+      { request },
+      {
+        login: loginPipeline(),
+        logout: logoutPipeline(),
+        "forgot-password": forgotPasswordPipeline(options.forgotPassword),
+        "reset-password": resetPasswordPipeline(),
+        "send-password-reset": sendPasswordResetPipeline(
+          options.forgotPassword,
+        ),
+      },
+    );
 
   return { POST };
 };

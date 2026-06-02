@@ -2,6 +2,40 @@
 
 Use this file to document breaking Kenstack API changes that downstream sites may need to apply.
 
+## Unreleased: Address Field Options Import Path
+
+Old APIs:
+
+- `@kenstack/admin/address`
+
+New APIs:
+
+- `@kenstack/fields/address`
+- `addressFieldOptions`, `requiredAddressFieldOptions`, and `createAddressFieldOptions` are field-layer helpers.
+
+Migration steps:
+
+- Replace direct imports from `@kenstack/admin/address` with `@kenstack/fields/address`.
+- Prefer importing address field helpers from `@kenstack/fields` or `@kenstack/fields/address` instead of the admin barrel.
+
+## Unreleased: Form Control Import Paths
+
+Old APIs:
+
+- `@kenstack/components/forms/Combobox`
+- `@kenstack/components/forms/InputGroup`
+
+New APIs:
+
+- `@kenstack/forms/controls/Combobox`
+- `@kenstack/forms/controls/InputGroup`
+
+Migration steps:
+
+- Replace imports from `@kenstack/components/forms/Combobox` with `@kenstack/forms/controls/Combobox`.
+- Replace imports from `@kenstack/components/forms/InputGroup` with `@kenstack/forms/controls/InputGroup`.
+- Keep RHF-bound form fields, such as `ComboboxField`, imported from `@kenstack/forms/*` or `@kenstack/admin/forms`.
+
 ## Unreleased: Node 24 Runtime Floor
 
 New requirement:
@@ -11,6 +45,79 @@ New requirement:
 Migration steps:
 
 - Update app/package engines, local runtime managers, deployment settings, and CI images to Node.js 24 or newer.
+
+## Unreleased: Managed Content Table Columns
+
+Old APIs:
+
+- The built-in `content` table defined only `id`, timestamps, `slug`, metadata, and `data` columns.
+
+New APIs:
+
+- The built-in `content` table is defined through `defineTable(...)`.
+- This adds the standard managed columns and indexes used by admin records, including `public_id`, `created_by`, `deleted_at`, `content_deleted_at_idx`, and `content_created_at_idx`.
+
+Migration steps:
+
+- Existing sites with a `content` table need a database migration before deploying this version.
+- Add the new managed columns with appropriate defaults/nullability, backfill existing rows as needed, and create the new indexes.
+- Keep the existing `content_slug_unique` unique index.
+
+## Unreleased: DateTime Field Naming
+
+Old APIs:
+
+- `DateField` from `@kenstack/forms/DateField` and `@kenstack/admin/forms`.
+
+New APIs:
+
+- `DateTimeField` from `@kenstack/forms/DateTimeField` and `@kenstack/admin/forms`.
+- `DateField` now means a date-only field that stores `YYYY-MM-DD` values.
+- `dateField()` is available from `@kenstack/fields/client` for date-only fields.
+
+Migration steps:
+
+- Replace imports and JSX usage of `DateField` with `DateTimeField` when the field stores a date and time.
+- Audit the corresponding Drizzle column before renaming. Fields backed by `dateTimeField()` should use a timestamp/datetime column, not a Postgres `date` column.
+- Keep domain date-only fields, such as birthdays or death dates, on Postgres `date` columns and use `dateField()`.
+
+## Unreleased: Option List Object Shape
+
+Old APIs:
+
+- Choice options were tuple-based, for example `["admin", "Administrator"]` or `["published", "Published", "Visible publicly"]`.
+- Icon options used a mixed tuple shape such as `["published", "Published", { icon, description }]`.
+
+New APIs:
+
+- Choice options use object entries: `{ value: "admin", label: "Administrator" }`.
+- Optional metadata uses the same object: `{ value, label, description, icon }`.
+- This applies to checkbox lists, radio button fields, icon choice fields, admin filter options, and built-in visibility options.
+
+Migration steps:
+
+- Replace `[value, label]` with `{ value, label }`.
+- Replace `[value, label, description]` with `{ value, label, description }`.
+- Replace `[value, label, { icon, description }]` with `{ value, label, icon, description }`.
+- Update tuple reads such as `option[0]` or `([value]) => ...` to use `option.value`.
+
+## Unreleased: Admin Load API Removal
+
+Old APIs:
+
+- Admin edit screens loaded records through the admin API with `{ action: "load" }`.
+- `loadAction` existed at `@kenstack/admin/api/load`.
+
+New APIs:
+
+- Admin edit screens load records on the server inside `<Edit />` through `loadAdminEdit` from `@kenstack/admin/queries/load`.
+- Cached admin record loads use cache tags from `adminLoadCacheTag(...)`.
+
+Migration steps:
+
+- Remove client `useQuery` calls that post `{ action: "load" }` to `/api/admin`.
+- Let `<AdminEdit />` load the server edit data before passing it into `AdminEditProvider`.
+- Use `adminLoadCacheTag(...)` with save/remove actions to revalidate cached edit records.
 
 ## Unreleased: Draft Mode Preview Transport
 
@@ -37,7 +144,7 @@ New APIs:
 
 Migration steps:
 
-- Update site admin API routes from `export const { POST } = adminPipeline({ adminConfig })` to `export const { GET, POST } = adminPipeline({ adminConfig })`.
+- Update site admin API routes from `export const { POST } = adminPipeline({ adminConfig })` to `export const { GET, POST } = adminPipeline()`. Admin modules are now loaded from `deps.modules`.
 - Replace `isPreview(searchParams)` with `(await draftMode()).isEnabled` from `next/headers`.
 - Replace `createMetadataLoader` imports from `@kenstack/admin` or `@kenstack/admin/metadata` with `@kenstack/admin/queries`.
 - Rename local query options from `preview` to `draft`; pass `{ draft }` to `listWhere(...)` for list queries and `pageWhere(...)` for detail/page queries.
@@ -262,6 +369,29 @@ Migration steps:
 - Normal table configs now resolve with `single: false`.
 - Keyed single admin configs now pass `key: string` and resolve with `single: true`.
 - Single admin configs cannot define list-only options: `select`, `sort`, `filters`, or `limit`.
+
+## Unreleased: Admin Modules In Deps
+
+Old APIs:
+
+- Site admin routes imported a local admin registry and passed it into `createAdminPage({ adminConfig })`.
+- Site admin API routes passed the local admin registry into `adminPipeline({ adminConfig })`.
+- `Sidebar` accepted an `admin` prop containing the admin module registry.
+
+New APIs:
+
+- Sites pass the resolved module registry into `createDeps({ modules })`.
+- `createAdminPage()` reads `deps.modules` internally.
+- `adminPipeline()` reads `deps.modules` internally.
+- `Sidebar` reads `deps.modules` internally and no longer accepts an `admin` prop.
+
+Migration steps:
+
+- Move the site admin module assembly into a module-owned file, such as `src/modules/index.ts`.
+- Pass that registry to `createDeps({ modules })`.
+- Replace `createAdminPage({ adminConfig })` with `createAdminPage()`.
+- Replace `adminPipeline({ adminConfig })` with `adminPipeline()`.
+- Remove the `admin` prop from `Sidebar`.
 
 ## Unreleased: Admin Page Query Select
 

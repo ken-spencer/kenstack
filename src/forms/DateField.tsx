@@ -1,17 +1,15 @@
 "use client";
-import { useState, useMemo } from "react";
+
+import { useMemo, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { format } from "date-fns";
-import { parseDate } from "chrono-node";
-
+import { parse } from "chrono-node";
 import { twMerge } from "tailwind-merge";
-
 import { Calendar as CalendarIcon } from "lucide-react";
 
 import Field, { type FieldProps } from "@kenstack/forms/Field";
 import { Input } from "@kenstack/components/ui/input";
 import { FormControl } from "@kenstack/components/ui/form";
-
 import { Button } from "@kenstack/components/ui/button";
 import { Calendar } from "@kenstack/components/ui/calendar";
 import {
@@ -25,10 +23,72 @@ type InputProps = FieldProps &
     inputClass?: string;
   };
 
-const formatDate = (date: string | Date) => {
-  return format(date, "MMMM d, yyyy '@' h:mm a");
-};
-export default function InputField({
+const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+
+function padDatePart(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+function toDateValue(date: Date) {
+  return [
+    date.getFullYear(),
+    padDatePart(date.getMonth() + 1),
+    padDatePart(date.getDate()),
+  ].join("-");
+}
+
+function toDateObject(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function parseDateValue(value: string | Date) {
+  if (value instanceof Date) {
+    return toDateValue(value);
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  if (datePattern.test(trimmed)) {
+    return trimmed;
+  }
+
+  const result = parse(trimmed)[0];
+  if (!result) {
+    return "";
+  }
+
+  const year = result.start.get("year");
+  const month = result.start.get("month");
+  const day = result.start.get("day");
+
+  if (year === null || month === null || day === null) {
+    return "";
+  }
+
+  return [year, padDatePart(month), padDatePart(day)].join("-");
+}
+
+function formatDate(value: string) {
+  return value ? format(toDateObject(value), "MMMM d, yyyy") : "";
+}
+
+function normalizeFormValue(value: unknown) {
+  if (value instanceof Date) {
+    return toDateValue(value);
+  }
+
+  if (typeof value !== "string" || !value) {
+    return "";
+  }
+
+  return datePattern.test(value) ? value : value.slice(0, 10);
+}
+
+export default function DateField({
   name,
   label,
   help,
@@ -40,32 +100,23 @@ export default function InputField({
 }: InputProps) {
   const { watch, getValues, setValue: setFormValue } = useFormContext();
   const [prevFormValue, setPrevFormValue] = useState(getValues(name));
-  const [value, setValue] = useState(() => {
-    const v = getValues(name);
-    if (v) {
-      return formatDate(v);
-    }
-    return "";
-  });
+  const [value, setValue] = useState(() =>
+    formatDate(normalizeFormValue(getValues(name))),
+  );
 
   const formValue = watch(name);
   if (formValue !== prevFormValue) {
     setPrevFormValue(formValue);
-    setValue(formValue ? formatDate(formValue) : "");
+    setValue(formatDate(normalizeFormValue(formValue)));
   }
+
   const handleDate = (newDate: string | Date) => {
-    if (newDate) {
-      const result =
-        newDate instanceof Date ? newDate : (parseDate(newDate) ?? "");
-      setFormValue(name, result instanceof Date ? result.toISOString() : "", {
-        shouldDirty: true,
-        shouldTouch: true,
-      });
-      setValue(formatDate(result || new Date()));
-    } else {
-      setFormValue(name, "", { shouldDirty: true, shouldTouch: true });
-      setValue("");
-    }
+    const result = newDate ? parseDateValue(newDate) : "";
+    setFormValue(name, result, {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+    setValue(formatDate(result));
   };
 
   return (
@@ -80,22 +131,22 @@ export default function InputField({
           <DatePicker
             disabled={disabled}
             handleDate={handleDate}
-            value={value}
+            value={normalizeFormValue(field.value)}
           />
           <FormControl>
             <Input
               {...field}
-              placeholder="eg: Jan 27 or Next Thursday"
+              placeholder="eg: January 27, 1932"
               {...props}
               disabled={disabled}
               className={twMerge("pl-9", inputClass)}
               value={value}
-              onChange={(e) => {
-                setValue(e.target.value);
+              onChange={(event) => {
+                setValue(event.target.value);
               }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
                   handleDate(value);
                 }
               }}
@@ -103,7 +154,7 @@ export default function InputField({
                 handleDate(value);
               }}
             />
-          </FormControl>{" "}
+          </FormControl>
         </div>
       )}
     />
@@ -120,7 +171,10 @@ function DatePicker({
   value: string;
 }) {
   const [open, setOpen] = useState(false);
-  const date = useMemo(() => (value ? new Date(value) : undefined), [value]);
+  const date = useMemo(
+    () => (value ? toDateObject(value) : undefined),
+    [value],
+  );
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -130,8 +184,6 @@ function DatePicker({
           variant="ghost"
           size="icon"
           className="absolute"
-          // data-empty={!date}
-          // className="data-[empty=true]:text-muted-foreground w-[280px] justify-start text-left font-normal"
         >
           <CalendarIcon />
           <span className="sr-only">Pick a date</span>
@@ -141,8 +193,8 @@ function DatePicker({
         <Calendar
           mode="single"
           selected={date}
-          onSelect={(v) => {
-            handleDate(v ?? "");
+          onSelect={(selectedDate) => {
+            handleDate(selectedDate ?? "");
             setOpen(false);
           }}
         />

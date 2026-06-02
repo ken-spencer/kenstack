@@ -5,10 +5,8 @@ import type { NextRequest } from "next/server";
 
 import { deps } from "@app/deps";
 import { pageWhere } from "@kenstack/admin/queries/page";
-import type { DefinedAdmin } from "@kenstack/admin";
 import type { AdminContentTable } from "@kenstack/admin/table";
 
-type Options = { adminConfig: DefinedAdmin };
 const previewOrigin = "https://kenstack.local";
 
 function normalizePath(pathname: string) {
@@ -104,10 +102,10 @@ async function isPublicSlugRecord({
   return !!row;
 }
 
-async function getDisableDraftRedirect(next: string, options: Options) {
+async function getDisableDraftRedirect(next: string) {
   const nextUrl = new URL(next, previewOrigin);
 
-  for (const moduleConfig of Object.values(options.adminConfig)) {
+  for (const moduleConfig of Object.values(deps.modules)) {
     const adminConfig = moduleConfig.admin;
     const { basePath } = moduleConfig;
     if (
@@ -146,10 +144,9 @@ export async function enableDraftModeAction(request: NextRequest) {
 
 export async function disableDraftModeAction(
   request: NextRequest,
-  options: Options,
 ) {
   const next = getRedirectPath(request);
-  const redirectPath = await getDisableDraftRedirect(next, options);
+  const redirectPath = await getDisableDraftRedirect(next);
 
   (await draftMode()).disable();
   return redirect(redirectPath);

@@ -2,11 +2,12 @@
 
 import { useFormContext } from "react-hook-form";
 import { format } from "date-fns";
+import { twMerge } from "tailwind-merge";
 
-import Field from "@kenstack/forms/Field";
 import { ImageField } from "@kenstack/admin/forms";
-import DateField from "@kenstack/forms/DateField";
+import DateTimeField from "@kenstack/forms/DateTimeField";
 import InputField from "@kenstack/forms/InputField";
+import RadioButtonField from "@kenstack/forms/RadioButtonField";
 import TextareaField from "@kenstack/forms/TextareaField";
 import { visibilityStatusOptions } from "@kenstack/admin/lib/visibilityStatus";
 import {
@@ -24,8 +25,6 @@ const defaultFields = {
   ogImage: true,
 } as const;
 
-type MetaFieldOptions = Partial<Record<keyof typeof defaultFields, boolean>>;
-
 function formatPublishedAt(value: unknown) {
   if (!value) {
     return "No publish date";
@@ -41,15 +40,18 @@ function formatPublishedAt(value: unknown) {
 
 export default function MetaFields({
   fields = defaultFields,
+  className,
 }: {
-  fields?: MetaFieldOptions;
+  fields?: Partial<Record<keyof typeof defaultFields, boolean>>;
+  className?: string;
 }) {
   const { setValue, watch } = useFormContext();
   const visibility = watch("visibility");
   const publishedAt = watch("publishedAt");
   const isDraft = visibility === "draft";
-  const publishSummary =
-    isDraft ? "Not listed" : formatPublishedAt(publishedAt);
+  const publishSummary = isDraft
+    ? "Not listed"
+    : formatPublishedAt(publishedAt);
   const showAccordion =
     fields.publishedAt ||
     fields.seoTitle ||
@@ -61,55 +63,30 @@ export default function MetaFields({
       : "Scheduling";
 
   return (
-    <div className="space-y-3 rounded border p-3">
+    <div className={twMerge("space-y-4", className)}>
       {fields.visibility ? (
-        <Field
+        <RadioButtonField
           name="visibility"
           label="Status"
-          render={({ field }) => (
-            <div className="grid grid-cols-3 gap-1.5">
-              {visibilityStatusOptions.map(({ value, label, Icon }) => (
-                <label key={value} className="cursor-pointer text-xs">
-                  <input
-                    {...field}
-                    type="radio"
-                    value={value}
-                    checked={field.value === value}
-                    className="peer sr-only"
-                    onChange={() => {
-                      field.onChange(value);
-                      if (
-                        value !== "draft" &&
-                        fields.publishedAt &&
-                        !publishedAt
-                      ) {
-                        setValue("publishedAt", new Date().toISOString(), {
-                          shouldDirty: true,
-                          shouldTouch: true,
-                          shouldValidate: true,
-                        });
-                      }
-                    }}
-                  />
-                  <span className="flex min-h-9 items-center justify-center gap-1 rounded border border-gray-200 px-2 text-center transition peer-checked:border-fuchsia-800 peer-checked:bg-fuchsia-800/85 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-fuchsia-800 peer-focus-visible:ring-offset-2 hover:bg-gray-50 peer-checked:hover:bg-fuchsia-800">
-                    <Icon className="size-3.5" />
-                    {label}
-                  </span>
-                </label>
-              ))}
-            </div>
-          )}
+          groupClassName="grid grid-cols-3 gap-1.5"
+          buttonClassName="min-w-0"
+          options={visibilityStatusOptions}
+          onValueChange={(value) => {
+            if (value !== "draft" && fields.publishedAt && !publishedAt) {
+              setValue("publishedAt", new Date().toISOString(), {
+                shouldDirty: true,
+                shouldTouch: true,
+                shouldValidate: true,
+              });
+            }
+          }}
         />
       ) : null}
 
       {showAccordion ? (
-        <Accordion
-          type="single"
-          collapsible
-          className="border-t border-gray-200"
-        >
+        <Accordion type="single" collapsible>
           <AccordionItem value="meta">
-            <AccordionTrigger className="my-3 rounded border border-gray-200 bg-gray-50 px-3 py-2 hover:no-underline">
+            <AccordionTrigger className="rounded border border-gray-200 bg-gray-50 px-4 py-2 hover:no-underline">
               <span className="flex min-w-0 flex-1 items-center justify-between gap-3">
                 <span className="text-sm font-medium">{accordionTitle}</span>
                 <span className="truncate text-xs font-normal text-gray-500">
@@ -119,7 +96,7 @@ export default function MetaFields({
             </AccordionTrigger>
             <AccordionContent className="space-y-4">
               {fields.publishedAt ? (
-                <DateField
+                <DateTimeField
                   disabled={isDraft}
                   name="publishedAt"
                   label="Publish On"

@@ -1,8 +1,8 @@
 import { type CheckboxListOptions } from "@kenstack/forms/CheckboxList";
 const roles = [
-  ["admin", "Administrator"],
+  { value: "admin", label: "Administrator" },
 ] as const satisfies CheckboxListOptions;
 
-export type Role = (typeof roles)[number][0];
+export type Role = (typeof roles)[number]["value"];
 
 export default roles;

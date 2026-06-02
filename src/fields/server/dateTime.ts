@@ -1,7 +1,7 @@
 import * as z from "zod";
 import type { ServerFieldDefaults } from ".";
 
-export const dateTimeServerSchema = z.union([
+const dateTimeServerSchema = z.union([
   z.date(),
   z.string().datetime({ precision: 3 }).transform((value) => new Date(value)),
   z.literal("").transform(() => null),

@@ -27,9 +27,9 @@ const visibilityIcons = {
 } satisfies Record<VisibilityValue, LucideIcon>;
 
 export const visibilityStatusOptions = visibilityOptions.map(
-  ([value, label]) => ({
-    value,
+  ({ label, value }) => ({
+    icon: visibilityIcons[value],
     label,
-    Icon: visibilityIcons[value],
+    value,
   }),
 );

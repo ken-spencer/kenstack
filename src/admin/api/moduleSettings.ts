@@ -3,22 +3,31 @@ import { eq } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
 
 import { pipelineStage } from "@kenstack/api";
-import type { ResolvedModuleSettings } from "@kenstack/admin";
+import type { DefinedAdmin, ResolvedModuleSettings } from "@kenstack/admin";
 import { loadRecord, saveRecord } from "@kenstack/fields/records";
 
-export const loadModuleSettingsAction = (module: {
-  name: string;
-  settings: ResolvedModuleSettings;
-}) =>
-  pipelineStage({ role: "admin" }, async ({ response }) => {
-    const { name, settings } = module;
+export const loadModuleSettingsAction = (
+  moduleConfig: DefinedAdmin[string],
+) => {
+  const { name, settings } = moduleConfig;
 
+  if (!settings) {
+    return pipelineStage({ role: "admin" }, async ({ response }) =>
+      response.error(`Module "${name}" does not have settings.`),
+    );
+  }
+
+  return pipelineStage({ role: "admin" }, async ({ response }) => {
     return response.success({
       values: await loadModuleSettings(name, settings),
     });
   });
+};
 
-async function loadModuleSettings(name: string, settings: ResolvedModuleSettings) {
+async function loadModuleSettings(
+  name: string,
+  settings: ResolvedModuleSettings,
+) {
   "use cache";
   cacheTag(settings.cacheTag);
   cacheLife("max");
@@ -42,10 +51,17 @@ async function loadModuleSettings(name: string, settings: ResolvedModuleSettings
 }
 
 export const saveModuleSettingsAction = (
-  name: string,
-  settings: ResolvedModuleSettings,
-) =>
-  pipelineStage(
+  moduleConfig: DefinedAdmin[string],
+) => {
+  const { name, settings } = moduleConfig;
+
+  if (!settings) {
+    return pipelineStage({ role: "admin" }, async ({ response }) =>
+      response.error(`Module "${name}" does not have settings.`),
+    );
+  }
+
+  return pipelineStage(
     {
       schema: z.object({
         values: settings.schema,
@@ -55,7 +71,7 @@ export const saveModuleSettingsAction = (
     },
     async ({ response, data }) => {
       const result = await saveRecord({
-        action: "save-module-settings",
+        actionPrefix: "module-settings",
         table: settings.table,
         fields: settings.fields,
         values: data.values,
@@ -88,3 +104,4 @@ export const saveModuleSettingsAction = (
       return response.success({ values: result.values });
     },
   );
+};

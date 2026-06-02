@@ -1,42 +1,21 @@
-import {
-  integer,
-  pgTable,
-  text,
-  jsonb,
-  timestamp,
-  uniqueIndex,
-} from "drizzle-orm/pg-core";
+import { integer, text, jsonb, uniqueIndex } from "drizzle-orm/pg-core";
+import { defineTable } from "@kenstack/admin/table";
 
-const fields = {
-  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+export const content = defineTable({
+  name: "content",
+  columns: {
+    slug: text("slug").notNull(), // per-page identifier (e.g. "home", "about")
 
-  slug: text("slug").notNull(), // per-page identifier (e.g. "home", "about")
+    title: text("title"),
+    description: text("description"),
+    image: integer("image"),
+    ogImage: integer("og_image"),
+    content: text("content"),
 
-  title: text("title"),
-  description: text("description"),
-  image: integer("image"),
-  ogImage: integer("og_image"),
-  content: text("content"),
+    seoTitle: text("seo_title"),
+    seoDescription: text("seo_description"),
 
-  seoTitle: text("seo_title"),
-  seoDescription: text("seo_description"),
-
-  data: jsonb("data").$type<Record<string, unknown>>(), // custom fields.
-
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date()),
-};
-
-export const content = pgTable(
-  "content",
-  {
-    ...fields,
+    data: jsonb("data").$type<Record<string, unknown>>(), // custom fields.
   },
-  (t) => [uniqueIndex("content_slug_unique").on(t.slug)],
-);
+  extraConfig: (t) => [uniqueIndex("content_slug_unique").on(t.slug)],
+});

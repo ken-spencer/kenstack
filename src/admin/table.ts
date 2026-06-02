@@ -8,6 +8,7 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  varchar,
   boolean,
   type AnyPgTable,
   type PgColumnBuilderBase,
@@ -42,6 +43,15 @@ export const metaColumns = {
   get seoDescription() {
     return text("seo_description").notNull().default("");
   },
+};
+
+export const addressColumns = {
+  addressLine1: text("address_line_1").notNull().default(""),
+  addressLine2: text("address_line_2").notNull().default(""),
+  locality: text("locality").notNull().default(""),
+  regionCode: varchar("region_code", { length: 64 }).notNull().default(""),
+  postalCode: varchar("postal_code", { length: 32 }).notNull().default(""),
+  countryCode: varchar("country_code", { length: 2 }).notNull().default("US"),
 };
 
 export type ExtraTable<
@@ -152,6 +162,9 @@ export type AdminTable = AnyPgTable & {
 export type AdminContentTable = AdminTable & {
   visibility: AnyPgColumn<{ data: "draft" | "published" | "unlisted" }>;
   publishedAt: AnyPgColumn<{ data: Date | null }>;
+};
+
+export type AdminSeoTable = AdminContentTable & {
   ogImage: AnyPgColumn<{ data: number | null }>;
   seoTitle: AnyPgColumn<{ data: string | null }>;
   seoDescription: AnyPgColumn<{ data: string | null }>;

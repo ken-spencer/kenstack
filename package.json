@@ -7,7 +7,8 @@
     "lint": "eslint .",
     "prettier": "npx prettier src --check",
     "prettier:fix": "npm run prettier -- --write",
-    "format": "npm run prettier:fix && npm run lint -- --fix"
+    "format": "npm run prettier:fix && npm run lint -- --fix",
+    "users:add-admin": "tsx --tsconfig ../tsconfig.json ./src/modules/users/scripts/add-admin-user.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1047.0",
@@ -37,6 +38,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
+    "country-region-data": "^4.1.0",
     "date-fns": "^4.1.0",
     "isomorphic-dompurify": "^3.13.0",
     "js-cookie": "^3.0.5",

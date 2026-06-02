@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useState, type ChangeEvent, type DragEvent } from "react";
+import {
+  useCallback,
+  useState,
+  type ChangeEvent,
+  type ComponentProps,
+  type DragEvent,
+} from "react";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 import { Upload, X } from "lucide-react";
 import { twMerge } from "tailwind-merge";
@@ -12,7 +18,6 @@ import { useForm } from "@kenstack/forms/context";
 import getUploadErrorMessage from "@kenstack/forms/getUploadErrorMessage";
 import fetcher from "@kenstack/api/fetcher";
 import { rasterMimeTypes as acceptDefault } from "@kenstack/db/tables/media/mimeTypes";
-import { useAdminEdit } from "@kenstack/admin/Edit/context";
 import ImageDetailsModal, {
   type ImageDetailsValue,
 } from "@kenstack/admin/forms/ImageDetailsModal";
@@ -31,11 +36,14 @@ type MediaRenderProps = {
   accept?: readonly string[];
   className?: string;
   placeholder?: React.ReactNode;
+  canUpload?: boolean;
+  presignedUrlAction?: string;
+  uploadCompleteAction?: string;
 };
 
 type MediaListFieldProps = FieldProps &
-  React.ComponentProps<"div"> &
-  Omit<MediaRenderProps, "apiPath" | "data">;
+  ComponentProps<"div"> &
+  MediaRenderProps;
 
 const buttonClass =
   "inline-flex size-6 items-center justify-center rounded-full border bg-gray-200/80 hover:bg-gray-400";
@@ -46,17 +54,12 @@ export default function MediaListField({
   description,
   ...props
 }: MediaListFieldProps) {
-  const { apiPath, name: adminName } = useAdminEdit();
-  const data = {
-    name: adminName,
-  };
-
   return (
     <Field
       name={name}
       label={label}
       description={description}
-      render={mediaRender({ ...props, apiPath, data })}
+      render={mediaRender(props)}
     />
   );
 }
@@ -67,6 +70,9 @@ const mediaRender = ({
   accept = acceptDefault,
   className,
   placeholder,
+  canUpload = true,
+  presignedUrlAction = "get-presigned-url",
+  uploadCompleteAction = "upload-complete",
 }: MediaRenderProps) =>
   function MediaListFieldRender({
     field,
@@ -94,10 +100,7 @@ const mediaRender = ({
       return Array.isArray(current) ? (current as MediaImage[]) : [];
     };
 
-    const updateLocalImage = (
-      localId: string,
-      image: Partial<MediaImage>,
-    ) => {
+    const updateLocalImage = (localId: string, image: Partial<MediaImage>) => {
       setImages(
         getImages().map((item) =>
           item.localId === localId ? { ...item, ...image } : item,
@@ -115,8 +118,8 @@ const mediaRender = ({
         uploadUrl: string;
         id: string;
       }>(apiPath, {
-        ...(extraData ? extraData : {}),
-        action: "get-presigned-url",
+        ...extraData,
+        action: presignedUrlAction,
         filename: file.name,
         type: file.type,
         fieldname: field.name,
@@ -171,8 +174,8 @@ const mediaRender = ({
         sourceHeight?: number;
         originalUrl?: string;
       }>(apiPath, {
-        ...(extraData ? extraData : {}),
-        action: "upload-complete",
+        ...extraData,
+        action: uploadCompleteAction,
         fieldname: field.name,
         imageId: res.id,
       });
@@ -221,6 +224,10 @@ const mediaRender = ({
     };
 
     const uploadFiles = async (files: FileList | File[]) => {
+      if (!canUpload) {
+        return;
+      }
+
       const acceptedFiles = [...files].filter((file) =>
         accept.includes(file.type),
       );
@@ -325,7 +332,7 @@ const mediaRender = ({
         evt.preventDefault();
         evt.stopPropagation();
 
-        if (evt.dataTransfer.files?.length) {
+        if (canUpload && evt.dataTransfer.files?.length) {
           uploadFiles(evt.dataTransfer.files);
         }
       },
@@ -337,9 +344,10 @@ const mediaRender = ({
         type="file"
         multiple
         accept={acceptStr}
+        disabled={!canUpload}
         onChange={(evt: ChangeEvent<HTMLInputElement>) => {
           const target = evt.currentTarget;
-          if (target.files) {
+          if (canUpload && target.files) {
             uploadFiles(target.files);
             target.value = "";
           }
@@ -437,11 +445,20 @@ const mediaRender = ({
           </div>
         ))}
 
-        <label className="flex size-28 cursor-pointer items-center justify-center rounded border border-dashed border-gray-300 bg-gray-50 text-gray-600 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800">
+        <label
+          className={twMerge(
+            "flex size-28 items-center justify-center rounded border border-dashed border-gray-300 bg-gray-50 text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300",
+            canUpload
+              ? "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+              : "cursor-not-allowed opacity-50",
+          )}
+        >
           {value.length ? (
             <Upload className="size-8" />
           ) : (
-            placeholder ?? <AddImageIcon className="h-16 w-16 text-gray-600" />
+            (placeholder ?? (
+              <AddImageIcon className="h-16 w-16 text-gray-600" />
+            ))
           )}
           {input}
         </label>

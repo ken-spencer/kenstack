@@ -1,33 +1,29 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
+import Progress from "@kenstack/components/Progress";
 import AdminList from "@kenstack/admin/List";
 import Edit from "@kenstack/admin/Edit";
 import { deps } from "@app/deps";
-import { type DefinedAdmin } from ".";
 
-type AdminServerProps = {
-  context: {
-    params: Promise<{ admin: [string, string?] }>;
-  };
-  adminConfig: DefinedAdmin;
+type AdminPageContext = {
+  params: Promise<{ admin: [string, string?] }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-type AdminPageContext = AdminServerProps["context"];
+type AdminServerProps = {
+  context: AdminPageContext;
+};
 
-export function createAdminPage({
-  adminConfig,
-}: {
-  adminConfig: DefinedAdmin;
-}) {
+export function createAdminPage() {
   return function AdminPage(context: AdminPageContext) {
-    return <AdminServer context={context} adminConfig={adminConfig} />;
+    return <AdminServer context={context} />;
   };
 }
 
 export default function AdminServer(props: AdminServerProps) {
   return (
     <div>
-      <Suspense>
+      <Suspense fallback={<Progress className="my-16" />}>
         <AdminServerCore {...props} />
       </Suspense>
     </div>
@@ -35,8 +31,7 @@ export default function AdminServer(props: AdminServerProps) {
 }
 
 async function AdminServerCore({
-  context: { params },
-  adminConfig: admin,
+  context: { params, searchParams },
 }: AdminServerProps) {
   const { admin: adminRoute } = await params;
 
@@ -46,14 +41,17 @@ async function AdminServerCore({
 
   const [name, id] = adminRoute;
 
-  if (id && id !== "new" && !id.match(/^[0-9]+$/)) {
+  if (id && id !== "new" && !/^\d+$/.test(id)) {
     notFound();
   }
-  const isNew = id === "new";
 
-  const moduleConfig = admin[name];
+  const isNew = id === "new";
+  const parsedId = id && !isNew ? Number(id) : undefined;
+
+  const moduleConfig = deps.modules[name];
   const adminConfig = moduleConfig?.admin;
   const clientConfig = moduleConfig?.client;
+
   if (!moduleConfig || !adminConfig || !clientConfig) {
     notFound();
   }
@@ -61,53 +59,35 @@ async function AdminServerCore({
   const user = await deps.auth.requireUser("admin");
   const Icon = moduleConfig.icon;
 
+  if (!("list" in adminConfig) && id) {
+    notFound();
+  }
+
   return (
     <div>
       <div className="text-md mx-auto mb-2 flex items-center justify-center gap-4 text-gray-700 md:hidden">
         {Icon && <Icon className="size-4 text-gray-800" />}
         <span className="font-bold">{moduleConfig.title}</span>
       </div>
-      {(() => {
-        if ("list" in adminConfig) {
-          if (!isNew && !id) {
-            return (
-              <AdminList
-                name={name}
-                adminConfig={adminConfig}
-                basePath={
-                  adminConfig.preview ? moduleConfig.basePath : undefined
-                }
-                clientConfig={clientConfig}
-                userId={user.id}
-              />
-            );
-          }
-
-          return (
-            <Edit
-              id={id ? parseInt(id) : undefined}
-              isNew={isNew}
-              name={name}
-              adminConfig={adminConfig}
-              clientConfig={clientConfig}
-              userId={user.id}
-            />
-          );
-        }
-
-        if (id) {
-          notFound();
-        }
-
-        return (
-          <Edit
-            name={name}
-            adminConfig={adminConfig}
-            clientConfig={clientConfig}
-            userId={user.id}
-          />
-        );
-      })()}
+      {"list" in adminConfig && !isNew && !id ? (
+        <AdminList
+          name={name}
+          adminConfig={adminConfig}
+          basePath={adminConfig.preview ? moduleConfig.basePath : undefined}
+          clientConfig={clientConfig}
+          searchParams={await searchParams}
+          userId={user.id}
+        />
+      ) : (
+        <Edit
+          id={"list" in adminConfig ? parsedId : undefined}
+          isNew={"list" in adminConfig ? isNew : undefined}
+          name={name}
+          adminConfig={adminConfig}
+          clientConfig={clientConfig}
+          userId={user.id}
+        />
+      )}
     </div>
   );
 }

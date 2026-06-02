@@ -21,6 +21,7 @@ type InputProps = React.ComponentProps<"input"> &
 export default function SlugField({
   name,
   label,
+  help,
   description,
   className,
   inputClass,
@@ -54,6 +55,7 @@ export default function SlugField({
     <Field
       name={name}
       label={label}
+      help={help}
       description={description}
       className={className}
       render={({ field }) => (

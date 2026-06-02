@@ -63,7 +63,7 @@ export function LoginForm() {
           ? await executeRecaptcha("login")
           : null;
         return mutation
-          .mutateAsync({ ...data, recaptchaToken, _action: "login" })
+          .mutateAsync({ ...data, recaptchaToken, action: "login" })
           .then((res) => {
             if (res.status === "success") {
               form.reset();

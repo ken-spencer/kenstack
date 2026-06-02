@@ -2,7 +2,7 @@ import { deps } from "@app/deps";
 import { pipeline, pipelineStage, type PipelineOptions } from "@kenstack/api";
 
 export const logoutPipeline = () => (options: PipelineOptions) =>
-  pipeline(options, [logout()]);
+  pipeline(options, logout());
 
 export const logout = () =>
   pipelineStage({}, async ({ response }) => {

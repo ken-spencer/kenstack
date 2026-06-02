@@ -28,18 +28,18 @@ export default function VisibilityStatus({
     return null;
   }
 
-  const { Icon } = option;
+  const { icon: Icon, label, value } = option;
 
   return (
     <div
       className={cn(
         "inline-flex h-7 w-7 items-center justify-center rounded border text-xs sm:w-auto sm:gap-1.5 sm:px-2",
-        statusClassNames[option.value],
+        statusClassNames[value],
         className,
       )}
     >
       <Icon className="size-3.5" />
-      <span className="hidden sm:inline">{option.label}</span>
+      <span className="hidden sm:inline">{label}</span>
     </div>
   );
 }

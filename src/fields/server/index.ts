@@ -9,11 +9,13 @@ import type { TagsTable } from "@kenstack/db/tables/tags";
 import type { Relationship } from "../relationships";
 import { booleanField } from "./boolean";
 import { checkboxListField } from "./checkboxList";
+import { dateField } from "./date";
 import { dateTimeField } from "./dateTime";
 import { imageField } from "./image";
 import { textField } from "./text";
 export { booleanField } from "./boolean";
 export { checkboxListField } from "./checkboxList";
+export { dateField } from "./date";
 export { dateTimeField } from "./dateTime";
 export { imageField } from "./image";
 export { mediaListField } from "./mediaList";
@@ -29,6 +31,12 @@ type SelectValue = TableColumns[string] | SQL;
 export type FieldAfterSave = (tx: TransactionDb) => Promise<unknown>;
 type FieldSaveTable = AnyPgTable & {
   id: AnyPgColumn<{ data: number; notNull: true }>;
+};
+
+type FieldFilterOption = {
+  description?: string;
+  label: string;
+  value: string;
 };
 
 export type FieldLoadContext = {
@@ -90,11 +98,7 @@ export type FieldFilterConfig =
     }
   | {
       kind: "enum" | "includes";
-      options: readonly (readonly [
-        value: string,
-        label: string,
-        description?: string,
-      ])[];
+      options: readonly FieldFilterOption[];
     };
 
 export type FieldBehavior = {
@@ -199,6 +203,10 @@ function getDefaultServerField(field: DefinedField): ServerFieldDefaults {
 
   if (field.kind === "datetime") {
     return dateTimeField();
+  }
+
+  if (field.kind === "date") {
+    return dateField();
   }
 
   if (field.kind === "boolean") {

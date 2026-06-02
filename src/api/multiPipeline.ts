@@ -1,21 +1,14 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { type FetchError } from "./fetcher";
-// import { type PipelineAction } from ".";
 import { pipeline, type PipelineOptions } from ".";
 import isPlainObject from "lodash-es/isPlainObject";
 
-type Options = {
-  request: NextRequest;
-} & Record<string, unknown>;
-
-type Actions = [
-  string,
-  (options: PipelineOptions) => ReturnType<typeof pipeline>,
-][];
-
 export default async function multiPipeline(
-  options: Options,
-  actions: Actions,
+  options: PipelineOptions & Record<string, unknown>,
+  actions: Record<
+    string,
+    (options: PipelineOptions) => ReturnType<typeof pipeline>
+  >,
 ) {
   const { request } = options;
   const contentType = request.headers.get("content-type");
@@ -34,13 +27,13 @@ export default async function multiPipeline(
     return NextResponse.json(
       {
         status: "error",
-        message: `Invalid JSON a plain object is expected`,
+        message: "Invalid JSON. A plain object is expected.",
       } satisfies FetchError,
       { status: 400 },
     );
   }
 
-  const { _action: actionName, ...json } = rawJson;
+  const { action: actionName, ...json } = rawJson;
 
   if (typeof actionName !== "string" || actionName.length === 0) {
     return NextResponse.json(
@@ -52,9 +45,11 @@ export default async function multiPipeline(
     );
   }
 
-  const actionTuple = actions.find(([key]) => actionName === key);
+  const actionItem = Object.hasOwn(actions, actionName)
+    ? actions[actionName]
+    : undefined;
 
-  if (!actionTuple) {
+  if (!actionItem) {
     return NextResponse.json(
       {
         status: "error",
@@ -64,6 +59,5 @@ export default async function multiPipeline(
     );
   }
 
-  const [, actionItem] = actionTuple;
   return await actionItem({ ...options, json });
 }

@@ -1,7 +1,5 @@
 import { useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-// import FormContainer from "@kenstack/forms/FormContainer";
-// import useForm from "@kenstack/forms/useForm";
 import Form from "@kenstack/forms/Form";
 import fetcher from "@kenstack/api/fetcher";
 
@@ -21,8 +19,8 @@ export default function AdminEditForm({
     useAdminEdit();
   const loadTarget = single ? name : id;
   const basePathname = useMemo(() => {
-    const parts = pathname.split("/").filter(Boolean); // removes empty strings
-    parts.pop(); // remove last segment
+    const parts = pathname.split("/").filter(Boolean);
+    parts.pop();
     return "/" + parts.join("/");
   }, [pathname]);
 
@@ -46,29 +44,22 @@ export default function AdminEditForm({
       }}
       onSuccess={(data, variables, { form }) => {
         queryClient.invalidateQueries({ queryKey: ["admin-list"] });
-        queryClient.setQueryData(["admin-edit", name, loadTarget], {
-          status: "success",
-          id: data.id,
-          item: data.values,
-        });
         queryClient.removeQueries({
           queryKey: ["admin-edit", name, loadTarget, "revisions"],
           exact: true,
         });
 
-        if (variables.submitter === "list") {
-          router.push(
-            basePathname + (searchParams.size ? "?" + searchParams : ""),
-          );
-        } else if (variables.submitter === "new") {
-          if (isNew) {
+        if (
+          typeof variables.submitter === "string" &&
+          variables.submitter.startsWith("/")
+        ) {
+          const currentPath =
+            pathname + (searchParams.size ? "?" + searchParams : "");
+
+          if (variables.submitter === currentPath) {
             form.reset(defaultValues);
           } else {
-            router.push(
-              basePathname +
-                "/new" +
-                (searchParams.size ? "?" + searchParams : ""),
-            );
+            router.push(variables.submitter);
           }
         } else if (isNew) {
           router.push(

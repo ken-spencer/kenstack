@@ -4,7 +4,9 @@ import React, { createContext, useContext, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { AdminFilterMeta, AdminSortMeta } from "@kenstack/admin";
 import {
+  createDefaultListQueryState,
   createListQueryStoreSchema,
+  parseListPage,
   type ListQueryStoreState,
 } from "@kenstack/admin/lib/listQuerySchema";
 import type { FetchResult } from "@kenstack/api/fetcher";
@@ -27,6 +29,7 @@ type AdminListProps = {
   name: string;
   sort: AdminSortMeta[];
   filter: AdminFilterMeta[];
+  initialData?: AdminListQueryData;
   children: React.ReactNode;
 };
 
@@ -66,6 +69,7 @@ export function AdminListProvider({
   name,
   sort,
   filter,
+  initialData,
   children,
 }: AdminListProps) {
   const client = clientConfig.admin;
@@ -74,14 +78,7 @@ export function AdminListProvider({
   }
 
   const [selected, setSelected] = useState<number[]>([]);
-  const defaultSort = sort[0];
-  const defaultFilterState = {
-    keywords: "",
-    trash: false,
-    sort: defaultSort?.name ?? "createdAt",
-    direction: defaultSort?.defaultDirection ?? "desc",
-    filters: {},
-  } satisfies ListQueryStoreState;
+  const defaultFilterState = createDefaultListQueryState(sort);
   const [filters, debouncedFilters, setFilters] =
     useQueryStore<ListQueryStoreState>(defaultFilterState, {
       schema: createListQueryStoreSchema({
@@ -92,7 +89,7 @@ export function AdminListProvider({
     });
 
   const searchParams = useSearchParams();
-  const page = parsePage(searchParams.get("page"));
+  const page = parseListPage(searchParams.get("page"));
 
   const apiPath = "/api/admin/";
 
@@ -115,6 +112,8 @@ export function AdminListProvider({
         page,
       }),
     queryKey,
+    initialData,
+    staleTime: 60 * 1000,
     placeholderData: (prev) => prev,
   });
 
@@ -140,11 +139,6 @@ export function AdminListProvider({
       {children}
     </AdminListContext.Provider>
   );
-}
-
-function parsePage(value: string | null) {
-  const page = Number(value ?? 1);
-  return Number.isInteger(page) && page > 0 ? page : 1;
 }
 
 export function useAdminList() {

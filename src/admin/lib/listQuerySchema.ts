@@ -20,6 +20,25 @@ export type ListQueryStoreState = {
   filters: Record<string, unknown>;
 };
 
+export function createDefaultListQueryState(sort: AdminSortMeta[]) {
+  const defaultSort = sort[0];
+
+  return {
+    keywords: "",
+    trash: false,
+    sort: defaultSort?.name ?? "createdAt",
+    direction: defaultSort?.defaultDirection ?? "desc",
+    filters: {},
+  } satisfies ListQueryStoreState;
+}
+
+export function parseListPage(value: string | string[] | null | undefined) {
+  const rawValue = Array.isArray(value) ? value[0] : value;
+  const page = Number(rawValue ?? 1);
+
+  return Number.isInteger(page) && page > 0 ? page : 1;
+}
+
 export function createListQueryStoreSchema({
   filters,
   sort,
@@ -102,7 +121,11 @@ function getFilterObjectSchema(filters: AdminFilterMeta[]) {
     )
     .partial()
     .strip()
-    .transform(compactFilters)
+    .transform((filters) =>
+      Object.fromEntries(
+        Object.entries(filters).filter(([, value]) => hasFilterValue(value)),
+      ),
+    )
     .catch({});
 }
 
@@ -134,12 +157,6 @@ function getFilterInputSchema(filter: AdminFilterMeta) {
 
 function getDateFilterDateSchema() {
   return z.string().max(maxDateFilterLength).optional().catch(undefined);
-}
-
-function compactFilters(filters: Record<string, unknown>) {
-  return Object.fromEntries(
-    Object.entries(filters).filter(([, value]) => hasFilterValue(value)),
-  );
 }
 
 function hasFilterValue(value: unknown) {

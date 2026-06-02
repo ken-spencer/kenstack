@@ -12,8 +12,8 @@ import {
 } from "@kenstack/components/ui/sidebar";
 import { AppSidebar } from "./app-sidebar";
 import AccountMenu from "@kenstack/components/AccountMenu";
-import { type DefinedAdmin } from "@kenstack/admin";
 import NavLink from "./NavLink";
+import { deps } from "@app/deps";
 
 import Content from "./Content";
 
@@ -42,7 +42,6 @@ function NavLinkFallback({
 
 type AdminSidebarProps = {
   accountMenu?: React.ReactNode;
-  admin: DefinedAdmin;
   logo?: React.ReactNode;
   children: React.ReactNode;
 };
@@ -63,13 +62,12 @@ async function AdminSidebarLoader(props: AdminSidebarProps) {
 }
 
 function AdminSidebarContent({
-  admin,
   accountMenu,
   logo,
   children,
   defaultOpen,
 }: AdminSidebarProps & { defaultOpen: boolean }) {
-  const adminModules = Object.entries(admin).flatMap(([name, module]) => {
+  const adminModules = Object.entries(deps.modules).flatMap(([name, module]) => {
     if (!module.admin) {
       return [];
     }

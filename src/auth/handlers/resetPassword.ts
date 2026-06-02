@@ -18,7 +18,7 @@ class TransactionError extends Error {
 }
 
 export const resetPasswordPipeline = () => (options: PipelineOptions) =>
-  pipeline(options, [resetPasswordAction]);
+  pipeline(options, resetPasswordAction);
 
 const resetPasswordAction = pipelineStage(
   { schema },

@@ -4,17 +4,15 @@ import { type ZodObject } from "zod";
 
 import React, { createContext, useContext, useMemo } from "react";
 import { usePathname } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
 
-import fetcher from "@kenstack/api/fetcher";
-import Alert from "@kenstack/components/Alert";
-import Progress from "@kenstack/components/Progress";
 import EditForm from "./Form";
 import { AdminClient, type ClientConfig, PreviewPath } from "..";
+import type { AdminEditItem } from "@kenstack/admin/queries/load";
 
 type AdminEditProps = {
   name: string;
   id?: number;
+  item: AdminEditItem | null;
   isNew: boolean;
   single: boolean;
   userId: number;
@@ -24,13 +22,6 @@ type AdminEditProps = {
   children: React.ReactNode;
   preview?: PreviewPath;
 };
-
-type EditItem = {
-  id: number;
-  createdAt: string;
-  updatedAt: string;
-  deletedAt?: string | null;
-} & Record<string, unknown>;
 
 type AdminEditContext = {
   name: string;
@@ -42,7 +33,7 @@ type AdminEditContext = {
   canUpload: boolean;
   apiPath: string;
   listPath: string;
-  item: null | EditItem;
+  item: null | AdminEditItem;
   defaultValues: Record<string, unknown>;
   schema: ZodObject;
   preview?: PreviewPath;
@@ -53,6 +44,7 @@ const AdminEditContext = createContext<AdminEditContext | null>(null);
 export function AdminEditProvider({
   name,
   id,
+  item,
   isNew,
   single,
   userId,
@@ -70,45 +62,11 @@ export function AdminEditProvider({
   const pathname = usePathname();
   const apiPath = "/api/admin";
   const listPath = useMemo(() => {
-    const parts = pathname.split("/").filter(Boolean); // removes empty strings
-    parts.pop(); // remove last segment
+    const parts = pathname.split("/").filter(Boolean);
+    parts.pop();
     return "/" + parts.join("/");
   }, [pathname]);
-  const loadTarget = single ? name : id;
 
-  const { data, error, isPending } = useQuery({
-    queryFn: () =>
-      fetcher<{ item: EditItem }>(apiPath, {
-        name,
-        action: "load",
-        id: single ? undefined : id,
-      }),
-    queryKey: ["admin-edit", name, loadTarget],
-    enabled: !!loadTarget,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-  });
-
-  if (loadTarget) {
-    if (error) {
-      return <Alert className="my-2">{error.message}</Alert>;
-    }
-
-    if (isPending) {
-      return <Progress className="my-16" />;
-    }
-
-    if (data.status === "error") {
-      return <Alert className="my-2" {...data} />;
-    }
-    defaultValues = data.item;
-  }
-
-  const item =
-    loadTarget && data?.status === "success" && data.item.id
-      ? data.item
-      : null;
   const values: AdminEditContext = {
     name,
     client,
@@ -120,7 +78,7 @@ export function AdminEditProvider({
     listPath,
     userId: userId,
     item,
-    defaultValues,
+    defaultValues: item ?? defaultValues,
     schema: client.schema,
     preview,
   };

@@ -23,20 +23,19 @@ export const pageEditAction = () =>
       const { slug } = data;
 
       const result = await saveRecord({
-        action: "page-editor",
+        actionPrefix: "page-editor",
         table: content,
         fields: pageEditorServerFields,
         values: data.values,
         changes: data.changes,
         revalidate: [() => `content:${slug}`],
-        query: async ({ tx, data, select }) => {
+        query: async ({ tx, data, select, user }) => {
           const [row] = await tx
             .insert(content)
             .values({
               slug,
+              createdBy: user.id,
               ...data,
-              createdAt: new Date(),
-              updatedAt: new Date(),
             })
             .onConflictDoUpdate({
               target: content.slug,

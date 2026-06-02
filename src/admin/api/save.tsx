@@ -1,12 +1,20 @@
 import { pipelineStage } from "@kenstack/api";
-import type { AnyAdminConfig } from "..";
+import type { DefinedAdmin } from "..";
 
 import * as z from "zod";
 
-import { saveRecord } from "@kenstack/fields/records";
+import { saveAdminRecord } from "@kenstack/admin/queries/save";
 
-export const saveAction = (name: string, adminConfig: AnyAdminConfig) =>
-  pipelineStage(
+export const saveAction = (moduleConfig: DefinedAdmin[string]) => {
+  const { name, admin: adminConfig } = moduleConfig;
+
+  if (!adminConfig) {
+    return pipelineStage({ role: "admin" }, async ({ response }) =>
+      response.error(`Module "${name}" does not have admin records.`),
+    );
+  }
+
+  return pipelineStage(
     {
       role: "admin",
       schema: z.object({
@@ -19,45 +27,12 @@ export const saveAction = (name: string, adminConfig: AnyAdminConfig) =>
     async ({ response, data: rawData }) => {
       const { changes, id, values } = rawData;
 
-      const result =
-        !("list" in adminConfig)
-          ? await saveRecord({
-              action: id ? "update" : "insert",
-              table: adminConfig.table,
-              fields: adminConfig.fields,
-              values,
-              changes: id ? changes : undefined,
-              id,
-              revalidate: adminConfig.revalidate,
-              query: async ({ tx, data, select, user }) => {
-                const [row] = await tx
-                  .insert(adminConfig.table)
-                  .values({
-                    key: name,
-                    createdBy: user.id,
-                    ...data,
-                  })
-                  .onConflictDoUpdate({
-                    target: adminConfig.table.key,
-                    set: {
-                      ...data,
-                      updatedAt: new Date(),
-                    },
-                  })
-                  .returning(select);
-
-                return row;
-              },
-            })
-          : await saveRecord({
-              action: id ? "update" : "insert",
-              table: adminConfig.table,
-              fields: adminConfig.fields,
-              values,
-              changes: id ? changes : undefined,
-              id,
-              revalidate: adminConfig.revalidate,
-            });
+      const result = await saveAdminRecord({
+        changes,
+        id,
+        moduleConfig,
+        values,
+      });
 
       if (result.status === "error") {
         return response.error(result.error);
@@ -69,3 +44,4 @@ export const saveAction = (name: string, adminConfig: AnyAdminConfig) =>
       });
     },
   );
+};

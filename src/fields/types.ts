@@ -3,10 +3,12 @@ import type * as z from "zod";
 
 export type FieldKind =
   | "text"
+  | "number"
   | "email"
   | "textarea"
   | "markdown"
   | "boolean"
+  | "date"
   | "datetime"
   | "checkbox-list"
   | "image"
@@ -25,8 +27,19 @@ export type FieldDisplay = (
   ctx: FieldDisplayContext,
 ) => Promise<unknown> | unknown;
 
+export type FieldRecordRefinement = (
+  values: Record<string, unknown>,
+  ctx: z.RefinementCtx,
+) => void;
+
 type FieldOptionMarker = {
   __kenstackField: true;
+};
+
+export type FieldInputOption = {
+  description?: string;
+  label: string;
+  value: string;
 };
 
 export type FieldOption<
@@ -39,11 +52,8 @@ export type FieldOption<
   component?: FieldComponent;
   label?: string;
   description?: string;
-  options?: readonly (readonly [
-    value: string,
-    label: string,
-    description?: string,
-  ])[];
+  options?: readonly FieldInputOption[];
+  recordRefinement?: FieldRecordRefinement;
   searchable?: boolean;
   revisions?: boolean;
   list?: boolean | "square" | "original";
@@ -62,11 +72,7 @@ export type FieldComponentProps = {
   name: string;
   label: string;
   description?: string;
-  options?: readonly (readonly [
-    value: string,
-    label: string,
-    description?: string,
-  ])[];
+  options?: readonly FieldInputOption[];
 };
 
 export type FieldComponent = ComponentType<FieldComponentProps>;
@@ -81,11 +87,8 @@ type DefinedFieldBase<
   component?: FieldComponent;
   label?: string;
   description?: string;
-  options?: readonly (readonly [
-    value: string,
-    label: string,
-    description?: string,
-  ])[];
+  options?: readonly FieldInputOption[];
+  recordRefinement?: FieldRecordRefinement;
   searchable: boolean;
   revisions: boolean;
   list?: boolean | "square" | "original";

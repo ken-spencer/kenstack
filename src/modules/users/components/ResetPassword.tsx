@@ -13,7 +13,7 @@ export default function ResetPassword() {
   const { id } = useAdminEdit();
   const mutation = useMutation({
     mutationFn: () =>
-      fetcher("/api/auth", { _action: "send-password-reset", userId: id }),
+      fetcher("/api/auth", { action: "send-password-reset", userId: id }),
   });
 
   if (!id) {

@@ -46,7 +46,7 @@ export const defineUsersTable = <
     extraConfig: (t) => [
       uniqueIndex("users_email_unique_active")
         .on(sql`lower(${t.email})`)
-        .where(sql`${t.deletedAt} IS NULL`),
+        .where(sql`${t.deletedAt} IS NULL AND ${t.email} <> ''`),
       index("users_org_deleted_at_idx")
         .on(t.deletedAt)
         .where(sql`${t.deletedAt} IS NOT NULL`),

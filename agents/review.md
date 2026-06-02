@@ -4,33 +4,64 @@ Use this checklist before finalizing code changes. It is meant to catch project 
 
 ## Type Shape
 
+- List every new or changed local `type` alias, interface, overload, generic, and cast in each touched TypeScript file. Keep each one only if it is exported, reused, materially simplifies a noisy function signature, documents a real domain contract, or protects a real generic/external boundary.
+- Inline one-use private shapes instead of creating names such as `SavedRow`, `Result`, `Error`, `Options`, `Query`, or `Callback` when the name only repeats the surrounding function or file context.
+- Do not leave a top-of-file type block just because a file has several typed values. Prefer inference and inline function-boundary object types unless a named type earns its place.
 - Remove casts that can be replaced cleanly with inference, a type guard, Zod parsing, or `satisfies`.
 - Keep necessary casts narrow and at real generic, Drizzle, React polymorphic, or untyped external boundaries.
 - Prefer inferred return types when the implementation already expresses the type clearly.
 - Prefer `satisfies` for validating returned object shapes without forcing a function return annotation.
 - Check `Resolved*`, `Defined*`, and similarly named output types that mirror a builder or resolver. Prefer deriving broad consumer types from `ReturnType<typeof builder>` or letting the call site infer the specific shape; keep a named resolved type only when it is reused independently or documents a real public contract that cannot be inferred cleanly.
+- Check newly shared types. If consumers only overlap partially, or allowed properties are ignored by some consumers, prefer local shapes or narrower variants over one broad shared type.
 - Do not specify component or form generics at call sites when props and callbacks can infer them.
 - Do not add runtime throws, guards, or branches only to satisfy a TypeScript tuple, generic, or narrowing shape. If the runtime can handle the value gracefully, fix the type boundary or move validation to the caller that actually requires the stricter invariant.
 
 ## Local Code Shape
 
 - Remove single-use variables that only rename a direct call, property access, or simple expression.
+- Remove generic temporary variables that merge distinct cases only to feed a nearby branch or call. Prefer explicit branches when the cases have different domain meanings, such as separate list-record and single-record cache targets.
 - Move immediate follow-up mutations into the initial array or object declaration when the value is unconditional.
 - Remove intermediate arrays or objects that only name one step in a fluent transformation before being immediately consumed.
+- Check string construction. Prefer plain concatenation when it is clearer than a template literal wrapped around short fragments or conditionals; keep template literals when interpolation improves readability.
 - Remove JSX fragments with zero or one meaningful child; return the child directly instead.
 - Check repeated loops over the same collection. Combine them when one pass can gather the needed values without making the code harder to read.
 - Remove pass-through helpers, wrappers, constants, and barrels unless they reduce real repeated complexity or expose a requested public API.
+- Keep data loading at the narrowest boundary that consumes the data. Avoid aggregate helpers that return mixed concerns, such as config, auth state, routing decisions, and page-specific records, just to simplify a parent. Extract a loader only when it owns a clear cache/API boundary, is reused, or gives a specific data shape a clear name.
+- Avoid rename-only or move-only churn. Preserve existing local type names, variable names, and declaration placement unless the new name or location makes a real behavior, ownership, or API boundary clearer.
 - Avoid thin wrappers around stable library APIs when the wrapper only renames the library function or hides a one-line call. Keep a wrapper only when it enforces project policy, preserves a boundary such as server/client separation, normalizes repeated nontrivial behavior, or isolates an unstable dependency.
 - Do not pass through unused option fields just because a shared options type supports them. Keep function parameters to the fields the function reads, and split or narrow option types when forwarding extra fields would obscure ownership.
 - Before keeping local string/date/collection formatting logic, check whether an existing installed utility already owns that behavior, such as `lodash-es`, `pluralize`, `date-fns`, `chrono-node`, or `validator`.
-- Check one-line `is*`, `get*`, and `has*` helpers. Remove them when they only hide a direct discriminator check, property lookup, or local ternary and do not provide meaningful reuse, validation, or type narrowing across an unsafe boundary.
+- Check one-line `is*`, `get*`, and `has*` helpers. Remove them when they only hide a direct discriminator check, property lookup, or local ternary and do not provide meaningful reuse, validation, or type narrowing across an unsafe boundary. This includes wrappers around query/API result statuses, such as `isSuccess(data)` for `data?.status === "success"`.
 - When touching a file, review nearby private helpers that predate the current change. Inline helpers that only return an optional property, defaulted object, mapped key list, or one local branch. Keep helpers that provide real generic narrowing, validation of external/unknown data, shared behavior, or a meaningful domain boundary.
 - Review each newly added function, type, helper, and local alias one by one. Keep it only if it meaningfully improves inference, readability, reuse, validation, or a real boundary; remove it if it merely renames a direct expression, works around a local type issue, or anticipates future use.
 - Review types with `Base` in the name. Keep them only when the shared base is meaningfully reused and makes the composed types easier to understand; inline them when they only factor out one small property group or exist for anticipated reuse.
 - Flatten nested guard `if` statements when the inner branch only returns, throws, continues, or breaks and the combined condition remains readable.
+- Check adjacent JSX branches that return the same wrapper component with only small prop or child differences. Collapse the common wrapper when it stays readable, such as rendering a `Link` child only for the enabled case instead of duplicating the surrounding button.
+- Check factory or maker functions whose body only returns a value such as `pipelineStage(...)`. Prefer concise arrow returns unless the function needs setup, branching, or named intermediate values.
 - Inline typed configuration objects at the typed call site so contextual typing and excess property checks work there.
+- Check styling props. If a prop only toggles a small class preset, prefer `className`, composition, or a local wrapper over component-specific mode props.
 - Avoid creating alternate return shapes, enhanced schemas, or parallel config objects when the original can be defined correctly at the point of use.
 - Do not split simple local logic into builder, mapper, normalizer, converter, or adapter functions unless the split removes meaningful repeated complexity.
+
+## Cleanup Definition
+
+Cleanup means making already-touched code simpler, clearer, or more consistent without changing behavior, ownership, or API shape.
+
+Good cleanup:
+
+- Remove dead comments, unused variables, and stale imports.
+- Inline one-use helpers or types that only rename a direct expression.
+- Apply mechanical shape changes consistently, such as option tuple to object entries.
+- Fix typos, formatting drift, and obvious duplicated branches.
+
+Not cleanup:
+
+- Adding runtime indirection, dynamic imports, wrappers, compatibility shims, or new abstractions solely to satisfy a local check.
+- Making site-bound code generic inside Kenstack when the direct site dependency is the real contract.
+- Moving complexity to another file instead of removing it.
+- Broadening public APIs or ownership boundaries for anticipated reuse.
+
+If a check fails because the check scope does not match the code's intended runtime context, prefer fixing the check scope or calling out the mismatch instead of adding ceremony to the code.
 
 ## Field And Form Behavior
 
@@ -45,13 +76,18 @@ Use this checklist before finalizing code changes. It is meant to catch project 
 - Put support code in existing secondary folders such as `lib`, `components`, `api`, or `fields`.
 - Do not put module infrastructure in `modules`; that folder is for actual modules and module-owned files.
 - Do not add compatibility shims, pass-through re-exports, or barrels unless explicitly requested or already established as a public API.
+- If a rename or API shape change only touches uncommitted work, remove old names directly. Do not preserve compatibility aliases or temporary exports for code that has not shipped.
 
 ## Behavior
 
 - Preserve existing capabilities such as caching, validation, permissions, publishing rules, extension points, query behavior, and revalidation.
 - Keep cache tags near `"use cache"` and `cacheLife(...)` as high in the function as behavior allows.
 - Do not remove configurability or behavior to make a cleanup easier without confirming first.
+- Check pipeline actions for guard-only stages that just return an error. Prefer one normal stage with the guard inside the handler unless the separate stage materially changes auth, schema parsing, or external behavior.
+- Check `useEffect` usage, especially around React Query. Effects should synchronize with an external system; avoid effects that only mirror derived state, inspect query data/errors, log results, or perform work that belongs in query/mutation callbacks, route actions, or explicit event handlers.
+- Check local `mounted`, `active`, and `cancelled` flags in effects. Remove them when they only guard a one-shot async state update after unmount; keep cleanup when it cancels a real external resource or prevents stale results from competing effect inputs.
 - Check whether client and server parse the same payload, query state, filters, or form values with separate schemas. Share the common schema or schema helper where possible so validation and coercion do not drift.
+- Keep URL/search-param parsing at the loader or action boundary. Server components should pass raw `searchParams` to the query loader instead of rebuilding list/query objects at the render call site.
 - Check hand-written validators and `value is ...` guards against existing Zod schemas. Prefer the canonical schema for submitted data unless the guard is only a lightweight UI/rendering branch.
 - Check field lifecycle behavior for duplicate schema parsing. If the action pipeline already parsed the payload, do not parse again inside the handler; use the parsed value shape at the lifecycle boundary.
 - Check for placeholders, dummy values, temporary review states, test-only copy, fake data, and scaffold comments. Remove them before finalizing unless the user explicitly asked to keep them.

@@ -1,4 +1,5 @@
 export * from "./types";
+export * from "./address";
 export * from "./relationshipSchema";
 export * from "./defineFields";
 export * from "./createZodSchema";

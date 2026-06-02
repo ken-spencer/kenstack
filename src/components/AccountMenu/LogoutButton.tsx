@@ -15,7 +15,7 @@ export default function LogoutButton() {
       tabIndex={-1} // stop Safari from automatically putting a focus style on this button
       onClick={() => {
         fetcher("/api/auth", {
-          _action: "logout",
+          action: "logout",
         }).then((data) => {
           if (data?.status === "error") {
             window.alert(data.message);

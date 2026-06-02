@@ -21,7 +21,9 @@ export function AppSidebar({ content }: { content: React.ReactNode }) {
         <div className="flex items-center justify-between px-2 pt-1">
           <div className="flex items-center gap-2">
             <SidebarTrigger className={isMobile ? "hidden" : ""} />
-            <KenstackLogo className="h-9 w-auto group-data-[collapsible=icon]:hidden" />
+            <div className="flex h-9 items-center group-data-[collapsible=icon]:hidden">
+              <KenstackLogo className="h-9 w-auto" />
+            </div>
           </div>
           <Button
             className={isMobile ? "" : "hidden"}
