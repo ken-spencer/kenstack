@@ -217,7 +217,11 @@ function getDefaultServerField(field: DefinedField): ServerFieldDefaults {
     return checkboxListField(field);
   }
 
-  if (field.kind === "text" || field.kind === "email") {
+  if (
+    field.kind === "text" ||
+    field.kind === "email" ||
+    field.kind === "radio-button"
+  ) {
     return textField();
   }
 

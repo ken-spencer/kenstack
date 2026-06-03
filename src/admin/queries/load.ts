@@ -56,37 +56,34 @@ async function loadCachedAdminRecord(
     return null;
   }
 
+  if ("list" in adminConfig) {
+    if (target === "single") {
+      return null;
+    }
+
+    const result = await loadRecord({
+      table: adminConfig.table,
+      fields: adminConfig.fields,
+      defaults: adminConfig.defaultValues,
+      id: target,
+    });
+
+    return result.row ? serializeAdminEditItem(result.values) : null;
+  }
+
   const result = await loadRecord({
     table: adminConfig.table,
     fields: adminConfig.fields,
     defaults: adminConfig.defaultValues,
-    query: async ({ db, select }) => {
-      if (!("list" in adminConfig)) {
-        const [row] = await db
-          .select(select)
-          .from(adminConfig.table)
-          .where(eq(adminConfig.table.key, name));
-
-        return row;
-      }
-
-      if (target !== "single") {
-        const [row] = await db
-          .select(select)
-          .from(adminConfig.table)
-          .where(eq(adminConfig.table.id, target));
-
-        return row;
-      }
-    },
+    where: eq(adminConfig.table.key, name),
   });
 
-  if ("list" in adminConfig && !result.row) {
-    return null;
-  }
+  return serializeAdminEditItem(result.values);
+}
 
+function serializeAdminEditItem(values: Record<string, unknown>) {
   return Object.fromEntries(
-    Object.entries(result.values).map(([key, value]) => [
+    Object.entries(values).map(([key, value]) => [
       key,
       serializeValue(value),
     ]),

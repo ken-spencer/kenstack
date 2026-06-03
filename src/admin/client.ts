@@ -1,4 +1,5 @@
 import type { FC, ReactNode } from "react";
+import type { SelectedImage } from "@kenstack/db/tables";
 import { createZodSchema } from "@kenstack/fields/createZodSchema";
 import type { DefinedFields } from "@kenstack/fields/types";
 
@@ -12,10 +13,12 @@ export type ListItemRow<
   TExtra extends Record<string, unknown> = Record<string, unknown>,
 > = BaseListItem & TExtra & { path: string };
 
-type ListItem<
-  TExtra extends Record<string, unknown> = Record<string, unknown>,
-> = readonly [
-  render: (row: ListItemRow<TExtra>) => ReactNode,
+type ListItemRender<TRow extends ListItemRow> = {
+  render(row: TRow): ReactNode;
+}["render"];
+
+type ListItem<TRow extends ListItemRow> = readonly [
+  render: ListItemRender<TRow>,
   options?: {
     className?: string;
     column?: string;
@@ -23,22 +26,35 @@ type ListItem<
 ];
 
 type ListItems<
-  TExtra extends Record<string, unknown> = Record<string, unknown>,
-> = readonly ListItem<TExtra>[];
+  TFields extends DefinedFields = DefinedFields,
+> = readonly ListItem<
+  BaseListItem & {
+    -readonly [TKey in keyof TFields as TFields[TKey] extends {
+      list: infer TList;
+    }
+      ? TList extends false | undefined
+        ? never
+        : TKey
+      : never]: TFields[TKey]["kind"] extends "image"
+      ? SelectedImage | null
+      : TFields[TKey]["default"];
+  } & { path: string }
+>[];
 
 export function defineClient<
-  TListItem extends Record<string, unknown> = Record<string, unknown>,
+  const TAdminFields extends DefinedFields = DefinedFields,
+  const TSettingsFields extends DefinedFields = DefinedFields,
 >({
   admin,
   settings,
 }: {
   admin?: {
-    fields: DefinedFields;
-    listItems?: ListItems<TListItem>;
+    fields: TAdminFields;
+    listItems?: ListItems<TAdminFields>;
     EditForm: FC;
   };
   settings?: {
-    fields: DefinedFields;
+    fields: TSettingsFields;
   };
 }) {
   return {

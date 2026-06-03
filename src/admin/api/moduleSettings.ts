@@ -36,15 +36,7 @@ async function loadModuleSettings(
     table: settings.table,
     fields: settings.fields,
     defaults: settings.defaultValues,
-    query: async ({ db, select }) => {
-      const [row] = await db
-        .select(select)
-        .from(settings.table)
-        .where(eq(settings.table.key, name))
-        .limit(1);
-
-      return row;
-    },
+    where: eq(settings.table.key, name),
   });
 
   return result.values;

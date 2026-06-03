@@ -1,8 +1,13 @@
-import type { DefinedField, FieldOption, FieldOptions } from "./types";
+import type { FieldOption, FieldOptions } from "./types";
 
-type DefinedFieldFromOption<TField extends FieldOption> = DefinedField & {
+type DefinedFieldFromOption<TField extends FieldOption> = Omit<
+  TField,
+  "__kenstackField" | "searchable" | "revisions"
+> & {
   kind: TField["kind"];
   default: TField["default"];
+  searchable: boolean;
+  revisions: boolean;
 };
 
 type DefinedFieldsFromOptions<TFields extends FieldOptions> = {

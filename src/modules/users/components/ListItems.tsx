@@ -18,32 +18,27 @@ function getInitials(givenName?: string | null, familyName?: string | null) {
   return (givenName?.slice(0, 1) ?? "") + (familyName?.slice(0, 1) ?? "");
 }
 
+export function UserAvatarListItem({ row }: { row: UserListRow }) {
+  return (
+    <Link href={row.path}>
+      <Avatar
+        initials={getInitials(row.givenName, row.familyName)}
+        url={row.avatar?.url}
+        className="size-8 shrink-0"
+      />
+    </Link>
+  );
+}
+
 export function UserNameListItem({ row }: { row: UserListRow }) {
   const name = [row.givenName, row.familyName].filter(Boolean).join(" ");
 
   return (
-    <div className="flex min-w-0 items-center gap-2">
-      <Link href={row.path}>
-        <Avatar
-          initials={getInitials(row.givenName, row.familyName)}
-          url={row.avatar?.url}
-          className="size-10 shrink-0"
-        />
+    <div className="flex min-w-0 flex-col">
+      <Link className="min-w-0 truncate text-lg" href={row.path}>
+        {name || row.email || `ID ${row.id}`}
       </Link>
-      <div className="flex min-w-0 flex-col">
-        <Link className="min-w-0 truncate text-lg" href={row.path}>
-          {name || row.email || `ID ${row.id}`}
-        </Link>
-        <MetaDates createdAt={row.createdAt} updatedAt={row.updatedAt} />
-      </div>
+      <MetaDates createdAt={row.createdAt} updatedAt={row.updatedAt} />
     </div>
-  );
-}
-
-export function UserEmailListItem({ row }: { row: UserListRow }) {
-  return (
-    <span className="block truncate text-sm text-gray-600">
-      {row.email ?? ""}
-    </span>
   );
 }

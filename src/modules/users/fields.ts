@@ -8,7 +8,7 @@ import {
 } from "@kenstack/fields/client";
 import * as z from "zod";
 
-export const fields = defineFields({
+export const userFields = {
   givenName: textField({
     zod: z.string().min(1, "Given name is required"),
     searchable: true,
@@ -27,5 +27,9 @@ export const fields = defineFields({
     filter: true,
   }),
   avatar: imageField({ list: "square" }),
+};
+
+export const fields = defineFields({
+  ...userFields,
   roles: checkboxListField({ options: roles }),
 });

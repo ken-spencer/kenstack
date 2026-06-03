@@ -1,17 +1,21 @@
 import type { Metadata } from "next";
-import * as z from "zod";
 
 import { selectImageSubquery } from "@kenstack/db/tables/media";
-import { dateTimeField, imageField, textField } from "@kenstack/fields/client";
+import {
+  dateTimeField,
+  imageField,
+  radioButtonField,
+  textField,
+} from "@kenstack/fields/client";
 import type { AdminSeoTable } from "./table";
-import { visibilityValues } from "./lib/visibility";
+import { visibilityStatusOptions } from "./lib/visibilityStatus";
 
 export { visibilityOptions, visibilityValues } from "./lib/visibility";
 
 export const metaFieldOptions = {
-  visibility: textField({
+  visibility: radioButtonField({
     default: "draft",
-    zod: z.enum(visibilityValues),
+    options: visibilityStatusOptions,
   }),
   publishedAt: dateTimeField({
     filter: true,

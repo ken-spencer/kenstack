@@ -55,19 +55,9 @@ export const loadContent = cache(
       table: content,
       fields: pageEditorServerFields,
       defaults,
-      query: async ({ db, select }) => {
-        const [row] = await db
-          .select(select)
-          .from(content)
-          .where(
-            and(
-              eq(content.slug, slug),
-              // multiTenant && tenant ? eq(content.orgId, org!.id) : undefined
-            ),
-          );
-
-        return row;
-      },
+      where: and(
+        eq(content.slug, slug),
+      ),
     });
 
     const data = Object.fromEntries(

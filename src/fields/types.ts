@@ -1,4 +1,4 @@
-import type { ComponentType } from "react";
+import type { ComponentType, SVGProps } from "react";
 import type * as z from "zod";
 
 export type FieldKind =
@@ -10,6 +10,7 @@ export type FieldKind =
   | "boolean"
   | "date"
   | "datetime"
+  | "radio-button"
   | "checkbox-list"
   | "image"
   | "media-list"
@@ -38,6 +39,7 @@ type FieldOptionMarker = {
 
 export type FieldInputOption = {
   description?: string;
+  icon?: ComponentType<SVGProps<SVGSVGElement>>;
   label: string;
   value: string;
 };

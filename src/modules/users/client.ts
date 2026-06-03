@@ -3,16 +3,22 @@
 import { defineClient } from "@kenstack/admin/client";
 import EditForm from "./components/EditForm";
 import { fields } from "./fields";
-import { UserEmailListItem, UserNameListItem } from "./components/ListItems";
+import { UserAvatarListItem, UserNameListItem } from "./components/ListItems";
 
 export default defineClient({
   admin: {
     fields,
     listItems: [
-      [(row) => UserNameListItem({ row }), { column: "auto" }],
       [
-        (row) => UserEmailListItem({ row }),
-        { className: "hidden self-center sm:block" },
+        (row) => UserAvatarListItem({ row }),
+        { className: "flex items-center", column: "auto" },
+      ],
+      [(row) => UserNameListItem({ row })],
+      [
+        (row) => row.email,
+        {
+          className: "hidden self-center truncate text-sm text-gray-600 sm:block",
+        },
       ],
     ],
     EditForm,

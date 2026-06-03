@@ -26,6 +26,7 @@ type ColumnBackedFieldKind =
   | "boolean"
   | "date"
   | "datetime"
+  | "radio-button"
   | "checkbox-list"
   | "image";
 
@@ -46,7 +47,11 @@ type FieldColumnBuilder<TField extends DefinedField> =
               ? ReturnType<TextColumnBuilder["array"]>
               : TField["kind"] extends "image"
                 ? PgIntegerBuilderInitial<string>
-                : TField["kind"] extends "text" | "textarea" | "markdown"
+                : TField["kind"] extends
+                      | "text"
+                      | "textarea"
+                      | "markdown"
+                      | "radio-button"
                   ? TextColumnBuilder
                   : never;
 
@@ -67,7 +72,8 @@ export function getColumns<const TFields extends DefinedFields>(
     if (
       field.kind === "text" ||
       field.kind === "textarea" ||
-      field.kind === "markdown"
+      field.kind === "markdown" ||
+      field.kind === "radio-button"
     ) {
       columns.push([key, text(columnName)]);
     } else if (field.kind === "number") {

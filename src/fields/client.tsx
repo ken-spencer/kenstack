@@ -15,6 +15,7 @@ import DateField from "@kenstack/forms/DateField";
 import DateTimeField from "@kenstack/forms/DateTimeField";
 import InputField from "@kenstack/forms/InputField";
 import PhoneField from "@kenstack/forms/PhoneField";
+import RadioButtonField from "@kenstack/forms/RadioButtonField";
 import SlugField from "@kenstack/forms/SlugField";
 import TextareaField from "@kenstack/forms/TextareaField";
 import { relationshipSchema } from "./relationshipSchema";
@@ -26,10 +27,11 @@ import type {
   FieldRecordRefinement,
 } from "./types";
 
-type FieldOptionOfKind<TKind extends FieldKind, TDefault> = FieldOption<
-  TKind,
-  TDefault
->;
+type FieldOptionOfKind<
+  TKind extends FieldKind,
+  TDefault,
+  TOptions extends object = Record<never, never>,
+> = FieldOption<TKind, TDefault> & TOptions;
 
 type CommonFieldOptions<TDefault = unknown> = {
   zod?: z.ZodType;
@@ -60,6 +62,14 @@ type CheckboxListFieldOptions = Omit<
   options: readonly FieldInputOption[];
   zod?: z.ZodType;
   default?: string[];
+};
+
+type RadioButtonFieldOptions = Omit<
+  CommonFieldOptions<string>,
+  "zod" | "searchable"
+> & {
+  options: readonly FieldInputOption[];
+  zod?: z.ZodType;
 };
 
 type ImageFieldOptions = DisplayFieldOptions & {
@@ -132,6 +142,10 @@ function CheckboxListFieldComponent({
   );
 }
 
+function RadioButtonFieldComponent(props: FieldComponentProps) {
+  return <RadioButtonField {...props} options={props.options ?? []} />;
+}
+
 function DateTimeFieldComponent(props: FieldComponentProps) {
   return <DateTimeField {...props} />;
 }
@@ -160,9 +174,11 @@ function RelationshipFieldComponent(props: FieldComponentProps) {
   return <RelationshipField {...props} relationship={props.name} />;
 }
 
-export function textField(
-  options: CommonFieldOptions<string> = {},
-): FieldOptionOfKind<"text", string> {
+export function textField<
+  const TOptions extends CommonFieldOptions<string> = Record<never, never>,
+>(
+  options: TOptions = {} as TOptions,
+): FieldOptionOfKind<"text", string, TOptions> {
   return {
     __kenstackField: true,
     kind: "text",
@@ -190,9 +206,11 @@ export function numberField(
   };
 }
 
-export function emailField(
-  options: CommonFieldOptions<string> = {},
-): FieldOptionOfKind<"email", string> {
+export function emailField<
+  const TOptions extends CommonFieldOptions<string> = Record<never, never>,
+>(
+  options: TOptions = {} as TOptions,
+): FieldOptionOfKind<"email", string, TOptions> {
   return {
     __kenstackField: true,
     kind: "email",
@@ -286,6 +304,29 @@ export function slugField(
   };
 }
 
+export function radioButtonField<const TOptions extends RadioButtonFieldOptions>(
+  options: TOptions,
+): FieldOptionOfKind<"radio-button", string, TOptions> {
+  const defaultValue = options.default ?? "";
+
+  return {
+    __kenstackField: true,
+    kind: "radio-button",
+    component: RadioButtonFieldComponent,
+    default: defaultValue,
+    searchable: false,
+    revisions: true,
+    zod:
+      options.zod ??
+      z.enum(
+        Array.from(
+          new Set([defaultValue, ...options.options.map(({ value }) => value)]),
+        ),
+      ),
+    ...options,
+  };
+}
+
 export function dateTimeField(
   options: CommonFieldOptions<string> = {},
 ): FieldOptionOfKind<"datetime", string> {
@@ -334,9 +375,11 @@ export function checkboxListField({
   };
 }
 
-export function imageField(
-  options: ImageFieldOptions = {},
-): FieldOptionOfKind<"image", null> {
+export function imageField<
+  const TOptions extends ImageFieldOptions = Record<never, never>,
+>(
+  options: TOptions = {} as TOptions,
+): FieldOptionOfKind<"image", null, TOptions> {
   return {
     __kenstackField: true,
     kind: "image",
