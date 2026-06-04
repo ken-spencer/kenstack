@@ -14,7 +14,7 @@ type Props = {
 
 export default function AuthGuard(props: Props) {
   return (
-    <Suspense fallback={props.loading ?? null}>
+    <Suspense fallback={props.loading ?? props.fallback ?? null}>
       <AuthGuardContent {...props} />
     </Suspense>
   );

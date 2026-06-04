@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useState, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 
 import {
@@ -19,18 +19,26 @@ type AccordionProps = {
   }[];
 };
 
+function subscribeHashChange(onStoreChange: () => void) {
+  window.addEventListener("hashchange", onStoreChange);
+
+  return () => {
+    window.removeEventListener("hashchange", onStoreChange);
+  };
+}
+
+function getHashValue() {
+  return window.location.hash.replace(/^#/, "");
+}
+
 export function Accordion({ defaultValue = "", items }: AccordionProps) {
-  const [value, setValue] = useState(() => {
-    if (defaultValue) {
-      return defaultValue;
-    }
-
-    if (typeof window === "undefined") {
-      return "";
-    }
-
-    return window.location.hash.replace(/^#/, "");
-  });
+  const hashValue = useSyncExternalStore(
+    subscribeHashChange,
+    getHashValue,
+    () => "",
+  );
+  const [manualValue, setManualValue] = useState<string | null>(null);
+  const value = manualValue ?? (defaultValue || hashValue);
   const pathname = usePathname();
 
   return (
@@ -46,10 +54,10 @@ export function Accordion({ defaultValue = "", items }: AccordionProps) {
             className="cursor-pointer text-base"
             onClick={(evt) => {
               if (value === slug) {
-                setValue("");
+                setManualValue("");
                 window.history.replaceState(null, "", pathname);
               } else {
-                setValue(slug);
+                setManualValue(slug);
                 window.history.replaceState(null, "", "#" + slug);
               }
 

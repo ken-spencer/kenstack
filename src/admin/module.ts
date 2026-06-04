@@ -7,6 +7,7 @@ import type {
   AdminFieldReference,
   AdminFilterOptions,
   AdminFilters,
+  AdminSortFieldReference,
   AdminSort,
   AdminSortField,
   AdminSortOptions,
@@ -332,11 +333,11 @@ function resolveSortField(
   if ("field" in field) {
     return {
       ...field,
-      field: resolveFieldReference(table, field.field),
+      field: resolveSortFieldReference(table, field.field),
     };
   }
 
-  return field;
+  return resolveSortFieldReference(table, field);
 }
 
 function resolveFieldReference(table: AdminTable, field: AdminFieldReference) {
@@ -350,4 +351,15 @@ function resolveFieldReference(table: AdminTable, field: AdminFieldReference) {
   }
 
   return column;
+}
+
+function resolveSortFieldReference(
+  table: AdminTable,
+  field: AdminSortFieldReference,
+) {
+  if (typeof field === "string") {
+    return resolveFieldReference(table, field);
+  }
+
+  return field;
 }

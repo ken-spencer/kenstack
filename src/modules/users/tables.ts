@@ -6,11 +6,10 @@ import {
   integer,
   index,
   uniqueIndex,
-  type PgColumnBuilderBase,
 } from "drizzle-orm/pg-core";
-import { type ExtraTable, type BuildTableOptions } from "@kenstack/admin/table";
+import { type ExtraTable } from "@kenstack/admin/table";
 
-const userColumns = {
+export const userColumns = {
   givenName: text("given_name").notNull(),
   familyName: text("family_name").notNull(),
   email: varchar("email", { length: 320 }).notNull(),
@@ -22,66 +21,22 @@ const userColumns = {
   passwordHash: text("password_hash"),
 };
 
-export const defineUsersTable = <
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-  const TColumnsMap extends Record<string, PgColumnBuilderBase> = {},
->({
-  columns,
-  extraConfig,
-}: {
-  columns?: TColumnsMap;
-  extraConfig?: BuildTableOptions<
-    "users",
-    typeof userColumns & TColumnsMap
-  >["extraConfig"];
-} = {}) => {
-  const allColumns = {
-    ...userColumns,
-    ...columns,
-  };
+export function userTableExtraConfig<
+  TTable extends ExtraTable<typeof userColumns>,
+>(t: TTable) {
+  return [
+    uniqueIndex("users_email_unique_active")
+      .on(sql`lower(${t.email})`)
+      .where(sql`${t.deletedAt} IS NULL AND ${t.email} <> ''`),
+    index("users_org_deleted_at_idx")
+      .on(t.deletedAt)
+      .where(sql`${t.deletedAt} IS NOT NULL`),
+  ];
+}
 
-  return defineTable({
-    name: "users",
-    columns: allColumns,
-    extraConfig: (t) => [
-      uniqueIndex("users_email_unique_active")
-        .on(sql`lower(${t.email})`)
-        .where(sql`${t.deletedAt} IS NULL AND ${t.email} <> ''`),
-      index("users_org_deleted_at_idx")
-        .on(t.deletedAt)
-        .where(sql`${t.deletedAt} IS NOT NULL`),
-      ...(extraConfig?.(t as ExtraTable<typeof userColumns & TColumnsMap>) ??
-        []),
-    ],
-  });
-};
-
-export const users = defineUsersTable();
+export const users = defineTable({
+  name: "users",
+  columns: userColumns,
+  extraConfig: userTableExtraConfig,
+});
 export type Users = typeof users;
-
-// export const users = defineTable({
-//   name: "users",
-//   columns: {
-//     givenName: text("given_name").notNull(),
-//     familyName: text("family_name").notNull(),
-//     email: varchar("email", { length: 320 }).notNull(),
-//     roles: text("roles")
-//       .array()
-//       .notNull()
-//       .default(sql`'{}'`),
-
-//     // avatar: jsonb("avatar").$type<Image>(),
-//     avatar: integer("avatar"),
-//     passwordHash: text("password_hash"),
-//   },
-//   extraConfig: (t) => [
-//     uniqueIndex("users_email_unique_active")
-//       .on(sql`lower(${t.email})`)
-//       .where(sql`${t.deletedAt} IS NULL`),
-//     index("users_org_deleted_at_idx")
-//       .on(t.deletedAt)
-//       .where(sql`${t.deletedAt} IS NOT NULL`),
-//   ],
-// });
-
-// export type Users = typeof users;

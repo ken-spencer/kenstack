@@ -1,19 +1,21 @@
-import type { AnyColumn } from "drizzle-orm";
+import type { AnyColumn, SQL } from "drizzle-orm";
 
 export type SortDirection = "asc" | "desc";
 export type AdminFieldReference = string | AnyColumn;
+export type AdminSortFieldReference = AdminFieldReference | SQL;
 
 export type AdminSortField =
-  | AdminFieldReference
+  | AdminSortFieldReference
   | {
-      field: AdminFieldReference;
+      field: AdminSortFieldReference;
       direction?: SortDirection;
     };
 
 export type ResolvedAdminSortField =
   | AnyColumn
+  | SQL
   | {
-      field: AnyColumn;
+      field: AnyColumn | SQL;
       direction?: SortDirection;
     };
 

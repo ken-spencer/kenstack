@@ -98,7 +98,7 @@ export default function DateField({
   disabled,
   ...props
 }: InputProps) {
-  const { watch, getValues, setValue: setFormValue } = useFormContext();
+  const { watch, getValues } = useFormContext();
   const [prevFormValue, setPrevFormValue] = useState(getValues(name));
   const [value, setValue] = useState(() =>
     formatDate(normalizeFormValue(getValues(name))),
@@ -110,15 +110,6 @@ export default function DateField({
     setValue(formatDate(normalizeFormValue(formValue)));
   }
 
-  const handleDate = (newDate: string | Date) => {
-    const result = newDate ? parseDateValue(newDate) : "";
-    setFormValue(name, result, {
-      shouldDirty: true,
-      shouldTouch: true,
-    });
-    setValue(formatDate(result));
-  };
-
   return (
     <Field
       name={name}
@@ -126,37 +117,46 @@ export default function DateField({
       help={help}
       description={description}
       className={className}
-      render={({ field }) => (
-        <div className="relative flex items-center">
-          <DatePicker
-            disabled={disabled}
-            handleDate={handleDate}
-            value={normalizeFormValue(field.value)}
-          />
-          <FormControl>
-            <Input
-              {...field}
-              placeholder="eg: January 27, 1932"
-              {...props}
+      render={({ field }) => {
+        const handleDate = (newDate: string | Date) => {
+          const result = newDate ? parseDateValue(newDate) : "";
+          field.onChange(result);
+          field.onBlur();
+          setValue(formatDate(result));
+        };
+
+        return (
+          <div className="relative flex items-center">
+            <DatePicker
               disabled={disabled}
-              className={twMerge("pl-9", inputClass)}
-              value={value}
-              onChange={(event) => {
-                setValue(event.target.value);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  handleDate(value);
-                }
-              }}
-              onBlur={() => {
-                handleDate(value);
-              }}
+              handleDate={handleDate}
+              value={normalizeFormValue(field.value)}
             />
-          </FormControl>
-        </div>
-      )}
+            <FormControl>
+              <Input
+                {...field}
+                placeholder="eg: January 27, 1932"
+                {...props}
+                disabled={disabled}
+                className={twMerge("pl-9", inputClass)}
+                value={value}
+                onChange={(event) => {
+                  setValue(event.target.value);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    handleDate(value);
+                  }
+                }}
+                onBlur={() => {
+                  handleDate(value);
+                }}
+              />
+            </FormControl>
+          </div>
+        );
+      }}
     />
   );
 }

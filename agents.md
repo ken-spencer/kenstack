@@ -12,6 +12,7 @@ Before any Next.js work, find and read the relevant doc in `node_modules/next/di
 - Use route handlers for API endpoints.
 - In cached functions or components, place `cacheTag(...)` as high as it can go without changing behavior, near `"use cache"` and `cacheLife(...)`, so cache identity is visible with the other cache setup.
 - Keep admin data cacheable, but do not let admin mutations serve stale data while the affected cache entries regenerate. Configure that behavior at the invalidation point with blocking expiration, such as `revalidateTag(tag, { expire: 0 })`, rather than by forcing custom cache profiles on cached loaders or host sites.
+- Do not use `<Suspense fallback={null}>`, or component APIs that silently default to a null loading fallback, for page bodies, full-page content, or content sections that affect page height. Null fallbacks collapse the streamed content area and can make the header and footer touch during loading. Use a height-preserving loading component or skeleton instead. A null fallback is only acceptable for small fixed-size slots where the surrounding layout already reserves the space.
 
 ## Preserve Existing Capabilities
 

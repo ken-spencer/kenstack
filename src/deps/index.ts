@@ -1,20 +1,25 @@
 import { createDb } from "@kenstack/db";
 import { Logger } from "@kenstack/logger";
 import { createAuth } from "@kenstack/auth/server";
+import type { AuthUsersTable } from "@kenstack/auth/server/types";
 import Email from "./components/Email";
 import type { EmailContainer } from "./components/Email";
 
-import { type Users } from "@kenstack/modules/users/tables";
 import { type Sessions } from "@kenstack/db/tables/sessions";
 import { type Attachment } from "@kenstack/lib/mailer";
 import type { DefinedAdmin } from "@kenstack/admin/module";
 
 export type EmailFrom = string | { name: string; addr: string };
 
-export type Tables = { users: Users; sessions: Sessions } & Record<
-  string,
-  unknown
->;
+export type Tables = { sessions: Sessions } & Record<string, unknown>;
+
+type ModulesWithUsers = DefinedAdmin & {
+  users: DefinedAdmin[string] & {
+    admin: NonNullable<DefinedAdmin[string]["admin"]> & {
+      table: AuthUsersTable;
+    };
+  };
+};
 
 export const defaultRoles = ["admin", "member"] as const;
 
@@ -34,11 +39,11 @@ const formatFileSize = (bytes: number) => {
 export const createDeps = <
   TSchema extends Tables,
   const TRoles extends readonly string[] = typeof defaultRoles,
-  const TModules extends DefinedAdmin = DefinedAdmin,
+  const TModules extends ModulesWithUsers = ModulesWithUsers,
 >(options: {
   roles?: TRoles;
   multiTenant?: boolean;
-  modules?: TModules;
+  modules: TModules;
   tables: TSchema;
   siteUrl?: string;
   email?: {
@@ -49,14 +54,17 @@ export const createDeps = <
   uploadMaxImageSize?: number;
   uploadMaxImageSizeMessage?: string;
 }) => {
-  const { email, modules = {} as TModules, ...depsOptions } = options;
+  const { email, modules, ...depsOptions } = options;
   const db = createDb({ schema: options.tables });
   const logger = new Logger<TSchema>({ db });
   const roles = (options.roles ?? defaultRoles) as TRoles;
   const uploadMaxImageSize = options.uploadMaxImageSize ?? 5 * 1024 ** 2;
   const auth = createAuth<TSchema, TRoles>({
     db,
-    tables: options.tables,
+    tables: {
+      users: modules.users.admin.table,
+      sessions: options.tables.sessions,
+    },
     logger,
     roles,
   });
@@ -85,5 +93,5 @@ export const createDeps = <
 export type Deps<
   TSchema extends Tables = Tables,
   TRoles extends readonly string[] = typeof defaultRoles,
-  TModules extends DefinedAdmin = DefinedAdmin,
+  TModules extends ModulesWithUsers = ModulesWithUsers,
 > = ReturnType<typeof createDeps<TSchema, TRoles, TModules>>;

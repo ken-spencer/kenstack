@@ -1,11 +1,11 @@
-import { AuthDeps, type Tables } from "./types";
+import { AuthDeps } from "./types";
 
 import { generateToken, hashToken } from "./token";
 import { createUser } from "./user";
 import { createAuth as createAuthLocal } from "./auth";
 
 export function createAuth<
-  TSchema extends Tables,
+  TSchema extends Record<string, unknown>,
   TRoles extends readonly string[],
 >(deps: AuthDeps<TSchema, TRoles>) {
   const userDeps = createUser<TSchema, TRoles>(deps);

@@ -1,4 +1,4 @@
-import { type AuthDeps, type Tables } from "./types";
+import { type AuthDeps } from "./types";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { hashToken } from "./token";
@@ -8,7 +8,7 @@ import { redirect } from "next/navigation";
 import { selectImageSubquery } from "@kenstack/db/tables";
 
 export function createUser<
-  TSchema extends Tables,
+  TSchema extends Record<string, unknown>,
   TRoles extends readonly string[],
 >(deps: AuthDeps<TSchema, TRoles>) {
   const {

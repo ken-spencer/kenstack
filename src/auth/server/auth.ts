@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { generateToken, hashToken } from "./token";
-import { AuthDeps, type Tables } from "./types";
+import { AuthDeps } from "./types";
 import { eq } from "drizzle-orm";
 
 import { type User } from "@kenstack/types";
@@ -12,7 +12,7 @@ export type AuthAccess<TRole extends string> =
   | readonly TRole[];
 
 export function createAuth<
-  TSchema extends Tables,
+  TSchema extends Record<string, unknown>,
   TRoles extends readonly string[],
 >(
   deps: AuthDeps<TSchema, TRoles>,
