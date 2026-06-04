@@ -11,7 +11,7 @@ import { isTagField } from "@kenstack/fields/server";
 const schema = z.object({ exclude: tagsSchema, keywords: z.string() });
 
 export const tagsAction = (adminConfig: AnyAdminConfig) =>
-  pipelineStage({ role: "admin", schema }, async ({ response, data }) => {
+  pipelineStage({ access: "admin", schema }, async ({ response, data }) => {
     const { keywords, exclude } = data;
     const excludedSlugs = exclude.map((e) => e.slug);
 

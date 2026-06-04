@@ -12,12 +12,12 @@ export const loadModuleSettingsAction = (
   const { name, settings } = moduleConfig;
 
   if (!settings) {
-    return pipelineStage({ role: "admin" }, async ({ response }) =>
+    return pipelineStage({ access: "admin" }, async ({ response }) =>
       response.error(`Module "${name}" does not have settings.`),
     );
   }
 
-  return pipelineStage({ role: "admin" }, async ({ response }) => {
+  return pipelineStage({ access: "admin" }, async ({ response }) => {
     return response.success({
       values: await loadModuleSettings(name, settings),
     });
@@ -48,7 +48,7 @@ export const saveModuleSettingsAction = (
   const { name, settings } = moduleConfig;
 
   if (!settings) {
-    return pipelineStage({ role: "admin" }, async ({ response }) =>
+    return pipelineStage({ access: "admin" }, async ({ response }) =>
       response.error(`Module "${name}" does not have settings.`),
     );
   }
@@ -58,7 +58,7 @@ export const saveModuleSettingsAction = (
       schema: z.object({
         values: settings.schema,
       }),
-      role: "admin",
+      access: "admin",
       fieldsKey: "values",
     },
     async ({ response, data }) => {

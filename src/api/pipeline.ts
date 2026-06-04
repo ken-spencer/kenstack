@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type { ObjectSchema } from ".";
 
 import { type FetchError } from "@kenstack/api/fetcher";
+import type { AuthAccess } from "@kenstack/auth/server/auth";
 
 import * as z from "zod";
 
@@ -20,7 +21,7 @@ export type PipelineOptions = {
 };
 
 type Roles = typeof deps.roles;
-type UserRole = Roles[number] | readonly Roles[number][];
+type UserAccess = AuthAccess<Roles[number]>;
 
 type PipelineContext = {
   request: NextRequest;
@@ -31,10 +32,10 @@ type PipelineContext = {
 
 export type PipelineStageContext<
   TSchema extends ObjectSchema | undefined = undefined,
-  TRole = undefined,
+  TAccess = undefined,
 > = PipelineContext & {
   data: TSchema extends ObjectSchema ? z.output<TSchema> : undefined;
-  user: [TRole] extends [undefined] ? User | undefined : User;
+  user: [TAccess] extends [undefined] ? User | undefined : User;
 };
 
 type PipelineStageResult =
@@ -54,14 +55,14 @@ type PipelineStage = (
 
 type PipelineStageCallback<
   TSchema extends ObjectSchema | undefined,
-  TRole = undefined,
+  TAccess = undefined,
 > = (
-  arg: PipelineStageContext<TSchema, TRole>,
+  arg: PipelineStageContext<TSchema, TAccess>,
 ) => Promise<PipelineStageResult> | PipelineStageResult;
 
-type PipelineStageOptions<TSchema extends ObjectSchema | undefined, TRole> = {
+type PipelineStageOptions<TSchema extends ObjectSchema | undefined, TAccess> = {
   schema?: TSchema;
-  role?: TRole;
+  access?: TAccess;
   fieldsKey?: string;
 };
 
@@ -161,13 +162,13 @@ export default async function pipeline(
 export const pipelineStage =
   <
     TSchema extends ObjectSchema | undefined = undefined,
-    const TRole extends UserRole | undefined = undefined,
+    const TAccess extends UserAccess | undefined = undefined,
   >(
-    { schema, role, fieldsKey }: PipelineStageOptions<TSchema, TRole>,
-    action: PipelineStageCallback<TSchema, TRole>,
+    { schema, access, fieldsKey }: PipelineStageOptions<TSchema, TAccess>,
+    action: PipelineStageCallback<TSchema, TAccess>,
   ) =>
   async (ctx: PipelineContext) => {
-    let data: PipelineStageContext<TSchema, TRole>["data"];
+    let data: PipelineStageContext<TSchema, TAccess>["data"];
 
     if (schema) {
       if (fieldsKey) {
@@ -211,7 +212,7 @@ export const pipelineStage =
         data = {
           ...parsedMeta.data,
           [fieldsKey]: parsedValues.data,
-        } as PipelineStageContext<TSchema, TRole>["data"];
+        } as PipelineStageContext<TSchema, TAccess>["data"];
       } else {
         const parsed = await schema.safeParseAsync(ctx.dataIn);
         if (!parsed.success) {
@@ -224,19 +225,36 @@ export const pipelineStage =
           });
         }
 
-        data = parsed.data as PipelineStageContext<TSchema, TRole>["data"];
+        data = parsed.data as PipelineStageContext<TSchema, TAccess>["data"];
       }
     } else {
-      data = undefined as PipelineStageContext<TSchema, TRole>["data"];
+      data = undefined as PipelineStageContext<TSchema, TAccess>["data"];
     }
 
-    const user = role ? await deps.auth.requireUser(role) : undefined;
+    let user: User | undefined;
+    if (access !== undefined) {
+      if (!(await deps.auth.hasAccess(access))) {
+        if (!(await deps.auth.isAuthenticated())) {
+          return ctx.response.error({
+            message: "You must be signed in to perform this action.",
+            status: 401,
+          });
+        }
+
+        return ctx.response.error({
+          message: "You do not have permission to perform this action.",
+          status: 403,
+        });
+      }
+
+      user = await deps.auth.requireUser();
+    }
 
     const arg = {
       ...ctx,
-      user: user as PipelineStageContext<TSchema, TRole>["user"],
+      user: user as PipelineStageContext<TSchema, TAccess>["user"],
       data,
-    } satisfies PipelineStageContext<TSchema, TRole>;
+    } satisfies PipelineStageContext<TSchema, TAccess>;
 
     return action(arg);
   };

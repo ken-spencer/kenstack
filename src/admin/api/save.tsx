@@ -9,14 +9,14 @@ export const saveAction = (moduleConfig: DefinedAdmin[string]) => {
   const { name, admin: adminConfig } = moduleConfig;
 
   if (!adminConfig) {
-    return pipelineStage({ role: "admin" }, async ({ response }) =>
+    return pipelineStage({ access: "admin" }, async ({ response }) =>
       response.error(`Module "${name}" does not have admin records.`),
     );
   }
 
   return pipelineStage(
     {
-      role: "admin",
+      access: "admin",
       schema: z.object({
         id: z.number().nullish(),
         changes: z.array(z.string()),

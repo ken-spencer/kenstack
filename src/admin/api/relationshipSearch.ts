@@ -24,7 +24,7 @@ type SoftDeleteTable = {
 };
 
 export const relationshipSearchAction = (adminConfig: AnyAdminConfig) =>
-  pipelineStage({ role: "admin", schema }, async ({ response, data }) => {
+  pipelineStage({ access: "admin", schema }, async ({ response, data }) => {
     const field = adminConfig.fields[data.relationship];
     const relationship = isRelationshipField(field)
       ? field.behavior.relationship

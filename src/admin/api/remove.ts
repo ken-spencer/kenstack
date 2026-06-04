@@ -28,13 +28,13 @@ export const removeAction = ({
   admin: adminConfig,
 }: DefinedAdmin[string]) => {
   if (!adminConfig) {
-    return pipelineStage({ role: "admin" }, async ({ response }) =>
+    return pipelineStage({ access: "admin" }, async ({ response }) =>
       response.error(`Module "${name}" does not have admin records.`),
     );
   }
 
   return pipelineStage(
-    { role: "admin", schema },
+    { access: "admin", schema },
     async ({ response, user, data }) => {
       if (!("list" in adminConfig)) {
         return response.error("This admin config is not removable.");

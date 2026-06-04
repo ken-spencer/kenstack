@@ -38,7 +38,7 @@ export const sendPasswordResetAction = ({
   from = deps.email.from,
 }: ForgotPasswordProps) =>
   pipelineStage(
-    { role: "admin", schema: z.object({ userId: z.number() }) },
+    { access: "admin", schema: z.object({ userId: z.number() }) },
     async ({ request, response, user: admin, data: { userId } }) => {
       if (!from) {
         return response.error("Password reset email sender is not configured.");

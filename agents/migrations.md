@@ -2,6 +2,23 @@
 
 Use this file to document breaking Kenstack API changes that downstream sites may need to apply.
 
+## Unreleased: Pipeline Stage Access Option
+
+Old APIs:
+
+- `pipelineStage({ role: "admin" }, action)`
+
+New APIs:
+
+- `pipelineStage({ access: "admin" }, action)`
+- `access` uses Kenstack auth access values, including `"authenticated"`, a role name, or a readonly role array.
+
+Migration steps:
+
+- Rename `pipelineStage` option keys from `role` to `access`.
+- Use `access: "authenticated"` for actions that only require a signed-in user.
+- Use role values such as `access: "admin"` for actions that require a specific role.
+
 ## Unreleased: Address Field Options Import Path
 
 Old APIs:

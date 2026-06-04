@@ -12,7 +12,7 @@ export const getPresignedUrlAction = (adminConfig: {
   fields: ServerDefinedFields;
 }) =>
   pipelineStage(
-    { role: "admin", schema: imageUploadRequestSchema },
+    { access: "admin", schema: imageUploadRequestSchema },
     async ({ data, response, user }) => {
       const result = await createImageUpload({
         ...adminConfig,

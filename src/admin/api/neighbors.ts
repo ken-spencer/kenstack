@@ -12,7 +12,7 @@ const schema = z.object({
 export const neighborsAction = (adminConfig: AnyAdminConfig) =>
   pipelineStage(
     {
-      role: "admin",
+      access: "admin",
       schema,
     },
     async ({ response, data }) => {

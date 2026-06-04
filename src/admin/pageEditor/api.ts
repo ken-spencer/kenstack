@@ -14,7 +14,7 @@ const apiSchema = z.object({
 
 export const pageEditAction = () =>
   pipelineStage(
-    { schema: apiSchema, role: "admin" },
+    { schema: apiSchema, access: "admin" },
     async ({ data, response }) => {
       const {
         tables: { content },

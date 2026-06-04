@@ -6,7 +6,7 @@ import { queryAdminList } from "@kenstack/admin/queries/list";
 export const listAction = (adminConfig: AnyAdminConfig) =>
   pipelineStage(
     {
-      role: "admin",
+      access: "admin",
       schema: createListRequestSchema({
         filters: "list" in adminConfig ? adminConfig.list.filters : {},
         sort: "list" in adminConfig ? adminConfig.list.sort : {},

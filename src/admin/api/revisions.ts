@@ -9,7 +9,7 @@ import { filterRevisionSnapshot } from "@kenstack/fields/records";
 export const revisionsAction = (adminConfig: AnyAdminConfig) =>
   pipelineStage(
     {
-      role: "admin",
+      access: "admin",
       schema: z.object({
         id: z.number(),
         revisionId: z.number().optional(),

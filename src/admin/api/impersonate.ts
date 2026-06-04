@@ -8,7 +8,7 @@ const schema = z.object({
 
 export const impersonateAction = () =>
   pipelineStage(
-    { schema, role: "admin" },
+    { schema, access: "admin" },
     async ({ response, user, data: { userId } }) => {
       if (user.id === userId) {
         return response.error("You can't switch to your own user");
