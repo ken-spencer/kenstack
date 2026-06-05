@@ -8,9 +8,13 @@ import { Button } from "@kenstack/components/ui/button";
 import { LoaderCircle, RotateCcwKey } from "lucide-react";
 
 import fetcher from "@kenstack/api/fetcher";
+import { useForm } from "@kenstack/forms/context";
 
 export default function ResetPassword() {
   const { id } = useAdminEdit();
+  const { form } = useForm();
+  const email = form.watch("email");
+  const hasEmail = typeof email === "string" && email.trim().length > 0;
   const mutation = useMutation({
     mutationFn: () =>
       fetcher("/api/auth", { action: "send-password-reset", userId: id }),
@@ -35,7 +39,7 @@ export default function ResetPassword() {
         <>
           <Button
             type="button"
-            disabled={mutation.isPending}
+            disabled={mutation.isPending || !hasEmail}
             onClick={() => mutation.mutate()}
           >
             {mutation.isPending ? (
@@ -45,7 +49,13 @@ export default function ResetPassword() {
             )}
             Reset Password
           </Button>
-          <Help message="Click the button to send a password reset email to the user." />
+          <Help
+            message={
+              hasEmail
+                ? "Click the button to send a password reset email to the user."
+                : "Add an email address before sending a password reset."
+            }
+          />
         </>
       )}
     </div>

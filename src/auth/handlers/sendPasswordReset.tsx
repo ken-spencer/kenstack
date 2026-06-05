@@ -62,6 +62,13 @@ export const sendPasswordResetAction = ({
         return response.error("Unable to find the requested user");
       }
 
+      const email = user.email.trim();
+      if (!email) {
+        return response.error(
+          "This user does not have an email address for password reset.",
+        );
+      }
+
       const tokenPlain = nanoid(32);
       const tokenHash = crypto
         .createHash("sha256")
@@ -81,7 +88,7 @@ export const sendPasswordResetAction = ({
           })
           .where(
             and(
-              eq(passwordResetRequests.email, user.email),
+              eq(passwordResetRequests.email, email),
               isNull(passwordResetRequests.invalidatedAt),
               gte(passwordResetRequests.expiresAt, now),
             ),
@@ -89,7 +96,7 @@ export const sendPasswordResetAction = ({
 
         await tx.insert(passwordResetRequests).values({
           tokenHash,
-          email: user.email,
+          email,
           userAgent: request.headers.get("user-agent") || null,
           ip,
           geo,
@@ -121,7 +128,7 @@ export const sendPasswordResetAction = ({
       });
 
       await mailer({
-        to: user.email,
+        to: email,
         from,
         subject: `${admin.givenName} ${admin.familyName} has requested a password reset`,
         html: emailHtml,
@@ -129,7 +136,7 @@ export const sendPasswordResetAction = ({
       });
 
       return response.success({
-        message: `An email has been sent to ${user.email}`,
+        message: `An email has been sent to ${email}`,
       });
     },
   );
