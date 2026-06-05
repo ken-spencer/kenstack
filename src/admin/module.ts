@@ -22,21 +22,18 @@ import {
   type ServerDefinedFields,
 } from "@kenstack/fields/server";
 import type { AdminKeyTable, AdminTable } from "@kenstack/admin/table";
+import type { RevalidateTagRule } from "@kenstack/lib/revalidate";
 import { visibilityOptions } from "./metadata";
 
 type SelectValue = AnyColumn | SQL | SQL.Aliased;
 type SelectShape = Record<string, SelectValue>;
 type AdminManagedTable = AdminTable | AdminKeyTable;
 
-type RevalidateCallback<TTable extends AdminManagedTable> = {
-  bivarianceHack(row: InferSelectModel<TTable>): string;
-}["bivarianceHack"];
-
 export type PreviewPath = `/${string}`;
 
 type AdminConfigBase<TTable extends AdminManagedTable> = {
   table: TTable;
-  revalidate?: (string | RevalidateCallback<TTable>)[];
+  revalidate?: RevalidateTagRule<InferSelectModel<TTable>>[];
   fields: ServerDefinedFields;
   preview?: PreviewPath;
 };

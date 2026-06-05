@@ -10,13 +10,16 @@ import { revisions } from "@kenstack/db/tables/revisions";
 import { errorTranslator } from "@kenstack/db/errorTranslator";
 import type { User } from "@kenstack/types";
 import {
+  revalidator,
+  type RevalidateTagRule,
+} from "@kenstack/lib/revalidate";
+import {
   eq,
   getTableColumns,
   getTableName,
   type InferInsertModel,
   type InferSelectModel,
 } from "drizzle-orm";
-import { revalidateTag } from "next/cache";
 
 type TransactionDb = Parameters<
   Parameters<(typeof deps)["db"]["transaction"]>[0]
@@ -31,7 +34,7 @@ type SaveRecordOptions<TTable extends SaveRecordTable> = {
   values: Record<string, unknown>;
   changes?: string[];
   id?: number | null;
-  revalidate?: (string | ((row: InferSelectModel<TTable>) => string))[];
+  revalidate?: RevalidateTagRule<InferSelectModel<TTable>>[];
   query?: (ctx: {
     tx: TransactionDb;
     data: Record<string, unknown>;
@@ -187,19 +190,10 @@ export async function saveRecord<TTable extends SaveRecordTable>(
       data: { changes: revisionChanges },
     });
 
-    for (const validator of revalidate ?? []) {
-      if (typeof validator === "string") {
-        revalidateTag(validator, { expire: 0 });
-        continue;
-      }
-
-      if (result.row) {
-        revalidateTag(
-          validator(result.row as InferSelectModel<typeof table>),
-          { expire: 0 },
-        );
-      }
-    }
+    revalidator(
+      revalidate,
+      result.row as InferSelectModel<typeof table> | undefined,
+    );
 
     return result;
   } catch (err) {

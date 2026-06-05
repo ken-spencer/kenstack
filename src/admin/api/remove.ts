@@ -7,6 +7,7 @@ import type { DefinedAdmin } from "..";
 import { adminListCacheTag } from "@kenstack/admin/queries/list";
 import { adminLoadCacheTag } from "@kenstack/admin/queries/load";
 import { deps } from "@app/deps";
+import { revalidator } from "@kenstack/lib/revalidate";
 
 const schema = z.object({
   remove: z.array(z.coerce.number()),
@@ -96,16 +97,8 @@ export const removeAction = ({
         },
       });
 
-      if (adminConfig.revalidate) {
-        for (const row of rows) {
-          adminConfig.revalidate.forEach((validator) => {
-            if (typeof validator === "string") {
-              revalidateTag(validator, { expire: 0 });
-            } else {
-              revalidateTag(validator(row), { expire: 0 });
-            }
-          });
-        }
+      for (const row of rows) {
+        revalidator(adminConfig.revalidate, row);
       }
 
       rows.forEach((row) => {
