@@ -39,32 +39,34 @@ export function metaSelect<TTable extends AdminSeoTable>(table: TTable) {
 }
 
 export function buildMetadata(
-  record: {
-    title?: string | null;
-    description?: string | null;
-    seoTitle?: string | null;
-    seoDescription?: string | null;
-    image?: {
-      url?: string | null;
-      width?: number | null;
-      height?: number | null;
-      alt?: string | null;
-    } | null;
-    ogImage?: {
-      url?: string | null;
-      width?: number | null;
-      height?: number | null;
-      alt?: string | null;
-    } | null;
-  } | null | undefined,
+  record:
+    | {
+        title?: string | null;
+        description?: string | null;
+        seoTitle?: string | null;
+        seoDescription?: string | null;
+        image?: {
+          url?: string | null;
+          width?: number | null;
+          height?: number | null;
+          alt?: string | null;
+        } | null;
+        ogImage?: {
+          url?: string | null;
+          width?: number | null;
+          height?: number | null;
+          alt?: string | null;
+        } | null;
+      }
+    | null
+    | undefined,
 ) {
   if (!record) {
     return {} satisfies Metadata;
   }
 
   const title = record.seoTitle || record.title || undefined;
-  const description =
-    record.seoDescription || record.description || undefined;
+  const description = record.seoDescription || record.description || undefined;
   const image = record.ogImage ?? record.image;
   const url = image?.url;
 

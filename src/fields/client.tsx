@@ -304,9 +304,9 @@ export function slugField(
   };
 }
 
-export function radioButtonField<const TOptions extends RadioButtonFieldOptions>(
-  options: TOptions,
-): FieldOptionOfKind<"radio-button", string, TOptions> {
+export function radioButtonField<
+  const TOptions extends RadioButtonFieldOptions,
+>(options: TOptions): FieldOptionOfKind<"radio-button", string, TOptions> {
   const defaultValue = options.default ?? "";
 
   return {

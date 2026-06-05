@@ -7,10 +7,7 @@ export * from "./createDefaultValues";
 export * from "./getFieldNames";
 export * from "./getColumns";
 export * from "./client";
-export {
-  serverFields,
-  resolveServerFields,
-} from "./server";
+export { serverFields, resolveServerFields } from "./server";
 export type {
   FieldAfterSave,
   FieldBehavior,

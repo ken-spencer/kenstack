@@ -16,9 +16,11 @@ import type {
 
 export type ImageVariant = "square" | "original";
 
-export function imageField(
-  { variant = "square" }: { variant?: ImageVariant } = {},
-): ServerFieldResolver<DefinedField<"image">> {
+export function imageField({
+  variant = "square",
+}: { variant?: ImageVariant } = {}): ServerFieldResolver<
+  DefinedField<"image">
+> {
   return (field): ServerFieldDefaults => ({
     behavior: {
       upload: true,
@@ -113,10 +115,7 @@ export async function prepareImageSave({
         })
       ) {
         afterSave.push((tx) =>
-          tx
-            .update(media)
-            .set(metadata)
-            .where(eq(media.id, imageId)),
+          tx.update(media).set(metadata).where(eq(media.id, imageId)),
         );
       }
     }

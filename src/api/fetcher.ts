@@ -20,9 +20,7 @@ export type FetchError = {
 
 export type FetchResult<
   TExtra extends Record<string, unknown> = Record<string, never>,
-> =
-  | FetchSuccess<TExtra>
-  | FetchError;
+> = FetchSuccess<TExtra> | FetchError;
 
 export default async function fetcher<
   TExtra extends Record<string, unknown> = Record<string, never>,

@@ -90,7 +90,7 @@ export default function ImageDetailsModal({
             <div>
               <h3 className="text-lg font-medium">Image details</h3>
               {image.filename ? (
-                <p className="break-all text-sm text-gray-500">
+                <p className="text-sm break-all text-gray-500">
                   {image.filename}
                 </p>
               ) : null}

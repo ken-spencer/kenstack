@@ -36,17 +36,17 @@ type MediaHandlerConfig = {
   sortOrder?: AnyPgColumn<{ data: number }>;
 };
 
-export function mediaListField(
-  {
-    table,
-    tableIdKey = "tableId",
-    tableId = table.tableId,
-    mediaIdKey = "mediaId",
-    mediaId = table.mediaId,
-    sortOrderKey = "sortOrder",
-    sortOrder = table.sortOrder,
-  }: MediaHandlerConfig,
-): ServerFieldResolver<ServerField & { kind: "media-list" }> {
+export function mediaListField({
+  table,
+  tableIdKey = "tableId",
+  tableId = table.tableId,
+  mediaIdKey = "mediaId",
+  mediaId = table.mediaId,
+  sortOrderKey = "sortOrder",
+  sortOrder = table.sortOrder,
+}: MediaHandlerConfig): ServerFieldResolver<
+  ServerField & { kind: "media-list" }
+> {
   const media = {
     table,
     tableIdKey,

@@ -9,10 +9,7 @@ import type {
 import { revisions } from "@kenstack/db/tables/revisions";
 import { errorTranslator } from "@kenstack/db/errorTranslator";
 import type { User } from "@kenstack/types";
-import {
-  revalidator,
-  type RevalidateTagRule,
-} from "@kenstack/lib/revalidate";
+import { revalidator, type RevalidateTagRule } from "@kenstack/lib/revalidate";
 import {
   eq,
   getTableColumns,

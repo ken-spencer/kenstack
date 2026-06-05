@@ -54,17 +54,16 @@ export function isRelationshipField(
   kind: "relationship";
   behavior: RelationshipFieldBehavior;
 } {
-  return field?.kind === "relationship" && Boolean(field.behavior?.relationship);
+  return (
+    field?.kind === "relationship" && Boolean(field.behavior?.relationship)
+  );
 }
 
 type SoftDeleteTable = {
   deletedAt: AnyColumn;
 };
 
-type RelationshipValues = Record<
-  string,
-  z.output<typeof relationshipSchema>
->;
+type RelationshipValues = Record<string, z.output<typeof relationshipSchema>>;
 
 async function loadRelationships({
   db,

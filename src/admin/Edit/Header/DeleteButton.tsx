@@ -116,7 +116,7 @@ export function RestoreButton() {
         action: "remove",
         mode: "restore",
         remove: [idToRestore],
-    }),
+      }),
     onError: (err) => {
       setStatusMessage(err);
 

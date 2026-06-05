@@ -18,15 +18,12 @@ type LoadedRow<TSelect extends SelectedFields = EmptySelect> = {
 type LoadRecordSelect<
   TTable extends LoadRecordTable,
   TSelect extends SelectedFields,
-> = ReturnType<typeof selectFields<TTable, ServerDefinedFields>> &
-  TSelect;
+> = ReturnType<typeof selectFields<TTable, ServerDefinedFields>> & TSelect;
 
 type LoadedValues<
   TSelect extends SelectedFields,
   TDefaults extends Record<string, unknown>,
-> = TDefaults &
-  Record<string, unknown> &
-  Partial<SelectResultFields<TSelect>>;
+> = TDefaults & Record<string, unknown> & Partial<SelectResultFields<TSelect>>;
 
 type LoadRecordOptions<
   TTable extends LoadRecordTable,
@@ -49,9 +46,7 @@ export async function loadRecord<
   TTable extends LoadRecordTable,
   const TSelect extends SelectedFields = EmptySelect,
   TDefaults extends Record<string, unknown> = Record<string, unknown>,
->(
-  options: LoadRecordOptions<TTable, TSelect, TDefaults>,
-) {
+>(options: LoadRecordOptions<TTable, TSelect, TDefaults>) {
   const { table, fields, id } = options;
   const defaults = options.defaults ?? ({} as TDefaults);
   const select = {

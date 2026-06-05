@@ -5,7 +5,7 @@ import { headers } from "next/headers";
 export default async function errorLog(
   error: Error,
   message: string | null = null,
-  data: Record<string, unknown> | null = null
+  data: Record<string, unknown> | null = null,
 ) {
   const geo = await getGeo();
   const headersList = await headers();

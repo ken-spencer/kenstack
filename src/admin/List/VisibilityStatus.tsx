@@ -21,7 +21,9 @@ export default function VisibilityStatus({
 }: VisibilityStatusProps) {
   const option =
     typeof item.visibility === "string"
-      ? visibilityStatusOptions.find((status) => status.value === item.visibility)
+      ? visibilityStatusOptions.find(
+          (status) => status.value === item.visibility,
+        )
       : undefined;
 
   if (!option) {

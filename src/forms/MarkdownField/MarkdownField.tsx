@@ -54,28 +54,27 @@ function MarkdownFieldEditor({ field }: { field: ControllerRenderProps }) {
   const lastEditorValue = useRef(initialValue);
   const [loading, get] = useInstance();
 
-  useEditor(
-    (root) =>
-      Editor.make()
-        .config((ctx) => {
-          ctx.set(rootCtx, root);
-          ctx.set(defaultValueCtx, initialValue);
-          ctx.set(placeholderCtx, "Start typing...");
+  useEditor((root) =>
+    Editor.make()
+      .config((ctx) => {
+        ctx.set(rootCtx, root);
+        ctx.set(defaultValueCtx, initialValue);
+        ctx.set(placeholderCtx, "Start typing...");
 
-          ctx.get(listenerCtx).markdownUpdated((_, markdown) => {
-            lastEditorValue.current = markdown;
-            field.onChange(markdown);
-          });
+        ctx.get(listenerCtx).markdownUpdated((_, markdown) => {
+          lastEditorValue.current = markdown;
+          field.onChange(markdown);
+        });
 
-          ctx.get(listenerCtx).blur(() => {
-            field.onBlur();
-          });
-        })
-        .use(listener)
-        .use(history)
-        .use(placeholderPlugin)
-        .use(commonmark)
-        .use(gfm)
+        ctx.get(listenerCtx).blur(() => {
+          field.onBlur();
+        });
+      })
+      .use(listener)
+      .use(history)
+      .use(placeholderPlugin)
+      .use(commonmark)
+      .use(gfm),
   );
 
   useEffect(() => {
@@ -89,7 +88,7 @@ function MarkdownFieldEditor({ field }: { field: ControllerRenderProps }) {
   }, [field.value, get, loading]);
 
   return (
-    <div className="overflow-hidden rounded-md border border-input bg-background">
+    <div className="border-input bg-background overflow-hidden rounded-md border">
       <MarkdownEditorToolbar variant="static" />
       <div className="min-h-[350px] px-3 py-2 [&_.ProseMirror]:min-h-[350px] [&_.ProseMirror]:outline-none">
         <Milkdown />

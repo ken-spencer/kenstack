@@ -64,9 +64,9 @@ export default function PageControlsClient({
                 aria-pressed={showAdminControls}
                 className={cn(
                   buttonClassName,
-                  (showAdminControls
+                  showAdminControls
                     ? "bg-fuchsia-800/85 text-white ring-fuchsia-800/60 hover:bg-fuchsia-800"
-                    : inactiveButtonClassName),
+                    : inactiveButtonClassName,
                 )}
                 onClick={() => {
                   setShowAdminControls(!showAdminControls);
@@ -92,9 +92,9 @@ export default function PageControlsClient({
                 aria-pressed={draftModeEnabled}
                 className={cn(
                   buttonClassName,
-                  (draftModeEnabled
+                  draftModeEnabled
                     ? "bg-amber-500/90 text-white ring-amber-500/60 hover:bg-amber-500"
-                    : inactiveButtonClassName),
+                    : inactiveButtonClassName,
                 )}
               >
                 <Eye className="size-4" />

@@ -142,9 +142,9 @@ export function MarkdownEditorToolbar({
   return (
     <div
       className={cn(
-        "flex h-[45px] items-center rounded-t-[3px] border-b border-input bg-[#f7f9fc] px-[25px]",
+        "border-input flex h-[45px] items-center rounded-t-[3px] border-b bg-[#f7f9fc] px-[25px]",
         variant === "floating" && "absolute right-0 left-0 z-20",
-        className
+        className,
       )}
       onMouseDown={(event) => event.preventDefault()}
     >
@@ -169,7 +169,7 @@ export function MarkdownEditorToolbar({
           <PopoverContent
             align="start"
             sideOffset={2}
-            className="w-auto min-w-36 rounded-[2px] border-border bg-popover p-0 py-[5px] text-popover-foreground shadow-[0_2px_4px_rgba(0,0,0,0.08)]"
+            className="border-border bg-popover text-popover-foreground w-auto min-w-36 rounded-[2px] p-0 py-[5px] shadow-[0_2px_4px_rgba(0,0,0,0.08)]"
             onMouseDown={(event) => event.preventDefault()}
             onOpenAutoFocus={(event) => event.preventDefault()}
             onCloseAutoFocus={(event) => event.preventDefault()}
@@ -181,7 +181,7 @@ export function MarkdownEditorToolbar({
               <button
                 key={option.label}
                 type="button"
-                className="block w-full px-3 py-1 text-left hover:bg-accent hover:text-accent-foreground"
+                className="hover:bg-accent hover:text-accent-foreground block w-full px-3 py-1 text-left"
                 onClick={() => runHeading(option.level)}
               >
                 <HeadingOption option={option} />
@@ -240,7 +240,7 @@ export function MarkdownEditorToolbar({
           <PopoverContent
             align="start"
             sideOffset={2}
-            className="w-72 rounded-md border-border bg-popover p-3 text-popover-foreground shadow-[0_2px_4px_rgba(0,0,0,0.08)]"
+            className="border-border bg-popover text-popover-foreground w-72 rounded-md p-3 shadow-[0_2px_4px_rgba(0,0,0,0.08)]"
             onOpenAutoFocus={(event) => event.preventDefault()}
             onCloseAutoFocus={(event) => event.preventDefault()}
             onEscapeKeyDown={() => {
@@ -308,7 +308,7 @@ function ToolbarButton({
       title={label}
       aria-label={label}
       className={
-        "my-[7px] mx-[5px] flex size-8 cursor-pointer items-center justify-center rounded-[3px] border border-[#f7f9fc] p-0 text-[#333] hover:border-[#e4e7ee] hover:bg-white disabled:cursor-default disabled:opacity-40 " +
+        "mx-[5px] my-[7px] flex size-8 cursor-pointer items-center justify-center rounded-[3px] border border-[#f7f9fc] p-0 text-[#333] hover:border-[#e4e7ee] hover:bg-white disabled:cursor-default disabled:opacity-40 " +
         (className ?? "")
       }
     >
@@ -318,7 +318,7 @@ function ToolbarButton({
 }
 
 function ToolbarDivider() {
-  return <span className="my-[14px] mx-3 h-[18px] w-px bg-[#e1e3e9]" />;
+  return <span className="mx-3 my-[14px] h-[18px] w-px bg-[#e1e3e9]" />;
 }
 
 function HeadingOption({

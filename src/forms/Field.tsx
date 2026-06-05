@@ -68,7 +68,7 @@ const Field: React.FC<FieldPropsLocal> = ({
               })
             : null}
           {description && (
-            <div className="text-sm text-muted-foreground">{description}</div>
+            <div className="text-muted-foreground text-sm">{description}</div>
           )}
           <FormMessage className="" />
         </FormItem>
@@ -84,7 +84,7 @@ function FormMessage({ className, ...props }: React.ComponentProps<"p">) {
     ? String(
         Array.isArray(firstError?.message)
           ? firstError.message.at(0)
-          : firstError.message
+          : firstError.message,
       )
     : props.children;
   if (!body) {
@@ -96,8 +96,8 @@ function FormMessage({ className, ...props }: React.ComponentProps<"p">) {
       data-slot="form-message"
       id={formMessageId}
       className={cn(
-        "flex items-center gap-2 text-sm text-destructive",
-        className
+        "text-destructive flex items-center gap-2 text-sm",
+        className,
       )}
       {...props}
     >

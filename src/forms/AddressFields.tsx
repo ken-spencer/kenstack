@@ -46,7 +46,10 @@ const countryLabels = {
     region: "State / Territory",
     postalCode: "Postcode",
   },
-} satisfies Record<string, { locality: string; postalCode: string; region: string }>;
+} satisfies Record<
+  string,
+  { locality: string; postalCode: string; region: string }
+>;
 
 const defaultLabels = {
   locality: "City / Town",
@@ -128,7 +131,8 @@ export default function AddressFields({
         emptyMessage="No countries found."
         placeholder="Select country"
         onChange={(nextCountryCode) => {
-          const currentRegion = typeof regionCode === "string" ? regionCode : "";
+          const currentRegion =
+            typeof regionCode === "string" ? regionCode : "";
           const nextCountry = countries.find(
             (country) => country.code === nextCountryCode,
           );

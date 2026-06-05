@@ -78,11 +78,8 @@ export const useAdminUi = create<AdminUiState>()(
 );
 
 export function useAdminControl() {
-  const {
-    registerAdminControl,
-    showAdminControls,
-    unregisterAdminControl,
-  } = useAdminUi();
+  const { registerAdminControl, showAdminControls, unregisterAdminControl } =
+    useAdminUi();
 
   useEffect(() => {
     registerAdminControl();

@@ -67,22 +67,24 @@ function AdminSidebarContent({
   children,
   defaultOpen,
 }: AdminSidebarProps & { defaultOpen: boolean }) {
-  const adminModules = Object.entries(deps.modules).flatMap(([name, module]) => {
-    if (!module.admin) {
-      return [];
-    }
+  const adminModules = Object.entries(deps.modules).flatMap(
+    ([name, module]) => {
+      if (!module.admin) {
+        return [];
+      }
 
-    return [
-      {
-        href: "/admin/" + name,
-        headerIcon: module.icon ? (
-          <module.icon className="size-4 text-gray-800" />
-        ) : null,
-        icon: module.icon ? <module.icon /> : <span className="w-3" />,
-        title: module.title,
-      },
-    ];
-  });
+      return [
+        {
+          href: "/admin/" + name,
+          headerIcon: module.icon ? (
+            <module.icon className="size-4 text-gray-800" />
+          ) : null,
+          icon: module.icon ? <module.icon /> : <span className="w-3" />,
+          title: module.title,
+        },
+      ];
+    },
+  );
 
   const sidebarNav = (
     <SidebarGroup>

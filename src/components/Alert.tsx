@@ -40,7 +40,7 @@ const Alert: React.FC<AlertProps> = ({
       className={twMerge(
         "flex items-center gap-2 rounded border p-2 transition",
         classes,
-        className
+        className,
       )}
     >
       <Icon className="size-8" />

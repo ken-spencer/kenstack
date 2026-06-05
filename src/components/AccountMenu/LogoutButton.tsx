@@ -16,22 +16,24 @@ export default function LogoutButton() {
       onClick={() => {
         fetcher("/api/auth", {
           action: "logout",
-        }).then((data) => {
-          if (data?.status === "error") {
-            window.alert(data.message);
-          }
-          if (data?.status === "success") {
-            router.push("/");
-            router.refresh();
-          }
-        }).catch((error) => {
-          window.alert(
-            "There was an unexpected problem handling your request. Please try again later.",
-          );
+        })
+          .then((data) => {
+            if (data?.status === "error") {
+              window.alert(data.message);
+            }
+            if (data?.status === "success") {
+              router.push("/");
+              router.refresh();
+            }
+          })
+          .catch((error) => {
+            window.alert(
+              "There was an unexpected problem handling your request. Please try again later.",
+            );
 
-          // eslint-disable-next-line no-console
-          console.error(error);
-        });
+            // eslint-disable-next-line no-console
+            console.error(error);
+          });
       }}
     >
       <LogOut />

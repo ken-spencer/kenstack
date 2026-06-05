@@ -14,7 +14,7 @@ export default async function ForgottenPasswordFormLoader({
   if (token) {
     if (!token.match(/^[A-Za-z0-9_-]{32}$/)) {
       return errorRedirect(
-        "That password reset link isn't valid. Please request a new one below."
+        "That password reset link isn't valid. Please request a new one below.",
       );
     }
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
@@ -33,15 +33,15 @@ export default async function ForgottenPasswordFormLoader({
 
     if (!row) {
       return errorRedirect(
-        "That password reset link isn't valid. Please request a new one below."
+        "That password reset link isn't valid. Please request a new one below.",
       );
     } else if (row.invalidatedAt) {
       return await errorRedirect(
-        "That password reset link has already been used. Please request a new one below."
+        "That password reset link has already been used. Please request a new one below.",
       );
     } else if (row.expiresAt <= now) {
       return await errorRedirect(
-        "That password reset link has expired. Please request a new one below."
+        "That password reset link has expired. Please request a new one below.",
       );
     }
   } else {

@@ -107,7 +107,9 @@ export function createUser<
   };
 
   const requireUser = cache(
-    async (role?: TRoles[number] | readonly TRoles[number][]): Promise<User> => {
+    async (
+      role?: TRoles[number] | readonly TRoles[number][],
+    ): Promise<User> => {
       const user = await getCurrentUser();
 
       if (!user) {

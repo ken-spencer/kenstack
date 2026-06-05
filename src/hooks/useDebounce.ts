@@ -4,14 +4,16 @@ import debounce from "lodash-es/debounce";
 
 export default function useDebounce(
   initialValue: string = "",
-  delay: number = 300
+  delay: number = 300,
 ): [string, string, (newValue: string) => void] {
   const [value, setValueBase] = useState<string>(initialValue);
-  const [debouncedValue, setDebouncedValueBase] = useState<string>(initialValue);
+  const [debouncedValue, setDebouncedValueBase] =
+    useState<string>(initialValue);
 
-  const debouncedFunction = useMemo<((newValue: string) => void)>(
-    () => debounce((newValue: string) => setDebouncedValueBase(newValue), delay),
-    [delay]
+  const debouncedFunction = useMemo<(newValue: string) => void>(
+    () =>
+      debounce((newValue: string) => setDebouncedValueBase(newValue), delay),
+    [delay],
   );
 
   const setDebouncedValue = useCallback(
@@ -19,7 +21,7 @@ export default function useDebounce(
       setValueBase(newValue);
       debouncedFunction(newValue);
     },
-    [debouncedFunction]
+    [debouncedFunction],
   );
 
   const setValue = useCallback(
@@ -27,7 +29,7 @@ export default function useDebounce(
       setValueBase(newValue);
       setDebouncedValue(newValue);
     },
-    [setDebouncedValue]
+    [setDebouncedValue],
   );
 
   return [value, debouncedValue, setValue];

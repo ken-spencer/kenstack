@@ -53,9 +53,7 @@ export default function CheckboxIconField({
               <span
                 className={twMerge(
                   "rounded-full border border-purple-800 p-2 transition",
-                  field.value.includes(value)
-                    ? "bg-purple-800 text-white"
-                    : "",
+                  field.value.includes(value) ? "bg-purple-800 text-white" : "",
                 )}
               >
                 <Icon className="h-8 w-8" />

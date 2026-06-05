@@ -79,7 +79,7 @@ export default async function rawMailer({
         data,
         headers,
       });
-    }
+    },
   );
 
   const raw = msg.asRaw();
@@ -101,7 +101,7 @@ export default async function rawMailer({
         // eslint-disable-next-line no-console
         console.error(
           `Exceeded ${maxRetries} rate-limit retries. Giving up.`,
-          err
+          err,
         );
       } else {
         // eslint-disable-next-line no-console

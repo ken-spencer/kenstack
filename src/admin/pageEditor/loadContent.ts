@@ -55,9 +55,7 @@ export const loadContent = cache(
       table: content,
       fields: pageEditorServerFields,
       defaults,
-      where: and(
-        eq(content.slug, slug),
-      ),
+      where: and(eq(content.slug, slug)),
     });
 
     const data = Object.fromEntries(

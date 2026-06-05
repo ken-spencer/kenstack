@@ -51,7 +51,11 @@ function decodePreviewValue(value: string) {
 
 function getPreviewSlug(nextUrl: URL, preview: string) {
   const [beforeSlug, afterSlug, ...extraParts] = preview.split("${slug}");
-  if (beforeSlug === undefined || afterSlug === undefined || extraParts.length) {
+  if (
+    beforeSlug === undefined ||
+    afterSlug === undefined ||
+    extraParts.length
+  ) {
     return null;
   }
 
@@ -118,9 +122,11 @@ async function getDisableDraftRedirect(next: string) {
 
     const slug = getPreviewSlug(nextUrl, adminConfig.preview);
     if (!slug) {
-      const onBasePath = normalizePath(nextUrl.pathname) === normalizePath(basePath);
+      const onBasePath =
+        normalizePath(nextUrl.pathname) === normalizePath(basePath);
 
-      return onBasePath && (!adminConfig.preview.includes("?") || !nextUrl.search)
+      return onBasePath &&
+        (!adminConfig.preview.includes("?") || !nextUrl.search)
         ? next
         : basePath;
     }
@@ -142,9 +148,7 @@ export async function enableDraftModeAction(request: NextRequest) {
   return redirect(getRedirectPath(request));
 }
 
-export async function disableDraftModeAction(
-  request: NextRequest,
-) {
+export async function disableDraftModeAction(request: NextRequest) {
   const next = getRedirectPath(request);
   const redirectPath = await getDisableDraftRedirect(next);
 

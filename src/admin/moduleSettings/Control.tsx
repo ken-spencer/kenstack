@@ -12,7 +12,9 @@ type ModuleSettingsControlProps = {
   title: string;
 };
 
-export default function ModuleSettingsControl(props: ModuleSettingsControlProps) {
+export default function ModuleSettingsControl(
+  props: ModuleSettingsControlProps,
+) {
   if (!props.client) {
     return props.children;
   }

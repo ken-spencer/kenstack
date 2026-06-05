@@ -20,8 +20,7 @@ export default async function AccountMenuLoader({
     return fallback ?? null;
   }
 
-  const resolvedItems =
-    typeof items === "function" ? await items(user) : items;
+  const resolvedItems = typeof items === "function" ? await items(user) : items;
 
   return (
     <Menu user={user}>

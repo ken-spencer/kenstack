@@ -7,20 +7,22 @@ type AddressFieldOptions = {
   required?: boolean;
 };
 
-const postalCodeFormats: Record<string, { message: string; pattern: RegExp }> = {
-  AU: {
-    pattern: /^\d{4}$/i,
-    message: "Enter a valid Australian postcode",
-  },
-  CA: {
-    pattern: /^[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z][ -]?\d[ABCEGHJ-NPRSTV-Z]\d$/i,
-    message: "Enter a valid Canadian postal code",
-  },
-  US: {
-    pattern: /^\d{5}(-\d{4})?$/i,
-    message: "Enter a valid ZIP code",
-  },
-};
+const postalCodeFormats: Record<string, { message: string; pattern: RegExp }> =
+  {
+    AU: {
+      pattern: /^\d{4}$/i,
+      message: "Enter a valid Australian postcode",
+    },
+    CA: {
+      pattern:
+        /^[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z][ -]?\d[ABCEGHJ-NPRSTV-Z]\d$/i,
+      message: "Enter a valid Canadian postal code",
+    },
+    US: {
+      pattern: /^\d{5}(-\d{4})?$/i,
+      message: "Enter a valid ZIP code",
+    },
+  };
 
 const fallbackPostalCodeFormat = {
   pattern: /^[A-Z0-9]$|^[A-Z0-9][A-Z0-9\s-]{0,30}[A-Z0-9]$/i,

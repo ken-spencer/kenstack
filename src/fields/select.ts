@@ -18,11 +18,11 @@ type SelectFieldsResult<
   createdAt: TTable["createdAt"];
   updatedAt: TTable["updatedAt"];
 } & SelectDeletedAt<TTable> & {
-  [TKey in Extract<keyof TSelection, keyof TTable>]: SelectFieldValue<
-    TSelection[TKey],
-    TTable[TKey]
-  >;
-};
+    [TKey in Extract<keyof TSelection, keyof TTable>]: SelectFieldValue<
+      TSelection[TKey],
+      TTable[TKey]
+    >;
+  };
 
 type SelectDeletedAt<TTable extends SelectFieldsTable> = TTable extends {
   deletedAt: AnyPgColumn;

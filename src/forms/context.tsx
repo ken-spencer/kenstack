@@ -57,7 +57,8 @@ function hasStatus(value: object): value is {
   message?: React.ReactNode;
 } {
   return (
-    "status" in value && (value.status === "error" || value.status === "success")
+    "status" in value &&
+    (value.status === "error" || value.status === "success")
   );
 }
 
@@ -161,8 +162,9 @@ function FormProvider<
   onSuccess,
   children,
 }: FormProviderProps<TResult, TVariables, TSchema, TValues>) {
-  const [statusMessage, setStatusMessageState] =
-    useState<StatusMessage | null>(null);
+  const [statusMessage, setStatusMessageState] = useState<StatusMessage | null>(
+    null,
+  );
   const setStatusMessage = useCallback<SetStatusMessage>((message) => {
     setStatusMessageState(normalizeStatusMessage(message));
   }, []);

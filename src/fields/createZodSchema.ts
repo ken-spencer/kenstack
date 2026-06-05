@@ -12,9 +12,8 @@ export function createZodSchema<const T extends DefinedFields>(fields: T) {
   ) as ZodShapeFromFields<T>;
   const recordRefinements = Object.values(fields)
     .map((field) => field.recordRefinement)
-    .filter(
-      (refinement): refinement is FieldRecordRefinement =>
-        Boolean(refinement),
+    .filter((refinement): refinement is FieldRecordRefinement =>
+      Boolean(refinement),
     );
 
   const schema = z.object(shape);

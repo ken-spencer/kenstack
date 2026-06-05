@@ -83,10 +83,7 @@ async function loadCachedAdminRecord(
 
 function serializeAdminEditItem(values: Record<string, unknown>) {
   return Object.fromEntries(
-    Object.entries(values).map(([key, value]) => [
-      key,
-      serializeValue(value),
-    ]),
+    Object.entries(values).map(([key, value]) => [key, serializeValue(value)]),
   ) as AdminEditItem;
 }
 
