@@ -22,24 +22,24 @@ type ListItem<TRow extends ListItemRow> = readonly [
   options?: {
     className?: string;
     column?: string;
+    mobileColumn?: string;
   },
 ];
 
-type ListItems<
-  TFields extends DefinedFields = DefinedFields,
-> = readonly ListItem<
-  BaseListItem & {
-    -readonly [TKey in keyof TFields as TFields[TKey] extends {
-      list: infer TList;
-    }
-      ? TList extends false | undefined
-        ? never
-        : TKey
-      : never]: TFields[TKey]["kind"] extends "image"
-      ? SelectedImage | null
-      : TFields[TKey]["default"];
-  } & { path: string }
->[];
+type ListItems<TFields extends DefinedFields = DefinedFields> =
+  readonly ListItem<
+    BaseListItem & {
+      -readonly [TKey in keyof TFields as TFields[TKey] extends {
+        list: infer TList;
+      }
+        ? TList extends false | undefined
+          ? never
+          : TKey
+        : never]: TFields[TKey]["kind"] extends "image"
+        ? SelectedImage | null
+        : TFields[TKey]["default"];
+    } & { path: string }
+  >[];
 
 export function defineClient<
   const TAdminFields extends DefinedFields = DefinedFields,

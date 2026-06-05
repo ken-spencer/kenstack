@@ -1,6 +1,6 @@
 import {
   CircleCheck,
-  PencilLine,
+  DraftingCompass,
   createLucideIcon,
   type LucideIcon,
 } from "lucide-react";
@@ -21,7 +21,7 @@ const ListOff = createLucideIcon("ListOff", [
 ]);
 
 const visibilityIcons = {
-  draft: PencilLine,
+  draft: DraftingCompass,
   published: CircleCheck,
   unlisted: ListOff,
 } satisfies Record<VisibilityValue, LucideIcon>;

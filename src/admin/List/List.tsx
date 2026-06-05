@@ -55,15 +55,24 @@ function AdminList() {
   const resolvedListItems = listItems?.length
     ? listItems
     : getDefaultListItems(data.items);
-  const listStyle = {
+  const listStyle: CSSProperties & {
+    "--list-item-columns": string;
+    "--list-item-mobile-columns": string;
+  } = {
     "--list-item-columns": resolvedListItems
       .map(([, options]) => options?.column ?? "minmax(0,1fr)")
       .join(" "),
-  } as CSSProperties & { "--list-item-columns": string };
+    "--list-item-mobile-columns": resolvedListItems
+      .map(
+        ([, options]) =>
+          options?.mobileColumn ?? options?.column ?? "minmax(0,1fr)",
+      )
+      .join(" "),
+  };
 
   return (
     <div
-      className="grid [grid-template-columns:min-content_var(--list-item-columns)] gap-x-2"
+      className="grid [grid-template-columns:min-content_var(--list-item-mobile-columns)] gap-x-2 md:[grid-template-columns:min-content_var(--list-item-columns)]"
       style={listStyle}
     >
       {data.items.map((item, key) => {
@@ -127,7 +136,11 @@ function ListItemCells({
 }) {
   return listItems.map(([render, options], key) => {
     return (
-      <div key={key} className={cn("min-w-0 py-2 md:px-2", options?.className)}>
+      <div
+        key={key}
+        className={cn("min-w-0 py-2 md:px-2", options?.className)}
+        style={{ gridColumn: key + 2 }}
+      >
         {render(item)}
       </div>
     );
