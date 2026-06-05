@@ -7,7 +7,13 @@ import List from "./List";
 import { type AnyAdminConfig } from "@kenstack/admin";
 import { getFilterMeta, getSortMeta } from "@kenstack/admin";
 import type { ClientConfig } from "@kenstack/admin/client";
+import { getAdminListQueryKey } from "@kenstack/admin/lib/listQuerySchema";
 import { loadAdminList } from "@kenstack/admin/queries/list";
+import {
+  dehydrate,
+  HydrationBoundary,
+  QueryClient,
+} from "@tanstack/react-query";
 
 type AdminListProps = {
   adminConfig: AnyAdminConfig;
@@ -33,27 +39,34 @@ export default async function AdminListCont({
   const { filters, sort } = adminConfig.list;
   const sortMeta = getSortMeta(sort);
   const filterMeta = getFilterMeta(filters);
-  const initialData = await loadAdminList({
+  const { data: initialData, query: initialQuery } = await loadAdminList({
     adminConfig,
     name,
     searchParams,
   });
+  const queryClient = new QueryClient();
+
+  queryClient.setQueryData(
+    getAdminListQueryKey(name, initialQuery),
+    initialData,
+  );
 
   return (
-    <AdminListProvider
-      name={name}
-      basePath={basePath}
-      clientConfig={clientConfig}
-      initialData={initialData}
-      userId={userId}
-      sort={sortMeta}
-      filter={filterMeta}
-    >
-      <section>
-        <Header />
-        <List />
-        <Footer />
-      </section>
-    </AdminListProvider>
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <AdminListProvider
+        name={name}
+        basePath={basePath}
+        clientConfig={clientConfig}
+        userId={userId}
+        sort={sortMeta}
+        filter={filterMeta}
+      >
+        <section>
+          <Header />
+          <List />
+          <Footer />
+        </section>
+      </AdminListProvider>
+    </HydrationBoundary>
   );
 }

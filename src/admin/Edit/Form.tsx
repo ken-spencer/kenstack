@@ -15,7 +15,7 @@ export default function AdminEditForm({
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const { defaultValues, schema, isNew, id, single, apiPath, name } =
+  const { defaultValues, schema, isNew, id, single, apiPath, name, userId } =
     useAdminEdit();
   const loadTarget = single ? name : id;
   const basePathname = useMemo(() => {
@@ -48,6 +48,10 @@ export default function AdminEditForm({
           queryKey: ["admin-edit", name, loadTarget, "revisions"],
           exact: true,
         });
+
+        if (name === "users" && (data.id ?? id) === userId) {
+          router.refresh();
+        }
 
         if (
           typeof variables.submitter === "string" &&

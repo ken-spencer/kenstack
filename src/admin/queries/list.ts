@@ -60,13 +60,21 @@ export async function loadAdminList({
   searchParams: AdminListSearchParams;
 }) {
   if (!Object.keys(searchParams).length) {
-    return loadCachedBaseAdminList(name);
+    return {
+      data: await loadCachedBaseAdminList(name),
+      query: {
+        ...createDefaultListQueryState(getSortMeta(adminConfig.list.sort)),
+        page: 1,
+      },
+    };
   }
 
-  return queryAdminList(
-    adminConfig,
-    parseAdminListSearchParams(adminConfig, searchParams),
-  );
+  const query = parseAdminListSearchParams(adminConfig, searchParams);
+
+  return {
+    data: await queryAdminList(adminConfig, query),
+    query,
+  };
 }
 
 async function loadCachedBaseAdminList(name: string) {

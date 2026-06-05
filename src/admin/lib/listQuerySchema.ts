@@ -32,6 +32,22 @@ export function createDefaultListQueryState(sort: AdminSortMeta[]) {
   } satisfies ListQueryStoreState;
 }
 
+export function getAdminListQueryKey(
+  name: string,
+  query: ListQueryStoreState & { page: number },
+) {
+  return [
+    "admin-list",
+    name,
+    query.keywords,
+    query.trash,
+    query.sort,
+    query.direction,
+    query.filters,
+    query.page,
+  ] as const;
+}
+
 export function parseListPage(value: string | string[] | null | undefined) {
   const rawValue = Array.isArray(value) ? value[0] : value;
   const page = Number(rawValue ?? 1);

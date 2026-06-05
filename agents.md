@@ -23,6 +23,8 @@ If there is a clear implementation path that preserves current behavior, use it.
 
 Treat existing behavior as intentional unless the user explicitly asks to remove it. If a change would trade away an existing capability for a minor simplification, stop and confirm before making that change.
 
+When fixing a bug, do not remove or clean up existing behavior-bearing code unless you have traced the workflow it supports and can prove the replacement preserves that behavior. If a line looks redundant but is outside the exact bug being fixed, leave it in place. Treat existing conditionals, resets, invalidations, redirects, and cache updates as intentional until proven otherwise. A cleanup is not valid if it requires guessing why the old code existed.
+
 ## Situational instructions
 
 - For UI, styling, Tailwind, shadcn, or shared component work, read `agents/ui.md` before coding.

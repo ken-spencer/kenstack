@@ -3,17 +3,15 @@
 import React, { createContext, useContext, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { AdminFilterMeta, AdminSortMeta } from "@kenstack/admin";
+import fetcher, { type FetchResult } from "@kenstack/api/fetcher";
+import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import {
   createDefaultListQueryState,
   createListQueryStoreSchema,
+  getAdminListQueryKey,
   parseListPage,
   type ListQueryStoreState,
 } from "@kenstack/admin/lib/listQuerySchema";
-import type { FetchResult } from "@kenstack/api/fetcher";
-
-const AdminListContext = createContext<UseListProps | null>(null);
-import fetcher from "@kenstack/api/fetcher";
-import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import useQueryStore, { type SetQueryStore } from "./useQueryStore";
 
 import type {
@@ -22,6 +20,8 @@ import type {
   ClientConfig,
 } from "@kenstack/admin/client";
 
+const AdminListContext = createContext<UseListProps | null>(null);
+
 type AdminListProps = {
   basePath?: string;
   clientConfig: ClientConfig;
@@ -29,11 +29,8 @@ type AdminListProps = {
   name: string;
   sort: AdminSortMeta[];
   filter: AdminFilterMeta[];
-  initialData?: AdminListQueryData;
   children: React.ReactNode;
 };
-
-type QueryKey = [string, string, ListQueryStoreState, number];
 
 export type AdminListQueryData<
   TDoc extends Record<string, unknown> = Record<string, unknown>,
@@ -53,7 +50,7 @@ type UseListProps<
   basePath?: string;
   setSelected: React.Dispatch<React.SetStateAction<number[]>>;
   apiPath: string;
-  queryKey: QueryKey;
+  queryKey: ReturnType<typeof getAdminListQueryKey>;
   filters: ListQueryStoreState;
   setFilters: SetQueryStore<ListQueryStoreState>;
   userId: number;
@@ -69,7 +66,6 @@ export function AdminListProvider({
   name,
   sort,
   filter,
-  initialData,
   children,
 }: AdminListProps) {
   const client = clientConfig.admin;
@@ -93,12 +89,10 @@ export function AdminListProvider({
 
   const apiPath = "/api/admin/";
 
-  const queryKey = [
-    "admin-list",
-    name,
-    debouncedFilters,
+  const queryKey = getAdminListQueryKey(name, {
+    ...debouncedFilters,
     page,
-  ] satisfies QueryKey;
+  });
 
   const query = useQuery({
     queryFn: () =>
@@ -112,7 +106,6 @@ export function AdminListProvider({
         page,
       }),
     queryKey,
-    initialData,
     staleTime: 60 * 1000,
     placeholderData: (prev) => prev,
   });
