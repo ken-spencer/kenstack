@@ -8,40 +8,79 @@ import {
   type DragEvent,
 } from "react";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
-import { Upload, X } from "lucide-react";
+import { Paperclip, Upload, X } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 
 import ProgressIcon from "@kenstack/icons/Progress";
+import AttachmentList, {
+  type AttachmentListItem,
+} from "@kenstack/components/AttachmentList";
 import Field, { type FieldProps } from "@kenstack/forms/Field";
 import AddImageIcon from "@kenstack/forms/ImageField/AddImageIcon";
 import { useForm } from "@kenstack/forms/context";
 import getUploadErrorMessage from "@kenstack/forms/getUploadErrorMessage";
 import fetcher from "@kenstack/api/fetcher";
+import {
+  attachmentUploadStatusLabels,
+  getAttachmentDocumentMeta,
+} from "@kenstack/lib/attachments";
 import { rasterMimeTypes as acceptDefault } from "@kenstack/db/tables/media/mimeTypes";
 import ImageDetailsModal, {
   type ImageDetailsValue,
 } from "@kenstack/admin/forms/ImageDetailsModal";
 
-type MediaImage = ImageDetailsValue & {
-  localId?: string;
-  previewUrl?: string;
-  uploadState?: "pending" | "uploading" | "done" | "error";
-  action?: "upload";
-  mediaId?: string;
-};
+type MediaImage = ImageDetailsValue &
+  AttachmentListItem & {
+    action?: "upload";
+    localId?: string;
+    mediaId?: string;
+    previewUrl?: string;
+  };
+
+function AttachmentFilePreview({ media }: { media: AttachmentListItem }) {
+  const {
+    className,
+    icon: Icon,
+    label,
+  } = getAttachmentDocumentMeta(media.sourceType);
+
+  return (
+    <div className="flex h-full w-full flex-col items-center justify-center gap-2 p-2 text-center">
+      <span
+        className={twMerge(
+          "flex size-14 items-center justify-center rounded border",
+          className,
+        )}
+      >
+        <Icon className="size-8" />
+      </span>
+      <span className="max-w-full truncate text-xs font-semibold tracking-normal text-gray-700 dark:text-gray-200">
+        {label}
+      </span>
+      {media.filename ? (
+        <span className="max-w-full truncate text-[0.6875rem] leading-tight text-gray-500 dark:text-gray-400">
+          {media.filename}
+        </span>
+      ) : null}
+    </div>
+  );
+}
 
 type MediaRenderProps = {
   apiPath: string;
   data?: Record<string, unknown>;
   accept?: readonly string[];
   className?: string;
+  itemClassName?: string;
   placeholder?: React.ReactNode;
+  uploadClassName?: string;
   canUpload?: boolean;
   presignedUrlAction?: string;
   uploadCompleteAction?: string;
+  variant?: "grid" | "attachments";
 };
 
-type MediaListFieldProps = FieldProps &
+export type MediaListFieldProps = FieldProps &
   ComponentProps<"div"> &
   MediaRenderProps;
 
@@ -69,10 +108,13 @@ const mediaRender = ({
   data: extraData,
   accept = acceptDefault,
   className,
+  itemClassName,
   placeholder,
+  uploadClassName,
   canUpload = true,
   presignedUrlAction = "get-presigned-url",
   uploadCompleteAction = "upload-complete",
+  variant = "grid",
 }: MediaRenderProps) =>
   function MediaListFieldRender({
     field,
@@ -146,13 +188,13 @@ const mediaRender = ({
           setStatusMessage({
             status: "error",
             message:
-              "There was a problem uploading your image. Please try again.",
+              "There was a problem uploading your file. Please try again.",
           });
           updateLocalImage(localId, { uploadState: "error" });
           return {
             status: "error",
             message:
-              "There was a problem uploading your image. Please try again.",
+              "There was a problem uploading your file. Please try again.",
           } as const;
         }
       } catch (error) {
@@ -164,14 +206,16 @@ const mediaRender = ({
 
       const complete = await fetcher<{
         imageId: string;
+        mediaId?: string;
+        kind?: AttachmentListItem["kind"];
         url: string;
-        width?: number;
-        height?: number;
+        width?: number | null;
+        height?: number | null;
         filename?: string;
         sourceType?: string;
         sourceSize?: number;
-        sourceWidth?: number;
-        sourceHeight?: number;
+        sourceWidth?: number | null;
+        sourceHeight?: number | null;
         originalUrl?: string;
       }>(apiPath, {
         ...extraData,
@@ -187,6 +231,7 @@ const mediaRender = ({
       }
 
       updateLocalImage(localId, {
+        kind: complete.kind,
         url: complete.url,
         width: complete.width,
         height: complete.height,
@@ -199,7 +244,7 @@ const mediaRender = ({
         previewUrl: undefined,
         uploadState: "done",
         action: "upload" as const,
-        mediaId: complete.imageId,
+        mediaId: complete.mediaId ?? complete.imageId,
       });
       return { status: "success" } as const;
     };
@@ -223,6 +268,10 @@ const mediaRender = ({
       setImages(value.map((item, key) => (key === index ? image : item)));
     };
 
+    const removeImage = (index: number) => {
+      setImages(value.filter((_, key) => key !== index));
+    };
+
     const uploadFiles = async (files: FileList | File[]) => {
       if (!canUpload) {
         return;
@@ -240,8 +289,13 @@ const mediaRender = ({
 
       const pendingImages = acceptedFiles.map((file) => {
         const previewUrl = URL.createObjectURL(file);
+        const kind: AttachmentListItem["kind"] = file.type.startsWith("image/")
+          ? undefined
+          : "file";
+
         return {
           localId: crypto.randomUUID(),
+          kind,
           previewUrl,
           url: previewUrl,
           filename: file.name,
@@ -310,8 +364,8 @@ const mediaRender = ({
             type: "validate",
             message:
               failedLocalIds.size === 1
-                ? `${message ?? "One image could not be uploaded."} The image was removed from media.`
-                : `${failedLocalIds.size} images could not be uploaded and were removed from media.`,
+                ? `${message ?? "One file could not be uploaded."} The file was removed from media.`
+                : `${failedLocalIds.size} files could not be uploaded and were removed from media.`,
           });
         }
 
@@ -355,6 +409,47 @@ const mediaRender = ({
       />
     );
 
+    if (variant === "attachments") {
+      return (
+        <div
+          className={twMerge(
+            "space-y-2 rounded-md border border-gray-200 p-2 dark:border-gray-800",
+            className,
+          )}
+          {...dragEvents}
+        >
+          <label
+            className={twMerge(
+              "flex min-h-12 items-center gap-3 rounded-md border border-dashed border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200",
+              canUpload
+                ? "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                : "cursor-not-allowed opacity-50",
+              uploadClassName,
+            )}
+          >
+            <Paperclip className="size-4 shrink-0 text-gray-500" />
+            <span className="min-w-0">
+              {placeholder ?? (
+                <>
+                  <span className="block font-medium">Attach files</span>
+                  <span className="text-muted-foreground block text-xs">
+                    Photos, PDFs, and Word documents are accepted.
+                  </span>
+                </>
+              )}
+            </span>
+            {input}
+          </label>
+
+          <AttachmentList
+            attachments={value}
+            itemClassName={itemClassName}
+            onRemove={removeImage}
+          />
+        </div>
+      );
+    }
+
     return (
       <div
         className={twMerge(
@@ -363,87 +458,103 @@ const mediaRender = ({
         )}
         {...dragEvents}
       >
-        {value.map((image, index) => (
-          <div
-            key={image.id ?? image.mediaId ?? image.url}
-            draggable
-            className={
-              "relative size-28 cursor-grab overflow-hidden rounded border border-gray-200 bg-gray-100 active:cursor-grabbing dark:border-gray-800 dark:bg-gray-900" +
-              (image.uploadState === "error" ? " opacity-45 grayscale" : "")
-            }
-            onDragStart={(evt) => {
-              setDragIndex(index);
-              evt.dataTransfer.effectAllowed = "move";
-              evt.dataTransfer.setData("action", "moveMediaImage");
-            }}
-            onDragEnd={() => {
-              setDragIndex(null);
-            }}
-            onDragOver={(evt) => {
-              if (dragIndex !== null) {
-                evt.preventDefault();
-                evt.dataTransfer.dropEffect = "move";
-              }
-            }}
-            onDrop={(evt) => {
-              evt.preventDefault();
-              evt.stopPropagation();
-              if (dragIndex !== null) {
-                moveImage(dragIndex, index);
+        {value.map((image, index) => {
+          const fileMedia = image.kind === "file";
+          const uploadStatus =
+            image.uploadState && image.uploadState !== "done"
+              ? attachmentUploadStatusLabels[image.uploadState]
+              : null;
+
+          return (
+            <div
+              key={image.id ?? image.mediaId ?? image.url}
+              draggable
+              className={twMerge(
+                "relative size-28 cursor-grab overflow-hidden rounded border border-gray-200 bg-gray-100 active:cursor-grabbing dark:border-gray-800 dark:bg-gray-900",
+                image.uploadState === "error" && "opacity-45 grayscale",
+                itemClassName,
+              )}
+              onDragStart={(evt) => {
+                setDragIndex(index);
+                evt.dataTransfer.effectAllowed = "move";
+                evt.dataTransfer.setData("action", "moveMediaImage");
+              }}
+              onDragEnd={() => {
                 setDragIndex(null);
-              }
-            }}
-          >
-            <button
-              type="button"
-              title="Remove image"
-              aria-label="Remove image"
-              draggable={false}
-              className={"absolute top-1 right-1 z-20 " + buttonClass}
-              onPointerDown={(evt) => {
-                evt.stopPropagation();
               }}
-              onClick={(evt) => {
+              onDragOver={(evt) => {
+                if (dragIndex !== null) {
+                  evt.preventDefault();
+                  evt.dataTransfer.dropEffect = "move";
+                }
+              }}
+              onDrop={(evt) => {
+                evt.preventDefault();
                 evt.stopPropagation();
-                setImages(value.filter((_, key) => key !== index));
+                if (dragIndex !== null) {
+                  moveImage(dragIndex, index);
+                  setDragIndex(null);
+                }
               }}
             >
-              <X />
-            </button>
-            <button
-              type="button"
-              className="block h-full w-full"
-              disabled={image.uploadState === "error"}
-              onClick={() => {
-                setEditingIndex(index);
-              }}
-            >
-              <img
-                alt={image.alt ?? ""}
-                className="h-full w-full object-cover"
-                src={image.previewUrl ?? image.url}
-              />
-              {image.uploadState === "pending" ? (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/35 text-xs font-medium text-white">
-                  Waiting
-                </div>
-              ) : null}
-              {image.uploadState === "uploading" ? (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/35">
-                  <ProgressIcon
-                    className="size-8 animate-spin text-white"
-                    style={{ animationDuration: "2s" }}
+              <button
+                type="button"
+                title="Remove media"
+                aria-label="Remove media"
+                draggable={false}
+                className={"absolute top-1 right-1 z-20 " + buttonClass}
+                onPointerDown={(evt) => {
+                  evt.stopPropagation();
+                }}
+                onClick={(evt) => {
+                  evt.stopPropagation();
+                  removeImage(index);
+                }}
+              >
+                <X />
+              </button>
+              <button
+                type="button"
+                className="block h-full w-full"
+                disabled={image.uploadState === "error" || fileMedia}
+                onClick={() => {
+                  if (!fileMedia) {
+                    setEditingIndex(index);
+                  }
+                }}
+              >
+                {fileMedia ? (
+                  <AttachmentFilePreview media={image} />
+                ) : (
+                  <img
+                    alt={image.alt ?? ""}
+                    className="h-full w-full object-cover"
+                    src={image.previewUrl ?? image.url}
                   />
-                </div>
-              ) : null}
-              {image.uploadState === "error" ? (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/45 px-2 text-center text-xs font-medium text-white">
-                  Too large
-                </div>
-              ) : null}
-            </button>
-          </div>
-        ))}
+                )}
+                {uploadStatus && image.uploadState !== "uploading" ? (
+                  <div
+                    className={twMerge(
+                      "absolute inset-0 flex items-center justify-center bg-black/35 text-xs font-medium text-white",
+                      image.uploadState === "error" &&
+                        "bg-black/45 px-2 text-center",
+                    )}
+                  >
+                    {uploadStatus}
+                  </div>
+                ) : null}
+                {image.uploadState === "uploading" ? (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/35">
+                    <ProgressIcon
+                      className="size-8 animate-spin text-white"
+                      style={{ animationDuration: "2s" }}
+                    />
+                  </div>
+                ) : null}
+              </button>
+            </div>
+          );
+        })}
 
         <label
           className={twMerge(
@@ -451,6 +562,7 @@ const mediaRender = ({
             canUpload
               ? "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
               : "cursor-not-allowed opacity-50",
+            uploadClassName,
           )}
         >
           {value.length ? (

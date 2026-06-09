@@ -11,7 +11,7 @@ import { Checkbox } from "@kenstack/components/ui/checkbox";
 import MetaDates from "@kenstack/admin/components/MetaDates";
 import VisibilityStatus from "./VisibilityStatus";
 import type { AdminClient, BaseListItem } from "@kenstack/admin/client";
-import type { SelectedImage } from "@kenstack/db/tables";
+import type { SelectedMedia } from "@kenstack/db/tables";
 import { cn } from "@kenstack/lib/utils";
 
 type ListItems = NonNullable<AdminClient["listItems"]>;
@@ -153,12 +153,12 @@ function DefaultTitleCell({
   row: BaseListItem & Record<string, unknown> & { path: string };
 }) {
   const title = getDefaultTitle(row);
-  const image = getDefaultImage(row);
-  const hasImageSlot = image || "image" in row;
+  const media = getDefaultMedia(row);
+  const hasImageSlot = media || "image" in row;
 
   return (
     <div className="flex min-w-0 items-center gap-2">
-      {hasImageSlot ? <ImageCell image={image} path={row.path} /> : null}
+      {hasImageSlot ? <ImageCell media={media} path={row.path} /> : null}
       <div className="flex min-w-0 flex-col">
         <Link className="text-lg" href={row.path}>
           {title}
@@ -178,10 +178,10 @@ function VisibilityStatusCell({
 }
 
 function ImageCell({
-  image,
+  media,
   path,
 }: {
-  image: SelectedImage | undefined;
+  media: SelectedMedia | undefined;
   path: string;
 }) {
   return (
@@ -190,9 +190,9 @@ function ImageCell({
         className="relative size-10 shrink-0 overflow-hidden rounded bg-gray-100 ring-1 ring-gray-200 dark:bg-gray-900 dark:ring-gray-800"
         href={path}
       >
-        {image ? (
+        {media ? (
           <Image
-            src={image.url}
+            src={media.url}
             alt=""
             fill
             className="object-contain p-1"
@@ -209,11 +209,11 @@ function getDefaultTitle(item: BaseListItem & { title?: string | null }) {
   return title || `ID ${item.id}`;
 }
 
-function getDefaultImage(item: BaseListItem & Record<string, unknown>) {
-  return Object.values(item).find(isSelectedImage);
+function getDefaultMedia(item: BaseListItem & Record<string, unknown>) {
+  return Object.values(item).find(isSelectedMedia);
 }
 
-function isSelectedImage(value: unknown): value is SelectedImage {
+function isSelectedMedia(value: unknown): value is SelectedMedia {
   return (
     typeof value === "object" &&
     value !== null &&

@@ -12,6 +12,7 @@ import { checkboxListField } from "./checkboxList";
 import { dateField } from "./date";
 import { dateTimeField } from "./dateTime";
 import { imageField } from "./image";
+import { radioButtonField } from "./radioButton";
 import { textField } from "./text";
 export { booleanField } from "./boolean";
 export { checkboxListField } from "./checkboxList";
@@ -19,6 +20,7 @@ export { dateField } from "./date";
 export { dateTimeField } from "./dateTime";
 export { imageField } from "./image";
 export { mediaListField } from "./mediaList";
+export { radioButtonField } from "./radioButton";
 export { relationshipField, isRelationshipField } from "./relationship";
 export { tagField, isTagField } from "./tags";
 export { textField } from "./text";
@@ -92,11 +94,21 @@ export type FieldPreSaveResult =
       message: string;
     };
 
+export type FieldUploadOptions = {
+  accept?: readonly string[];
+  maxSize?: number;
+  maxSizeMessage?: string;
+};
+
+export type FieldUploadBehavior = true | FieldUploadOptions;
+
 export type FieldFilterConfig =
   | {
+      field?: SelectValue;
       kind: "date-range" | "boolean" | "text";
     }
   | {
+      field?: SelectValue;
       kind: "enum" | "includes";
       options: readonly FieldFilterOption[];
     };
@@ -105,7 +117,7 @@ export type FieldBehavior = {
   load?: (ctx: FieldLoadContext) => Promise<unknown>;
   save?: (ctx: FieldSaveContext) => Promise<unknown>;
   delete?: (ctx: FieldDeleteContext) => Promise<void>;
-  upload?: true;
+  upload?: FieldUploadBehavior;
   tagRelations?: TagsTable;
   relationship?: Relationship;
   listSelect?: (ctx: FieldListSelectContext) => SelectValue | undefined;
@@ -217,11 +229,11 @@ function getDefaultServerField(field: DefinedField): ServerFieldDefaults {
     return checkboxListField(field);
   }
 
-  if (
-    field.kind === "text" ||
-    field.kind === "email" ||
-    field.kind === "radio-button"
-  ) {
+  if (field.kind === "radio-button") {
+    return radioButtonField(field);
+  }
+
+  if (field.kind === "text" || field.kind === "email") {
     return textField();
   }
 

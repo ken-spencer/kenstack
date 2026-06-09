@@ -2,9 +2,10 @@ import { pipelineStage } from "@kenstack/api";
 import type { AnyAdminConfig } from "..";
 import { deps } from "@app/deps";
 import { revisions } from "@kenstack/db/tables/revisions";
-import { and, desc, eq, getTableName, sql } from "drizzle-orm";
+import { and, desc, eq, getTableName } from "drizzle-orm";
 import * as z from "zod";
 import { filterRevisionSnapshot } from "@kenstack/fields/records";
+import { formatUserName } from "@kenstack/lib/user";
 
 export const revisionsAction = (adminConfig: AnyAdminConfig) =>
   pipelineStage(
@@ -55,12 +56,10 @@ export const revisionsAction = (adminConfig: AnyAdminConfig) =>
           id: revisions.id,
           createdAt: revisions.createdAt,
           createdBy: revisions.createdBy,
-          createdByName: sql<string | null>`
-            coalesce(
-              nullif(trim(coalesce(${users.givenName}, '') || ' ' || coalesce(${users.familyName}, '')), ''),
-              ${users.email}
-            )
-          `,
+          createdByEmail: users.email,
+          createdByFamilyName: users.familyName,
+          createdByGivenName: users.givenName,
+          createdByMiddleName: users.middleName,
           changes: revisions.changes,
         })
         .from(revisions)
@@ -69,7 +68,24 @@ export const revisionsAction = (adminConfig: AnyAdminConfig) =>
         .orderBy(desc(revisions.createdAt));
 
       return response.success({
-        revisions: rows,
+        revisions: rows.map(
+          ({
+            createdByEmail,
+            createdByFamilyName,
+            createdByGivenName,
+            createdByMiddleName,
+            ...row
+          }) => ({
+            ...row,
+            createdByName:
+              formatUserName({
+                email: createdByEmail,
+                familyName: createdByFamilyName,
+                givenName: createdByGivenName,
+                middleName: createdByMiddleName,
+              }) || null,
+          }),
+        ),
       });
     },
   );

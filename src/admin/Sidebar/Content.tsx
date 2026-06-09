@@ -1,5 +1,5 @@
 "use client";
-import { Suspense, type ReactNode } from "react";
+import { type ReactNode } from "react";
 
 import { useSidebar, SidebarTrigger } from "@kenstack/components/ui/sidebar";
 
@@ -43,16 +43,7 @@ export default function SidebarContent({
           <Link href="/" className="justify-self-center md:justify-self-start">
             {logo}
           </Link>
-          <Suspense
-            fallback={
-              <div
-                className="hidden h-6 w-24 justify-self-center md:block"
-                aria-hidden="true"
-              />
-            }
-          >
-            <HeaderModuleTitle moduleLinks={moduleLinks} />
-          </Suspense>
+          <HeaderModuleTitle moduleLinks={moduleLinks} />
           <div className="flex min-h-10 min-w-10 items-center justify-end justify-self-end">
             {accountMenu}
           </div>

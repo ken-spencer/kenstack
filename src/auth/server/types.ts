@@ -6,6 +6,7 @@ import type { AnyPgColumn } from "drizzle-orm/pg-core";
 
 export type AuthUsersTable = AdminTable & {
   givenName: AnyPgColumn<{ data: string; notNull: true }>;
+  middleName: AnyPgColumn<{ data: string; notNull: true }>;
   familyName: AnyPgColumn<{ data: string; notNull: true }>;
   email: AnyPgColumn<{ data: string; notNull: true }>;
   roles: AnyPgColumn<{ data: string[]; notNull: true }>;

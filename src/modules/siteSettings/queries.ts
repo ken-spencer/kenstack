@@ -3,7 +3,7 @@ import { cacheLife, cacheTag } from "next/cache";
 import { eq } from "drizzle-orm";
 
 import { deps } from "@app/deps";
-import { selectImageSubquery } from "@kenstack/db/tables";
+import { selectMediaSubquery } from "@kenstack/db/tables";
 import { fields } from "./fields";
 import { siteSettings } from "./tables";
 
@@ -16,7 +16,7 @@ export async function loadSiteSettings() {
     .select({
       title: siteSettings.title,
       titleTemplate: siteSettings.titleTemplate,
-      ogImage: selectImageSubquery(siteSettings.ogImage, "original"),
+      ogImage: selectMediaSubquery(siteSettings.ogImage, "original"),
     })
     .from(siteSettings)
     .where(eq(siteSettings.key, "site-settings"))

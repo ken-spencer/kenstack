@@ -7,6 +7,7 @@ import crypto from "crypto";
 import * as z from "zod";
 
 import mailer, { type Attachment } from "@kenstack/lib/mailer";
+import { formatUserName } from "@kenstack/lib/user";
 import { render } from "@react-email/render";
 
 import {
@@ -107,14 +108,12 @@ export const sendPasswordResetAction = ({
       const url = new URL("/reset-password", request.url);
       url.searchParams.set("token", tokenPlain);
 
+      const recipientName = formatUserName(user, { fallback: "there" });
+      const adminName = admin.name || admin.email;
+
       const emailHtml = await render(
         <Email
-          name={
-            [user.givenName, user.familyName]
-              .filter((part) => Boolean(part))
-              .join(" ")
-              .trim() || "there"
-          }
+          name={recipientName}
           url={url.toString()}
           ip={ip}
           geo={geo}
@@ -130,7 +129,7 @@ export const sendPasswordResetAction = ({
       await mailer({
         to: email,
         from,
-        subject: `${admin.givenName} ${admin.familyName} has requested a password reset`,
+        subject: `${adminName} has requested a password reset`,
         html: emailHtml,
         attachments,
       });

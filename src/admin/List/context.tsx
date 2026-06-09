@@ -11,8 +11,10 @@ import {
   getAdminListQueryKey,
   parseListPage,
   type ListQueryStoreState,
-} from "@kenstack/admin/lib/listQuerySchema";
-import useQueryStore, { type SetQueryStore } from "./useQueryStore";
+} from "@kenstack/list/querySchema";
+import useQueryStore, {
+  type SetQueryStore,
+} from "@kenstack/list/useQueryStore";
 
 import type {
   AdminClient,

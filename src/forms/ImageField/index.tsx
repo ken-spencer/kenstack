@@ -10,7 +10,7 @@ import { Upload as UploadIcon, X as CancelIcon } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 import Field, { type FieldProps } from "@kenstack/forms/Field";
 import getUploadErrorMessage from "@kenstack/forms/getUploadErrorMessage";
-import IconButton from "@kenstack/components/IconButton";
+import Button from "@kenstack/components/Button";
 import Help from "@kenstack/components/Help";
 import { useForm } from "@kenstack/forms/context";
 
@@ -273,16 +273,18 @@ const imageRender = ({
       return (
         <div className={contClass}>
           {src && <img className={imgClass} src={src} alt="" />}
-          <IconButton
+          <Button
             type="button"
             className={"absolute top-1 right-1 cursor-pointer " + buttonClass}
+            size="icon"
             tooltip="Cancel"
+            variant="ghost"
             onClick={() => {
               reset();
             }}
           >
             <CancelIcon />
-          </IconButton>
+          </Button>
           <div className="bg-opacity-40 absolute inset-0 m-auto h-12 w-12 rounded-full bg-black">
             <ProgressIcon
               className="h-12 w-12 animate-spin text-gray-100"
@@ -305,10 +307,12 @@ const imageRender = ({
 
       return (
         <div className={contClass} {...dragEvents}>
-          <IconButton
+          <Button
             type="button"
             className={"absolute top-1 right-1 " + buttonClass}
+            size="icon"
             tooltip="Delete image"
+            variant="ghost"
             onClick={(evt) => {
               field.onChange(null);
 
@@ -317,7 +321,7 @@ const imageRender = ({
             }}
           >
             <CancelIcon />
-          </IconButton>
+          </Button>
           <label
             title="Upload image"
             aria-label="Upload image"

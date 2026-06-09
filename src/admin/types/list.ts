@@ -2,6 +2,8 @@ import type { AnyColumn, SQL } from "drizzle-orm";
 
 export type SortDirection = "asc" | "desc";
 export type AdminFieldReference = string | AnyColumn;
+export type AdminFilterField = AnyColumn | SQL;
+export type AdminFilterFieldReference = AdminFieldReference | SQL;
 export type AdminSortFieldReference = AdminFieldReference | SQL;
 
 export type AdminSortField =
@@ -61,23 +63,23 @@ export type AdminFilterOptions = Record<
   | {
       label?: string;
       kind: "date-range";
-      field: AdminFieldReference;
+      field: AdminFilterFieldReference;
     }
   | {
       label?: string;
       kind: "boolean";
-      field: AdminFieldReference;
+      field: AdminFilterFieldReference;
     }
   | {
       label?: string;
       kind: "enum" | "includes";
-      field: AdminFieldReference;
+      field: AdminFilterFieldReference;
       options: readonly AdminFilterOption[];
     }
   | {
       label?: string;
       kind: "text";
-      field: AdminFieldReference;
+      field: AdminFilterFieldReference;
     }
 >;
 
@@ -88,20 +90,20 @@ export type AdminFilters = Record<
   } & (
     | {
         kind: "date-range";
-        field: AnyColumn;
+        field: AdminFilterField;
       }
     | {
         kind: "boolean";
-        field: AnyColumn;
+        field: AdminFilterField;
       }
     | {
         kind: "enum" | "includes";
-        field: AnyColumn;
+        field: AdminFilterField;
         options: readonly AdminFilterOption[];
       }
     | {
         kind: "text";
-        field: AnyColumn;
+        field: AdminFilterField;
       }
   )
 >;

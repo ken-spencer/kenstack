@@ -4,7 +4,7 @@ import type { AnyColumn, InferSelectModel, SQL } from "drizzle-orm";
 import { getTableColumns } from "drizzle-orm";
 
 import type {
-  AdminFieldReference,
+  AdminFilterFieldReference,
   AdminFilterOptions,
   AdminFilters,
   AdminSortFieldReference,
@@ -228,7 +228,7 @@ function defineFilters<TTable extends AdminTable>(
   options: AdminFilterOptions | undefined,
 ) {
   const custom = normalizeFilters(table, options ?? {});
-  const fieldFilters = normalizeFilters(table, getFieldFilterOptions(fields));
+  const fieldFilters = defineFieldFilters(table, fields);
   const visibilityFilter: AdminFilters =
     "visibility" in table && !custom.visibility
       ? {
@@ -268,6 +268,37 @@ function defineFilters<TTable extends AdminTable>(
   } satisfies AdminFilters;
 }
 
+export function defineFieldFilters(
+  table: AdminTable,
+  fields: ServerDefinedFields,
+) {
+  const entries: [string, AdminFilters[string]][] = [];
+
+  Object.entries(fields)
+    .filter(([, field]) => field.filter === true)
+    .forEach(([name, field]) => {
+      const filter = field.behavior?.filter;
+      if (!filter) {
+        throw new Error(
+          `Field "${name}" is filterable but has no filter behavior.`,
+        );
+      }
+
+      const { field: filterField, ...filterOptions } = filter;
+
+      entries.push([
+        name,
+        {
+          field: resolveFieldReference(table, filterField ?? name),
+          label: field.label ?? startCase(name),
+          ...filterOptions,
+        },
+      ]);
+    });
+
+  return Object.fromEntries(entries);
+}
+
 function normalizeFilters(table: AdminTable, options: AdminFilterOptions) {
   return Object.fromEntries(
     Object.entries(options).map(([name, option]) => [
@@ -298,27 +329,6 @@ function getFieldSortOptions(fields: ServerDefinedFields): AdminSortOptions {
   );
 }
 
-function getFieldFilterOptions(
-  fields: ServerDefinedFields,
-): AdminFilterOptions {
-  const entries: [string, AdminFilterOptions[string]][] = [];
-
-  Object.entries(fields)
-    .filter(([, field]) => field.filter === true)
-    .forEach(([name, field]) => {
-      const filter = field.behavior?.filter;
-      if (!filter) {
-        throw new Error(
-          `Field "${name}" is filterable but has no filter behavior.`,
-        );
-      }
-
-      entries.push([name, { field: name, ...filter }]);
-    });
-
-  return Object.fromEntries(entries);
-}
-
 function resolveSortField(
   table: AdminTable,
   field: AdminSortField,
@@ -337,7 +347,10 @@ function resolveSortField(
   return resolveSortFieldReference(table, field);
 }
 
-function resolveFieldReference(table: AdminTable, field: AdminFieldReference) {
+function resolveFieldReference(
+  table: AdminTable,
+  field: AdminFilterFieldReference,
+) {
   if (typeof field !== "string") {
     return field;
   }

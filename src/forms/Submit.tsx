@@ -4,6 +4,7 @@ import { useFormContext } from "react-hook-form";
 
 export default function SubmitButton({
   children = "Submit",
+  disabled = false,
   disabledUntilDirty = false,
   ...props
 }: ButtonProps & {
@@ -19,7 +20,7 @@ export default function SubmitButton({
     <Button
       {...props}
       disabled={
-        props.disabled ||
+        disabled ||
         isPending ||
         (disabledUntilDirty && !isDirty) ||
         uploadingFields.size > 0

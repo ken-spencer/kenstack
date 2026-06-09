@@ -3,8 +3,9 @@
 import { useEffect } from "react";
 import { X } from "lucide-react";
 
-import IconButton from "@kenstack/components/IconButton";
+import Button from "@kenstack/components/Button";
 import type { SquareCrop } from "@kenstack/db/tables/media/types";
+import { formatFileSize } from "@kenstack/lib/fileSize";
 
 export type ImageDetailsValue = {
   id?: number;
@@ -22,18 +23,6 @@ export type ImageDetailsValue = {
   originalUrl?: string | null;
   squareCrop?: SquareCrop | null;
 };
-
-function formatFileSize(size?: number | null) {
-  if (!size) {
-    return "";
-  }
-
-  if (size < 1024 * 1024) {
-    return `${Math.round(size / 1024)} KB`;
-  }
-
-  return `${(size / 1024 ** 2).toFixed(1)} MB`;
-}
 
 export default function ImageDetailsModal({
   image,
@@ -95,14 +84,16 @@ export default function ImageDetailsModal({
                 </p>
               ) : null}
             </div>
-            <IconButton
+            <Button
               type="button"
               className="size-8 rounded border"
+              size="icon"
               tooltip="Close"
+              variant="ghost"
               onClick={onClose}
             >
               <X />
-            </IconButton>
+            </Button>
           </div>
 
           <div className="grid gap-4">

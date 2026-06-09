@@ -22,6 +22,11 @@ export function relationshipField(
 ): ServerFieldResolver<ServerField & { kind: "relationship" }> {
   return (): ServerFieldDefaults => ({
     behavior: {
+      filter: {
+        field: relationshipFilterField(relationship),
+        kind: "includes",
+        options: [],
+      },
       relationship,
       async load({ db, key, tableId }) {
         const values = await loadRelationships({
@@ -57,6 +62,35 @@ export function isRelationshipField(
   return (
     field?.kind === "relationship" && Boolean(field.behavior?.relationship)
   );
+}
+
+function relationshipFilterField(relationship: Relationship) {
+  const where = [
+    eq(relationship.fromColumn, relationship.fromPrimaryKey),
+    eq(relationship.through.relationship, relationship.relationship),
+  ];
+
+  if ("deletedAt" in relationship.through) {
+    const table = relationship.through as typeof relationship.through &
+      SoftDeleteTable;
+    where.push(isNull(table.deletedAt));
+  }
+
+  if ("deletedAt" in relationship.to) {
+    const table = relationship.to as typeof relationship.to & SoftDeleteTable;
+    where.push(isNull(table.deletedAt));
+  }
+
+  return sql<string[]>`coalesce(
+    (
+      select array_agg(${relationship.toPrimaryKey}::text)
+      from ${relationship.through}
+      inner join ${relationship.to}
+        on ${relationship.toPrimaryKey} = ${relationship.toColumn}
+      where ${and(...where)}
+    ),
+    array[]::text[]
+  )`;
 }
 
 type SoftDeleteTable = {

@@ -3,9 +3,9 @@ import type { AnyPgTable } from "drizzle-orm/pg-core";
 import { pipelineStage } from "@kenstack/api";
 import { deps } from "@app/deps";
 import {
-  completeImageUpload,
-  imageUploadCompleteSchema,
-} from "@kenstack/fields/records/imageUpload";
+  completeMediaUpload,
+  mediaUploadCompleteSchema,
+} from "@kenstack/fields/records/mediaUpload";
 import type { ServerDefinedFields } from "@kenstack/fields/server";
 
 export const uploadCompleteAction = (adminConfig: {
@@ -13,10 +13,10 @@ export const uploadCompleteAction = (adminConfig: {
   fields: ServerDefinedFields;
 }) =>
   pipelineStage(
-    { schema: imageUploadCompleteSchema },
+    { schema: mediaUploadCompleteSchema },
     async ({ data, response }) => {
       const user = await deps.auth.requireUser();
-      const result = await completeImageUpload({
+      const result = await completeMediaUpload({
         ...adminConfig,
         ...data,
         userId: user.id,

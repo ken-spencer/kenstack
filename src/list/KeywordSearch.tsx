@@ -1,15 +1,26 @@
 import { Input } from "@kenstack/components/ui/input";
+import { cn } from "@kenstack/lib/utils";
 import { Search, CircleX } from "lucide-react";
-import { useAdminList } from "./context";
+import type { ListQueryStoreState } from "@kenstack/list/querySchema";
+import type { SetQueryStore } from "@kenstack/list/useQueryStore";
 
-export default function KeywordSearch() {
-  const { filters, setFilters } = useAdminList();
+export default function KeywordSearch({
+  className,
+  filters,
+  placeholder = "Enter keywords",
+  setFilters,
+}: {
+  className?: string;
+  filters: Pick<ListQueryStoreState, "keywords">;
+  placeholder?: string;
+  setFilters: SetQueryStore<ListQueryStoreState>;
+}) {
   return (
-    <div className="flex max-w-sm items-center p-1">
+    <div className={cn("flex max-w-sm items-center p-1", className)}>
       <Search className="-mr-7 ml-1 size-6" />
       <Input
         className="pl-9"
-        placeholder="Enter keywords"
+        placeholder={placeholder}
         value={filters.keywords}
         name="search"
         autoComplete="off"

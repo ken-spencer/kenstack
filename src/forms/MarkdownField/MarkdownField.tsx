@@ -19,12 +19,15 @@ import {
 } from "milkdown-plugin-placeholder";
 import { useEffect, useRef } from "react";
 import { type ControllerRenderProps } from "react-hook-form";
+import { twMerge } from "tailwind-merge";
 
 import Field, { type FieldProps } from "@kenstack/forms/Field";
 import { MarkdownEditorToolbar } from "@kenstack/forms/MarkdownEditor/Toolbar";
 
 export type InputProps = React.ComponentProps<"input"> &
   FieldProps & {
+    editorClassName?: string;
+    editorContentClassName?: string;
     inputClass?: string;
   };
 
@@ -33,6 +36,8 @@ export default function MarkdownField({
   label,
   description,
   className,
+  editorClassName,
+  editorContentClassName,
 }: InputProps) {
   return (
     <Field
@@ -42,14 +47,26 @@ export default function MarkdownField({
       className={className}
       render={({ field }) => (
         <MilkdownProvider>
-          <MarkdownFieldEditor field={field} />
+          <MarkdownFieldEditor
+            editorClassName={editorClassName}
+            editorContentClassName={editorContentClassName}
+            field={field}
+          />
         </MilkdownProvider>
       )}
     />
   );
 }
 
-function MarkdownFieldEditor({ field }: { field: ControllerRenderProps }) {
+function MarkdownFieldEditor({
+  editorClassName,
+  editorContentClassName,
+  field,
+}: {
+  editorClassName?: string;
+  editorContentClassName?: string;
+  field: ControllerRenderProps;
+}) {
   const initialValue = typeof field.value === "string" ? field.value : "";
   const lastEditorValue = useRef(initialValue);
   const [loading, get] = useInstance();
@@ -88,9 +105,19 @@ function MarkdownFieldEditor({ field }: { field: ControllerRenderProps }) {
   }, [field.value, get, loading]);
 
   return (
-    <div className="border-input bg-background overflow-hidden rounded-md border">
+    <div
+      className={twMerge(
+        "border-input bg-background overflow-hidden rounded-md border",
+        editorClassName,
+      )}
+    >
       <MarkdownEditorToolbar variant="static" />
-      <div className="min-h-[350px] px-3 py-2 [&_.ProseMirror]:min-h-[350px] [&_.ProseMirror]:outline-none">
+      <div
+        className={twMerge(
+          "min-h-[350px] px-3 py-2 [&_.ProseMirror]:min-h-[350px] [&_.ProseMirror]:outline-none",
+          editorContentClassName,
+        )}
+      >
         <Milkdown />
       </div>
       <input

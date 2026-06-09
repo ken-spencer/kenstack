@@ -1,6 +1,6 @@
 "use client";
 
-import IconButton from "@kenstack/components/IconButton";
+import Button from "@kenstack/components/Button";
 import { Eye } from "lucide-react";
 import { draftModePath } from "@kenstack/admin/lib/searchParams";
 import { useAdminEdit } from "../context";
@@ -25,10 +25,10 @@ export default function PreviewButton() {
   }
 
   return (
-    <IconButton tooltip="View Content" asChild>
+    <Button asChild size="icon" tooltip="View Content" variant="ghost">
       <a href={previewUrl} target="_blank" rel="noreferrer">
         <Eye className="size-6 text-gray-800" />
       </a>
-    </IconButton>
+    </Button>
   );
 }

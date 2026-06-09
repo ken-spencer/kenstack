@@ -1,6 +1,6 @@
 import { pipelineStage } from "@kenstack/api";
 import type { AnyAdminConfig } from "@kenstack/admin";
-import { createListRequestSchema } from "@kenstack/admin/lib/listQuerySchema";
+import { createListRequestSchema } from "@kenstack/list/querySchema";
 import { queryAdminList } from "@kenstack/admin/queries/list";
 
 export const listAction = (adminConfig: AnyAdminConfig) =>

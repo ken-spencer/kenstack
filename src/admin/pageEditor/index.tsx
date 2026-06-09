@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import Suspense from "@kenstack/components/Suspense";
 import { PageEditorProvider } from "./context";
 import {
   loadContent,

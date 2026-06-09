@@ -1,48 +1,30 @@
 import {
   and,
-  arrayOverlaps,
-  asc,
-  desc,
   eq,
   getTableColumns,
-  gte,
-  ilike,
-  inArray,
-  isNotNull,
   isNull,
   lte,
-  not,
-  or,
   sql,
   type SQL,
 } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
 
 import { deps } from "@app/deps";
-import {
-  createDefaultListQueryState,
-  createListQueryStoreSchema,
-  parseListPage,
-} from "@kenstack/admin/lib/listQuerySchema";
-import type {
-  AdminFilters,
-  AnyAdminConfig,
-  SortDirection,
-} from "@kenstack/admin";
+import { createDefaultListQueryState } from "@kenstack/list/querySchema";
+import type { AnyAdminConfig } from "@kenstack/admin";
 import type { BaseListItem } from "@kenstack/admin/client";
 import type { AdminContentTable } from "@kenstack/admin/table";
-import { getFilterMeta, getSortMeta } from "@kenstack/admin/types/list";
+import { getSortMeta } from "@kenstack/admin/types/list";
+import {
+  parseListSearchParams,
+  resolveListOrderBy,
+  resolveListWhere,
+  type ListQuery,
+} from "@kenstack/list/server";
 
 type AdminListSearchParams = Record<string, string | string[] | undefined>;
 
-export type AdminListQuery = {
-  keywords: string;
-  trash: boolean;
-  sort?: string;
-  direction?: SortDirection;
-  filters: Record<string, unknown>;
-  page: number;
-};
+export type AdminListQuery = ListQuery;
 
 export type AdminListConfig = Extract<AnyAdminConfig, { list: unknown }>;
 
@@ -69,7 +51,11 @@ export async function loadAdminList({
     };
   }
 
-  const query = parseAdminListSearchParams(adminConfig, searchParams);
+  const query = parseListSearchParams({
+    filters: adminConfig.list.filters,
+    searchParams,
+    sort: adminConfig.list.sort,
+  });
 
   return {
     data: await queryAdminList(adminConfig, query),
@@ -118,7 +104,16 @@ export async function queryAdminList(
     } as const;
   }
 
-  const whereClause = and(...resolveListWhere(adminConfig, data));
+  const whereClause = and(
+    ...resolveListWhere(
+      {
+        fields,
+        filters: adminConfig.list.filters,
+        table,
+      },
+      data,
+    ),
+  );
   const [rows, [{ count }]] = await Promise.all([
     db
       .select({
@@ -130,7 +125,15 @@ export async function queryAdminList(
       })
       .from(table)
       .where(whereClause)
-      .orderBy(...resolveOrderBy(adminConfig, data))
+      .orderBy(
+        ...resolveListOrderBy(
+          {
+            sort: adminConfig.list.sort,
+            table,
+          },
+          data,
+        ),
+      )
       .limit(limit)
       .offset(offset),
     db
@@ -151,13 +154,20 @@ export async function loadAdminListNeighbors(
   queryString: string,
   id: number,
 ) {
-  const data = parseAdminListSearchParams(
-    adminConfig,
-    Object.fromEntries(new URLSearchParams(queryString)),
-  );
+  const data = parseListSearchParams({
+    filters: adminConfig.list.filters,
+    searchParams: Object.fromEntries(new URLSearchParams(queryString)),
+    sort: adminConfig.list.sort,
+  });
   const { db } = deps;
   const { table } = adminConfig;
-  const orderBy = resolveOrderBy(adminConfig, data);
+  const orderBy = resolveListOrderBy(
+    {
+      sort: adminConfig.list.sort,
+      table,
+    },
+    data,
+  );
   const ordered = db.$with("admin_list_neighbors").as(
     db
       .select({
@@ -174,7 +184,18 @@ export async function loadAdminListNeighbors(
         ),
       })
       .from(table)
-      .where(and(...resolveListWhere(adminConfig, data))),
+      .where(
+        and(
+          ...resolveListWhere(
+            {
+              fields: adminConfig.fields,
+              filters: adminConfig.list.filters,
+              table,
+            },
+            data,
+          ),
+        ),
+      ),
   );
   const [row] = await db
     .with(ordered)
@@ -193,42 +214,6 @@ export async function loadAdminListNeighbors(
   } as const;
 }
 
-function parseAdminListSearchParams(
-  adminConfig: AdminListConfig,
-  searchParams: AdminListSearchParams,
-) {
-  const sort = getSortMeta(adminConfig.list.sort);
-  const filters = getFilterMeta(adminConfig.list.filters);
-  const defaults = createDefaultListQueryState(sort);
-  const values = Object.fromEntries(
-    Object.entries(defaults).map(([key, fallback]) => {
-      const value = searchParams[key];
-      const rawValue = Array.isArray(value) ? value[0] : value;
-
-      if (typeof rawValue !== "string" || !rawValue) {
-        return [key, fallback];
-      }
-
-      try {
-        return [key, JSON.parse(rawValue) as unknown];
-      } catch {
-        return [key, fallback];
-      }
-    }),
-  );
-  const parsed = createListQueryStoreSchema({
-    defaults,
-    filters,
-    sort,
-  }).safeParse(values);
-  const state = parsed.success ? parsed.data : defaults;
-
-  return {
-    ...state,
-    page: parseListPage(searchParams.page),
-  };
-}
-
 export async function listWhere<TTable extends AdminContentTable>(
   table: TTable,
   options: { draft?: boolean } = {},
@@ -243,32 +228,6 @@ export async function listWhere<TTable extends AdminContentTable>(
     eq(table.visibility, "published"),
     lte(table.publishedAt, sql`now()`),
   );
-}
-
-function resolveListWhere(adminConfig: AdminListConfig, data: AdminListQuery) {
-  const { keywords, trash } = data;
-  const { table, fields } = adminConfig;
-  const searchable = Object.entries(fields)
-    .filter(([, field]) => "searchable" in field && field.searchable)
-    .map(([key]) => key);
-  const where = [
-    trash ? isNotNull(table.deletedAt) : isNull(table.deletedAt),
-    ...resolveFilters(adminConfig.list.filters, data.filters),
-  ];
-
-  if (keywords && searchable.length) {
-    const searchConditions = searchable
-      .filter((key): key is Extract<keyof typeof table, string> => key in table)
-      .map((key) => ilike(sql`${table[key]}`, `%${keywords}%`));
-
-    if (searchConditions.length === 1) {
-      where.push(searchConditions[0]);
-    } else if (searchConditions.length > 1) {
-      where.push(or(...searchConditions) ?? searchConditions[0]);
-    }
-  }
-
-  return where;
 }
 
 function getListSelect(
@@ -312,173 +271,6 @@ function getListSelect(
   }
 
   return select;
-}
-
-function resolveFilters(
-  filters: AdminFilters,
-  values: Record<string, unknown>,
-) {
-  const where: SQL[] = [];
-
-  for (const [name, rawValue] of Object.entries(values)) {
-    const filter = filters[name];
-    if (!filter) {
-      continue;
-    }
-
-    switch (filter.kind) {
-      case "date-range": {
-        const range = parseDateRange(rawValue);
-        if (range.from) {
-          where.push(gte(filter.field, range.from));
-        }
-        if (range.to) {
-          where.push(lte(filter.field, range.to));
-        }
-        break;
-      }
-      case "boolean": {
-        if (typeof rawValue === "boolean") {
-          where.push(eq(filter.field, rawValue));
-        }
-        break;
-      }
-      case "enum": {
-        const selected = parseOptionFilterValue(filter, rawValue);
-        if (selected.include.length === 1) {
-          where.push(eq(filter.field, selected.include[0]));
-        } else if (selected.include.length > 1) {
-          where.push(inArray(filter.field, selected.include));
-        }
-        if (selected.exclude.length > 0) {
-          where.push(not(inArray(filter.field, selected.exclude)));
-        }
-        break;
-      }
-      case "includes": {
-        const selected = parseOptionFilterValue(filter, rawValue);
-        if (selected.include.length > 0) {
-          where.push(arrayOverlaps(filter.field, selected.include));
-        }
-        if (selected.exclude.length > 0) {
-          where.push(not(arrayOverlaps(filter.field, selected.exclude)));
-        }
-        break;
-      }
-      case "text": {
-        const filterText = parseTextFilter(rawValue);
-        if (filterText) {
-          const condition = ilike(
-            sql`${filter.field}`,
-            `%${filterText.value}%`,
-          );
-          where.push(filterText.exclude ? not(condition) : condition);
-        }
-        break;
-      }
-    }
-  }
-
-  return where;
-}
-
-function parseDateRange(value: unknown) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return {};
-  }
-
-  const range = value as { from?: unknown; to?: unknown };
-
-  return {
-    from: parseDateValue(range.from),
-    to: parseDateValue(range.to, true),
-  };
-}
-
-function parseDateValue(value: unknown, endOfDay = false) {
-  if (typeof value !== "string" || !value) {
-    return undefined;
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.valueOf())) {
-    return undefined;
-  }
-
-  if (endOfDay) {
-    date.setHours(23, 59, 59, 999);
-  }
-
-  return date;
-}
-
-function parseOptionFilterValue(
-  filter: Extract<AdminFilters[string], { kind: "enum" | "includes" }>,
-  value: unknown,
-) {
-  const options = new Set(filter.options.map((option) => option.value));
-  const entries = Array.isArray(value)
-    ? value
-        .filter((option): option is string => typeof option === "string")
-        .filter((option) => options.has(option))
-        .map((option) => [option, "+"])
-    : value && typeof value === "object"
-      ? Object.entries(value).filter(
-          ([option, state]) =>
-            options.has(option) && (state === "+" || state === "-"),
-        )
-      : [];
-  const include: string[] = [];
-  const exclude: string[] = [];
-
-  entries.forEach(([option, state]) => {
-    if (state === "+") {
-      include.push(option);
-    } else if (state === "-") {
-      exclude.push(option);
-    }
-  });
-
-  return { include, exclude };
-}
-
-function parseTextFilter(value: unknown) {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  const exclude = trimmed.startsWith("!");
-  const text = exclude ? trimmed.slice(1).trim() : trimmed;
-
-  return text ? { exclude, value: text } : null;
-}
-
-function resolveOrderBy(adminConfig: AdminListConfig, data: AdminListQuery) {
-  const { table } = adminConfig;
-  const { sort } = adminConfig.list;
-  const { direction: requestedDirection, sort: requestedSort } = data;
-  const sortName =
-    requestedSort && sort[requestedSort] ? requestedSort : Object.keys(sort)[0];
-  const option = sort[sortName];
-  const direction = requestedDirection ?? option.defaultDirection;
-  const orderBy = option.fields.map((field) => {
-    const column = "field" in field ? field.field : field;
-    const fieldDirection =
-      "field" in field && field.direction ? field.direction : direction;
-
-    return fieldDirection === "asc" ? asc(column) : desc(column);
-  });
-
-  if (
-    !option.fields.some(
-      (field) => ("field" in field ? field.field : field) === table.id,
-    )
-  ) {
-    orderBy.push(desc(table.id));
-  }
-
-  return orderBy;
 }
 
 function serializeAdminListItem(values: Record<string, unknown>) {

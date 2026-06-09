@@ -23,9 +23,11 @@ import {
   PopoverTrigger,
 } from "@kenstack/components/ui/popover";
 import { Separator } from "@kenstack/components/ui/separator";
+import type { AdminFilterMeta } from "@kenstack/admin/types/list";
 import Tooltip from "@kenstack/components/Tooltip";
 import { cn } from "@kenstack/lib/utils";
-import { useAdminList } from "./context";
+import type { ListQueryStoreState } from "@kenstack/list/querySchema";
+import type { SetQueryStore } from "@kenstack/list/useQueryStore";
 
 type FilterValue =
   | string
@@ -39,8 +41,19 @@ type FilterValue =
 type OptionFilterState = "+" | "-";
 type OptionFilterValue = Record<string, OptionFilterState>;
 
-export default function FilterControl() {
-  const { filter, filters, setFilters } = useAdminList();
+export default function FilterControl({
+  filter,
+  filters,
+  setFilters,
+  showLabel = false,
+  tooltip = true,
+}: {
+  filter: AdminFilterMeta[];
+  filters: ListQueryStoreState;
+  setFilters: SetQueryStore<ListQueryStoreState>;
+  showLabel?: boolean;
+  tooltip?: boolean;
+}) {
   const [selectedFilterNames, setSelectedFilterNames] = useState<string[]>([]);
   const filterOptions = filter.filter(
     (option) => filters.trash || option.name !== "deletedAt",
@@ -70,27 +83,29 @@ export default function FilterControl() {
 
   const activeCount = activeFilters.length;
   const hasSelectedFilters = selectedFilters.length > 0;
+  const trigger = (
+    <PopoverTrigger asChild>
+      <Button
+        type="button"
+        variant="ghost"
+        size={showLabel ? "default" : "icon"}
+        className={cn("relative text-gray-800", showLabel ? "gap-2" : "")}
+        aria-label="Filters"
+      >
+        <ListFilter className={showLabel ? "size-4" : "size-6"} />
+        {showLabel ? <span>Filters</span> : null}
+        {activeCount > 0 ? (
+          <span className="absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-fuchsia-800 text-[10px] font-medium text-white">
+            {activeCount}
+          </span>
+        ) : null}
+      </Button>
+    </PopoverTrigger>
+  );
 
   return (
     <Popover>
-      <Tooltip content="Filters">
-        <PopoverTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="relative text-gray-800"
-            aria-label="Filters"
-          >
-            <ListFilter className="size-6" />
-            {activeCount > 0 ? (
-              <span className="absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-fuchsia-800 text-[10px] font-medium text-white">
-                {activeCount}
-              </span>
-            ) : null}
-          </Button>
-        </PopoverTrigger>
-      </Tooltip>
+      {tooltip ? <Tooltip content="Filters">{trigger}</Tooltip> : trigger}
       <PopoverContent align="end" className="w-80 p-3">
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
@@ -193,7 +208,7 @@ function FilterEditor({
   value,
   onChange,
 }: {
-  option: ReturnType<typeof useAdminList>["filter"][number];
+  option: AdminFilterMeta;
   value: unknown;
   onChange: (value: FilterValue | null, debounce?: boolean) => void;
 }) {
@@ -456,7 +471,7 @@ function TextFilterInput({
 function setFilterValue(
   name: string,
   value: FilterValue | null,
-  setFilters: ReturnType<typeof useAdminList>["setFilters"],
+  setFilters: SetQueryStore<ListQueryStoreState>,
   debounce = false,
 ) {
   setFilters((prev) => {
@@ -474,7 +489,7 @@ function setFilterValue(
 function addFilter(
   name: string,
   kind: string,
-  setFilters: ReturnType<typeof useAdminList>["setFilters"],
+  setFilters: SetQueryStore<ListQueryStoreState>,
   setSelectedFilterNames: Dispatch<SetStateAction<string[]>>,
 ) {
   setSelectedFilterNames((prev) =>
@@ -498,7 +513,7 @@ function addFilter(
 
 function removeFilter(
   name: string,
-  setFilters: ReturnType<typeof useAdminList>["setFilters"],
+  setFilters: SetQueryStore<ListQueryStoreState>,
   setSelectedFilterNames: Dispatch<SetStateAction<string[]>>,
 ) {
   setSelectedFilterNames((prev) => prev.filter((item) => item !== name));
@@ -516,6 +531,12 @@ function isActiveFilterValue(value: unknown) {
 
   if (typeof value === "string") {
     return value.trim().length > 0;
+  }
+
+  if (Array.isArray(value)) {
+    return value.some(
+      (item) => typeof item === "string" && item.trim().length > 0,
+    );
   }
 
   if (!value || typeof value !== "object" || Array.isArray(value)) {

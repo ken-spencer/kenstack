@@ -12,7 +12,7 @@ import {
 } from "@kenstack/components/ui/alert-dialog";
 
 import { Trash, Undo2 } from "lucide-react";
-import IconButton from "@kenstack/components/IconButton";
+import Button from "@kenstack/components/Button";
 import { useAdminEdit } from "../context";
 import fetcher from "@kenstack/api/fetcher";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -67,15 +67,16 @@ export default function DeleteButton() {
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <IconButton
+        <Button
           disabled={isNew || (name === "users" && id === userId)}
           isPending={mutation.isPending}
           className="relative"
+          size="icon"
           tooltip={isDeleted ? "Delete Forever" : "Delete"}
-          // disabled={}
+          variant="ghost"
         >
           <Trash className="size-6 text-gray-800" />
-        </IconButton>
+        </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
@@ -147,11 +148,13 @@ export function RestoreButton() {
   }
 
   return (
-    <IconButton
+    <Button
       disabled={isNew}
       isPending={mutation.isPending}
+      size="icon"
       type="button"
       tooltip="Restore"
+      variant="ghost"
       onClick={() => {
         if (id) {
           mutation.mutate(id);
@@ -159,6 +162,6 @@ export function RestoreButton() {
       }}
     >
       <Undo2 className="size-6 text-gray-800" />
-    </IconButton>
+    </Button>
   );
 }

@@ -2,7 +2,7 @@
 
 import { Plus } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import AdminEditNavButton from "../AdminEditNavButton";
+import FormNavButton from "@kenstack/forms/NavButton";
 import { useAdminEdit } from "../context";
 
 export default function NewButton() {
@@ -14,11 +14,13 @@ export default function NewButton() {
   }
 
   return (
-    <AdminEditNavButton
+    <FormNavButton
       href={listPath + "/new" + (searchParams.size ? "?" + searchParams : "")}
+      size="icon"
       tooltip="New Entry"
+      variant="ghost"
     >
       <Plus className="size-6 text-gray-800" />
-    </AdminEditNavButton>
+    </FormNavButton>
   );
 }

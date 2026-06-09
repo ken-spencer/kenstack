@@ -2,7 +2,7 @@
 
 import { ArchiveRestore, Recycle } from "lucide-react";
 
-import IconButton from "@kenstack/components/IconButton";
+import Button from "@kenstack/components/Button";
 import { useAdminList } from "./context";
 
 export default function TrashToggle() {
@@ -11,9 +11,11 @@ export default function TrashToggle() {
   const defaultSort = sort.find((option) => option.name !== "deletedAt");
 
   return (
-    <IconButton
+    <Button
+      size="icon"
       type="button"
       tooltip={inTrash ? "Exit Trash" : "View Trash"}
+      variant="ghost"
       onClick={() => {
         setSelected([]);
         setFilters((prev) => {
@@ -41,6 +43,6 @@ export default function TrashToggle() {
       ) : (
         <Recycle className="size-6 text-gray-800" />
       )}
-    </IconButton>
+    </Button>
   );
 }

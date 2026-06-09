@@ -13,7 +13,8 @@ Use this checklist before finalizing code changes. It is meant to catch project 
 - Prefer `satisfies` for validating returned object shapes without forcing a function return annotation.
 - Check `Resolved*`, `Defined*`, and similarly named output types that mirror a builder or resolver. Prefer deriving broad consumer types from `ReturnType<typeof builder>` or letting the call site infer the specific shape; keep a named resolved type only when it is reused independently or documents a real public contract that cannot be inferred cleanly.
 - Check newly shared types. If consumers only overlap partially, or allowed properties are ignored by some consumers, prefer local shapes or narrower variants over one broad shared type.
-- Do not specify component or form generics at call sites when props and callbacks can infer them.
+- Treat explicit generic arguments on parameterless hooks or context helpers as suspicious. Temporarily remove them during review; keep them only when the resulting inferred type is wrong at a real boundary, not merely broader.
+- Do not specify component or form generics at call sites when props, callbacks, schema, defaults, mutation variables, or context already provide a useful inferred type.
 - Do not add runtime throws, guards, or branches only to satisfy a TypeScript tuple, generic, or narrowing shape. If the runtime can handle the value gracefully, fix the type boundary or move validation to the caller that actually requires the stricter invariant.
 
 ## Local Code Shape
@@ -26,6 +27,9 @@ Use this checklist before finalizing code changes. It is meant to catch project 
 - Remove JSX fragments with zero or one meaningful child; return the child directly instead.
 - Check repeated loops over the same collection. Combine them when one pass can gather the needed values without making the code harder to read.
 - Remove pass-through helpers, wrappers, constants, and barrels unless they reduce real repeated complexity or expose a requested public API.
+- Check helpers whose whole body is a single call to another local helper. Keep the name that best describes the real operation, and remove or inline the other helper unless it is a deliberate compatibility alias, preset, or public API boundary.
+- In component wrappers, do not destructure props only to pass them through unchanged. Leave ordinary child-component props in `...props`; separate only values the wrapper reads, transforms, branches on, or defaults. When supplying a wrapper default that callers may override, pass the default before `{...props}`.
+- Before keeping a new feature, helper, component, hook, field, or API utility, search for the closest existing Kenstack/admin/forms/list/page-editor implementation. If the new code duplicates behavior too closely, reuse the existing piece, extend it at the shared owner, or explain why the local version is intentionally different.
 - Keep data loading at the narrowest boundary that consumes the data. Avoid aggregate helpers that return mixed concerns, such as config, auth state, routing decisions, and page-specific records, just to simplify a parent. Extract a loader only when it owns a clear cache/API boundary, is reused, or gives a specific data shape a clear name.
 - Avoid rename-only or move-only churn. Preserve existing local type names, variable names, and declaration placement unless the new name or location makes a real behavior, ownership, or API boundary clearer.
 - Avoid thin wrappers around stable library APIs when the wrapper only renames the library function or hides a one-line call. Keep a wrapper only when it enforces project policy, preserves a boundary such as server/client separation, normalizes repeated nontrivial behavior, or isolates an unstable dependency.
@@ -68,7 +72,7 @@ If a check fails because the check scope does not match the code's intended runt
 - Keep field definitions, field helpers, field handlers, field lifecycle code, and field-based record helpers in `src/fields` when they are reusable outside admin.
 - Do not hand-plumb save, load, delete, display, list, filter, or sort behavior in actions when the field lifecycle should own it.
 - Ensure client field definitions stay client-safe; server-only handlers and transforms should be applied through server field helpers.
-- For forms, rely on schema/default/mutation inference instead of repeating generic arguments at usage sites.
+- For forms, rely on schema/default/mutation inference instead of repeating generic arguments at usage sites. In particular, review `useForm<...>()`, `useFormContext<...>()`, and similar context-hook calls by first trying the unparameterized call.
 
 ## Files And Boundaries
 
@@ -76,12 +80,16 @@ If a check fails because the check scope does not match the code's intended runt
 - Put support code in existing secondary folders such as `lib`, `components`, `api`, or `fields`.
 - Do not put module infrastructure in `modules`; that folder is for actual modules and module-owned files.
 - Do not add compatibility shims, pass-through re-exports, or barrels unless explicitly requested or already established as a public API.
+- For internal moves, update the internal call sites to the new owner and delete the old file. Do not leave old-path wrapper components, re-export files, or local adapter imports just to make the move feel smaller.
+- When moving or renaming a tracked repository file, use `git mv` so the move is recorded deliberately instead of leaving Git to infer it from separate delete/add changes.
+- When deleting a tracked repository file, use `git rm` so the deletion is recorded deliberately instead of leaving Git to infer it from a filesystem delete.
 - If a rename or API shape change only touches uncommitted work, remove old names directly. Do not preserve compatibility aliases or temporary exports for code that has not shipped.
 
 ## Behavior
 
 - Preserve existing capabilities such as caching, validation, permissions, publishing rules, extension points, query behavior, and revalidation.
 - Keep cache tags near `"use cache"` and `cacheLife(...)` as high in the function as behavior allows.
+- When server loaders might be called from more than one component or query path during a single page render, wrap the shared DB/API work in `React.cache` so duplicate calls dedupe within the request. Prefer primitive cache keys or stable arguments so equivalent calls actually hit the same cache entry.
 - Do not remove configurability or behavior to make a cleanup easier without confirming first.
 - Check pipeline actions for guard-only stages that just return an error. Prefer one normal stage with the guard inside the handler unless the separate stage materially changes auth, schema parsing, or external behavior.
 - Check `useEffect` usage, especially around React Query. Effects should synchronize with an external system; avoid effects that only mirror derived state, inspect query data/errors, log results, or perform work that belongs in query/mutation callbacks, route actions, or explicit event handlers.

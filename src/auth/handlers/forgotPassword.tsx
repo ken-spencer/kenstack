@@ -6,6 +6,7 @@ import { nanoid } from "nanoid";
 import crypto from "crypto";
 
 import mailer, { type Attachment } from "@kenstack/lib/mailer";
+import { formatUserName } from "@kenstack/lib/user";
 import { render } from "@react-email/render";
 
 import {
@@ -175,12 +176,7 @@ export const forgottenPasswordAction = ({
 
     const emailHtml = await render(
       <Email
-        name={
-          [user.givenName, user.familyName]
-            .filter((part) => Boolean(part))
-            .join(" ")
-            .trim() || "there"
-        }
+        name={formatUserName(user, { fallback: "there" })}
         url={url.toString()}
         ip={ip}
         geo={geo}

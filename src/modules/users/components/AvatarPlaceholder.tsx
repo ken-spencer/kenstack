@@ -4,14 +4,13 @@ import { useFormContext } from "react-hook-form";
 import { UserRound } from "lucide-react";
 
 import Avatar from "@kenstack/components/Avatar";
+import { formatUserInitials } from "@kenstack/lib/user";
 
 export default function AvatarPlaceholder() {
   const { watch } = useFormContext();
   const givenName = watch("givenName");
   const familyName = watch("familyName");
-  const initials =
-    (typeof givenName === "string" ? givenName.slice(0, 1) : "") +
-    (typeof familyName === "string" ? familyName.slice(0, 1) : "");
+  const initials = formatUserInitials({ familyName, givenName });
 
   if (initials) {
     return <Avatar initials={initials} className="size-full text-5xl" />;

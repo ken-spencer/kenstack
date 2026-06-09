@@ -19,7 +19,7 @@ type SubmitData<
   TVariables extends Record<string, unknown>,
   TValues extends FieldValues,
 > = {
-  data: TValues; //Record<string, unknown>;
+  data: TValues;
   event?: React.BaseSyntheticEvent;
   mutation: UseMutationResult<FetchResult<TResult>, Error, TVariables>;
   isDirty: boolean;
@@ -56,8 +56,8 @@ type FormProps<
 };
 
 export default function FormContainer<
-  TResult extends Record<string, unknown>, // = {},
-  TVariables extends Record<string, unknown>, // = Record<string, unknown>,
+  TResult extends Record<string, unknown>,
+  TVariables extends Record<string, unknown>,
   TSchema extends FormSchema,
   TValues extends FieldValues = z.input<TSchema>,
 >({

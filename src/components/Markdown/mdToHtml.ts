@@ -1,30 +1,32 @@
 import { remark } from "remark";
 import remarkGfm from "remark-gfm";
+import type { PluggableList } from "unified";
 
 import remarkRehype from "remark-rehype";
 import rehypeSanitize from "rehype-sanitize";
 import rehypeStringify from "rehype-stringify";
 import remarkBreaks from "remark-breaks";
-// import { remarkShiftHeadings } from "./plugins";
 
-export default async function mdToHtml(content: string) {
+export type MarkdownOptions = {
+  remarkPlugins?: PluggableList;
+};
+
+export default async function mdToHtml(
+  content: string,
+  options: MarkdownOptions = {},
+) {
   if (!content) {
     return "";
   }
 
-  // const preprocessedContent = content.replace(
-  //   /__((?:(?!__).)+?)__/g,
-  //   "<u>$1</u>",
-  // );
+  const processor = remark().use(remarkGfm).use(remarkBreaks);
 
-  const processedContent = await remark()
-    // .use(remarkUnderline)
-    // .use(remarkShiftHeadings)
-    .use(remarkGfm)
-    .use(remarkBreaks) // Convert single newline to <br />    // .use(toHtml)
+  if (options.remarkPlugins?.length) {
+    processor.use(options.remarkPlugins);
+  }
+
+  const processedContent = await processor
     .use(remarkRehype)
-    // .use(remarkRehype, { allowDangerousHtml: true })
-    // .use(rehypeRaw)
     .use(rehypeSanitize)
     .use(rehypeStringify)
     .process(content);

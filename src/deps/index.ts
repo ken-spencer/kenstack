@@ -7,6 +7,7 @@ import type { EmailContainer } from "./components/Email";
 
 import { type Sessions } from "@kenstack/db/tables/sessions";
 import { type Attachment } from "@kenstack/lib/mailer";
+import { formatFileSize } from "@kenstack/lib/fileSize";
 import type { DefinedAdmin } from "@kenstack/admin/module";
 
 export type EmailFrom = string | { name: string; addr: string };
@@ -22,19 +23,6 @@ type ModulesWithUsers = DefinedAdmin & {
 };
 
 export const defaultRoles = ["admin", "member"] as const;
-
-const formatFileSize = (bytes: number) => {
-  const units = ["bytes", "kilobytes", "megabytes", "gigabytes"] as const;
-  let size = bytes;
-  let unitIndex = 0;
-
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size = size / 1024;
-    unitIndex++;
-  }
-
-  return `${Number.isInteger(size) ? size : size.toFixed(1)} ${units[unitIndex]}`;
-};
 
 export const createDeps = <
   TSchema extends Tables,
@@ -74,7 +62,7 @@ export const createDeps = <
   return {
     multiTenant: false,
     uploadMaxImageSize,
-    uploadMaxImageSizeMessage: `Maximum image size is ${formatFileSize(uploadMaxImageSize)}.`,
+    uploadMaxImageSizeMessage: `Maximum image size is ${formatFileSize(uploadMaxImageSize, { unitStyle: "long" })}.`,
     logger,
     auth,
     roles,

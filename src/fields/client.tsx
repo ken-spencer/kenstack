@@ -25,6 +25,7 @@ import type {
   FieldKind,
   FieldOption,
   FieldRecordRefinement,
+  MediaListUploadOptions,
 } from "./types";
 
 type FieldOptionOfKind<
@@ -85,6 +86,11 @@ type RelationshipFieldOptions = DisplayFieldOptions & {
   list?: boolean;
   filter?: boolean;
 };
+
+type MediaListFieldOptions = DisplayFieldOptions &
+  MediaListUploadOptions & {
+    list?: boolean;
+  };
 
 const dateTimeSchema = z.union([
   z.date().transform((value) => value.toISOString()),
@@ -160,10 +166,6 @@ function SlugFieldComponent(props: FieldComponentProps) {
 
 function ImageFieldComponent(props: FieldComponentProps) {
   return <AdminImageField {...props} />;
-}
-
-function MediaListFieldComponent(props: FieldComponentProps) {
-  return <MediaListField {...props} />;
 }
 
 function TagFieldComponent(props: FieldComponentProps) {
@@ -392,7 +394,15 @@ export function imageField<
   };
 }
 
-export function mediaListField(): FieldOptionOfKind<"media-list", []> {
+export function mediaListField(
+  options: MediaListFieldOptions = {},
+): FieldOptionOfKind<"media-list", [], MediaListFieldOptions> {
+  const { accept } = options;
+
+  function MediaListFieldComponent(props: FieldComponentProps) {
+    return <MediaListField {...props} accept={accept} />;
+  }
+
   return {
     __kenstackField: true,
     kind: "media-list",
@@ -401,6 +411,7 @@ export function mediaListField(): FieldOptionOfKind<"media-list", []> {
     searchable: false,
     revisions: true,
     zod: mediaListSchema,
+    ...options,
   };
 }
 

@@ -1,7 +1,7 @@
 import { getTableColumns, type SQL } from "drizzle-orm";
 import type { AnyPgColumn, AnyPgTable } from "drizzle-orm/pg-core";
 
-import type { SelectedImage } from "@kenstack/db/tables";
+import type { SelectedMedia } from "@kenstack/db/tables";
 import type { ServerDefinedFields, ServerField } from "./server";
 
 type SelectFieldsTable = AnyPgTable & {
@@ -33,7 +33,7 @@ type SelectDeletedAt<TTable extends SelectFieldsTable> = TTable extends {
 type SelectFieldValue<
   TField extends ServerField,
   TColumn,
-> = TField["kind"] extends "image" ? SQL<SelectedImage | null> : TColumn;
+> = TField["kind"] extends "image" ? SQL<SelectedMedia | null> : TColumn;
 
 /**
  * Used by record-loading actions to build a select query from field behavior.

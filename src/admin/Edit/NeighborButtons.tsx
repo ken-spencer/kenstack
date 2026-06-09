@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 import fetcher from "@kenstack/api/fetcher";
-import AdminEditNavButton from "./AdminEditNavButton";
+import FormNavButton from "@kenstack/forms/NavButton";
 import { useAdminEdit } from "./context";
 
 export default function NeighborButtons() {
@@ -78,8 +78,14 @@ function NeighborButton({
     : listPath;
 
   return (
-    <AdminEditNavButton disabled={!targetId} href={href} tooltip={tooltip}>
+    <FormNavButton
+      disabled={!targetId}
+      href={href}
+      size="icon"
+      tooltip={tooltip}
+      variant="ghost"
+    >
       {children}
-    </AdminEditNavButton>
+    </FormNavButton>
   );
 }

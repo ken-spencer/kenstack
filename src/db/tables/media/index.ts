@@ -82,18 +82,13 @@ export const defineMediaList = ({
   );
 };
 
-// import { alias as pgAlias } from "drizzle-orm/pg-core";
-// const image = pgAlias(media, "image");
-// const avatar = pgAlias(media, "avatar");
-// .leftJoin(image, eq(posts.imageId, image.id))
-
-type LooseImageColumn<TColumn extends PgColumn> = AnyPgColumn<{
+type LooseMediaColumn<TColumn extends PgColumn> = AnyPgColumn<{
   data: TColumn["_"]["data"];
   driverParam: TColumn["_"]["driverParam"];
   notNull: TColumn["_"]["notNull"];
 }>;
 
-type ImageAliasKey =
+type MediaAliasKey =
   | "publicId"
   | "kind"
   | "sourceUrl"
@@ -107,40 +102,49 @@ type ImageAliasKey =
   | "title"
   | "caption";
 
-type ImageAlias = {
-  [Key in ImageAliasKey]: LooseImageColumn<(typeof media)[Key]>;
+type MediaAlias = {
+  [Key in MediaAliasKey]: LooseMediaColumn<(typeof media)[Key]>;
 };
 
-type ImageVariantName = "original" | "square";
+export type MediaVariantName = "original" | "square";
 
-function imageVariantKey(variant: ImageVariantName) {
+function mediaVariantKey(variant: MediaVariantName) {
   return variant === "square" ? sql.raw("'square'") : sql.raw("'original'");
 }
 
-export const selectImage = (
-  alias: ImageAlias,
-  variant: ImageVariantName = "original",
+/**
+ * Selects media fields from an already-joined media table alias.
+ *
+ * Use this when the query has explicit media joins, especially if several
+ * media rows are selected or the join needs filtering/sorting. The selected
+ * variant applies to raster image variants; files use their source URL.
+ */
+export const selectMedia = (
+  alias: MediaAlias,
+  variant: MediaVariantName = "original",
 ) => {
-  const variantKey = imageVariantKey(variant);
+  const variantKey = mediaVariantKey(variant);
 
   return {
     // id: alias.publicId,
     kind: alias.kind,
     url: sql<string>`
       case
-        when ${alias.kind} = 'svg' then ${alias.sourceUrl}
+        when ${alias.kind} in ('svg', 'file') then ${alias.sourceUrl}
         else ${alias.variants}->${variantKey}->>'url'
       end
     `,
     width: sql<number | null>`
       case
         when ${alias.kind} = 'svg' then ${alias.sourceWidth}
+        when ${alias.kind} = 'file' then null
         else (${alias.variants}->${variantKey}->>'width')::int
       end
     `,
     height: sql<number | null>`
       case
         when ${alias.kind} = 'svg' then ${alias.sourceHeight}
+        when ${alias.kind} = 'file' then null
         else (${alias.variants}->${variantKey}->>'height')::int
       end
     `,
@@ -148,7 +152,7 @@ export const selectImage = (
   };
 };
 
-export type SelectedImage = {
+export type SelectedMedia = {
   id?: number;
   kind: "raster" | "svg" | "file";
   url: string;
@@ -166,26 +170,35 @@ export type SelectedImage = {
   squareCrop?: SquareCrop | null;
 };
 
-export function selectImageSubquery(
-  imageCol: AnyPgColumn,
-  variant: ImageVariantName = "original",
+/**
+ * Selects a single media row as JSON from a foreign-key column.
+ *
+ * Use this for compact record queries where adding a media join would add more
+ * ceremony than clarity. Prefer `selectMedia` when the media table is already
+ * joined or the query needs to reason about media rows directly.
+ */
+export function selectMediaSubquery(
+  mediaCol: AnyPgColumn,
+  variant: MediaVariantName = "original",
 ) {
-  const variantKey = imageVariantKey(variant);
+  const variantKey = mediaVariantKey(variant);
 
-  return sql<SelectedImage | null>`(
+  return sql<SelectedMedia | null>`(
   select jsonb_build_object(
     'id', ${media.id},
     'kind', ${media.kind},
     'url', case
-      when ${media.kind} = 'svg' then ${media.sourceUrl}
+      when ${media.kind} in ('svg', 'file') then ${media.sourceUrl}
       else ${media.variants}->${variantKey}->>'url'
     end,
     'width', case
       when ${media.kind} = 'svg' then ${media.sourceWidth}
+      when ${media.kind} = 'file' then null
       else (${media.variants}->${variantKey}->>'width')::int
     end,
     'height', case
       when ${media.kind} = 'svg' then ${media.sourceHeight}
+      when ${media.kind} = 'file' then null
       else (${media.variants}->${variantKey}->>'height')::int
     end,
     'alt', ${media.alt},
@@ -197,13 +210,33 @@ export function selectImageSubquery(
     'sourceWidth', ${media.sourceWidth},
     'sourceHeight', ${media.sourceHeight},
     'originalUrl', case
-      when ${media.kind} = 'svg' then ${media.sourceUrl}
+      when ${media.kind} in ('svg', 'file') then ${media.sourceUrl}
       else ${media.variants}->'original'->>'url'
     end,
     'squareCrop', ${media.variants}->'squareCrop'
   )
   from ${media}
-  where ${media.id} = ${imageCol}
+  where ${media.id} = ${mediaCol}
   limit 1
 )`;
+}
+
+/**
+ * @deprecated Use `selectMedia`.
+ */
+export const selectImage = selectMedia;
+
+/**
+ * @deprecated Use `SelectedMedia`.
+ */
+export type SelectedImage = SelectedMedia;
+
+/**
+ * @deprecated Use `selectMediaSubquery`.
+ */
+export function selectImageSubquery(
+  mediaCol: AnyPgColumn,
+  variant: MediaVariantName = "original",
+) {
+  return selectMediaSubquery(mediaCol, variant);
 }

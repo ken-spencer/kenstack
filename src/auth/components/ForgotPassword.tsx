@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { useState } from "react";
 
 import Link from "next/link";
 
@@ -12,6 +12,7 @@ import Alert from "@kenstack/components/Alert";
 import cookies from "js-cookie";
 
 import Submit from "@kenstack/forms/Submit";
+import Suspense from "@kenstack/components/Suspense";
 
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 import RecaptchaTerms from "@kenstack/components/RecaptchaTerms";

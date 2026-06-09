@@ -2,7 +2,7 @@ import { and, eq, sql } from "drizzle-orm";
 import type * as z from "zod";
 import isEqual from "lodash-es/isEqual";
 
-import { selectImageSubquery } from "@kenstack/db/tables";
+import { selectMediaSubquery } from "@kenstack/db/tables";
 import { media } from "@kenstack/db/tables/media";
 import { imageSchema } from "@kenstack/zod/image";
 import type { DefinedField } from "../types";
@@ -26,14 +26,14 @@ export function imageField({
       upload: true,
       listSelect: ({ column }) => {
         return column
-          ? selectImageSubquery(
+          ? selectMediaSubquery(
               column,
               typeof field.list === "string" ? field.list : "square",
             )
           : undefined;
       },
       select: ({ column }) => {
-        return column ? selectImageSubquery(column, variant) : undefined;
+        return column ? selectMediaSubquery(column, variant) : undefined;
       },
       preSave: prepareImageSave,
     },

@@ -2,16 +2,8 @@
 
 import { useRef, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import isEqual from "lodash-es/isEqual";
 import type { z } from "zod";
-
-/**
- * Minimal generic URL param hook (no debounce/useEffect loops).
- * - Always stores JSON under a single key.
- * - Works for strings or plain objects.
- * - Debounce happens inside the setter when requested.
- * - Optionally excludes params (e.g., `page`) on write.
- * - Does not auto-sync on back/forward; caller can opt-in separately if needed.
- */
 
 export type SetQueryStore<T> = (
   value: React.SetStateAction<T>,
@@ -23,14 +15,14 @@ export default function useQueryStore<T extends Record<string, unknown>>(
   {
     debounceMs = 300,
     excludeParams = ["page"],
+    fallbackState,
     routerMode = "replace",
     onPopState,
     schema,
   }: {
-    /** Milliseconds to debounce when `set(value, { debounce: true })` is used. */
     debounceMs?: number;
-    /** Params to remove from the URL when writing (e.g., pagination). */
     excludeParams?: string[];
+    fallbackState?: Partial<T>;
     routerMode?: "replace" | "push";
     onPopState?: (state: T) => void;
     schema?: z.ZodType<T>;
@@ -43,14 +35,20 @@ export default function useQueryStore<T extends Record<string, unknown>>(
   const importSearchParams = () => {
     const pairs = Object.entries(initial).map(([key, val]) => {
       const param = searchParams.get(key);
+      const fallbackValue =
+        fallbackState &&
+        Object.prototype.hasOwnProperty.call(fallbackState, key)
+          ? fallbackState[key as keyof T]
+          : val;
+
       if (param) {
         try {
           return [key, JSON.parse(param)] as const;
         } catch {
-          return [key, val] as const;
+          return [key, fallbackValue] as const;
         }
       } else {
-        return [key, val] as const;
+        return [key, fallbackValue] as const;
       }
     });
     const parsedParams = Object.fromEntries(pairs);
@@ -64,7 +62,6 @@ export default function useQueryStore<T extends Record<string, unknown>>(
   const initialSearchParams = useRef(searchParams);
   const skipRef = useRef(false);
 
-  // ensure state is  up to date with back / forward navigation
   useEffect(() => {
     if (initialSearchParams.current === searchParams) {
       return;
@@ -83,10 +80,8 @@ export default function useQueryStore<T extends Record<string, unknown>>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  // Single timer for debounced writes
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Clear pending debounce on unmount
   useEffect(() => {
     return () => {
       if (timerRef.current) {
@@ -114,33 +109,41 @@ export default function useQueryStore<T extends Record<string, unknown>>(
 
     Object.entries(v).forEach(([key, val]) => {
       const json = encode(val);
-      const initJson = encode(initial[key]);
-      if (json === null || json === initJson) {
+
+      if (json === null || isEqual(val, initial[key])) {
         params.delete(key);
       } else {
         params.set(key, json);
       }
     });
 
-    const href = pathname + (params.size ? "?" + params : "");
+    const nextSearch = params.toString();
+    const href = pathname + (nextSearch ? `?${nextSearch}` : "");
+    const currentSearch = searchParams.toString();
+    const currentHref = pathname + (currentSearch ? `?${currentSearch}` : "");
+
+    if (href === currentHref) {
+      return;
+    }
+
+    skipRef.current = true;
     if (routerMode === "push") {
-      // note, this doesn't seem to work, act's like replace most of the time.
       router.push(href, { scroll: false });
     } else {
       router.replace(href, { scroll: false });
     }
   };
 
-  /**
-   * Set the value. If `opts.debounce` is true, URL write is delayed by `debounceMs`.
-   * Without debounce, writes immediately and cancels any pending debounce.
-   */
   const set: SetQueryStore<T> = (next, debounce = true) => {
-    skipRef.current = true;
     const resolved =
       typeof next === "function"
         ? (next as (p: T) => T)(valueRef.current)
         : next;
+
+    if (isEqual(valueRef.current, resolved)) {
+      return;
+    }
+
     valueRef.current = resolved;
     setValue(resolved);
 

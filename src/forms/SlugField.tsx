@@ -4,7 +4,7 @@ import kebabCase from "lodash-es/kebabCase";
 import { useState, useEffect } from "react";
 
 import { Lock, LockOpen } from "lucide-react";
-import IconButton from "@kenstack/components/IconButton";
+import Button from "@kenstack/components/Button";
 
 import Field, { type FieldProps } from "@kenstack/forms/Field";
 import { Input } from "@kenstack/components/ui/input";
@@ -83,9 +83,11 @@ export default function SlugField({
               readOnly={locked}
             />
           </FormControl>
-          <IconButton
+          <Button
+            size="icon"
             tooltip={locked ? "Unlock" : "Lock"}
             type="button"
+            variant="ghost"
             onClick={() => {
               setLocked(!locked);
             }}
@@ -95,7 +97,7 @@ export default function SlugField({
             ) : (
               <LockOpen className="text-gray-800" />
             )}
-          </IconButton>
+          </Button>
         </div>
       )}
     />

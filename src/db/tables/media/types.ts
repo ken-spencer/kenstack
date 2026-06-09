@@ -1,7 +1,12 @@
-import { imageMimeTypes, rasterMimeTypes } from "./mimeTypes";
+import {
+  documentMimeTypes,
+  imageMimeTypes,
+  rasterMimeTypes,
+} from "./mimeTypes";
 
 export type RasterMimeType = (typeof rasterMimeTypes)[number];
 export type ImageMimeType = (typeof imageMimeTypes)[number];
+export type DocumentMimeType = (typeof documentMimeTypes)[number];
 
 export type GeneratedMimeType =
   | "image/webp"

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import cookies from "js-cookie";
@@ -15,6 +15,7 @@ import InputField from "@kenstack/forms/InputField";
 import PasswordField from "@kenstack/forms/PasswordField";
 
 import Submit from "@kenstack/forms/Submit";
+import Suspense from "@kenstack/components/Suspense";
 
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 import RecaptchaTerms from "@kenstack/components/RecaptchaTerms";

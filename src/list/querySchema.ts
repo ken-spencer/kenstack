@@ -6,8 +6,8 @@ import type {
   AdminSort,
   AdminSortMeta,
   SortDirection,
-} from "../types/list";
-import { getFilterMeta, getSortMeta } from "../types/list";
+} from "@kenstack/admin/types/list";
+import { getFilterMeta, getSortMeta } from "@kenstack/admin/types/list";
 
 const maxTextFilterLength = 200;
 const maxDateFilterLength = 64;
@@ -20,7 +20,10 @@ export type ListQueryStoreState = {
   filters: Record<string, unknown>;
 };
 
-export function createDefaultListQueryState(sort: AdminSortMeta[]) {
+export function createDefaultListQueryState(
+  sort: AdminSortMeta[],
+  overrides: Partial<ListQueryStoreState> = {},
+) {
   const defaultSort = sort[0];
 
   return {
@@ -29,6 +32,7 @@ export function createDefaultListQueryState(sort: AdminSortMeta[]) {
     sort: defaultSort?.name ?? "createdAt",
     direction: defaultSort?.defaultDirection ?? "desc",
     filters: {},
+    ...overrides,
   } satisfies ListQueryStoreState;
 }
 
@@ -93,15 +97,25 @@ export function createListRequestSchema({
   const filterMeta = getFilterMeta(filters);
   const sortMeta = getSortMeta(sort);
   const sortNames = sortMeta.map((option) => option.name);
+  const defaults = createDefaultListQueryState(sortMeta);
 
-  return z.object({
-    keywords: getKeywordSchema(""),
-    trash: getBooleanSchema(false),
-    sort: getSortSchema(sortNames),
-    direction: getDirectionSchema(),
-    filters: getFilterObjectSchema(filterMeta),
-    page: z.coerce.number().int().positive().max(10000).catch(1),
-  });
+  return z
+    .object({
+      keywords: getKeywordSchema(defaults.keywords),
+      trash: getBooleanSchema(defaults.trash),
+      sort: getSortSchema(sortNames, defaults.sort),
+      direction: getDirectionSchema(defaults.direction),
+      filters: getFilterObjectSchema(filterMeta),
+      page: z.coerce.number().int().positive().max(10000).catch(1),
+    })
+    .transform((value) => ({
+      keywords: value.keywords ?? defaults.keywords,
+      trash: value.trash ?? defaults.trash,
+      sort: value.sort ?? defaults.sort,
+      direction: value.direction ?? defaults.direction,
+      filters: value.filters ?? defaults.filters,
+      page: value.page,
+    }));
 }
 
 function getKeywordSchema(defaultValue: string) {
@@ -182,6 +196,12 @@ function hasFilterValue(value: unknown) {
 
   if (typeof value === "string") {
     return value.trim().length > 0;
+  }
+
+  if (Array.isArray(value)) {
+    return value.some(
+      (item) => typeof item === "string" && item.trim().length > 0,
+    );
   }
 
   if (!value || typeof value !== "object" || Array.isArray(value)) {

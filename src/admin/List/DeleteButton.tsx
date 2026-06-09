@@ -11,7 +11,7 @@ import {
 } from "@kenstack/components/ui/alert-dialog";
 
 import { Trash, Undo2 } from "lucide-react";
-import IconButton from "@kenstack/components/IconButton";
+import Button from "@kenstack/components/Button";
 import { Badge } from "@kenstack/components/ui/badge";
 import { type AdminListQueryData, useAdminList } from "./context";
 import fetcher from "@kenstack/api/fetcher";
@@ -67,11 +67,13 @@ export default function DeleteButton() {
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <IconButton
+        <Button
           isPending={mutation.isPending}
           className="relative"
+          size="icon"
           tooltip={inTrash ? "Delete Forever" : "Delete"}
           disabled={!selected.length}
+          variant="ghost"
         >
           <Badge
             className={
@@ -82,7 +84,7 @@ export default function DeleteButton() {
             {selected.length}
           </Badge>
           <Trash className="size-6 text-gray-800" />
-        </IconButton>
+        </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
@@ -160,12 +162,14 @@ export function RestoreButton() {
   }
 
   return (
-    <IconButton
+    <Button
       type="button"
       isPending={mutation.isPending}
       className="relative"
+      size="icon"
       tooltip="Restore"
       disabled={!selected.length}
+      variant="ghost"
       onClick={() => mutation.mutate(selected)}
     >
       <Badge
@@ -177,6 +181,6 @@ export function RestoreButton() {
         {selected.length}
       </Badge>
       <Undo2 className="size-6 text-gray-800" />
-    </IconButton>
+    </Button>
   );
 }

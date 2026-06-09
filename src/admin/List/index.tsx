@@ -7,7 +7,7 @@ import List from "./List";
 import { type AnyAdminConfig } from "@kenstack/admin";
 import { getFilterMeta, getSortMeta } from "@kenstack/admin";
 import type { ClientConfig } from "@kenstack/admin/client";
-import { getAdminListQueryKey } from "@kenstack/admin/lib/listQuerySchema";
+import { getAdminListQueryKey } from "@kenstack/list/querySchema";
 import { loadAdminList } from "@kenstack/admin/queries/list";
 import {
   dehydrate,

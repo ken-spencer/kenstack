@@ -4,10 +4,11 @@ import type { AnyPgColumn, AnyPgTable } from "drizzle-orm/pg-core";
 import isEqual from "lodash-es/isEqual";
 
 import type { deps } from "@app/deps";
-import { media as mediaTable, selectImageSubquery } from "@kenstack/db/tables";
+import { media as mediaTable, selectMediaSubquery } from "@kenstack/db/tables";
 import type { User } from "@kenstack/types";
 import { mediaListSchema } from "@kenstack/zod/mediaList";
-import type { ServerField, ServerFieldDefaults, ServerFieldResolver } from ".";
+import type { DefinedField, MediaListUploadOptions } from "../types";
+import type { ServerFieldDefaults, ServerFieldResolver } from ".";
 import { imageMetadata } from "./image";
 
 type MediaConfig = {
@@ -45,7 +46,7 @@ export function mediaListField({
   sortOrderKey = "sortOrder",
   sortOrder = table.sortOrder,
 }: MediaHandlerConfig): ServerFieldResolver<
-  ServerField & { kind: "media-list" }
+  DefinedField<"media-list"> & MediaListUploadOptions
 > {
   const media = {
     table,
@@ -57,9 +58,13 @@ export function mediaListField({
     sortOrder,
   };
 
-  return (): ServerFieldDefaults => ({
+  return (field): ServerFieldDefaults => ({
     behavior: {
-      upload: true,
+      upload: {
+        accept: field.accept,
+        maxSize: field.uploadMaxSize,
+        maxSizeMessage: field.uploadMaxSizeMessage,
+      },
       async load({ db, key, tableId }) {
         const values = await loadMedia({
           db,
@@ -108,7 +113,7 @@ async function loadMedia({
     const rows = await db
       .select({
         id: mediaConfig.mediaId,
-        image: selectImageSubquery(mediaConfig.mediaId, "square"),
+        media: selectMediaSubquery(mediaConfig.mediaId, "square"),
         filename: mediaTable.filename,
         sourceType: mediaTable.sourceType,
         sourceSize: mediaTable.sourceSize,
@@ -116,7 +121,7 @@ async function loadMedia({
         sourceHeight: mediaTable.sourceHeight,
         originalUrl: sql<string | null>`
           case
-            when ${mediaTable.kind} = 'svg' then ${mediaTable.sourceUrl}
+            when ${mediaTable.kind} in ('svg', 'file') then ${mediaTable.sourceUrl}
             else ${mediaTable.variants}->'original'->>'url'
           end
         `,
@@ -129,10 +134,10 @@ async function loadMedia({
       .orderBy(asc(mediaConfig.sortOrder));
 
     values[key] = rows
-      .filter((row) => row.image)
+      .filter((row) => row.media)
       .map((row) => ({
         id: row.id,
-        ...row.image,
+        ...row.media,
         filename: row.filename,
         sourceType: row.sourceType,
         sourceSize: row.sourceSize,

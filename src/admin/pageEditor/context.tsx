@@ -9,7 +9,7 @@ import {
 } from "react";
 
 import { useRouter } from "next/navigation";
-import { CircleAlert, X } from "lucide-react";
+import FloatingError from "@kenstack/components/FloatingError";
 import { useForm } from "@kenstack/forms/context";
 import {
   useAdminControl,
@@ -73,20 +73,12 @@ function PageEditorError() {
   }
 
   return (
-    <div className="fixed right-4 bottom-4 z-50 flex min-h-36 w-64 max-w-[calc(100vw-2rem)] gap-3 rounded-md bg-red-600 p-4 text-sm text-white shadow-lg">
-      <CircleAlert className="mt-0.5 size-4 shrink-0" />
-      <div className="grow">{pageEditorError}</div>
-      <button
-        type="button"
-        aria-label="Dismiss page editor error"
-        className="-m-1 flex size-6 shrink-0 items-center justify-center rounded-sm text-white/80 transition hover:text-white focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
-        onClick={() => {
-          setPageEditorError(null);
-        }}
-      >
-        <X className="size-4" />
-      </button>
-    </div>
+    <FloatingError
+      message={pageEditorError}
+      onDismiss={() => {
+        setPageEditorError(null);
+      }}
+    />
   );
 }
 

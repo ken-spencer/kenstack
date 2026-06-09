@@ -9,8 +9,12 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { deps } from "@app/deps";
 import { media } from "@kenstack/db/tables";
-import { rasterMimeTypes } from "@kenstack/db/tables/media/mimeTypes";
+import {
+  imageMimeTypes,
+  rasterMimeTypes,
+} from "@kenstack/db/tables/media/mimeTypes";
 import canUpload from "@kenstack/lib/canUpload";
+import { formatFileSize } from "@kenstack/lib/fileSize";
 import unsecureId from "@kenstack/lib/unsecureId";
 import type { ServerDefinedFields } from "@kenstack/fields/server";
 import { and, eq, getTableName } from "drizzle-orm";
@@ -26,33 +30,33 @@ const maxOriginalWidth = 1920;
 const maxOriginalHeight = 1920;
 const squareSize = 800;
 const svgMimeType = "image/svg+xml";
+const supportedImageMimeTypes: readonly string[] = imageMimeTypes;
+const supportedRasterMimeTypes: readonly string[] = rasterMimeTypes;
 
 const s3 = new S3Client({
   requestChecksumCalculation: "WHEN_REQUIRED",
   region,
 });
 
-export const imageUploadRequestSchema = z.object({
-  fieldname: z.string("image field name is required"),
+export const mediaUploadRequestSchema = z.object({
+  fieldname: z.string("field name is required"),
   filename: z
     .string("filename is required")
     .nonempty("filename cannot be empty"),
-  type: z.enum(rasterMimeTypes, "Image type is not supported"),
-  size: z
-    .number("size is required")
-    .gt(0, "size must be greater than 0")
-    .max(deps.uploadMaxImageSize, deps.uploadMaxImageSizeMessage),
+  type: z.string("file type is required").min(1, "file type is required"),
+  size: z.number("size is required").gt(0, "size must be greater than 0"),
 });
 
-export const imageUploadCompleteSchema = z.object({
-  fieldname: z.string("image field name is required").min(1),
-  imageId: z.string("image id is required").min(1),
+export const mediaUploadCompleteSchema = z.object({
+  fieldname: z.string("field name is required").min(1),
+  imageId: z.string("media id is required").min(1),
 });
 
-export async function createImageUpload({
+export async function createMediaUpload({
   fields,
   fieldname,
   filename,
+  size,
   table,
   type,
   userId,
@@ -60,29 +64,43 @@ export async function createImageUpload({
   fields: ServerDefinedFields;
   fieldname: string;
   filename: string;
+  size: number;
   table: AnyPgTable;
   type: string;
   userId: number;
 }) {
   if (!canUpload()) {
-    return imageUploadError("Image uploads are not configured.");
+    return mediaUploadError("Uploads are not configured.");
   }
 
   const field = fields[fieldname];
   if (!field) {
-    return imageUploadError(`Unknown field name ${fieldname}`);
+    return mediaUploadError(`Unknown field name ${fieldname}`);
   }
 
-  if (!field.behavior?.upload) {
-    return imageUploadError(`Field "${fieldname}" does not support uploads.`);
+  const uploadConfig = getUploadConfig(field);
+  if (!uploadConfig) {
+    return mediaUploadError(`Field "${fieldname}" does not support uploads.`);
   }
 
+  if (!uploadConfig.accept.includes(type)) {
+    return mediaUploadError("File type is not supported.");
+  }
+
+  if (size > uploadConfig.maxSize) {
+    return mediaUploadError(uploadConfig.maxSizeMessage);
+  }
+
+  const kind = getMediaKind(type);
   const parsed = path.parse(filename);
-  const baseName = kebabCase(parsed.name) || "image";
+  const baseName =
+    kebabCase(parsed.name) || (kind === "file" ? "file" : "image");
   const ext = parsed.ext.toLowerCase();
   const imageId = unsecureId();
   const prefix = `${getTableName(table)}/${fieldname}/${imageId}`;
-  const key = `${type === svgMimeType ? "" : "private/"}${prefix}/original-${baseName}${ext}`;
+  const key = `${kind === "raster" ? "private/" : ""}${prefix}/${
+    kind === "file" ? baseName : "original-" + baseName
+  }${ext}`;
 
   const uploadUrl = await getSignedUrl(
     s3,
@@ -101,7 +119,7 @@ export async function createImageUpload({
     .values({
       createdBy: userId,
       status: "pending",
-      kind: type === svgMimeType ? "svg" : "raster",
+      kind,
       filename,
       prefix,
       baseName,
@@ -111,10 +129,10 @@ export async function createImageUpload({
     })
     .returning({ id: media.publicId });
 
-  return imageUploadSuccess({ uploadUrl, id: image.id });
+  return mediaUploadSuccess({ uploadUrl, id: image.id });
 }
 
-export async function completeImageUpload({
+export async function completeMediaUpload({
   fields,
   fieldname,
   imageId,
@@ -128,7 +146,17 @@ export async function completeImageUpload({
   userId: number;
 }) {
   if (!canUpload()) {
-    return imageUploadError("Image uploads are not configured.");
+    return mediaUploadError("Uploads are not configured.");
+  }
+
+  const field = fields[fieldname];
+  if (!field) {
+    return mediaUploadError(`Unknown field name ${fieldname}`);
+  }
+
+  const uploadConfig = getUploadConfig(field);
+  if (!uploadConfig) {
+    return mediaUploadError(`Field "${fieldname}" does not support uploads.`);
   }
 
   const [pendingImage] = await deps.db
@@ -138,6 +166,7 @@ export async function completeImageUpload({
       prefix: media.prefix,
       baseName: media.baseName,
       filename: media.filename,
+      kind: media.kind,
       type: media.sourceType,
     })
     .from(media)
@@ -150,26 +179,19 @@ export async function completeImageUpload({
     );
 
   if (!pendingImage) {
-    return imageUploadError(
-      "Problem finding uploaded image. Please try again.",
-    );
+    return mediaUploadError("Problem finding uploaded file. Please try again.");
   }
 
-  const field = fields[fieldname];
-  if (!field) {
-    return imageUploadError(`Unknown field name ${fieldname}`);
-  }
-
-  if (!field.behavior?.upload) {
-    return imageUploadError(`Field "${fieldname}" does not support uploads.`);
+  if (!uploadConfig.accept.includes(pendingImage.type)) {
+    await removePendingImage(pendingImage.key, pendingImage.id, userId);
+    return mediaUploadError("File type is not supported.");
   }
 
   if (!bucket) {
-    return imageUploadError("Missing AWS_S3_BUCKET");
+    return mediaUploadError("Missing AWS_S3_BUCKET");
   }
 
-  const { id, key, type, baseName, prefix, filename } = pendingImage;
-  const { default: sharp } = await import("sharp");
+  const { id, key, kind, type, baseName, prefix, filename } = pendingImage;
 
   const originalObject = await s3.send(
     new GetObjectCommand({
@@ -179,28 +201,79 @@ export async function completeImageUpload({
   );
 
   if (!originalObject.Body) {
-    return imageUploadError("Could not read uploaded image from S3");
+    return mediaUploadError("Could not read uploaded file from S3");
   }
+
+  const originalStream = originalObject.Body as Readable;
 
   if (
     typeof originalObject.ContentLength === "number" &&
-    originalObject.ContentLength > deps.uploadMaxImageSize
+    originalObject.ContentLength > uploadConfig.maxSize
   ) {
+    originalStream.destroy();
     await removePendingImage(key, id, userId);
-    return imageUploadError(deps.uploadMaxImageSizeMessage);
+    return mediaUploadError(uploadConfig.maxSizeMessage);
   }
 
-  const originalBuffer = await streamToBuffer(originalObject.Body as Readable);
+  if (kind === "file") {
+    const sourceSize =
+      typeof originalObject.ContentLength === "number"
+        ? originalObject.ContentLength
+        : (await streamToBuffer(originalStream)).length;
 
-  if (originalBuffer.length > deps.uploadMaxImageSize) {
+    if (typeof originalObject.ContentLength === "number") {
+      originalStream.destroy();
+    }
+
+    if (sourceSize > uploadConfig.maxSize) {
+      await removePendingImage(key, id, userId);
+      return mediaUploadError(uploadConfig.maxSizeMessage);
+    }
+
+    const [file] = await deps.db
+      .update(media)
+      .set({
+        status: "uploaded",
+        kind: "file",
+        table: getTableName(table),
+        sourceSize,
+        sourceWidth: null,
+        sourceHeight: null,
+        variants: null,
+      })
+      .where(eq(media.id, id))
+      .returning({
+        imageId: media.publicId,
+        url: media.sourceUrl,
+        sourceType: media.sourceType,
+        sourceSize: media.sourceSize,
+      });
+
+    return mediaUploadSuccess({
+      ...file,
+      kind: "file",
+      mediaId: file.imageId,
+      filename,
+      width: null,
+      height: null,
+      originalUrl: file.url,
+      sourceWidth: null,
+      sourceHeight: null,
+    });
+  }
+
+  const { default: sharp } = await import("sharp");
+  const originalBuffer = await streamToBuffer(originalStream);
+
+  if (originalBuffer.length > uploadConfig.maxSize) {
     await removePendingImage(key, id, userId);
-    return imageUploadError(deps.uploadMaxImageSizeMessage);
+    return mediaUploadError(uploadConfig.maxSizeMessage);
   }
 
   const metadata = await sharp(originalBuffer).metadata();
 
   if (!metadata.format) {
-    return imageUploadError("Uploaded file is not a supported image");
+    return mediaUploadError("Uploaded file is not a supported image");
   }
 
   if (type === svgMimeType) {
@@ -235,8 +308,10 @@ export async function completeImageUpload({
         sourceSize: media.sourceSize,
       });
 
-    return imageUploadSuccess({
+    return mediaUploadSuccess({
       ...image,
+      kind: "svg",
+      mediaId: image.imageId,
       filename,
       originalUrl: image.url,
       sourceWidth: image.width,
@@ -282,15 +357,15 @@ export async function completeImageUpload({
   const squareWebpMetadata = await sharp(squareWebp).metadata();
 
   if (!metadata.width || !metadata.height) {
-    return imageUploadError("Could not determine uploaded image dimensions");
+    return mediaUploadError("Could not determine uploaded image dimensions");
   }
 
   if (!originalWebpMetadata.width || !originalWebpMetadata.height) {
-    return imageUploadError("Could not determine original variant dimensions");
+    return mediaUploadError("Could not determine original variant dimensions");
   }
 
   if (!squareWebpMetadata.width || !squareWebpMetadata.height) {
-    return imageUploadError("Could not determine square variant dimensions");
+    return mediaUploadError("Could not determine square variant dimensions");
   }
 
   const [image] = await deps.db
@@ -333,8 +408,10 @@ export async function completeImageUpload({
     variants: { square },
   } = image;
 
-  return imageUploadSuccess({
+  return mediaUploadSuccess({
     imageId: image.imageId,
+    kind: "raster",
+    mediaId: image.imageId,
     url: square.url,
     width: square.width,
     height: square.height,
@@ -347,12 +424,60 @@ export async function completeImageUpload({
   });
 }
 
-function imageUploadError(message: string) {
+function mediaUploadError(message: string) {
   return { status: "error" as const, message };
 }
 
-function imageUploadSuccess(payload: Record<string, unknown>) {
+function mediaUploadSuccess(payload: Record<string, unknown>) {
   return { status: "success" as const, payload };
+}
+
+function getUploadConfig(field: ServerDefinedFields[string]) {
+  const upload = field.behavior?.upload;
+  if (!upload) {
+    return;
+  }
+
+  const accept =
+    upload === true || !upload.accept?.length
+      ? supportedRasterMimeTypes
+      : upload.accept;
+  const maxSize =
+    upload === true
+      ? deps.uploadMaxImageSize
+      : (upload.maxSize ?? deps.uploadMaxImageSize);
+  const maxSizeMessage =
+    upload === true
+      ? deps.uploadMaxImageSizeMessage
+      : (upload.maxSizeMessage ?? getDefaultMaxSizeMessage(accept, maxSize));
+
+  return {
+    accept,
+    maxSize,
+    maxSizeMessage,
+  };
+}
+
+function getDefaultMaxSizeMessage(accept: readonly string[], maxSize: number) {
+  const allImages = accept.every((type) =>
+    supportedImageMimeTypes.includes(type),
+  );
+
+  return allImages
+    ? deps.uploadMaxImageSizeMessage
+    : `Maximum file size is ${formatFileSize(maxSize, { unitStyle: "long" })}.`;
+}
+
+function getMediaKind(type: string) {
+  if (type === svgMimeType) {
+    return "svg";
+  }
+
+  if (supportedRasterMimeTypes.includes(type)) {
+    return "raster";
+  }
+
+  return "file";
 }
 
 async function sanitizeSvg(buffer: Buffer) {

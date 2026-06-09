@@ -5,7 +5,7 @@ import { type Prettify } from "@kenstack/types";
 
 import { cache } from "react";
 import { cacheLife, cacheTag } from "next/cache";
-import { selectImageSubquery, type SelectedImage } from "@kenstack/db/tables";
+import { selectMediaSubquery, type SelectedMedia } from "@kenstack/db/tables";
 import { getDisplayValues } from "@kenstack/fields/display";
 import { createDefaultValues } from "@kenstack/fields/createDefaultValues";
 import { loadRecord } from "@kenstack/fields/records";
@@ -14,7 +14,7 @@ import { pageEditorFieldNames, pageEditorFields } from "./fields";
 import { pageEditorServerFields } from "./serverFields";
 
 type ContentValue<TField extends DefinedField> = TField["kind"] extends "image"
-  ? SelectedImage | null
+  ? SelectedMedia | null
   : TField["default"];
 
 export type ContentData = Prettify<
@@ -94,7 +94,7 @@ export const loadMeta = async (
     .select({
       title: content.title,
       description: content.description,
-      ogImage: selectImageSubquery(content.ogImage, "original"),
+      ogImage: selectMediaSubquery(content.ogImage, "original"),
       seoTitle: content.seoTitle,
       seoDescription: content.seoDescription,
     })

@@ -2,7 +2,7 @@
 
 import { useAdminEdit } from "@kenstack/admin/Edit/context";
 import fetcher from "@kenstack/api/fetcher";
-import IconButton from "@kenstack/components/IconButton";
+import Button from "@kenstack/components/Button";
 import { useForm } from "@kenstack/forms/context";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { UserRoundKey } from "lucide-react";
@@ -47,14 +47,16 @@ export default function SwitchUserButton() {
   const isCurrentUser = id === userId;
 
   return (
-    <IconButton
+    <Button
       disabled={isCurrentUser}
       isPending={isPending}
+      size="icon"
       type="button"
       tooltip={isCurrentUser ? "You are already this user" : "Switch to user"}
+      variant="ghost"
       onClick={() => mutate(id)}
     >
       <UserRoundKey className="size-6 text-gray-800" />
-    </IconButton>
+    </Button>
   );
 }

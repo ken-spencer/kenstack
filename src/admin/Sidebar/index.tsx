@@ -1,5 +1,4 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { cookies } from "next/headers";
 import {
   SidebarProvider,
@@ -7,38 +6,17 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
 } from "@kenstack/components/ui/sidebar";
+import { Skeleton } from "@kenstack/components/ui/skeleton";
 import { AppSidebar } from "./app-sidebar";
 import AccountMenu from "@kenstack/components/AccountMenu";
 import NavLink from "./NavLink";
 import { deps } from "@app/deps";
+import Progress from "@kenstack/components/Progress";
 
 import Content from "./Content";
 
 const sidebarCookieName = "sidebar_state";
-
-function NavLinkFallback({
-  href,
-  icon,
-  title,
-}: {
-  href: string;
-  icon: React.ReactNode;
-  title: string;
-}) {
-  return (
-    <SidebarMenuItem>
-      <SidebarMenuButton asChild>
-        <Link href={href}>
-          {icon}
-          <span>{title}</span>
-        </Link>
-      </SidebarMenuButton>
-    </SidebarMenuItem>
-  );
-}
 
 type AdminSidebarProps = {
   accountMenu?: React.ReactNode;
@@ -48,13 +26,17 @@ type AdminSidebarProps = {
 
 export default function AdminSidebar(props: AdminSidebarProps) {
   return (
-    <Suspense fallback={<AdminSidebarContent {...props} defaultOpen={true} />}>
+    <Suspense fallback={<Progress className="my-16 size-10" />}>
       <AdminSidebarLoader {...props} />
     </Suspense>
   );
 }
 
+const accountMenuFallback = <Skeleton className="size-9 rounded-full" />;
+
 async function AdminSidebarLoader(props: AdminSidebarProps) {
+  await deps.auth.requireUser("admin");
+
   const cookieStore = await cookies();
   const defaultOpen = cookieStore.get(sidebarCookieName)?.value !== "false";
 
@@ -92,16 +74,7 @@ function AdminSidebarContent({
       <SidebarGroupContent>
         <SidebarMenu>
           {adminModules.map(({ href, icon, title }) => {
-            return (
-              <Suspense
-                key={href}
-                fallback={
-                  <NavLinkFallback href={href} icon={icon} title={title} />
-                }
-              >
-                <NavLink href={href} icon={icon} title={title} />
-              </Suspense>
-            );
+            return <NavLink key={href} href={href} icon={icon} title={title} />;
           })}
         </SidebarMenu>
       </SidebarGroupContent>
@@ -119,7 +92,9 @@ function AdminSidebarContent({
           title,
         }))}
         accountMenu={
-          <Suspense>{accountMenu ?? <AccountMenu fallback={null} />}</Suspense>
+          <Suspense fallback={accountMenuFallback}>
+            {accountMenu ?? <AccountMenu fallback={accountMenuFallback} />}
+          </Suspense>
         }
       >
         {children}

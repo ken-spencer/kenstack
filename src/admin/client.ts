@@ -1,5 +1,5 @@
 import type { FC, ReactNode } from "react";
-import type { SelectedImage } from "@kenstack/db/tables";
+import type { SelectedMedia } from "@kenstack/db/tables";
 import { createZodSchema } from "@kenstack/fields/createZodSchema";
 import type { DefinedFields } from "@kenstack/fields/types";
 
@@ -36,7 +36,7 @@ type ListItems<TFields extends DefinedFields = DefinedFields> =
           ? never
           : TKey
         : never]: TFields[TKey]["kind"] extends "image"
-        ? SelectedImage | null
+        ? SelectedMedia | null
         : TFields[TKey]["default"];
     } & { path: string }
   >[];

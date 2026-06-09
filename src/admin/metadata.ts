@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { selectImageSubquery } from "@kenstack/db/tables/media";
+import { selectMediaSubquery } from "@kenstack/db/tables/media";
 import {
   dateTimeField,
   imageField,
@@ -34,7 +34,7 @@ export function metaSelect<TTable extends AdminSeoTable>(table: TTable) {
   return {
     seoTitle: table.seoTitle,
     seoDescription: table.seoDescription,
-    ogImage: selectImageSubquery(table.ogImage, "original"),
+    ogImage: selectMediaSubquery(table.ogImage, "original"),
   };
 }
 

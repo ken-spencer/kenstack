@@ -2,10 +2,11 @@ import { type AuthDeps } from "./types";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { hashToken } from "./token";
-import { sql, and, isNull, eq, gt } from "drizzle-orm";
+import { and, isNull, eq, gt } from "drizzle-orm";
 import { type User } from "@kenstack/types";
 import { redirect } from "next/navigation";
-import { selectImageSubquery } from "@kenstack/db/tables";
+import { selectMediaSubquery } from "@kenstack/db/tables";
+import { formatUserInitials, formatUserName } from "@kenstack/lib/user";
 
 export function createUser<
   TSchema extends Record<string, unknown>,
@@ -30,12 +31,10 @@ export function createUser<
           impersonatedBy: sessions.impersonatedBy,
           publicId: users.publicId,
           givenName: users.givenName,
+          middleName: users.middleName,
           familyName: users.familyName,
-          name: sql<string>`trim(${users.givenName} || ' ' || ${users.familyName})`.as(
-            "name",
-          ),
           email: users.email,
-          avatar: selectImageSubquery(users.avatar, "square"),
+          avatar: selectMediaSubquery(users.avatar, "square"),
           roles: users.roles,
         })
         .from(sessions)
@@ -58,42 +57,11 @@ export function createUser<
       return {
         ...publicUser,
         ...(impersonatedBy ? { impersonatedBy } : {}),
-        initials: user.givenName.slice(0, 1) + user.familyName.slice(0, 1),
+        name: formatUserName(user),
+        initials: formatUserInitials(user),
       };
     },
   );
-
-  // const loadUser = cache(async (userId: number): Promise<User | undefined> => {
-  //   const [user] = await db
-  //     .select({
-  //       id: users.id,
-  //       impersonatedBy: sessions.impersonatedBy,
-  //       publicId: users.publicId,
-  //       givenName: users.givenName,
-  //       familyName: users.familyName,
-  //       name: sql<string>`trim(${users.givenName} || ' ' || ${users.familyName})`.as(
-  //         "name",
-  //       ),
-  //       email: users.email,
-  //       avatar: selectImageSubquery(users.avatar, "square"),
-  //       roles: users.roles,
-  //     })
-  //     .from(users)
-  //     .where(and(eq(users.id, userId), isNull(users.deletedAt)))
-  //     .limit(1);
-
-  //   if (!user) {
-  //     return undefined;
-  //   }
-
-  //   const { impersonatedBy, ...publicUser } = user;
-
-  //   return {
-  //     ...publicUser,
-  //     ...(impersonatedBy ? { impersonatedBy } : {}),
-  //     initials: user.givenName.slice(0, 1) + user.familyName.slice(0, 1),
-  //   };
-  // });
 
   const getCurrentUser = async () /*: Promise<User<TRoles> | undefined>*/ => {
     const cookieStore = await cookies();

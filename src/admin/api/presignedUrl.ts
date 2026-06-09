@@ -3,18 +3,18 @@ import type { ServerDefinedFields } from "@kenstack/fields/server";
 
 import { pipelineStage } from "@kenstack/api";
 import {
-  createImageUpload,
-  imageUploadRequestSchema,
-} from "@kenstack/fields/records/imageUpload";
+  createMediaUpload,
+  mediaUploadRequestSchema,
+} from "@kenstack/fields/records/mediaUpload";
 
 export const getPresignedUrlAction = (adminConfig: {
   table: AnyPgTable;
   fields: ServerDefinedFields;
 }) =>
   pipelineStage(
-    { access: "admin", schema: imageUploadRequestSchema },
+    { access: "admin", schema: mediaUploadRequestSchema },
     async ({ data, response, user }) => {
-      const result = await createImageUpload({
+      const result = await createMediaUpload({
         ...adminConfig,
         ...data,
         userId: user.id,

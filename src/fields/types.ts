@@ -44,6 +44,12 @@ export type FieldInputOption = {
   value: string;
 };
 
+export type MediaListUploadOptions = {
+  accept?: readonly string[];
+  uploadMaxSize?: number;
+  uploadMaxSizeMessage?: string;
+};
+
 export type FieldOption<
   TKind extends FieldKind = FieldKind,
   TDefault = unknown,

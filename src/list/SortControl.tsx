@@ -10,12 +10,27 @@ import {
   PopoverTrigger,
 } from "@kenstack/components/ui/popover";
 import Tooltip from "@kenstack/components/Tooltip";
-import { useAdminList } from "./context";
+import type { AdminSortMeta } from "@kenstack/admin/types/list";
+import type { ListQueryStoreState } from "@kenstack/list/querySchema";
+import type { SetQueryStore } from "@kenstack/list/useQueryStore";
 
 type Direction = "asc" | "desc";
 
-export default function SortControl() {
-  const { sort, filters, setFilters } = useAdminList();
+export default function SortControl({
+  filters,
+  label,
+  setFilters,
+  showLabel = false,
+  sort,
+  tooltip = true,
+}: {
+  filters: ListQueryStoreState;
+  label?: string;
+  setFilters: SetQueryStore<ListQueryStoreState>;
+  showLabel?: boolean;
+  sort: AdminSortMeta[];
+  tooltip?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sortOptions =
@@ -53,6 +68,25 @@ export default function SortControl() {
   }
 
   const direction = filters.direction;
+  const trigger = (
+    <PopoverTrigger asChild>
+      <Button
+        type="button"
+        variant="ghost"
+        className="gap-2 px-2 text-gray-800"
+        aria-label={`Sort by ${currentSort.label}`}
+      >
+        <ArrowUpDown className="size-5" />
+        <span className={showLabel ? "inline" : "hidden sm:inline"}>
+          {label ?? currentSort.label}
+        </span>
+        <DirectionIcon
+          direction={direction}
+          className={showLabel ? "block size-4" : "hidden sm:block"}
+        />
+      </Button>
+    </PopoverTrigger>
+  );
 
   return (
     <Popover
@@ -64,20 +98,7 @@ export default function SortControl() {
         setOpen(nextOpen);
       }}
     >
-      <Tooltip content="Sort">
-        <PopoverTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            className="gap-2 px-2 text-gray-800"
-            aria-label={`Sort by ${currentSort.label}`}
-          >
-            <ArrowUpDown className="size-5" />
-            <span className="hidden sm:inline">{currentSort.label}</span>
-            <DirectionIcon direction={direction} className="hidden sm:block" />
-          </Button>
-        </PopoverTrigger>
-      </Tooltip>
+      {tooltip ? <Tooltip content="Sort">{trigger}</Tooltip> : trigger}
       <PopoverContent align="end" className="w-64 p-2">
         <div className="flex flex-col gap-1">
           {sortOptions.map((option) => {

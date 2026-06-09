@@ -1,18 +1,21 @@
-import mdToHtml from "./mdToHtml";
+import mdToHtml, { type MarkdownOptions } from "./mdToHtml";
 
 import { twMerge } from "tailwind-merge";
 
 import { type ComponentProps } from "@kenstack/admin/pageEditor/types";
 
+export type MarkdownProps = ComponentProps<"div"> & MarkdownOptions;
+
 export async function Markdown({
   content,
   className,
   placeholder,
+  remarkPlugins,
   ...props
-}: ComponentProps<"div">) {
-  delete props.tag; // in case this was used int he page editor.
+}: MarkdownProps) {
+  delete props.tag; // In case this was used in the page editor.
 
-  const html = await mdToHtml(content ?? "");
+  const html = await mdToHtml(content ?? "", { remarkPlugins });
 
   if (html) {
     return (

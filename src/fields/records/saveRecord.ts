@@ -38,6 +38,13 @@ type SaveRecordOptions<TTable extends SaveRecordTable> = {
     select: ReturnType<typeof selectFields<TTable, ServerDefinedFields>>;
     user: User;
   }) => Promise<{ id: number } | undefined>;
+  afterSaveRecord?: (ctx: {
+    tx: TransactionDb;
+    row: { id: number };
+    values: Record<string, unknown>;
+    savedValues: Record<string, unknown>;
+    user: User;
+  }) => Promise<void>;
 };
 
 export async function saveRecord<TTable extends SaveRecordTable>(
@@ -83,6 +90,7 @@ export async function saveRecord<TTable extends SaveRecordTable>(
         fields,
         columns: getTableColumns(table),
         data,
+        handledValues,
         id,
         user,
         table,
@@ -161,6 +169,14 @@ export async function saveRecord<TTable extends SaveRecordTable>(
         });
       }
 
+      await options.afterSaveRecord?.({
+        tx,
+        row: savedRow,
+        values,
+        savedValues,
+        user,
+      });
+
       await tx.insert(revisions).values({
         table: tableName,
         rowId: savedRow.id,
@@ -212,6 +228,7 @@ async function preSaveFields<TTable extends SaveRecordTable>({
   fields,
   columns,
   data,
+  handledValues,
   id,
   user,
   table,
@@ -222,6 +239,7 @@ async function preSaveFields<TTable extends SaveRecordTable>({
   fields: ServerDefinedFields;
   columns: ReturnType<typeof getTableColumns<TTable>>;
   data: Record<string, unknown>;
+  handledValues: Record<string, unknown>;
   id?: number | null;
   user: User;
   table: TTable;
@@ -231,7 +249,11 @@ async function preSaveFields<TTable extends SaveRecordTable>({
 }) {
   const afterSave: FieldAfterSave[] = [];
 
-  for (const [key, value] of Object.entries(data)) {
+  for (const [key] of Object.entries(values)) {
+    if (!shouldSaveField(key)) {
+      continue;
+    }
+
     const field = fields[key];
     if (!field) {
       continue;
@@ -249,6 +271,8 @@ async function preSaveFields<TTable extends SaveRecordTable>({
       continue;
     }
 
+    const hasFieldSave = Boolean(field.behavior.save);
+    const value = hasFieldSave ? handledValues[key] : data[key];
     const result = await field.behavior.preSave({
       db: tx,
       key,
@@ -267,8 +291,13 @@ async function preSaveFields<TTable extends SaveRecordTable>({
 
     if (result.remove) {
       delete data[key];
+      delete handledValues[key];
     } else if ("value" in result) {
-      data[key] = result.value;
+      if (hasFieldSave) {
+        handledValues[key] = result.value;
+      } else {
+        data[key] = result.value;
+      }
     }
 
     afterSave.push(...(result.afterSave ?? []));

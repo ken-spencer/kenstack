@@ -2,6 +2,28 @@
 
 Use this file to document breaking Kenstack API changes that downstream sites may need to apply.
 
+## Unreleased: Shared List Utilities
+
+Old APIs:
+
+- `@kenstack/admin/List/FilterControl`
+- `@kenstack/admin/List/KeywordSearch`
+- `@kenstack/admin/List/SortControl`
+- `@kenstack/admin/List/useQueryStore`
+- `@kenstack/admin/lib/listQuerySchema`
+
+New APIs:
+
+- `@kenstack/list/FilterControl`
+- `@kenstack/list/KeywordSearch`
+- `@kenstack/list/SortControl`
+- `@kenstack/list/useQueryStore`
+- `@kenstack/list/querySchema`
+
+Migration steps:
+
+- Replace shared list utility imports from `@kenstack/admin/List/...` and `@kenstack/admin/lib/listQuerySchema` with the matching `@kenstack/list/...` path.
+
 ## Unreleased: Pipeline Stage Access Option
 
 Old APIs:
@@ -180,6 +202,7 @@ Old APIs:
 - `mediaField(...)` and `<MediaField />` for ordered multi-media fields.
 - Internal field kind `"media"`.
 - Ordered media join tables used `image_id` and index/FK names such as `blog_media_blog_id_image_id_unique`.
+- `SelectedImage`, `selectImage(...)`, and `selectImageSubquery(...)` for media selector helpers.
 
 New APIs:
 
@@ -189,6 +212,8 @@ New APIs:
 - `mediaListField(...)` and `<MediaListField />` for ordered multi-media fields.
 - Internal field kind `"media-list"`.
 - Ordered media join tables use `media_id`, `blog_media_unique`, `blog_media_sort_order_idx`, `blog_media_blog_fk`, and `blog_media_media_fk` style names.
+- `SelectedMedia`, `selectMedia(...)`, and `selectMediaSubquery(...)` for media selector helpers.
+- The old selector helper names remain as deprecated aliases during the transition.
 
 Migration steps:
 
@@ -196,7 +221,9 @@ Migration steps:
 - Rename ordered media join columns from `image_id` to `media_id`.
 - Rename imports from `defineMedia` to `defineMediaList`.
 - Rename field helper and component imports from `mediaField` / `MediaField` to `mediaListField` / `MediaListField`.
+- Rename selector helper imports from `SelectedImage`, `selectImage`, and `selectImageSubquery` to `SelectedMedia`, `selectMedia`, and `selectMediaSubquery`.
 - Keep singular image fields such as `image`, `ogImage`, or `avatar` named for their domain role; those fields can still store ids from the generalized `media` table.
+- Keep `"original"` and `"square"` selector variants where image renditions are needed. File media ignores the variant and returns its source URL with null dimensions.
 
 ## Unreleased: Admin Module And Page Editor Imports
 
@@ -432,7 +459,7 @@ New APIs:
 Migration steps:
 
 - Rename `pageQuery`'s `columns` option to `select`.
-- Keep computed Drizzle selections inside `select`, for example `image: selectImageSubquery(services.image, "square", { shape: "src" })`.
+- Keep computed Drizzle selections inside `select`, for example `image: selectMediaSubquery(services.image, "square")`.
 - Keep `where`, `cache`, and `preview` unchanged.
 - Use `customPageQuery` only when the page query needs custom joins or clauses that the simple `pageQuery` select option cannot express. The callback receives Kenstack's computed admin visibility predicate as `where`.
 - Replace `listQuery` with normal Drizzle list queries locally so ordering, joins, and module-specific behavior stay explicit.

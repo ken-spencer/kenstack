@@ -10,13 +10,13 @@ import * as z from "zod";
 
 export const userFields = {
   givenName: textField({
-    zod: z.string().min(1, "Given name is required"),
+    zod: z.string().trim().min(1, "Given name is required"),
     searchable: true,
     list: true,
     filter: true,
   }),
   familyName: textField({
-    zod: z.string().min(1, "Family name is required"),
+    zod: z.string().trim().min(1, "Family name is required"),
     searchable: true,
     list: true,
     filter: true,

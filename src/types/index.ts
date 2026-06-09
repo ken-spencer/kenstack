@@ -3,6 +3,7 @@ export type User<TRoles extends readonly string[] = string[]> = {
   impersonatedBy?: number;
   publicId: string;
   givenName: string;
+  middleName: string;
   familyName: string;
   name: string;
   initials: string;

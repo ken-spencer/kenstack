@@ -11,6 +11,7 @@ import { type ExtraTable } from "@kenstack/admin/table";
 
 export const userColumns = {
   givenName: text("given_name").notNull(),
+  middleName: text("middle_name").notNull().default(""),
   familyName: text("family_name").notNull(),
   email: varchar("email", { length: 320 }).notNull(),
   roles: text("roles")

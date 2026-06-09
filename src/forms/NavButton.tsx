@@ -4,19 +4,18 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { useFormContext } from "react-hook-form";
 
-import IconButton from "@kenstack/components/IconButton";
-import { useForm } from "@kenstack/forms/context";
+import Button, { type ButtonProps } from "@kenstack/components/Button";
 
-export default function AdminEditNavButton({
+import { useForm } from "./context";
+
+export default function FormNavButton({
   children,
   disabled = false,
   href,
-  tooltip,
-}: {
+  ...props
+}: Omit<ButtonProps, "asChild" | "isPending" | "name" | "type" | "value"> & {
   children: ReactNode;
-  disabled?: boolean;
   href: string;
-  tooltip: string;
 }) {
   const {
     formState: { isDirty },
@@ -24,22 +23,28 @@ export default function AdminEditNavButton({
   const { mutation, uploadingFields } = useForm();
 
   if (isDirty) {
+    const isPending =
+      mutation.isPending && mutation.variables?.submitter === href;
+
     return (
-      <IconButton
+      <Button
+        variant="ghost"
+        {...props}
         disabled={disabled || mutation.isPending || uploadingFields.size > 0}
-        isPending={mutation.isPending && mutation.variables.submitter === href}
+        isPending={isPending}
         name="action"
+        type="submit"
         value={href}
-        tooltip={tooltip}
+        aria-busy={isPending || undefined}
       >
         {children}
-      </IconButton>
+      </Button>
     );
   }
 
   return (
-    <IconButton disabled={disabled} tooltip={tooltip} asChild={!disabled}>
+    <Button variant="ghost" {...props} asChild={!disabled} disabled={disabled}>
       {disabled ? children : <Link href={href}>{children}</Link>}
-    </IconButton>
+    </Button>
   );
 }
