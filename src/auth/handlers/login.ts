@@ -8,6 +8,7 @@ import {
   type PipelineOptions,
 } from "@kenstack/api";
 import loginSchema from "@kenstack/auth/schemas/login";
+import { getSafeReturnToPath } from "@kenstack/auth/returnTo";
 import { deps } from "@app/deps";
 import { sql } from "drizzle-orm";
 
@@ -19,7 +20,7 @@ export const loginPipeline = () => (options: PipelineOptions) =>
 const login = () =>
   pipelineStage(
     { schema: loginSchema },
-    async ({ data: { email, password }, request, response }) => {
+    async ({ data: { email, password, returnTo }, request, response }) => {
       const ip = ipAddress(request) ?? "127.0.0.1";
       const {
         db,
@@ -68,14 +69,9 @@ const login = () =>
         return await failResponse(email, request, response);
       }
 
-      const returnTo = request.cookies.get("returnTo");
-      const path = returnTo?.value ?? "/";
+      const path = getSafeReturnToPath(returnTo) ?? "/";
 
       await deps.auth.login(user.id);
-
-      if (returnTo) {
-        response.cookies.delete("returnTo");
-      }
 
       return response.success({
         authenticated: true,

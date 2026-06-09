@@ -6,7 +6,19 @@ import { and, isNull, eq, gt } from "drizzle-orm";
 import { type User } from "@kenstack/types";
 import { redirect } from "next/navigation";
 import { selectMediaSubquery } from "@kenstack/db/tables";
+import { createLoginPath } from "@kenstack/auth/returnTo";
+import type { AuthAccess } from "@kenstack/auth/server/auth";
 import { formatUserInitials, formatUserName } from "@kenstack/lib/user";
+
+type RequireUserOptions<TRole extends string> =
+  | {
+      access: AuthAccess<TRole>;
+      returnTo?: string | null;
+    }
+  | {
+      access?: AuthAccess<TRole>;
+      returnTo: string | null;
+    };
 
 export function createUser<
   TSchema extends Record<string, unknown>,
@@ -74,31 +86,44 @@ export function createUser<
     return getUserBySessionToken(token.value);
   };
 
-  const requireUser = cache(
-    async (
-      role?: TRoles[number] | readonly TRoles[number][],
-    ): Promise<User> => {
-      const user = await getCurrentUser();
+  const requireUser = cache(async function requireUser(
+    input?: AuthAccess<TRoles[number]> | RequireUserOptions<TRoles[number]>,
+  ): Promise<User> {
+    let access: AuthAccess<TRoles[number]>;
+    let returnTo: string | null | undefined;
 
-      if (!user) {
-        redirect("/login");
+    if (
+      input &&
+      typeof input === "object" &&
+      ("access" in input || "returnTo" in input)
+    ) {
+      access = input.access ?? "authenticated";
+      returnTo = input.returnTo;
+    } else {
+      access = input ?? "authenticated";
+    }
+
+    const user = await getCurrentUser();
+    const loginPath = createLoginPath(returnTo);
+
+    if (!user) {
+      redirect(loginPath);
+    }
+
+    const requiredAccess = Array.isArray(access) ? access : [access];
+
+    if (!requiredAccess.includes("authenticated")) {
+      const hasPermission = user.roles.some((userRole) =>
+        requiredAccess.includes(userRole),
+      );
+
+      if (!hasPermission) {
+        redirect(loginPath);
       }
+    }
 
-      if (role) {
-        const requiredRoles = Array.isArray(role) ? role : [role];
-
-        const hasPermission = user.roles.some((userRole) =>
-          requiredRoles.includes(userRole),
-        );
-
-        if (!hasPermission) {
-          redirect("/login");
-        }
-      }
-
-      return user;
-    },
-  );
+    return user;
+  });
 
   return { getUserBySessionToken, getCurrentUser, requireUser };
 }

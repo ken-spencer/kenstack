@@ -9,10 +9,12 @@ import Link from "next/link";
 
 import Form from "@kenstack/forms/Form";
 import loginSchema from "@kenstack/auth/schemas/login";
+import { getSafeReturnToPath } from "@kenstack/auth/returnTo";
 import Notice from "@kenstack/forms/Notice";
 import Alert from "@kenstack/components/Alert";
 import InputField from "@kenstack/forms/InputField";
 import PasswordField from "@kenstack/forms/PasswordField";
+import RegisterField from "@kenstack/forms/RegisterField";
 
 import Submit from "@kenstack/forms/Submit";
 import Suspense from "@kenstack/components/Suspense";
@@ -20,9 +22,10 @@ import Suspense from "@kenstack/components/Suspense";
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 import RecaptchaTerms from "@kenstack/components/RecaptchaTerms";
 
-const defaultValues = {
+const loginDefaultValues = {
   email: "",
   password: "",
+  returnTo: "",
 };
 
 export default function LoginFormCont() {
@@ -37,6 +40,7 @@ export function LoginForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { executeRecaptcha } = useGoogleReCaptcha();
+  const returnTo = getSafeReturnToPath(searchParams.get("returnTo")) ?? "";
 
   const [message, setMessage] = useState(() => {
     if (typeof window === "undefined") {
@@ -45,7 +49,13 @@ export function LoginForm() {
 
     let m;
     if ((m = searchParams.get("loginMessage"))) {
-      window.history.replaceState(null, "", window.location.pathname);
+      const params = new URLSearchParams(window.location.search);
+      params.delete("loginMessage");
+      window.history.replaceState(
+        null,
+        "",
+        window.location.pathname + (params.size ? `?${params}` : ""),
+      );
     } else if ((m = cookies.get("loginMessage"))) {
       cookies.remove("loginMessage", { path: "/login" });
     }
@@ -57,7 +67,7 @@ export function LoginForm() {
       className="space-y-4"
       apiPath="/api/auth"
       schema={loginSchema}
-      defaultValues={defaultValues}
+      defaultValues={{ ...loginDefaultValues, returnTo }}
       onSubmit={async ({ data, mutation, form }) => {
         setMessage("");
         const recaptchaToken = executeRecaptcha
@@ -78,6 +88,7 @@ export function LoginForm() {
     >
       {message && <Alert>{message}</Alert>}
       <Notice />
+      <RegisterField name="returnTo" />
       <InputField name="email" label="Email" type="email" />
       <PasswordField name="password" label="Password" />
 

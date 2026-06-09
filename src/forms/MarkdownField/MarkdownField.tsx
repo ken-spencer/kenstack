@@ -13,22 +13,28 @@ import {
   useEditor,
   useInstance,
 } from "@milkdown/react";
+import { QueryClientContext } from "@tanstack/react-query";
 import {
   placeholder as placeholderPlugin,
   placeholderCtx,
 } from "milkdown-plugin-placeholder";
-import { useEffect, useRef } from "react";
+import { useContext, useEffect, useRef } from "react";
 import { type ControllerRenderProps } from "react-hook-form";
 import { twMerge } from "tailwind-merge";
 
 import Field, { type FieldProps } from "@kenstack/forms/Field";
 import { MarkdownEditorToolbar } from "@kenstack/forms/MarkdownEditor/Toolbar";
+import {
+  markdownMentionPlugin,
+  type MarkdownMentionConfig,
+} from "./mentions";
 
 export type InputProps = React.ComponentProps<"input"> &
   FieldProps & {
     editorClassName?: string;
     editorContentClassName?: string;
     inputClass?: string;
+    mentions?: MarkdownMentionConfig;
   };
 
 export default function MarkdownField({
@@ -38,6 +44,7 @@ export default function MarkdownField({
   className,
   editorClassName,
   editorContentClassName,
+  mentions,
 }: InputProps) {
   return (
     <Field
@@ -51,6 +58,7 @@ export default function MarkdownField({
             editorClassName={editorClassName}
             editorContentClassName={editorContentClassName}
             field={field}
+            mentions={mentions}
           />
         </MilkdownProvider>
       )}
@@ -62,17 +70,20 @@ function MarkdownFieldEditor({
   editorClassName,
   editorContentClassName,
   field,
+  mentions,
 }: {
   editorClassName?: string;
   editorContentClassName?: string;
   field: ControllerRenderProps;
+  mentions?: MarkdownMentionConfig;
 }) {
   const initialValue = typeof field.value === "string" ? field.value : "";
   const lastEditorValue = useRef(initialValue);
   const [loading, get] = useInstance();
+  const queryClient = useContext(QueryClientContext);
 
-  useEditor((root) =>
-    Editor.make()
+  useEditor((root) => {
+    const editor = Editor.make()
       .config((ctx) => {
         ctx.set(rootCtx, root);
         ctx.set(defaultValueCtx, initialValue);
@@ -91,8 +102,12 @@ function MarkdownFieldEditor({
       .use(history)
       .use(placeholderPlugin)
       .use(commonmark)
-      .use(gfm),
-  );
+      .use(gfm);
+
+    return mentions
+      ? editor.use(markdownMentionPlugin({ ...mentions, queryClient }))
+      : editor;
+  });
 
   useEffect(() => {
     const nextValue = typeof field.value === "string" ? field.value : "";

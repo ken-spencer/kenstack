@@ -51,7 +51,7 @@ export default function Avatar({ url, initials = "", className }: AvatarProps) {
     <div
       style={{ backgroundColor: palette[index] }}
       className={twMerge(
-        "inline-flex size-10 items-center justify-center rounded-full p-4 text-xl text-white",
+        "inline-flex size-10 items-center justify-center rounded-full text-xl text-white",
         className,
       )}
     >

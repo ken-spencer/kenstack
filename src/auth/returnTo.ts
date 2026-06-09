@@ -1,0 +1,32 @@
+export function getSafeReturnToPath(value?: string | null) {
+  const path = value?.trim();
+
+  if (
+    !path ||
+    !path.startsWith("/") ||
+    path.startsWith("//") ||
+    path.includes("\\") ||
+    /[\u0000-\u001f\u007f]/.test(path)
+  ) {
+    return;
+  }
+
+  const pathname = path.split(/[?#]/, 1)[0];
+
+  if (pathname === "/login") {
+    return;
+  }
+
+  return path;
+}
+
+export function createLoginPath(returnTo?: string | null) {
+  const path = getSafeReturnToPath(returnTo);
+
+  if (!path) {
+    return "/login";
+  }
+
+  const params = new URLSearchParams({ returnTo: path });
+  return `/login?${params.toString()}`;
+}
