@@ -6,19 +6,8 @@ import { and, isNull, eq, gt } from "drizzle-orm";
 import { type User } from "@kenstack/types";
 import { redirect } from "next/navigation";
 import { selectMediaSubquery } from "@kenstack/db/tables";
-import { createLoginPath } from "@kenstack/auth/returnTo";
 import type { AuthAccess } from "@kenstack/auth/server/auth";
 import { formatUserInitials, formatUserName } from "@kenstack/lib/user";
-
-type RequireUserOptions<TRole extends string> =
-  | {
-      access: AuthAccess<TRole>;
-      returnTo?: string | null;
-    }
-  | {
-      access?: AuthAccess<TRole>;
-      returnTo: string | null;
-    };
 
 export function createUser<
   TSchema extends Record<string, unknown>,
@@ -34,7 +23,6 @@ export function createUser<
       if (!token) {
         return;
       }
-
       const tokenHash = hashToken(token);
 
       const [user] = await db
@@ -87,27 +75,12 @@ export function createUser<
   };
 
   const requireUser = cache(async function requireUser(
-    input?: AuthAccess<TRoles[number]> | RequireUserOptions<TRoles[number]>,
+    access: AuthAccess<TRoles[number]> = "authenticated",
   ): Promise<User> {
-    let access: AuthAccess<TRoles[number]>;
-    let returnTo: string | null | undefined;
-
-    if (
-      input &&
-      typeof input === "object" &&
-      ("access" in input || "returnTo" in input)
-    ) {
-      access = input.access ?? "authenticated";
-      returnTo = input.returnTo;
-    } else {
-      access = input ?? "authenticated";
-    }
-
     const user = await getCurrentUser();
-    const loginPath = createLoginPath(returnTo);
 
     if (!user) {
-      redirect(loginPath);
+      redirect("/login");
     }
 
     const requiredAccess = Array.isArray(access) ? access : [access];
@@ -118,7 +91,7 @@ export function createUser<
       );
 
       if (!hasPermission) {
-        redirect(loginPath);
+        redirect("/login");
       }
     }
 

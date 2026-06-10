@@ -19,14 +19,3 @@ export function getSafeReturnToPath(value?: string | null) {
 
   return path;
 }
-
-export function createLoginPath(returnTo?: string | null) {
-  const path = getSafeReturnToPath(returnTo);
-
-  if (!path) {
-    return "/login";
-  }
-
-  const params = new URLSearchParams({ returnTo: path });
-  return `/login?${params.toString()}`;
-}
