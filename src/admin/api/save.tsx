@@ -49,17 +49,15 @@ export const saveAction = (moduleConfig: DefinedAdmin[string]) => {
   return pipelineStage(
     {
       access: "admin",
-      schema: z
-        .object({
-          id: z.number().nullish(),
-          changes: z.array(z.string()),
-          values: adminConfig.schema,
-        })
-        .transform(withServerPublishDate),
+      schema: z.object({
+        id: z.number().nullish(),
+        changes: z.array(z.string()),
+        values: adminConfig.schema,
+      }),
       fieldsKey: "values",
     },
     async ({ response, data: rawData }) => {
-      const { changes, id, values } = rawData;
+      const { changes, id, values } = withServerPublishDate(rawData);
 
       const result = await saveAdminRecord({
         changes,

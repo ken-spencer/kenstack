@@ -203,7 +203,14 @@ function FormProvider<
     shouldFocusError: true,
   });
 
-  const { resetField, setError, clearErrors } = form;
+  const { reset, resetField, setError, clearErrors } = form;
+
+  useEffect(() => {
+    reset(defaultValues);
+    setStatusMessage(null);
+    setUploadingFields(new Set());
+    lastFieldRef.current = null;
+  }, [defaultValues, reset, setStatusMessage]);
 
   // const mutation = useMutation<
   //   FetchResult<WithExtra<TResult>>,
