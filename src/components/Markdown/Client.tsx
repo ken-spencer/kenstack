@@ -5,12 +5,17 @@ import { twMerge } from "tailwind-merge";
 import { useEffect, useState } from "react";
 
 import { type ComponentProps } from "@kenstack/admin/pageEditor/types";
+import { remarkKenStackMarkdown, type MarkdownMentionTargets } from "./plugins";
 
-export type MarkdownClientProps = ComponentProps<"div"> & MarkdownOptions;
+export type MarkdownClientProps = ComponentProps<"div"> &
+  MarkdownOptions & {
+    mentionTargets?: MarkdownMentionTargets;
+  };
 
 export default function MarkdownClient({
   content,
   className,
+  mentionTargets,
   placeholder,
   remarkPlugins,
   ...props
@@ -19,15 +24,28 @@ export default function MarkdownClient({
 
   const [html, setHtml] = useState("");
   useEffect(() => {
-    mdToHtml(content ?? "", { remarkPlugins })
+    let active = true;
+
+    mdToHtml(content ?? "", {
+      remarkPlugins: [
+        [remarkKenStackMarkdown, { mentionTargets }],
+        ...(remarkPlugins ?? []),
+      ],
+    })
       .then((value) => {
-        setHtml(value);
+        if (active) {
+          setHtml(value);
+        }
       })
       .catch((err) => {
         //eslint-disable-next-line no-console
         console.error(err);
       });
-  }, [content, remarkPlugins]);
+
+    return () => {
+      active = false;
+    };
+  }, [content, mentionTargets, remarkPlugins]);
 
   if (html) {
     return (

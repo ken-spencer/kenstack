@@ -3,19 +3,42 @@ import mdToHtml, { type MarkdownOptions } from "./mdToHtml";
 import { twMerge } from "tailwind-merge";
 
 import { type ComponentProps } from "@kenstack/admin/pageEditor/types";
+import {
+  loadMarkdownMentionTargets,
+  remarkKenStackMarkdown,
+  type MarkdownMentionLoader,
+  type MarkdownMentionTargets,
+} from "./plugins";
 
-export type MarkdownProps = ComponentProps<"div"> & MarkdownOptions;
+export type MarkdownProps = ComponentProps<"div"> &
+  MarkdownOptions & {
+    mentionTargets?: MarkdownMentionTargets;
+    mentionLoader?: MarkdownMentionLoader;
+  };
 
 export async function Markdown({
   content,
   className,
+  mentionTargets,
+  mentionLoader,
   placeholder,
   remarkPlugins,
   ...props
 }: MarkdownProps) {
   delete props.tag; // In case this was used in the page editor.
 
-  const html = await mdToHtml(content ?? "", { remarkPlugins });
+  const markdown = content ?? "";
+  const loadedMentionTargets =
+    mentionTargets ??
+    (mentionLoader
+      ? await loadMarkdownMentionTargets(markdown, mentionLoader)
+      : undefined);
+  const html = await mdToHtml(markdown, {
+    remarkPlugins: [
+      [remarkKenStackMarkdown, { mentionTargets: loadedMentionTargets }],
+      ...(remarkPlugins ?? []),
+    ],
+  });
 
   if (html) {
     return (

@@ -2,6 +2,12 @@
 
 Use this checklist before finalizing code changes. It is meant to catch project preferences that are easy to miss during implementation.
 
+Our primary review goal is to keep the code simple, direct, and easy to follow.
+
+Evaluate all changes through that lens. Prefer clear, explicit code over unnecessary abstraction. Avoid indirection, cleverness, duplication, and redundant structure unless they provide a clear practical benefit.
+
+When reviewing, look for opportunities to reduce complexity, improve readability, and make the intent of the code obvious to the next developer.
+
 ## Type Shape
 
 - List every new or changed local `type` alias, interface, overload, generic, and cast in each touched TypeScript file. Keep each one only if it is exported, reused, materially simplifies a noisy function signature, documents a real domain contract, or protects a real generic/external boundary.
@@ -19,10 +25,25 @@ Use this checklist before finalizing code changes. It is meant to catch project 
 
 ## Local Code Shape
 
-- Remove single-use variables that only rename a direct call, property access, or simple expression.
+- Do an alias pass over new and changed locals. A local name must earn its place by avoiding meaningful repetition, clarifying a real domain concept, or containing complexity that would be harder to read inline; otherwise inline it.
+- Make the alias pass mechanical, not vibes-based: after edits, search or scan touched TypeScript files for local `const` declarations referenced only once. Inline each one unless the remaining name has a concrete current reason, and be ready to name that reason.
+- Important exception: do not inline auth/current-user lookups into query predicates or other behavior-defining expressions. Resolve values such as `const user = await deps.auth.requireUser()` and `const userId = user.id` near the top of the nearest function boundary so user-scoped behavior is obvious during review.
+- Treat single-use variables as suspect by default, especially when the value is immediately handed to JSX or another nearby call.
+- Inline single-use style objects. When the same styling intent is reused, make a small component at the right owner instead of keeping a shared `*Style` object that is only passed to JSX.
+- Remove aliases that hide the meaningful condition, such as `pendingValue = isPending ? value : undefined`. Keep the condition visible where it drives the branch unless a name captures a real domain concept reused nearby.
+- After deriving a value from a condition, avoid re-checking the same condition or source fields in adjacent code. Reuse the derived value or split the logic into explicit branches when that reads clearer.
+- When both branches of a conditional apply the same wrapper, coercion, fallback, or formatting helper, move that shared operation outside the conditional so the branch only chooses the differing value.
+- Avoid nested ternaries for multi-way choices, especially discriminator-to-label/icon/component mappings. Prefer a `switch` or explicit branches so each case is named plainly.
+- In JSX components, check one-use event handlers and local aliases. Inline them when the event site is clearer; keep named handlers for reuse, complex branching, domain workflows, or stable callback identity.
+- Do not pass `initial*` props that duplicate data already owned by the same query, context, or provider. Seed the shared state at the boundary and read it from one source.
 - Remove generic temporary variables that merge distinct cases only to feed a nearby branch or call. Prefer explicit branches when the cases have different domain meanings, such as separate list-record and single-record cache targets.
+- Prefer direct guard returns for terminal UI states such as errors, empty states, redirects, and permission denials. Do not gather a temporary message or status value only to render that terminal branch a few lines later.
+- Before keeping local JSX helpers or hand-rolled styled markup for common UI states such as errors, loading, empty, success, or informational messages, check for an existing shared primitive or local component owner. Use that existing component, or create one at the right owner if the pattern is truly missing, instead of copying class strings into each feature.
+- Check state-specific JSX helpers and component branches for duplicated section, card, heading, or layout shells. When one component owns all states, render the shell once and put loading/error/empty/content branching inside it instead of swapping whole outer components. Use a shared shell helper only when that shell is reused across separate components or distant call sites.
+- For Suspense around auth/data branches, keep the boundary at the smallest server-rendered branch that actually awaits the data. Do not wrap a whole navigation, page section, card, or layout shell when only one nested item depends on async/auth state. Render the stable shell once, and suspend only the auth/data-dependent child slot. The authenticated/suspended component should render only the private or async-dependent fragment, not the whole parent/client component with public props passed through. Public links, shells, headings, sections, and other always-visible UI should be rendered outside the auth/data branch even when nearby client behavior needs its own wrapper. If that slot lives inside a client component, split the component into a small server wrapper and a focused client component so the parent can pass ordinary data/config props while the wrapper owns the auth/data branch. Prefer that extra file over making a parent know internal authenticated child components or moving the boundary outward. When the client component itself needs server Suspense, such as for route hooks under Cache Components, keep the boundary but use `fallback={null}` for trivial immediate hooks like `usePathname`; add visible fallback UI only for real slow work such as auth checks, database queries, network calls, or useful skeleton states.
 - Move immediate follow-up mutations into the initial array or object declaration when the value is unconditional.
 - Remove intermediate arrays or objects that only name one step in a fluent transformation before being immediately consumed.
+- Do not add dedupe passes, `Set` conversions, or uniqueness guards unless duplicates can actually enter from the data source or user flow. When uniqueness is enforced by schema, database constraints, or filtered UI options, use direct membership checks or trust the invariant instead of suggesting duplicate records are possible.
 - Check string construction. Prefer plain concatenation when it is clearer than a template literal wrapped around short fragments or conditionals; keep template literals when interpolation improves readability.
 - Remove JSX fragments with zero or one meaningful child; return the child directly instead.
 - Check repeated loops over the same collection. Combine them when one pass can gather the needed values without making the code harder to read.
@@ -93,6 +114,8 @@ If a check fails because the check scope does not match the code's intended runt
 - Do not remove configurability or behavior to make a cleanup easier without confirming first.
 - Check pipeline actions for guard-only stages that just return an error. Prefer one normal stage with the guard inside the handler unless the separate stage materially changes auth, schema parsing, or external behavior.
 - Check `useEffect` usage, especially around React Query. Effects should synchronize with an external system; avoid effects that only mirror derived state, inspect query data/errors, log results, or perform work that belongs in query/mutation callbacks, route actions, or explicit event handlers.
+- When several components consume the same React Query result from a context/provider, handle no-data and query/app-level error states at that shared boundary. Child components should render their local loading/content/empty states and assume the provider has already dealt with an unusable shared query.
+- For simple React Query controls that toggle one value or add/remove one visible item, avoid optimistic `onMutate` cache rewrites unless other visible shared UI must change immediately. Keep `mutation.isPending` visible when deriving the pending control state from `mutation.variables`, let `onSuccess` handle app-level `{ status: "error" }`, let `onError` handle thrown or unexpected failures, and replace shared cache state from the server response.
 - Check local `mounted`, `active`, and `cancelled` flags in effects. Remove them when they only guard a one-shot async state update after unmount; keep cleanup when it cancels a real external resource or prevents stale results from competing effect inputs.
 - Check whether client and server parse the same payload, query state, filters, or form values with separate schemas. Share the common schema or schema helper where possible so validation and coercion do not drift.
 - For every `pipelineStage({ schema })`, scan the handler for `.parse(...)`, `.safeParse(...)`, hand-written validation, or request-field reshaping against `data`, `dataIn`, or the same submitted fields. Move that logic into the pipeline schema so `z.output<typeof schema>` is the shape the action consumes. Keep client-only raw form schemas separate from action schemas when needed.

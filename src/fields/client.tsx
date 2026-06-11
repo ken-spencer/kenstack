@@ -21,6 +21,7 @@ import TextareaField from "@kenstack/forms/TextareaField";
 import { relationshipSchema } from "./relationshipSchema";
 import type {
   FieldComponentProps,
+  FieldComponent,
   FieldInputOption,
   FieldKind,
   FieldOption,
@@ -82,7 +83,10 @@ type TagFieldOptions = DisplayFieldOptions & {
   filter?: boolean;
 };
 
-type RelationshipFieldOptions = DisplayFieldOptions & {
+type RelationshipFieldOptions = CommonFieldOptions<
+  z.output<typeof relationshipSchema>
+> & {
+  component?: FieldComponent;
   list?: boolean;
   filter?: boolean;
 };
@@ -432,7 +436,7 @@ export function tagField(
 
 export function relationshipField(
   options: RelationshipFieldOptions = {},
-): FieldOptionOfKind<"relationship", []> {
+): FieldOptionOfKind<"relationship", z.output<typeof relationshipSchema>> {
   return {
     __kenstackField: true,
     kind: "relationship",

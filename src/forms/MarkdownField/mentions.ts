@@ -1,24 +1,29 @@
 import { posToDOMRect } from "@milkdown/prose";
 import {
+  NodeSelection,
   Plugin,
   PluginKey,
   TextSelection,
   type EditorState,
 } from "@milkdown/prose/state";
 import type { EditorView } from "@milkdown/prose/view";
-import { $prose } from "@milkdown/kit/utils";
+import type { MilkdownPlugin } from "@milkdown/kit/ctx";
+import { $nodeSchema, $prose, $remark } from "@milkdown/kit/utils";
 import type { QueryClient } from "@tanstack/react-query";
 import { createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 
 import fetcher, { type FetchResult } from "@kenstack/api/fetcher";
 import Avatar from "@kenstack/components/Avatar";
+import {
+  formatUserMentionTarget,
+  userMentionIdFromHref,
+} from "@kenstack/components/Markdown/plugins";
 
 export type MarkdownMentionConfig = {
   apiPath: string;
   action?: string;
   minQueryLength?: number;
-  path: string;
   trigger?: string;
 };
 
@@ -27,7 +32,6 @@ type MarkdownMentionOption = {
   id: number;
   initials?: string;
   label: string;
-  slug: string;
 };
 
 type MarkdownMentionSearchResult = FetchResult<{
@@ -45,26 +49,135 @@ type MentionMatch = {
   trigger: string;
 };
 
+type MentionTransformNode = {
+  children?: MentionTransformNode[];
+  label?: unknown;
+  type: string;
+  url?: unknown;
+  userId?: unknown;
+  value?: unknown;
+};
+
 const mentionPluginKey = new PluginKey("KENSTACK_MARKDOWN_MENTIONS");
 const mentionPluginViews = new WeakMap<EditorView, MentionPluginView>();
+const mentionNodeId = "kenstack_mention";
+const mentionMarkdownNodeType = "kenstackMention";
 
-export function markdownMentionPlugin(config: MarkdownMentionRuntimeConfig) {
-  return $prose(
-    () =>
-      new Plugin({
-        key: mentionPluginKey,
-        props: {
-          handleKeyDown(view, event) {
-            return mentionPluginViews.get(view)?.handleKeyDown(event) ?? false;
+const markdownMentionSchema = $nodeSchema(mentionNodeId, () => ({
+  group: "inline",
+  inline: true,
+  atom: true,
+  selectable: true,
+  isolating: true,
+  marks: "",
+  attrs: {
+    label: { default: "", validate: "string" },
+    userId: { default: 0, validate: "number" },
+  },
+  parseDOM: [
+    {
+      tag: `span[data-type="${mentionNodeId}"]`,
+      getAttrs: (dom) => {
+        if (!(dom instanceof HTMLElement)) {
+          return false;
+        }
+
+        const userId = Number(dom.dataset.userId);
+
+        if (!Number.isSafeInteger(userId) || userId <= 0) {
+          return false;
+        }
+
+        return {
+          label: normalizeMentionLabel(
+            dom.dataset.label ?? dom.textContent ?? "",
+          ),
+          userId,
+        };
+      },
+    },
+  ],
+  toDOM: (node) => [
+    "span",
+    {
+      "data-label": node.attrs.label,
+      "data-type": mentionNodeId,
+      "data-user-id": String(node.attrs.userId),
+      contenteditable: "false",
+      style:
+        "border-radius:4px;color:rgb(37 99 235);cursor:default;font-weight:500;white-space:nowrap;",
+    },
+    formatMentionLabel(node.attrs.label),
+  ],
+  parseMarkdown: {
+    match: (node) => node.type === mentionMarkdownNodeType,
+    runner: (state, node, type) => {
+      const userId = Number(node.userId);
+
+      if (!Number.isSafeInteger(userId) || userId <= 0) {
+        return;
+      }
+
+      state.addNode(type, {
+        label: normalizeMentionLabel((node.label as string | undefined) ?? ""),
+        userId,
+      });
+    },
+  },
+  toMarkdown: {
+    match: (node) => node.type.name === mentionNodeId,
+    runner: (state, node) => {
+      state.addNode(
+        "link",
+        [
+          {
+            type: "text",
+            value: formatMentionLabel(node.attrs.label),
           },
+        ],
+        undefined,
+        {
+          title: null,
+          url: formatUserMentionTarget(node.attrs.userId),
         },
-        view: (view) => {
-          const pluginView = new MentionPluginView(view, config);
-          mentionPluginViews.set(view, pluginView);
-          return pluginView;
-        },
-      }),
-  );
+      );
+    },
+  },
+}));
+
+const markdownMentionRemark = $remark(
+  "kenstackMarkdownMentions",
+  () => () => (tree) => {
+    transformMentionLinks(tree);
+  },
+);
+
+export function markdownMentionPlugin(
+  config: MarkdownMentionRuntimeConfig,
+): MilkdownPlugin[] {
+  return [
+    ...markdownMentionSchema,
+    ...markdownMentionRemark,
+    $prose(
+      () =>
+        new Plugin({
+          key: mentionPluginKey,
+          props: {
+            handleKeyDown(view, event) {
+              return (
+                mentionPluginViews.get(view)?.handleKeyDown(event) ||
+                handleMentionNodeKeyDown(view, event)
+              );
+            },
+          },
+          view: (view) => {
+            const pluginView = new MentionPluginView(view, config);
+            mentionPluginViews.set(view, pluginView);
+            return pluginView;
+          },
+        }),
+    ),
+  ];
 }
 
 class MentionPluginView {
@@ -204,19 +317,18 @@ class MentionPluginView {
     }
 
     const { schema, tr } = this.view.state;
-    const link = schema.marks.link;
+    const mention = schema.nodes[mentionNodeId];
 
-    if (!link) {
+    if (!mention) {
       return;
     }
 
     const label = `${this.match.trigger}${option.label}`;
-    const node = schema.text(label, [
-      link.create({
-        href: formatMentionPath(this.config.path, option.slug),
-      }),
-    ]);
-    const selectionTo = this.match.from + label.length;
+    const node = mention.create({
+      label: normalizeMentionLabel(label),
+      userId: option.id,
+    });
+    const selectionTo = this.match.from + node.nodeSize;
 
     tr.replaceWith(this.match.from, this.match.to, node);
     tr.insertText(" ", selectionTo, selectionTo);
@@ -506,6 +618,89 @@ function findMentionMatch(
   };
 }
 
+function handleMentionNodeKeyDown(view: EditorView, event: KeyboardEvent) {
+  if (hasModifierKey(event)) {
+    return false;
+  }
+
+  if (event.key === "Backspace") {
+    return selectAdjacentMentionNode(view, -1);
+  }
+
+  if (event.key === "Delete") {
+    return selectAdjacentMentionNode(view, 1);
+  }
+
+  return false;
+}
+
+function selectAdjacentMentionNode(view: EditorView, direction: -1 | 1) {
+  const { selection } = view.state;
+
+  if (!selection.empty || selection instanceof NodeSelection) {
+    return false;
+  }
+
+  const node =
+    direction === -1 ? selection.$from.nodeBefore : selection.$from.nodeAfter;
+
+  if (node?.type.name !== mentionNodeId) {
+    return false;
+  }
+
+  const position =
+    direction === -1 ? selection.from - node.nodeSize : selection.from;
+
+  view.dispatch(
+    view.state.tr
+      .setSelection(NodeSelection.create(view.state.doc, position))
+      .scrollIntoView(),
+  );
+  return true;
+}
+
+function transformMentionLinks(node: MentionTransformNode) {
+  if (!node.children?.length) {
+    return;
+  }
+
+  for (let index = 0; index < node.children.length; index += 1) {
+    const child = node.children[index];
+
+    if (child?.type === "link") {
+      const userId = userMentionIdFromHref(String(child.url ?? ""));
+
+      if (userId) {
+        node.children[index] = {
+          type: mentionMarkdownNodeType,
+          label: normalizeMentionLabel(textContent(child)),
+          userId,
+        };
+        continue;
+      }
+    }
+
+    transformMentionLinks(child);
+  }
+}
+
+function textContent(node: MentionTransformNode): string {
+  if (typeof node.value === "string") {
+    return node.value;
+  }
+
+  return node.children?.map((child) => textContent(child)).join("") ?? "";
+}
+
+function formatMentionLabel(label: string) {
+  const normalizedLabel = normalizeMentionLabel(label);
+  return normalizedLabel ? `@${normalizedLabel}` : "@";
+}
+
+function normalizeMentionLabel(label: string) {
+  return label.trim().replace(/^@+/, "");
+}
+
 function createAvatarElement(option: MarkdownMentionOption) {
   const element = document.createElement("span");
   element.style.display = "inline-flex";
@@ -548,10 +743,6 @@ function markdownMentionQueryKey(apiPath: string, action: string, query: string)
 
 function hasModifierKey(event: KeyboardEvent) {
   return event.altKey || event.ctrlKey || event.metaKey || event.shiftKey;
-}
-
-function formatMentionPath(path: string, slug: string) {
-  return path.replace("{slug}", encodeURIComponent(slug));
 }
 
 function escapeRegExp(value: string) {
