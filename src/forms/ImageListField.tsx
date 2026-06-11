@@ -7,7 +7,10 @@ import MediaListField, {
 
 export default function ImageListField({
   accept = rasterMimeTypes,
+  label = "Images",
   ...props
 }: Omit<MediaListFieldProps, "variant">) {
-  return <MediaListField {...props} accept={accept} variant="grid" />;
+  return (
+    <MediaListField {...props} accept={accept} label={label} variant="grid" />
+  );
 }

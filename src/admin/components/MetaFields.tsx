@@ -45,22 +45,55 @@ export default function MetaFields({
   fields?: Partial<Record<keyof typeof defaultFields, boolean>>;
   className?: string;
 }) {
-  const { setValue, watch } = useFormContext();
+  const { watch } = useFormContext();
   const visibility = watch("visibility");
   const publishedAt = watch("publishedAt");
   const isDraft = visibility === "draft";
   const publishSummary = isDraft
     ? "Not listed"
     : formatPublishedAt(publishedAt);
-  const showAccordion =
-    fields.publishedAt ||
-    fields.seoTitle ||
-    fields.seoDescription ||
-    fields.ogImage;
+  const metaFieldCount = [
+    fields.publishedAt,
+    fields.seoTitle,
+    fields.seoDescription,
+    fields.ogImage,
+  ].filter(Boolean).length;
+  const showMetaFields = metaFieldCount > 0;
+  const showAccordion = metaFieldCount > 1;
   const accordionTitle =
     fields.seoTitle || fields.seoDescription || fields.ogImage
       ? "Scheduling & Meta"
       : "Scheduling";
+  const metaFields = (
+    <>
+      {fields.publishedAt ? (
+        <DateTimeField
+          disabled={isDraft}
+          name="publishedAt"
+          label="Publish On"
+        />
+      ) : null}
+      {fields.seoTitle ? (
+        <InputField
+          label="SEO Title (If different than Title)"
+          name="seoTitle"
+        />
+      ) : null}
+      {fields.seoDescription ? (
+        <TextareaField
+          label="SEO Description (if different than Description)"
+          name="seoDescription"
+        />
+      ) : null}
+      {fields.ogImage ? (
+        <ImageField
+          help="The image shown in social media and messaging app previews when this page is shared. If left empty, the site default image is used."
+          label="Open Graph Image (1200 x 630)"
+          name="ogImage"
+        />
+      ) : null}
+    </>
+  );
 
   return (
     <div className={twMerge("space-y-4", className)}>
@@ -71,15 +104,6 @@ export default function MetaFields({
           groupClassName="grid grid-cols-3 gap-1.5"
           buttonClassName="min-w-0"
           options={visibilityStatusOptions}
-          onValueChange={(value) => {
-            if (value !== "draft" && fields.publishedAt && !publishedAt) {
-              setValue("publishedAt", new Date().toISOString(), {
-                shouldDirty: true,
-                shouldTouch: true,
-                shouldValidate: true,
-              });
-            }
-          }}
         />
       ) : null}
 
@@ -95,35 +119,12 @@ export default function MetaFields({
               </span>
             </AccordionTrigger>
             <AccordionContent className="space-y-4">
-              {fields.publishedAt ? (
-                <DateTimeField
-                  disabled={isDraft}
-                  name="publishedAt"
-                  label="Publish On"
-                />
-              ) : null}
-              {fields.seoTitle ? (
-                <InputField
-                  label="SEO Title (If different than Title)"
-                  name="seoTitle"
-                />
-              ) : null}
-              {fields.seoDescription ? (
-                <TextareaField
-                  label="SEO Description (if different than Description)"
-                  name="seoDescription"
-                />
-              ) : null}
-              {fields.ogImage ? (
-                <ImageField
-                  help="The image shown in social media and messaging app previews when this page is shared. If left empty, the site default image is used."
-                  label="Open Graph Image (1200 x 630)"
-                  name="ogImage"
-                />
-              ) : null}
+              {metaFields}
             </AccordionContent>
           </AccordionItem>
         </Accordion>
+      ) : showMetaFields ? (
+        <div className="space-y-4">{metaFields}</div>
       ) : null}
     </div>
   );
