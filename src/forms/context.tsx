@@ -6,6 +6,7 @@ import React, {
   useCallback,
   useContext,
   useState,
+  useEffect,
 } from "react";
 // import { nanoid } from "nanoid";
 import {
@@ -168,6 +169,12 @@ function FormProvider<
   const setStatusMessage = useCallback<SetStatusMessage>((message) => {
     setStatusMessageState(normalizeStatusMessage(message));
   }, []);
+  useEffect(() => {
+    return () => {
+      // fixes a problem in next where status message can persist navigation.
+      setStatusMessage(null);
+    };
+  }, [setStatusMessage]);
   const [uploadingFields, setUploadingFields] = useState<Set<string>>(
     () => new Set(),
   );
