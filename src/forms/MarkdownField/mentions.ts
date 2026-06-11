@@ -190,9 +190,24 @@ class MentionPluginView {
   private match: MentionMatch | null = null;
   private optionButtons: HTMLButtonElement[] = [];
   private options: MarkdownMentionOption[] = [];
+  private repositionFrame: number | null = null;
   private roots: Root[] = [];
   private requestKey = "";
   private selectedIndex = 0;
+  private readonly handleViewportChange = () => {
+    if (!this.match || this.element.style.display === "none") {
+      return;
+    }
+
+    if (this.repositionFrame !== null) {
+      return;
+    }
+
+    this.repositionFrame = window.requestAnimationFrame(() => {
+      this.repositionFrame = null;
+      this.positionPopover();
+    });
+  };
 
   constructor(
     private view: EditorView,
@@ -218,6 +233,8 @@ class MentionPluginView {
     });
 
     document.body.appendChild(this.element);
+    window.addEventListener("resize", this.handleViewportChange);
+    window.addEventListener("scroll", this.handleViewportChange, true);
     this.update(view);
   }
 
@@ -238,9 +255,11 @@ class MentionPluginView {
       return true;
     }
 
-    if (event.key === "Enter" && this.options.length) {
+    if (event.key === "Enter") {
       event.preventDefault();
-      this.insertMention(this.options[this.selectedIndex] ?? this.options[0]);
+      if (this.options.length) {
+        this.insertMention(this.options[this.selectedIndex] ?? this.options[0]);
+      }
       return true;
     }
 
@@ -282,14 +301,16 @@ class MentionPluginView {
     }
 
     this.render();
-
-    const rect = posToDOMRect(view, this.match.from, this.match.to);
-    this.element.style.left = `${Math.max(8, rect.left)}px`;
-    this.element.style.top = `${rect.bottom + 6}px`;
-    this.element.style.display = "block";
+    this.positionPopover();
   }
 
   destroy() {
+    window.removeEventListener("resize", this.handleViewportChange);
+    window.removeEventListener("scroll", this.handleViewportChange, true);
+    if (this.repositionFrame !== null) {
+      window.cancelAnimationFrame(this.repositionFrame);
+      this.repositionFrame = null;
+    }
     this.clearRequest();
     this.clearPopover();
     mentionPluginViews.delete(this.view);
@@ -309,6 +330,17 @@ class MentionPluginView {
     this.selectedIndex = 0;
     this.clearPopover();
     this.hide();
+  }
+
+  private positionPopover() {
+    if (!this.match) {
+      return;
+    }
+
+    const rect = posToDOMRect(this.view, this.match.from, this.match.to);
+    this.element.style.left = `${Math.max(8, rect.left)}px`;
+    this.element.style.top = `${rect.bottom + 6}px`;
+    this.element.style.display = "block";
   }
 
   private insertMention(option: MarkdownMentionOption) {
