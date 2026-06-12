@@ -1,27 +1,27 @@
 import AuthGuard from "@kenstack/auth/components/AuthGuard";
-import type { SettingsClient } from "@kenstack/admin/client";
+import type { ClientConfig } from "@kenstack/admin/client";
+import type { DefinedAdmin } from "@kenstack/admin/module";
 
 import ModuleSettingsControlClient from "./ControlClient";
 
 type ModuleSettingsControlProps = {
   children: React.ReactNode;
-  client?: SettingsClient;
   description?: string;
   label?: string;
-  name: string;
+  module: DefinedAdmin[string];
   title: string;
 };
 
 export default function ModuleSettingsControl(
   props: ModuleSettingsControlProps,
 ) {
-  if (!props.client) {
+  if (!props.module.settings || !props.module.client) {
     return props.children;
   }
 
   return (
     <AuthGuard access="admin" fallback={props.children}>
-      <ModuleSettingsControlContent {...props} client={props.client} />
+      <ModuleSettingsControlContent {...props} client={props.module.client} />
     </AuthGuard>
   );
 }
@@ -31,15 +31,15 @@ function ModuleSettingsControlContent({
   client,
   description,
   label,
-  name,
+  module,
   title,
-}: ModuleSettingsControlProps & { client: SettingsClient }) {
+}: ModuleSettingsControlProps & { client: ClientConfig }) {
   return (
     <ModuleSettingsControlClient
       client={client}
       description={description}
       label={label ?? `Edit ${title} settings`}
-      name={name}
+      name={module.name}
       title={title}
     >
       {children}
