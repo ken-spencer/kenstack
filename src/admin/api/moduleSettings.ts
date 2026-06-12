@@ -1,6 +1,5 @@
 import * as z from "zod";
 import { eq } from "drizzle-orm";
-import { cacheLife, cacheTag } from "next/cache";
 
 import { pipelineStage } from "@kenstack/api";
 import type { DefinedAdmin, ResolvedModuleSettings } from "@kenstack/admin";
@@ -28,10 +27,6 @@ async function loadModuleSettings(
   name: string,
   settings: ResolvedModuleSettings,
 ) {
-  "use cache";
-  cacheTag(settings.cacheTag);
-  cacheLife("max");
-
   const result = await loadRecord({
     table: settings.table,
     fields: settings.fields,
