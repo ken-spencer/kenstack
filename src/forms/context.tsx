@@ -169,15 +169,10 @@ function FormProvider<
   const setStatusMessage = useCallback<SetStatusMessage>((message) => {
     setStatusMessageState(normalizeStatusMessage(message));
   }, []);
-  useEffect(() => {
-    return () => {
-      // fixes a problem in next where status message can persist navigation.
-      setStatusMessage(null);
-    };
-  }, [setStatusMessage]);
   const [uploadingFields, setUploadingFields] = useState<Set<string>>(
     () => new Set(),
   );
+  const hasMountedRef = useRef(false);
   const lastFieldRef = useRef(null);
 
   const startUploading = useCallback((fieldName: string) => {
@@ -206,11 +201,23 @@ function FormProvider<
   const { reset, resetField, setError, clearErrors } = form;
 
   useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
+
     reset(defaultValues);
-    setStatusMessage(null);
-    setUploadingFields(new Set());
-    lastFieldRef.current = null;
-  }, [defaultValues, reset, setStatusMessage]);
+  }, [defaultValues, reset]);
+
+  useEffect(
+    () => () => {
+      // Fixes a problem in Next where form state can persist navigation.
+      setStatusMessage(null);
+      setUploadingFields(new Set());
+      lastFieldRef.current = null;
+    },
+    [setStatusMessage],
+  );
 
   // const mutation = useMutation<
   //   FetchResult<WithExtra<TResult>>,
