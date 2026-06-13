@@ -26,8 +26,13 @@ export default async function AccountMenuLoader({
     <Menu user={user}>
       {resolvedItems &&
         resolvedItems.map(([href, text, Icon], key) => (
-          <Button key={href + key} variant="link" asChild>
-            <Link className="w-full justify-start" href={href}>
+          <Button
+            className="text-foreground w-full justify-start"
+            key={href + key}
+            variant="link"
+            asChild
+          >
+            <Link href={href}>
               <Icon />
               {text}
             </Link>
