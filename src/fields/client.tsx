@@ -305,7 +305,14 @@ export function slugField(
     default: "",
     searchable: false,
     revisions: true,
-    zod: z.string().min(1, "Slug is required"),
+    zod: z
+      .string()
+      .trim()
+      .min(1, "Slug is required")
+      .regex(
+        /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+        "Use lowercase letters, numbers, and hyphens.",
+      ),
     ...options,
   };
 }
