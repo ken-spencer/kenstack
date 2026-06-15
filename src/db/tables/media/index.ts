@@ -220,23 +220,3 @@ export function selectMediaSubquery(
   limit 1
 )`;
 }
-
-/**
- * @deprecated Use `selectMedia`.
- */
-export const selectImage = selectMedia;
-
-/**
- * @deprecated Use `SelectedMedia`.
- */
-export type SelectedImage = SelectedMedia;
-
-/**
- * @deprecated Use `selectMediaSubquery`.
- */
-export function selectImageSubquery(
-  mediaCol: AnyPgColumn,
-  variant: MediaVariantName = "original",
-) {
-  return selectMediaSubquery(mediaCol, variant);
-}

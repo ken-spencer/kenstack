@@ -21,24 +21,9 @@ import type {
   BaseListItem,
   ClientConfig,
 } from "@kenstack/admin/client";
+import { getAdminListQueryKey } from "./queryKey";
 
 const AdminListContext = createContext<UseListProps | null>(null);
-
-export function getAdminListQueryKey(
-  name: string,
-  query: ListQueryStoreState & { page: number },
-) {
-  return [
-    "admin-list",
-    name,
-    query.keywords,
-    query.trash,
-    query.sort,
-    query.direction,
-    query.filters,
-    query.page,
-  ] as const;
-}
 
 type AdminListProps = {
   basePath?: string;

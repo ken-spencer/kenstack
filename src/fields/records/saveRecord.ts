@@ -23,6 +23,7 @@ type TransactionDb = Parameters<
 >[0];
 
 type SaveRecordTable = AdminTable | AdminKeyTable;
+type SavedRow = { id: number } & Record<string, unknown>;
 
 type SaveRecordOptions<TTable extends SaveRecordTable> = {
   actionPrefix: string;
@@ -37,10 +38,10 @@ type SaveRecordOptions<TTable extends SaveRecordTable> = {
     data: Record<string, unknown>;
     select: ReturnType<typeof selectFields<TTable, ServerDefinedFields>>;
     user: User;
-  }) => Promise<{ id: number } | undefined>;
+  }) => Promise<SavedRow | undefined>;
   afterSaveRecord?: (ctx: {
     tx: TransactionDb;
-    row: { id: number };
+    row: SavedRow;
     values: Record<string, unknown>;
     savedValues: Record<string, unknown>;
     user: User;
@@ -107,7 +108,7 @@ export async function saveRecord<TTable extends SaveRecordTable>(
       }
 
       const select = selectFields(table, fields);
-      let savedRow: { id: number } | undefined;
+      let savedRow: SavedRow | undefined;
 
       if (options.query) {
         savedRow = await options.query({
@@ -126,7 +127,7 @@ export async function saveRecord<TTable extends SaveRecordTable>(
           .update(table)
           .set(updateData)
           .where(eq(table.id, id))
-          .returning(select);
+          .returning(select) as SavedRow[];
 
         savedRow = row;
       } else {
@@ -136,7 +137,7 @@ export async function saveRecord<TTable extends SaveRecordTable>(
             ...data,
             createdBy: user.id,
           } as InferInsertModel<TTable>)
-          .returning(select);
+          .returning(select) as SavedRow[];
 
         savedRow = row;
       }

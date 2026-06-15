@@ -1,4 +1,5 @@
-import { AdminListProvider, getAdminListQueryKey } from "./context";
+import { AdminListProvider } from "./context";
+import { getAdminListQueryKey } from "./queryKey";
 
 import Header from "./Header";
 import Footer from "./Footer";

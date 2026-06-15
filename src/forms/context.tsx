@@ -8,6 +8,7 @@ import React, {
   useState,
   useEffect,
 } from "react";
+import isEqual from "lodash-es/isEqual";
 // import { nanoid } from "nanoid";
 import {
   useForm as useReactHookForm,
@@ -173,6 +174,7 @@ function FormProvider<
     () => new Set(),
   );
   const hasMountedRef = useRef(false);
+  const defaultValuesRef = useRef(defaultValues);
   const lastFieldRef = useRef(null);
 
   const startUploading = useCallback((fieldName: string) => {
@@ -203,9 +205,15 @@ function FormProvider<
   useEffect(() => {
     if (!hasMountedRef.current) {
       hasMountedRef.current = true;
+      defaultValuesRef.current = defaultValues;
       return;
     }
 
+    if (isEqual(defaultValuesRef.current, defaultValues)) {
+      return;
+    }
+
+    defaultValuesRef.current = defaultValues;
     reset(defaultValues);
   }, [defaultValues, reset]);
 

@@ -213,7 +213,6 @@ New APIs:
 - Internal field kind `"media-list"`.
 - Ordered media join tables use `media_id`, `blog_media_unique`, `blog_media_sort_order_idx`, `blog_media_blog_fk`, and `blog_media_media_fk` style names.
 - `SelectedMedia`, `selectMedia(...)`, and `selectMediaSubquery(...)` for media selector helpers.
-- The old selector helper names remain as deprecated aliases during the transition.
 
 Migration steps:
 
