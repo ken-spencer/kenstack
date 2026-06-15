@@ -6,7 +6,7 @@ import { fields } from "./fields";
 import { siteSettings } from "./tables";
 
 export default defineModule({
-  name: "siteSettings",
+  name: "site-settings",
   title: "Site Settings",
   icon: Settings,
   client,

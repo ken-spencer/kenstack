@@ -78,7 +78,7 @@ async function loadCachedAdminRecord(
     where: eq(adminConfig.table.key, name),
   });
 
-  return serializeAdminEditItem(result.values);
+  return result.row ? serializeAdminEditItem(result.values) : null;
 }
 
 function serializeAdminEditItem(values: Record<string, unknown>) {
