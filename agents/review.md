@@ -27,6 +27,7 @@ When reviewing, look for opportunities to reduce complexity, improve readability
 
 - Do an alias pass over new and changed locals. A local name must earn its place by avoiding meaningful repetition, clarifying a real domain concept, or containing complexity that would be harder to read inline; otherwise inline it.
 - Make the alias pass mechanical, not vibes-based: after edits, search or scan touched TypeScript files for local `const` declarations referenced only once. Inline each one unless the remaining name has a concrete current reason, and be ready to name that reason.
+- Avoid resolving data into generic temporary names only to immediately rename it to the intended domain names, such as `rawParams` followed by `paramsIn`. Bind or destructure to the final names at the point where the values are created unless the intermediate name documents a real separate state.
 - Important exception: do not inline auth/current-user lookups into query predicates or other behavior-defining expressions. Resolve values such as `const user = await deps.auth.requireUser()` and `const userId = user.id` near the top of the nearest function boundary so user-scoped behavior is obvious during review.
 - Treat single-use variables as suspect by default, especially when the value is immediately handed to JSX or another nearby call.
 - Inline single-use style objects. When the same styling intent is reused, make a small component at the right owner instead of keeping a shared `*Style` object that is only passed to JSX.
