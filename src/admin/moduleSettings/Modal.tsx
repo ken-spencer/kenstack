@@ -1,10 +1,10 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import fetcher from "@kenstack/api/fetcher";
 import Button from "@kenstack/components/Button";
-import Progress from "@kenstack/components/Progress";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,7 @@ import Form from "@kenstack/forms/Form";
 import Notice from "@kenstack/forms/Notice";
 import Submit from "@kenstack/forms/Submit";
 import type { SettingsClient } from "@kenstack/admin/client";
+import { createDefaultValues } from "@kenstack/fields/createDefaultValues";
 
 type ModuleSettingsModalProps = {
   client: SettingsClient;
@@ -58,6 +59,10 @@ export default function ModuleSettingsModal({
       return result.values;
     },
   });
+  const defaultValues = useMemo(
+    () => query.data ?? createDefaultValues(client.fields),
+    [client.fields, query.data],
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -69,9 +74,7 @@ export default function ModuleSettingsModal({
           ) : null}
         </DialogHeader>
 
-        {query.isPending ? (
-          <Progress className="size-12" />
-        ) : query.isError ? (
+        {query.isError ? (
           <div className="space-y-4">
             <div className="text-sm text-red-700">
               {query.error instanceof Error
@@ -92,7 +95,7 @@ export default function ModuleSettingsModal({
           <Form
             className="space-y-4"
             schema={client.schema}
-            defaultValues={query.data}
+            defaultValues={defaultValues}
             mutationFn={async (values) =>
               fetcher<SettingsLoadResult>("/api/admin", {
                 action: "save-module-settings",
@@ -107,9 +110,17 @@ export default function ModuleSettingsModal({
               queryClient.setQueryData(queryKey, result.values);
             }}
           >
-            <Notice />
-            <FieldLayout fields={client.fields} />
-            <Submit disabledUntilDirty>Save Settings</Submit>
+            <fieldset
+              aria-busy={query.isPending}
+              disabled={query.isPending}
+              className="min-w-0 space-y-4 border-0 p-0"
+            >
+              <Notice />
+              <FieldLayout fields={client.fields} />
+            </fieldset>
+            <Submit disabled={query.isPending} disabledUntilDirty>
+              Save Settings
+            </Submit>
           </Form>
         )}
       </DialogContent>
