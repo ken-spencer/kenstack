@@ -5,6 +5,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import isEqual from "lodash-es/isEqual";
 import type { z } from "zod";
 
+import { searchParamsToRecord } from "@kenstack/list/querySchema";
+
 export type SetQueryStore<T> = (
   value: React.SetStateAction<T>,
   debounce?: boolean,
@@ -14,46 +16,34 @@ export default function useQueryStore<T extends Record<string, unknown>>(
   initial: T,
   {
     debounceMs = 300,
-    excludeParams = ["page"],
     fallbackState,
     routerMode = "replace",
     onPopState,
     schema,
+    serialize,
   }: {
     debounceMs?: number;
-    excludeParams?: string[];
     fallbackState?: Partial<T>;
     routerMode?: "replace" | "push";
     onPopState?: (state: T) => void;
-    schema?: z.ZodType<T>;
-  } = {},
+    schema: z.ZodType<T>;
+    serialize: (state: T) => URLSearchParams;
+  },
 ) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const importSearchParams = () => {
-    const pairs = Object.entries(initial).map(([key, val]) => {
-      const param = searchParams.get(key);
-      const fallbackValue =
-        fallbackState &&
-        Object.prototype.hasOwnProperty.call(fallbackState, key)
-          ? fallbackState[key as keyof T]
-          : val;
+    const parsed = schema.safeParse(searchParamsToRecord(searchParams));
+    if (parsed.success) {
+      return parsed.data;
+    }
 
-      if (param) {
-        try {
-          return [key, JSON.parse(param)] as const;
-        } catch {
-          return [key, fallbackValue] as const;
-        }
-      } else {
-        return [key, fallbackValue] as const;
-      }
-    });
-    const parsedParams = Object.fromEntries(pairs);
-    const parsed = schema?.safeParse(parsedParams);
-    return (parsed?.success ? parsed.data : parsedParams) as T;
+    return {
+      ...initial,
+      ...fallbackState,
+    };
   };
 
   const [value, setValue] = useState<T>(() => importSearchParams());
@@ -91,31 +81,7 @@ export default function useQueryStore<T extends Record<string, unknown>>(
   }, []);
 
   const writeToUrl = (v: T) => {
-    const params = new URLSearchParams(searchParams);
-    for (const p of excludeParams) {
-      params.delete(p);
-    }
-
-    const encode = (x: unknown): string | null => {
-      if (x === undefined) {
-        return null;
-      }
-      try {
-        return JSON.stringify(x);
-      } catch {
-        return null;
-      }
-    };
-
-    Object.entries(v).forEach(([key, val]) => {
-      const json = encode(val);
-
-      if (json === null || isEqual(val, initial[key])) {
-        params.delete(key);
-      } else {
-        params.set(key, json);
-      }
-    });
+    const params = serialize(v);
 
     const nextSearch = params.toString();
     const href = pathname + (nextSearch ? `?${nextSearch}` : "");

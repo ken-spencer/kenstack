@@ -457,7 +457,7 @@ function TextFilterInput({
 
   return (
     <Input
-      placeholder="Use ! to exclude"
+      placeholder="Use - to exclude"
       value={textValue}
       onChange={(event) => {
         const nextValue = event.target.value;
@@ -533,12 +533,6 @@ function isActiveFilterValue(value: unknown) {
     return value.trim().length > 0;
   }
 
-  if (Array.isArray(value)) {
-    return value.some(
-      (item) => typeof item === "string" && item.trim().length > 0,
-    );
-  }
-
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return false;
   }
@@ -573,14 +567,6 @@ function compactRange(range: { from?: string; to?: string }) {
 }
 
 function parseOptionFilterValue(value: unknown) {
-  if (Array.isArray(value)) {
-    return Object.fromEntries(
-      value
-        .filter((item): item is string => typeof item === "string")
-        .map((item) => [item, "+"]),
-    ) satisfies OptionFilterValue;
-  }
-
   if (!value || typeof value !== "object") {
     return {};
   }

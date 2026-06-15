@@ -7,8 +7,8 @@ import fetcher, { type FetchResult } from "@kenstack/api/fetcher";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import {
   createDefaultListQueryState,
-  createListQueryStoreSchema,
-  getAdminListQueryKey,
+  createListSearchSchema,
+  listQuerySearchParams,
   parseListPage,
   type ListQueryStoreState,
 } from "@kenstack/list/querySchema";
@@ -23,6 +23,22 @@ import type {
 } from "@kenstack/admin/client";
 
 const AdminListContext = createContext<UseListProps | null>(null);
+
+export function getAdminListQueryKey(
+  name: string,
+  query: ListQueryStoreState & { page: number },
+) {
+  return [
+    "admin-list",
+    name,
+    query.keywords,
+    query.trash,
+    query.sort,
+    query.direction,
+    query.filters,
+    query.page,
+  ] as const;
+}
 
 type AdminListProps = {
   basePath?: string;
@@ -79,11 +95,16 @@ export function AdminListProvider({
   const defaultFilterState = createDefaultListQueryState(sort);
   const [filters, debouncedFilters, setFilters] =
     useQueryStore<ListQueryStoreState>(defaultFilterState, {
-      schema: createListQueryStoreSchema({
+      schema: createListSearchSchema({
         filters: filter,
         sort,
         defaults: defaultFilterState,
       }),
+      serialize: (state) =>
+        listQuerySearchParams(state, {
+          defaults: defaultFilterState,
+          sort,
+        }),
     });
 
   const searchParams = useSearchParams();

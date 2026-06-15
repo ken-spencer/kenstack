@@ -8,21 +8,20 @@ import {
   type SQL,
 } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
+import isEqual from "lodash-es/isEqual";
 
 import { deps } from "@app/deps";
-import { createDefaultListQueryState } from "@kenstack/list/querySchema";
+import {
+  createDefaultListQueryState,
+  parseListSearchParams,
+  searchParamsToRecord,
+  type ListQuery,
+} from "@kenstack/list/querySchema";
 import type { AnyAdminConfig } from "@kenstack/admin";
 import type { BaseListItem } from "@kenstack/admin/client";
 import type { AdminContentTable } from "@kenstack/admin/table";
 import { getSortMeta } from "@kenstack/admin/types/list";
-import {
-  parseListSearchParams,
-  resolveListOrderBy,
-  resolveListWhere,
-  type ListQuery,
-} from "@kenstack/list/server";
-
-type AdminListSearchParams = Record<string, string | string[] | undefined>;
+import { resolveListOrderBy, resolveListWhere } from "@kenstack/list/server";
 
 export type AdminListQuery = ListQuery;
 
@@ -35,31 +34,20 @@ export function adminListCacheTag(name: string) {
 export async function loadAdminList({
   adminConfig,
   name,
-  searchParams,
+  query,
 }: {
   adminConfig: AdminListConfig;
   name: string;
-  searchParams: AdminListSearchParams;
+  query: ListQuery;
 }) {
-  if (!Object.keys(searchParams).length) {
+  if (isDefaultAdminListQuery(adminConfig, query)) {
     return {
       data: await loadCachedBaseAdminList(name),
-      query: {
-        ...createDefaultListQueryState(getSortMeta(adminConfig.list.sort)),
-        page: 1,
-      },
     };
   }
 
-  const query = parseListSearchParams({
-    filters: adminConfig.list.filters,
-    searchParams,
-    sort: adminConfig.list.sort,
-  });
-
   return {
     data: await queryAdminList(adminConfig, query),
-    query,
   };
 }
 
@@ -84,6 +72,24 @@ async function loadCachedBaseAdminList(name: string) {
   };
 
   return queryAdminList(adminConfig, baseListQuery);
+}
+
+function isDefaultAdminListQuery(
+  adminConfig: AdminListConfig,
+  query: ListQuery,
+) {
+  const defaults = createDefaultListQueryState(
+    getSortMeta(adminConfig.list.sort),
+  );
+
+  return (
+    query.page === 1 &&
+    query.keywords === defaults.keywords &&
+    query.trash === defaults.trash &&
+    query.sort === defaults.sort &&
+    query.direction === defaults.direction &&
+    isEqual(query.filters, defaults.filters)
+  );
 }
 
 export async function queryAdminList(
@@ -156,7 +162,7 @@ export async function loadAdminListNeighbors(
 ) {
   const data = parseListSearchParams({
     filters: adminConfig.list.filters,
-    searchParams: Object.fromEntries(new URLSearchParams(queryString)),
+    searchParams: searchParamsToRecord(new URLSearchParams(queryString)),
     sort: adminConfig.list.sort,
   });
   const { db } = deps;

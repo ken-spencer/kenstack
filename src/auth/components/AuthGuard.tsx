@@ -1,12 +1,10 @@
 import { Suspense } from "react";
 
 import { deps } from "@app/deps";
-import type { AuthAccess } from "@kenstack/auth/server/auth";
-
-type Roles = (typeof deps)["roles"];
+import type { UserAccess } from "@kenstack/auth/types";
 
 type Props = {
-  access?: AuthAccess<Roles[number]>;
+  access?: UserAccess;
   fallback?: React.ReactNode;
   loading?: React.ReactNode;
   children: React.ReactNode;

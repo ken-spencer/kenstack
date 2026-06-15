@@ -5,12 +5,10 @@ import crypto from "crypto";
 import { eq } from "drizzle-orm";
 
 export default async function ForgottenPasswordFormLoader({
-  searchParams,
+  token,
 }: {
-  searchParams: Promise<Record<string, string>>;
+  token?: string;
 }) {
-  // await new Promise((success) => setTimeout(() => success(), 2000));
-  const { token } = await searchParams;
   if (token) {
     if (!token.match(/^[A-Za-z0-9_-]{32}$/)) {
       return errorRedirect(

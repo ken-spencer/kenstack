@@ -4,7 +4,6 @@ import { NextRequest, NextResponse } from "next/server";
 import type { ObjectSchema } from ".";
 
 import { type FetchError } from "@kenstack/api/fetcher";
-import type { AuthAccess } from "@kenstack/auth/server/auth";
 
 import * as z from "zod";
 
@@ -13,15 +12,13 @@ import isPlainObject from "lodash-es/isPlainObject";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { PipelineResponse } from "./PipelineResponse";
 import { deps } from "@app/deps";
+import type { UserAccess } from "@kenstack/auth/types";
 import type { User } from "@kenstack/types";
 
 export type PipelineOptions = {
   request: NextRequest;
   json?: Record<string, unknown>;
 };
-
-type Roles = typeof deps.roles;
-type UserAccess = AuthAccess<Roles[number]>;
 
 type PipelineContext = {
   request: NextRequest;

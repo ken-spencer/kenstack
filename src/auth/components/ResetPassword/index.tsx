@@ -2,13 +2,13 @@ import Suspense from "@kenstack/components/Suspense";
 import Loader from "./Loader";
 
 export default async function ResetPasswordFormCont({
-  searchParams,
+  token,
 }: {
-  searchParams: Promise<Record<string, string>>;
+  token?: string;
 }) {
   return (
     <Suspense>
-      <Loader searchParams={searchParams} />
+      <Loader token={token} />
     </Suspense>
   );
 }
