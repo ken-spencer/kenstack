@@ -25,9 +25,15 @@ type AdminSidebarProps = {
 
 const accountMenuFallback = <Skeleton className="size-9 rounded-full" />;
 
-export default async function AdminSidebar(props: AdminSidebarProps) {
-  await deps.auth.requireUser("admin");
+export default function AdminSidebar(props: AdminSidebarProps) {
+  return (
+    <Suspense fallback={null}>
+      <AdminSidebarWithDefaultOpen {...props} />
+    </Suspense>
+  );
+}
 
+async function AdminSidebarWithDefaultOpen(props: AdminSidebarProps) {
   const cookieStore = await cookies();
   const defaultOpen = cookieStore.get(sidebarCookieName)?.value !== "false";
 

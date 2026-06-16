@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { notFound } from "next/navigation";
 import type * as z from "zod";
 
@@ -26,6 +26,7 @@ export function pageRoute<
 >(
   options: {
     access?: TAccess;
+    fallback?: ReactNode;
     params?: TParams;
     search?: TSearch;
   },
@@ -39,7 +40,15 @@ export function pageRoute<
     user: RouteUser<TAccess>;
   }) => ReactNode | Promise<ReactNode>,
 ) {
-  return async function PageRoute({ params, searchParams }: PageRouteProps) {
+  return function PageRoute(props: PageRouteProps) {
+    return (
+      <Suspense fallback={options.fallback}>
+        <PageRouteContent {...props} />
+      </Suspense>
+    );
+  };
+
+  async function PageRouteContent({ params, searchParams }: PageRouteProps) {
     const [paramsIn = {}, searchIn = {}] = await Promise.all([
       params,
       searchParams,
@@ -63,7 +72,7 @@ export function pageRoute<
     const PageContent = render;
 
     return <PageContent {...context} />;
-  };
+  }
 }
 
 async function parseInput<TSchema extends MaybeSchema>(

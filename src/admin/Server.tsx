@@ -12,6 +12,7 @@ export function createAdminPage() {
   return pageRoute(
     {
       access: "admin",
+      fallback: <Progress className="my-16" />,
       params: z
         .object({
           admin: z.tuple([
