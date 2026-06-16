@@ -20,6 +20,8 @@ const sidebarCookieName = "sidebar_state";
 type AdminSidebarProps = {
   accountMenu?: React.ReactNode;
   logo?: React.ReactNode;
+  sidebarAfter?: React.ReactNode;
+  sidebarBefore?: React.ReactNode;
   children: React.ReactNode;
 };
 
@@ -43,6 +45,8 @@ async function AdminSidebarWithDefaultOpen(props: AdminSidebarProps) {
 function AdminSidebarContent({
   accountMenu,
   logo,
+  sidebarAfter,
+  sidebarBefore,
   children,
   defaultOpen,
 }: AdminSidebarProps & { defaultOpen: boolean }) {
@@ -66,16 +70,22 @@ function AdminSidebarContent({
   );
 
   const sidebarNav = (
-    <SidebarGroup>
-      <SidebarGroupLabel>Administration</SidebarGroupLabel>
-      <SidebarGroupContent>
-        <SidebarMenu>
-          {adminModules.map(({ href, icon, title }) => {
-            return <NavLink key={href} href={href} icon={icon} title={title} />;
-          })}
-        </SidebarMenu>
-      </SidebarGroupContent>
-    </SidebarGroup>
+    <>
+      {sidebarBefore}
+      <SidebarGroup>
+        <SidebarGroupLabel>Administration</SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            {adminModules.map(({ href, icon, title }) => {
+              return (
+                <NavLink key={href} href={href} icon={icon} title={title} />
+              );
+            })}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+      {sidebarAfter}
+    </>
   );
 
   return (
@@ -99,3 +109,5 @@ function AdminSidebarContent({
     </SidebarProvider>
   );
 }
+
+export { default as AdminSidebarNavLink } from "./NavLink";

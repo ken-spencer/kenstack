@@ -25,6 +25,16 @@ Treat existing behavior as intentional unless the user explicitly asks to remove
 
 When fixing a bug, do not remove or clean up existing behavior-bearing code unless you have traced the workflow it supports and can prove the replacement preserves that behavior. If a line looks redundant but is outside the exact bug being fixed, leave it in place. Treat existing conditionals, resets, invalidations, redirects, and cache updates as intentional until proven otherwise. A cleanup is not valid if it requires guessing why the old code existed.
 
+## Debugging Churn
+
+When fixing a bug, watch for signs that the current approach is becoming churn: repeated edits to the same area, increasingly broad rewrites, speculative abstractions, layout or state changes that fix one symptom while creating another, or fixes made without a clear explanation of the root cause.
+
+Do not remove, disable, hide, or substantially reduce existing user-facing features, workflows, options, configuration, or data paths in order to make a bug easier to fix. That is usually a regression, not a fix. If preserving the feature appears to make the bug fix much harder, stop and ask for guidance instead of shipping a narrower product behavior.
+
+If that pattern appears, stop and ask for human input before continuing. Summarize what was observed, what changed, what still does not fit, and the simplest suspected cause. Do not keep iterating through complex or compensating changes just to make progress.
+
+For bug fixes, proceed autonomously only when the cause is clear and the fix is narrow. If the cause is not clear, prioritize a short diagnosis and a question over more code changes.
+
 ## Situational instructions
 
 - For UI, styling, Tailwind, shadcn, or shared component work, read `agents/ui.md` before coding.
