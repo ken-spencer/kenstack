@@ -68,6 +68,7 @@ export function LoginForm() {
       apiPath="/api/auth"
       schema={loginSchema}
       defaultValues={{ ...loginDefaultValues, returnTo }}
+      key={returnTo}
       onSubmit={async ({ data, mutation, form }) => {
         setMessage("");
         const recaptchaToken = executeRecaptcha

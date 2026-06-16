@@ -95,6 +95,7 @@ If a check fails because the check scope does not match the code's intended runt
 - Do not hand-plumb save, load, delete, display, list, filter, or sort behavior in actions when the field lifecycle should own it.
 - Ensure client field definitions stay client-safe; server-only handlers and transforms should be applied through server field helpers.
 - For forms, rely on schema/default/mutation inference instead of repeating generic arguments at usage sites. In particular, review `useForm<...>()`, `useFormContext<...>()`, and similar context-hook calls by first trying the unparameterized call.
+- Treat form `defaultValues` as initial state, not a reactive reset mechanism. Prefer module-scope constants for static defaults when they naturally live outside render or are reused for explicit resets, and pass server-derived defaults through serialized props when they depend on server data. Do not add `useMemo` only to stabilize `defaultValues`; use a key/remount at the record or route-input boundary when changing defaults should reset the form. If a form needs to reset after submit, do it explicitly from the mutation/navigation path.
 
 ## Files And Boundaries
 
@@ -111,6 +112,7 @@ If a check fails because the check scope does not match the code's intended runt
 
 - Preserve existing capabilities such as caching, validation, permissions, publishing rules, extension points, query behavior, and revalidation.
 - Keep cache tags near `"use cache"` and `cacheLife(...)` as high in the function as behavior allows.
+- For user-visible cached loaders whose result depends on `publishedAt`, `publishedAt <= now()`, or `Date.now()` for publishing visibility, use an hours-or-shorter cache lifetime. Do not use `cacheLife("days")` or `cacheLife("max")` unless the loader cannot hide future-published content or another mechanism guarantees timely invalidation.
 - When server loaders might be called from more than one component or query path during a single page render, wrap the shared DB/API work in `React.cache` so duplicate calls dedupe within the request. Prefer primitive cache keys or stable arguments so equivalent calls actually hit the same cache entry.
 - Do not remove configurability or behavior to make a cleanup easier without confirming first.
 - Check pipeline actions for guard-only stages that just return an error. Prefer one normal stage with the guard inside the handler unless the separate stage materially changes auth, schema parsing, or external behavior.

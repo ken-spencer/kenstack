@@ -8,7 +8,6 @@ import React, {
   useState,
   useEffect,
 } from "react";
-import isEqual from "lodash-es/isEqual";
 // import { nanoid } from "nanoid";
 import {
   useForm as useReactHookForm,
@@ -173,8 +172,7 @@ function FormProvider<
   const [uploadingFields, setUploadingFields] = useState<Set<string>>(
     () => new Set(),
   );
-  const hasMountedRef = useRef(false);
-  const defaultValuesRef = useRef(defaultValues);
+  const initialDefaultValuesRef = useRef(defaultValues);
   const lastFieldRef = useRef(null);
 
   const startUploading = useCallback((fieldName: string) => {
@@ -202,29 +200,15 @@ function FormProvider<
 
   const { reset, resetField, setError, clearErrors } = form;
 
-  useEffect(() => {
-    if (!hasMountedRef.current) {
-      hasMountedRef.current = true;
-      defaultValuesRef.current = defaultValues;
-      return;
-    }
-
-    if (isEqual(defaultValuesRef.current, defaultValues)) {
-      return;
-    }
-
-    defaultValuesRef.current = defaultValues;
-    reset(defaultValues);
-  }, [defaultValues, reset]);
-
   useEffect(
     () => () => {
       // Fixes a problem in Next where form state can persist navigation.
+      reset(initialDefaultValuesRef.current);
       setStatusMessage(null);
       setUploadingFields(new Set());
       lastFieldRef.current = null;
     },
-    [setStatusMessage],
+    [reset, setStatusMessage],
   );
 
   // const mutation = useMutation<
