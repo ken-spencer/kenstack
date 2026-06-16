@@ -12,7 +12,6 @@ import { AppSidebar } from "./app-sidebar";
 import AccountMenu from "@kenstack/components/AccountMenu";
 import NavLink from "./NavLink";
 import { deps } from "@app/deps";
-import Progress from "@kenstack/components/Progress";
 
 import Content from "./Content";
 
@@ -24,17 +23,9 @@ type AdminSidebarProps = {
   children: React.ReactNode;
 };
 
-export default function AdminSidebar(props: AdminSidebarProps) {
-  return (
-    <Suspense fallback={<Progress className="my-16 size-10" />}>
-      <AdminSidebarLoader {...props} />
-    </Suspense>
-  );
-}
-
 const accountMenuFallback = <Skeleton className="size-9 rounded-full" />;
 
-async function AdminSidebarLoader(props: AdminSidebarProps) {
+export default async function AdminSidebar(props: AdminSidebarProps) {
   await deps.auth.requireUser("admin");
 
   const cookieStore = await cookies();
