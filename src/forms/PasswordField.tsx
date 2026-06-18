@@ -3,9 +3,9 @@
 import { useState } from "react";
 
 import Field, { type FieldProps } from "@kenstack/forms/Field";
-import { Input } from "@kenstack/components/ui/input";
+import { Input } from "@kenstack/forms/controls/Input";
 
-import { Button } from "@kenstack/components/ui/button";
+import { Button } from "@kenstack/components/Button";
 import { Eye, EyeOff } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 

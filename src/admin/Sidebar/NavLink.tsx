@@ -7,7 +7,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@kenstack/components/ui/sidebar";
+} from "@kenstack/components/Sidebar";
 
 export default function NavLink({
   href,

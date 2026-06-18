@@ -1,4 +1,4 @@
-import { Input } from "@kenstack/components/ui/input";
+import { Input } from "@kenstack/forms/controls/Input";
 import { cn } from "@kenstack/lib/utils";
 import { Search, CircleX } from "lucide-react";
 import type { ListQueryStoreState } from "@kenstack/list/querySchema";

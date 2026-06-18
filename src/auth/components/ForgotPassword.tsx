@@ -9,7 +9,7 @@ import schema from "@kenstack/auth/schemas/forgotPassword";
 import Notice from "@kenstack/forms/Notice";
 import InputField from "@kenstack/forms/InputField";
 import Alert from "@kenstack/components/Alert";
-import cookies from "js-cookie";
+import { deleteCookie, getCookie } from "@kenstack/lib/cookies";
 
 import Submit from "@kenstack/forms/Submit";
 import Suspense from "@kenstack/components/Suspense";
@@ -40,9 +40,9 @@ export function ForgotPasswordForm() {
     let m;
     if ((m = searchParams.get("forgottenPasswordMessage"))) {
       window.history.replaceState(null, "", window.location.pathname);
-    } else if ((m = cookies.get("forgottenPasswordMessage"))) {
+    } else if ((m = getCookie("forgottenPasswordMessage"))) {
       if (m) {
-        cookies.remove("forgottenPassword");
+        deleteCookie("forgottenPasswordMessage", "/forgot-password");
       }
     }
     return m;

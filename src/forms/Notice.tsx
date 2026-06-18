@@ -3,7 +3,7 @@
 import Alert from "@kenstack/components/Alert";
 import { useForm } from "@kenstack/forms/context";
 import { useEffect, useRef } from "react";
-import { Button } from "@kenstack/components/ui/button";
+import { Button } from "@kenstack/components/Button";
 import { CircleX } from "lucide-react";
 
 export default function NoticeList() {

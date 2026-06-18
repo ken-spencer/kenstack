@@ -2,7 +2,7 @@ import { and, asc, ilike, isNull, notInArray, or, sql } from "drizzle-orm";
 import * as z from "zod";
 
 import { deps } from "@app/deps";
-import type { AnyAdminConfig } from "@kenstack/admin";
+import type { AnyAdminConfig } from "@kenstack/admin/module";
 import { isRelationshipField } from "@kenstack/fields/server";
 import { pipelineStage } from "@kenstack/api";
 

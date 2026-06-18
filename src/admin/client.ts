@@ -1,3 +1,5 @@
+"use client";
+
 import type { FC, ReactNode } from "react";
 import type { SelectedMedia } from "@kenstack/db/tables";
 import { createZodSchema } from "@kenstack/fields/createZodSchema";
@@ -65,6 +67,12 @@ export function defineClient<
       ? { ...settings, schema: createZodSchema(settings.fields) }
       : undefined,
   };
+}
+
+export function defineSettingsClient<
+  const TSettingsFields extends DefinedFields = DefinedFields,
+>({ fields }: { fields: TSettingsFields }) {
+  return { fields, schema: createZodSchema(fields) };
 }
 
 export type AdminClient = NonNullable<ReturnType<typeof defineClient>["admin"]>;

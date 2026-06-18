@@ -2,7 +2,10 @@
 
 import React, { createContext, useContext, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import type { AdminFilterMeta, AdminSortMeta } from "@kenstack/admin";
+import type {
+  AdminFilterMeta,
+  AdminSortMeta,
+} from "@kenstack/admin/types/list";
 import fetcher, { type FetchResult } from "@kenstack/api/fetcher";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import {

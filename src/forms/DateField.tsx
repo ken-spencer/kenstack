@@ -7,16 +7,15 @@ import { parse } from "chrono-node";
 import { twMerge } from "tailwind-merge";
 import { Calendar as CalendarIcon } from "lucide-react";
 
-import Field, { type FieldProps } from "@kenstack/forms/Field";
-import { Input } from "@kenstack/components/ui/input";
-import { FormControl } from "@kenstack/components/ui/form";
-import { Button } from "@kenstack/components/ui/button";
-import { Calendar } from "@kenstack/components/ui/calendar";
+import Field, { FormControl, type FieldProps } from "@kenstack/forms/Field";
+import { Input } from "@kenstack/forms/controls/Input";
+import { Button } from "@kenstack/components/Button";
+import { Calendar } from "@kenstack/components/Calendar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@kenstack/components/ui/popover";
+} from "@kenstack/components/Popover";
 
 type InputProps = FieldProps &
   React.ComponentProps<"input"> & {

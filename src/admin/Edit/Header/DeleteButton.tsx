@@ -9,7 +9,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@kenstack/components/ui/alert-dialog";
+} from "@kenstack/components/AlertDialog";
 
 import { Trash, Undo2 } from "lucide-react";
 import Button from "@kenstack/components/Button";

@@ -12,16 +12,18 @@ type ModuleSettingsControlProps = {
   title: string;
 };
 
-export default function ModuleSettingsControl(
+export default async function ModuleSettingsControl(
   props: ModuleSettingsControlProps,
 ) {
   if (!props.module.settings || !props.module.client) {
     return props.children;
   }
 
+  const client = await props.module.client();
+
   return (
     <AuthGuard access="admin" fallback={props.children}>
-      <ModuleSettingsControlContent {...props} client={props.module.client} />
+      <ModuleSettingsControlContent {...props} client={client} />
     </AuthGuard>
   );
 }

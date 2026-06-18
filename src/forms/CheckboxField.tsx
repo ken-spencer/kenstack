@@ -1,13 +1,11 @@
 "use client";
-import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 
 // import { twMerge } from "tailwind-merge";
 import Field, { type FieldProps } from "@kenstack/forms/Field";
-import { Checkbox } from "@kenstack/components/ui/checkbox";
-// import { FormLabel } from "@kenstack/components/ui/form";
+import { Checkbox } from "@kenstack/forms/controls/Checkbox";
 
 type InputProps = FieldProps &
-  React.ComponentProps<typeof CheckboxPrimitive.Root> & {
+  React.ComponentProps<typeof Checkbox> & {
     inputClass?: string;
   };
 
@@ -31,8 +29,8 @@ export default function CheckboxField({
             {...props}
             className={inputClass}
             {...field}
-            onClick={() => {
-              field.onChange(!field.value);
+            onCheckedChange={(checked) => {
+              field.onChange(checked === true);
             }}
             checked={field.value}
           />

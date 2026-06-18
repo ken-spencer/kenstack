@@ -1,3 +1,5 @@
+import "server-only";
+
 import snakeCase from "lodash-es/snakeCase";
 import {
   boolean,

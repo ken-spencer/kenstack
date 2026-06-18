@@ -1,5 +1,5 @@
 import { pipelineStage } from "@kenstack/api";
-import type { AnyAdminConfig } from "..";
+import type { AnyAdminConfig } from "@kenstack/admin/module";
 import { deps } from "@app/deps";
 import { revisions } from "@kenstack/db/tables/revisions";
 import { and, desc, eq, getTableName } from "drizzle-orm";

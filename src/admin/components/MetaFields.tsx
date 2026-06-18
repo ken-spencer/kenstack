@@ -15,7 +15,7 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@kenstack/components/ui/accordion";
+} from "@kenstack/components/Accordion";
 
 const defaultFields = {
   visibility: true,

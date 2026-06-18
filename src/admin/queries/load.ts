@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
 
 import { deps } from "@app/deps";
-import type { AnyAdminConfig } from "@kenstack/admin";
+import type { AnyAdminConfig } from "@kenstack/admin/module";
 import { loadRecord } from "@kenstack/fields/records";
 
 type AdminLoadTarget = number | "single";

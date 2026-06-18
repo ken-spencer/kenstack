@@ -1,3 +1,5 @@
+import "server-only";
+
 import type { SQL } from "drizzle-orm";
 import type { AnyPgColumn, AnyPgTable } from "drizzle-orm/pg-core";
 import pluralize from "pluralize";

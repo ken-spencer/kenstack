@@ -1,40 +1,44 @@
 "use client";
+import { useState, type ReactNode } from "react";
 import { type User } from "@kenstack/types";
-import { useRef } from "react";
-// import Link from "next/link";
 import Avatar from "@kenstack/components/Avatar";
-
-import LogoutButton from "./LogoutButton";
-
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@kenstack/components/ui/popover";
+} from "@kenstack/components/Popover";
 
-import { PopoverClose } from "@radix-ui/react-popover";
+import LogoutButton from "./LogoutButton";
 
 export default function AccountMenu({
   user,
   children,
 }: {
   user: User;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
-  const ref = useRef<HTMLButtonElement | null>(null);
+  const [open, setOpen] = useState(false);
 
   return (
     <div className="flex items-center gap-4">
-      <Popover>
-        <PopoverTrigger className="focus-visible:ring-sidebar-ring cursor-pointer rounded-full underline-offset-4 transition hover:underline focus-visible:ring-2 focus-visible:outline-none">
-          <Avatar initials={user.initials} url={user.avatar?.url} />
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className="focus-visible:ring-sidebar-ring cursor-pointer rounded-full underline-offset-4 transition hover:underline focus-visible:ring-2 focus-visible:outline-none"
+          >
+            <Avatar initials={user.initials} url={user.avatar?.url} />
+          </button>
         </PopoverTrigger>
         <PopoverContent
           align="end"
           className="flex w-44 flex-col gap-1 p-1.5"
-          onClick={() => ref.current?.click()}
+          onClick={(event) => {
+            if ((event.target as HTMLElement).closest("a,button")) {
+              setOpen(false);
+            }
+          }}
         >
-          <PopoverClose className="hidden" ref={ref} />
           {children}
           <LogoutButton />
         </PopoverContent>

@@ -1,3 +1,5 @@
+import "server-only";
+
 import type { User } from "@kenstack/types";
 import type { deps } from "@app/deps";
 import type * as z from "zod";

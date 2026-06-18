@@ -4,7 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 
 import Alert from "@kenstack/components/Alert";
 import Help from "@kenstack/components/Help";
-import { Button } from "@kenstack/components/ui/button";
+import { Button } from "@kenstack/components/Button";
 import { LoaderCircle, RotateCcwKey } from "lucide-react";
 
 import fetcher from "@kenstack/api/fetcher";

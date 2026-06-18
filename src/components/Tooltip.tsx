@@ -1,18 +1,18 @@
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@kenstack/components/ui/tooltip";
+"use client";
+
+import type { ReactElement, ReactNode } from "react";
 import { twMerge } from "tailwind-merge";
 
 export type TooltipBreakpoint = "sm" | "md" | "lg" | "xl" | "2xl";
+type TooltipSide = "top" | "right" | "left";
 
 type TooltipProps = {
-  children: React.ReactElement;
+  children: ReactElement;
   className?: string;
-  content: React.ReactNode;
+  content: ReactNode;
+  hidden?: boolean;
   onlyBelow?: TooltipBreakpoint;
+  side?: TooltipSide;
 };
 
 const onlyBelowClassNames = {
@@ -23,27 +23,45 @@ const onlyBelowClassNames = {
   "2xl": "2xl:hidden",
 } satisfies Record<TooltipBreakpoint, string>;
 
-export default function TooltipCont({
+const sideClassNames = {
+  top: "bottom-full left-1/2 mb-1 -translate-x-1/2 translate-y-1 group-hover/tooltip:translate-y-0 group-focus-within/tooltip:translate-y-0",
+  right:
+    "top-1/2 left-full ml-1 -translate-y-1/2 -translate-x-1 group-hover/tooltip:translate-x-0 group-focus-within/tooltip:translate-x-0",
+  left: "top-1/2 right-full mr-1 -translate-y-1/2 translate-x-1 group-hover/tooltip:translate-x-0 group-focus-within/tooltip:translate-x-0",
+} satisfies Record<TooltipSide, string>;
+
+const stemClassNames = {
+  top: "after:absolute after:top-full after:left-1/2 after:size-2 after:-translate-x-1/2 after:-translate-y-1/2 after:rotate-45 after:bg-foreground",
+  right:
+    "after:absolute after:top-1/2 after:right-full after:size-2 after:translate-x-1/2 after:-translate-y-1/2 after:rotate-45 after:bg-foreground",
+  left: "after:absolute after:top-1/2 after:left-full after:size-2 after:-translate-x-1/2 after:-translate-y-1/2 after:rotate-45 after:bg-foreground",
+} satisfies Record<TooltipSide, string>;
+
+export default function Tooltip({
+  children,
   className,
   content,
-  children,
+  hidden = false,
   onlyBelow,
+  side = "top",
 }: TooltipProps) {
+  if (hidden) {
+    return children;
+  }
+
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger suppressHydrationWarning asChild>
-          {children}
-        </TooltipTrigger>
-        <TooltipContent
-          className={twMerge(
-            onlyBelow ? onlyBelowClassNames[onlyBelow] : undefined,
-            className,
-          )}
-        >
-          {content}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <span className={twMerge("group/tooltip relative inline-flex", className)}>
+      {children}
+      <span
+        className={twMerge(
+          "pointer-events-none absolute z-50 w-max max-w-xs scale-0 rounded-md bg-foreground px-3 py-1.5 text-xs text-background opacity-0 shadow-sm transition-[opacity,transform] duration-100 ease-out group-hover/tooltip:scale-100 group-hover/tooltip:opacity-100 group-focus-within/tooltip:scale-100 group-focus-within/tooltip:opacity-100",
+          sideClassNames[side],
+          stemClassNames[side],
+          onlyBelow ? onlyBelowClassNames[onlyBelow] : undefined,
+        )}
+      >
+        {content}
+      </span>
+    </span>
   );
 }

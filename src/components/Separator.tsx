@@ -1,5 +1,4 @@
 import * as React from "react";
-import { Separator as SeparatorPrimitive } from "radix-ui";
 
 import { cn } from "@kenstack/lib/utils";
 
@@ -8,12 +7,18 @@ function Separator({
   orientation = "horizontal",
   decorative = true,
   ...props
-}: React.ComponentProps<typeof SeparatorPrimitive.Root>) {
+}: Omit<React.ComponentProps<"div">, "role"> & {
+  orientation?: "horizontal" | "vertical";
+  decorative?: boolean;
+}) {
   return (
-    <SeparatorPrimitive.Root
+    <div
       data-slot="separator"
-      decorative={decorative}
-      orientation={orientation}
+      data-orientation={orientation}
+      data-horizontal={orientation === "horizontal" ? "" : undefined}
+      data-vertical={orientation === "vertical" ? "" : undefined}
+      role={decorative ? undefined : "separator"}
+      aria-orientation={decorative ? undefined : orientation}
       className={cn(
         "bg-border shrink-0 data-horizontal:h-px data-horizontal:w-full data-vertical:w-px data-vertical:self-stretch",
         className,

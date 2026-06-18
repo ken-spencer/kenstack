@@ -10,13 +10,13 @@ import React, {
 } from "react";
 // import { nanoid } from "nanoid";
 import {
+  FormProvider as ReactHookFormProvider,
   useForm as useReactHookForm,
   type UseFormReturn,
   type DefaultValues,
   type FieldValues,
   type Path,
 } from "react-hook-form";
-import { Form as ReactHookFormProvider } from "@kenstack/components/ui/form";
 
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import {

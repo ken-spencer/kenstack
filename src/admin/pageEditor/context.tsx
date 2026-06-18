@@ -2,14 +2,16 @@
 
 import {
   createContext,
-  useState,
   useContext,
+  useEffect,
+  useState,
   useCallback,
   type ReactNode,
 } from "react";
 
 import { useRouter } from "next/navigation";
-import FloatingError from "@kenstack/components/FloatingError";
+import dynamic from "next/dynamic";
+import { useStore } from "zustand";
 import { useForm } from "@kenstack/forms/context";
 import {
   useAdminControl,
@@ -17,19 +19,23 @@ import {
 } from "@kenstack/admin/components/PageControls/useAdminUi";
 import { getDisplayValues } from "@kenstack/fields/display";
 
-import { type Content } from "@kenstack/admin/pageEditor";
+import { type Content } from "./loadContent";
 import { pageEditorFields } from "./fields";
 import { type Name } from "./types";
+import {
+  createPageEditorStore,
+  getPageEditorScope,
+  type PageEditorStore,
+  type PageEditorStoreApi,
+} from "./store";
 
 type Context = {
   content: Content;
   slug: string;
   setContent: React.Dispatch<React.SetStateAction<Content>>;
   tenant?: string;
-  editing: keyof Content["data"] | null;
-  setEditing: React.Dispatch<
-    React.SetStateAction<keyof Content["data"] | null>
-  >;
+  editing: Name | null;
+  setEditing: React.Dispatch<React.SetStateAction<Name | null>>;
 };
 
 type PageContentProviderProps = {
@@ -39,29 +45,36 @@ type PageContentProviderProps = {
   children: ReactNode;
 };
 
-const PageContentContext = createContext<Context | null>(null);
+const PageEditorStoreContext = createContext<PageEditorStoreApi | null>(null);
+const FloatingError = dynamic(() => import("@kenstack/components/FloatingError"), {
+  ssr: false,
+});
 
 export function PageEditorProvider({
   children,
-  content: defaultContent,
-  ...value
+  content,
+  slug,
+  tenant,
 }: PageContentProviderProps) {
   useAdminControl();
-  const [editing, setEditing] = useState<keyof Content["data"] | null>(null);
-  const [content, setContent] = useState(defaultContent);
+  const scope = getPageEditorScope(slug, tenant);
+  const [store] = useState(() =>
+    createPageEditorStore({ scope, slug, tenant, content }),
+  );
 
-  const context = {
-    ...value,
-    content,
-    setContent,
-    editing,
-    setEditing,
-  } satisfies Context;
+  useEffect(() => {
+    store.getState().init({ scope, slug, tenant, content });
+
+    return () => {
+      store.getState().reset(scope);
+    };
+  }, [store, scope, slug, tenant, content]);
+
   return (
-    <PageContentContext.Provider value={context}>
+    <PageEditorStoreContext.Provider value={store}>
       {children}
       <PageEditorError />
-    </PageContentContext.Provider>
+    </PageEditorStoreContext.Provider>
   );
 }
 
@@ -83,15 +96,41 @@ function PageEditorError() {
 }
 
 export function usePageEditor() {
-  const ctx = useContext(PageContentContext);
+  const store = useContext(PageEditorStoreContext);
 
-  if (!ctx) {
+  if (!store) {
     throw new Error(
       "usePageEditor must be used within the PageEditor component",
     );
   }
 
-  return ctx;
+  const content = useStore(store, (state: PageEditorStore) => state.content);
+  const editing = useStore(store, (state: PageEditorStore) => state.editing);
+  const setContent = useStore(
+    store,
+    (state: PageEditorStore) => state.setContent,
+  );
+  const setEditing = useStore(
+    store,
+    (state: PageEditorStore) => state.setEditing,
+  );
+  const slug = useStore(store, (state: PageEditorStore) => state.slug);
+  const tenant = useStore(store, (state: PageEditorStore) => state.tenant);
+
+  if (!content || !slug) {
+    throw new Error(
+      "usePageEditor must be used within the PageEditor component",
+    );
+  }
+
+  return {
+    content,
+    slug,
+    tenant,
+    editing,
+    setContent,
+    setEditing,
+  } satisfies Context;
 }
 
 export const useCommit = () => {

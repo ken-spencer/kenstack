@@ -4,14 +4,13 @@ import { useRouter } from "next/navigation";
 import fetcher from "@kenstack/api/fetcher";
 
 import { LogOut } from "lucide-react";
-import { Button } from "@kenstack/components/ui/button";
 
 export default function LogoutButton() {
   const router = useRouter();
   return (
-    <Button
-      className="text-foreground w-full cursor-pointer justify-start"
-      variant="link"
+    <button
+      className="text-foreground inline-flex h-8 w-full cursor-pointer items-center justify-start gap-1.5 rounded-lg border border-transparent px-2.5 text-sm font-medium whitespace-nowrap transition-all outline-none hover:underline focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+      type="button"
       tabIndex={-1} // stop Safari from automatically putting a focus style on this button
       onClick={() => {
         fetcher("/api/auth", {
@@ -38,6 +37,6 @@ export default function LogoutButton() {
     >
       <LogOut />
       Logout
-    </Button>
+    </button>
   );
 }

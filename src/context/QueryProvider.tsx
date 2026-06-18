@@ -1,7 +1,11 @@
 "use client";
-import type { ReactNode } from "react";
+import { useContext, type ReactNode } from "react";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
-import { QueryClient, QueryCache } from "@tanstack/react-query";
+import {
+  QueryClient,
+  QueryCache,
+  QueryClientContext,
+} from "@tanstack/react-query";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 
 const queryClient = new QueryClient({
@@ -47,4 +51,14 @@ export default function QueryProvider({ children }: { children: ReactNode }) {
       {children}
     </PersistQueryClientProvider>
   );
+}
+
+export function QueryBoundary({ children }: { children: ReactNode }) {
+  const existingClient = useContext(QueryClientContext);
+
+  if (existingClient) {
+    return children;
+  }
+
+  return <QueryProvider>{children}</QueryProvider>;
 }

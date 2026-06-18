@@ -1,5 +1,5 @@
 import * as z from "zod";
-import type { AnyAdminConfig } from "..";
+import type { AnyAdminConfig } from "@kenstack/admin/module";
 import { tagsSchema } from "@kenstack/zod/tags";
 import { tags as tagsTable } from "@kenstack/db/tables/tags";
 import { and, count, desc, eq, ilike, notInArray } from "drizzle-orm";

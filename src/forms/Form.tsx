@@ -14,6 +14,7 @@ import { type FetchResult } from "@kenstack/api/fetcher";
 import { type UseFormReturn, type FieldValues } from "react-hook-form";
 
 import type { UseMutationResult } from "@tanstack/react-query";
+import { QueryBoundary } from "@kenstack/context/QueryProvider";
 type SubmitData<
   TResult extends Record<string, unknown>,
   TVariables extends Record<string, unknown>,
@@ -74,21 +75,23 @@ export default function FormContainer<
 }: FormProviderProps<TResult, TVariables, TSchema, TValues> &
   FormProps<TResult, TVariables, TSchema, TValues>) {
   return (
-    <FormProvider<TResult, TVariables, TSchema, TValues>
-      mutationFn={mutationFn}
-      apiPath={apiPath}
-      schema={schema}
-      defaultValues={defaultValues}
-      onError={onError}
-      onSuccess={onSuccess}
-    >
-      <Form<TResult, TVariables, TSchema, TValues>
-        onSubmit={onSubmit}
-        onChange={onChange}
-        onBlur={onBlur}
-        {...props}
-      />
-    </FormProvider>
+    <QueryBoundary>
+      <FormProvider<TResult, TVariables, TSchema, TValues>
+        mutationFn={mutationFn}
+        apiPath={apiPath}
+        schema={schema}
+        defaultValues={defaultValues}
+        onError={onError}
+        onSuccess={onSuccess}
+      >
+        <Form<TResult, TVariables, TSchema, TValues>
+          onSubmit={onSubmit}
+          onChange={onChange}
+          onBlur={onBlur}
+          {...props}
+        />
+      </FormProvider>
+    </QueryBoundary>
   );
 }
 

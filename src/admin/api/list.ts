@@ -1,5 +1,5 @@
 import { pipelineStage } from "@kenstack/api";
-import type { AnyAdminConfig } from "@kenstack/admin";
+import type { AnyAdminConfig } from "@kenstack/admin/module";
 import { createListRequestSchema } from "@kenstack/list/querySchema";
 import { queryAdminList } from "@kenstack/admin/queries/list";
 

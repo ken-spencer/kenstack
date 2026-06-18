@@ -2,7 +2,6 @@ import { deps } from "@app/deps";
 
 import Menu from "./Menu";
 import Link from "next/link";
-import { Button } from "@kenstack/components/ui/button";
 import type { AccountMenuItems, AccountMenuItemsResolver } from "./types";
 
 // import UnAuthenticated from "./UnAuthenticated";
@@ -26,17 +25,14 @@ export default async function AccountMenuLoader({
     <Menu user={user}>
       {resolvedItems &&
         resolvedItems.map(([href, text, Icon], key) => (
-          <Button
-            className="text-foreground w-full justify-start"
+          <Link
+            className="text-foreground inline-flex h-8 w-full items-center justify-start gap-1.5 rounded-lg border border-transparent px-2.5 text-sm font-medium whitespace-nowrap transition-all outline-none hover:underline focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            href={href}
             key={href + key}
-            variant="link"
-            asChild
           >
-            <Link href={href}>
-              <Icon />
-              {text}
-            </Link>
-          </Button>
+            <Icon />
+            {text}
+          </Link>
         ))}
     </Menu>
   );

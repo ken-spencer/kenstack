@@ -5,9 +5,8 @@ import LinkedInIcon from "@kenstack/icons/LinkedIn";
 import FacebookIcon from "@kenstack/icons/FacebookColor";
 import TwitterIcon from "@kenstack/icons/Twitter";
 
-import Field, { type FieldProps } from "@kenstack/forms/Field";
-import { Input } from "@kenstack/components/ui/input";
-import { FormControl } from "@kenstack/components/ui/form";
+import Field, { FormControl, type FieldProps } from "@kenstack/forms/Field";
+import { Input } from "@kenstack/forms/controls/Input";
 
 type InputProps = FieldProps &
   React.ComponentProps<"input"> & {

@@ -5,8 +5,8 @@ import Header from "./Header";
 import Footer from "./Footer";
 import List from "./List";
 
-import { type AnyAdminConfig } from "@kenstack/admin";
-import { getFilterMeta, getSortMeta } from "@kenstack/admin";
+import type { AnyAdminConfig } from "@kenstack/admin/module";
+import { getFilterMeta, getSortMeta } from "@kenstack/admin/types/list";
 import type { ClientConfig } from "@kenstack/admin/client";
 import {
   parseListSearchParams,

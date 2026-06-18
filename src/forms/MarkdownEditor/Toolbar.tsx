@@ -28,9 +28,9 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@kenstack/components/ui/popover";
-import { Button } from "@kenstack/components/ui/button";
-import { Input } from "@kenstack/components/ui/input";
+} from "@kenstack/components/Popover";
+import { Button } from "@kenstack/components/Button";
+import { Input } from "@kenstack/forms/controls/Input";
 import { cn } from "@kenstack/lib/utils";
 
 type ToolbarProps = {
@@ -170,10 +170,9 @@ export function MarkdownEditorToolbar({
             align="start"
             sideOffset={2}
             className="border-border bg-popover text-popover-foreground w-auto min-w-36 rounded-[2px] p-0 py-[5px] shadow-[0_2px_4px_rgba(0,0,0,0.08)]"
+            autoFocus={false}
             onMouseDown={(event) => event.preventDefault()}
-            onOpenAutoFocus={(event) => event.preventDefault()}
-            onCloseAutoFocus={(event) => event.preventDefault()}
-            onEscapeKeyDown={() => {
+            onEscape={() => {
               restoreFocusOnClose.current = true;
             }}
           >
@@ -241,9 +240,8 @@ export function MarkdownEditorToolbar({
             align="start"
             sideOffset={2}
             className="border-border bg-popover text-popover-foreground w-72 rounded-md p-3 shadow-[0_2px_4px_rgba(0,0,0,0.08)]"
-            onOpenAutoFocus={(event) => event.preventDefault()}
-            onCloseAutoFocus={(event) => event.preventDefault()}
-            onEscapeKeyDown={() => {
+            autoFocus={false}
+            onEscape={() => {
               restoreLinkFocusOnClose.current = true;
             }}
           >

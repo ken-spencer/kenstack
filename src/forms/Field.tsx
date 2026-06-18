@@ -1,24 +1,17 @@
 import { CircleAlert } from "lucide-react";
+import * as React from "react";
 import Help from "@kenstack/components/Help";
 
 import {
+  Controller,
   useFormContext,
-  FieldValues,
-  Path,
-  ControllerRenderProps,
+  useFormState,
+  type FieldValues,
+  type Path,
+  type ControllerRenderProps,
   type ControllerFieldState,
   // type FieldError,
 } from "react-hook-form";
-
-import {
-  // FormControl,
-  // FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  useFormField,
-  // FormMessage,
-} from "@kenstack/components/ui/form";
 
 import { cn } from "@kenstack/lib/utils";
 
@@ -33,56 +26,135 @@ export type FieldProps = {
   help?: React.ReactNode;
   description?: React.ReactNode;
 };
-type FieldPropsLocal = React.ComponentProps<"div"> &
-  FieldProps & {
-    render: (props: RenderProps) => React.ReactElement;
-  };
 
-const Field: React.FC<FieldPropsLocal> = ({
+export default function Field({
   name,
   label,
   help,
   description,
   render,
   ...props
-}) => {
+}: React.ComponentProps<"div"> &
+  FieldProps & {
+    render: (props: RenderProps) => React.ReactElement;
+  }) {
   const { control } = useFormContext();
 
-  /** Keep track of list of rendered fields so we can display errors for non rendered fields  * */
   return (
-    <FormField
-      control={control}
-      name={name}
-      render={({ field, fieldState }) => (
-        <FormItem {...props}>
-          {(label || help) && (
-            <div className="flex items-center gap-1 leading-none">
-              {label && <FormLabel className="select-text">{label}</FormLabel>}
-              {help && <Help message={help} />}
-            </div>
-          )}
-          {render
-            ? render({
-                field,
-                fieldState,
-              })
-            : null}
-          {description && (
-            <div className="text-muted-foreground text-sm">{description}</div>
-          )}
-          <FormMessage className="" />
-        </FormItem>
+    <FormFieldContext.Provider value={{ name }}>
+      <Controller
+        control={control}
+        name={name}
+        render={({ field, fieldState }) => (
+          <FormItem {...props}>
+            {(label || help) && (
+              <div className="flex items-center gap-1 leading-none">
+                {label && (
+                  <FormLabel className="select-text">{label}</FormLabel>
+                )}
+                {help && <Help message={help} />}
+              </div>
+            )}
+            {render({ field, fieldState })}
+            {description && (
+              <div className="text-muted-foreground text-sm">
+                {description}
+              </div>
+            )}
+            <FormMessage className="" />
+          </FormItem>
+        )}
+      />
+    </FormFieldContext.Provider>
+  );
+}
+
+const FormFieldContext = React.createContext<{
+  name: Path<FieldValues>;
+} | null>(null);
+
+const FormItemContext = React.createContext<{ id: string } | null>(null);
+
+function useFormField() {
+  const fieldContext = React.useContext(FormFieldContext);
+  const itemContext = React.useContext(FormItemContext);
+
+  if (!fieldContext || !itemContext) {
+    throw new Error("useFormField should be used within <Field>");
+  }
+
+  const { getFieldState } = useFormContext();
+  const formState = useFormState({ name: fieldContext.name });
+  const fieldState = getFieldState(fieldContext.name, formState);
+  const { id } = itemContext;
+
+  return {
+    id,
+    name: fieldContext.name,
+    formItemId: `${id}-form-item`,
+    formDescriptionId: `${id}-form-item-description`,
+    formMessageId: `${id}-form-item-message`,
+    ...fieldState,
+  };
+}
+
+function FormItem({ className, ...props }: React.ComponentProps<"div">) {
+  const id = React.useId();
+
+  return (
+    <FormItemContext.Provider value={{ id }}>
+      <div className={cn("grid gap-2", className)} {...props} />
+    </FormItemContext.Provider>
+  );
+}
+
+function FormLabel({ className, ...props }: React.ComponentProps<"label">) {
+  const { error, formItemId } = useFormField();
+
+  return (
+    <label
+      data-error={!!error}
+      className={cn(
+        "flex items-center gap-2 text-sm leading-none font-medium select-none data-[error=true]:text-destructive group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
+        className,
       )}
+      htmlFor={formItemId}
+      {...props}
     />
   );
-};
+}
+
+function FormControl({
+  children,
+}: {
+  children: React.ReactElement<
+    React.HTMLAttributes<HTMLElement> & {
+      "aria-describedby"?: string;
+      "aria-invalid"?: boolean;
+      id?: string;
+    }
+  >;
+}) {
+  const { error, formItemId, formDescriptionId, formMessageId } =
+    useFormField();
+  const child = React.Children.only(children);
+
+  return React.cloneElement(child, {
+    ...child.props,
+    "aria-describedby": !error
+      ? `${formDescriptionId}`
+      : `${formDescriptionId} ${formMessageId}`,
+    "aria-invalid": !!error,
+    id: formItemId,
+  });
+}
 
 function FormMessage({ className, ...props }: React.ComponentProps<"p">) {
   const { error, formMessageId } = useFormField();
   const firstError = findFirstMessageObject(error);
   const body = firstError
     ? String(
-        Array.isArray(firstError?.message)
+        Array.isArray(firstError.message)
           ? firstError.message.at(0)
           : firstError.message,
       )
@@ -125,4 +197,4 @@ function findFirstMessageObject(obj: unknown): MessageCarrier | null {
   return null;
 }
 
-export default Field;
+export { FormControl, FormItem, FormLabel, useFormField };

@@ -2,7 +2,10 @@ import * as z from "zod";
 import { eq } from "drizzle-orm";
 
 import { pipelineStage } from "@kenstack/api";
-import type { DefinedAdmin, ResolvedModuleSettings } from "@kenstack/admin";
+import type {
+  DefinedAdmin,
+  ResolvedModuleSettings,
+} from "@kenstack/admin/module";
 import { loadRecord, saveRecord } from "@kenstack/fields/records";
 
 export const loadModuleSettingsAction = (

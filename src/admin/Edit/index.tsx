@@ -6,7 +6,7 @@ import FormRender from "./FormRender";
 import canUpload from "@kenstack/lib/canUpload";
 import { notFound } from "next/navigation";
 
-import { type AnyAdminConfig } from "..";
+import type { AnyAdminConfig } from "@kenstack/admin/module";
 import type { ClientConfig } from "@kenstack/admin/client";
 import { loadAdminEdit } from "@kenstack/admin/queries/load";
 

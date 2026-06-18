@@ -3,12 +3,12 @@
 import { ArrowDown, ArrowUp, ArrowUpDown, Check } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-import { Button } from "@kenstack/components/ui/button";
+import { Button } from "@kenstack/components/Button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@kenstack/components/ui/popover";
+} from "@kenstack/components/Popover";
 import Tooltip from "@kenstack/components/Tooltip";
 import type { AdminSortMeta } from "@kenstack/admin/types/list";
 import type { ListQueryStoreState } from "@kenstack/list/querySchema";

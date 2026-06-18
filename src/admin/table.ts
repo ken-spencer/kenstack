@@ -1,3 +1,5 @@
+import "server-only";
+
 import { sql } from "drizzle-orm";
 import snakeCase from "lodash-es/snakeCase";
 

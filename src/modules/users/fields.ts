@@ -1,5 +1,5 @@
 import roles from "@app/deps/roles";
-import { defineFields } from "@kenstack/fields";
+import { defineFields } from "@kenstack/fields/defineFields";
 import {
   checkboxListField,
   emailField,

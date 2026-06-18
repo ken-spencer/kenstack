@@ -1,12 +1,7 @@
 import React from "react";
 import { usePageEditor } from "@kenstack/admin/pageEditor/context";
 import { useAdminUi } from "@kenstack/admin/components/PageControls/useAdminUi";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@kenstack/components/ui/tooltip";
+import Tooltip from "@kenstack/components/Tooltip";
 import { PageEditorForm } from "../Form";
 
 import type {
@@ -79,28 +74,27 @@ function Toggle({ name, children }: { name: Name; children: React.ReactNode }) {
   return (
     <div className="relative">
       {children}
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              aria-label="Edit"
-              className={
-                "absolute -top-3 right-0 z-10 size-6 cursor-pointer rounded-full bg-white/85 shadow ring-1 ring-black/10 sm:-right-6 sm:bg-transparent sm:shadow-none sm:ring-0 dark:bg-gray-950/85 sm:dark:bg-transparent " +
-                (editing === name
-                  ? "!bg-fuchsia-800/85 text-white ring-fuchsia-800/60"
-                  : "")
-              }
-              onClick={() => {
-                setEditing(editing === name ? null : name);
-              }}
-            >
-              ✎
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="left">Edit</TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <Tooltip
+        className="absolute -top-3 right-0 z-10 sm:-right-6"
+        content="Edit"
+        side="left"
+      >
+        <button
+          type="button"
+          aria-label="Edit"
+          className={
+            "size-6 cursor-pointer rounded-full bg-white/85 shadow ring-1 ring-black/10 sm:bg-transparent sm:shadow-none sm:ring-0 dark:bg-gray-950/85 sm:dark:bg-transparent " +
+            (editing === name
+              ? "!bg-fuchsia-800/85 text-white ring-fuchsia-800/60"
+              : "")
+          }
+          onClick={() => {
+            setEditing(editing === name ? null : name);
+          }}
+        >
+          ✎
+        </button>
+      </Tooltip>
     </div>
   );
 }

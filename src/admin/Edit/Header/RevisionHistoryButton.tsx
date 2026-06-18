@@ -8,12 +8,12 @@ import { useFormContext } from "react-hook-form";
 import Alert from "@kenstack/components/Alert";
 import Progress from "@kenstack/components/Progress";
 import Tooltip from "@kenstack/components/Tooltip";
-import { Button } from "@kenstack/components/ui/button";
+import { Button } from "@kenstack/components/Button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@kenstack/components/ui/popover";
+} from "@kenstack/components/Popover";
 import { dateFormat } from "@kenstack/lib/dateFormat";
 import fetcher from "@kenstack/api/fetcher";
 import { useForm } from "@kenstack/forms/context";

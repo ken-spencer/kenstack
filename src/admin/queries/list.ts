@@ -17,7 +17,7 @@ import {
   searchParamsToRecord,
   type ListQuery,
 } from "@kenstack/list/querySchema";
-import type { AnyAdminConfig } from "@kenstack/admin";
+import type { AnyAdminConfig } from "@kenstack/admin/module";
 import type { BaseListItem } from "@kenstack/admin/client";
 import type { AdminContentTable } from "@kenstack/admin/table";
 import { getSortMeta } from "@kenstack/admin/types/list";

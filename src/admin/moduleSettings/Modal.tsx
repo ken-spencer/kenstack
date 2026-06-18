@@ -11,13 +11,14 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@kenstack/components/ui/dialog";
-import FieldLayout from "@kenstack/forms/FieldLayout";
+} from "@kenstack/components/Dialog";
 import Form from "@kenstack/forms/Form";
 import Notice from "@kenstack/forms/Notice";
 import Submit from "@kenstack/forms/Submit";
+import { QueryBoundary } from "@kenstack/context/QueryProvider";
 import type { SettingsClient } from "@kenstack/admin/client";
 import { createDefaultValues } from "@kenstack/fields/createDefaultValues";
+import FieldLayout from "./FieldLayout";
 
 type ModuleSettingsModalProps = {
   client: SettingsClient;
@@ -40,12 +41,35 @@ export default function ModuleSettingsModal({
   onOpenChange,
   title,
 }: ModuleSettingsModalProps) {
+  return (
+    <QueryBoundary>
+      <ModuleSettingsModalContent
+        client={client}
+        description={description}
+        name={name}
+        open={open}
+        onOpenChange={onOpenChange}
+        title={title}
+      />
+    </QueryBoundary>
+  );
+}
+
+function ModuleSettingsModalContent({
+  client,
+  description,
+  name,
+  open,
+  onOpenChange,
+  title,
+}: ModuleSettingsModalProps) {
   const queryClient = useQueryClient();
   const queryKey = ["module-settings", name] as const;
   const query = useQuery({
     queryKey,
     enabled: open,
     retry: false,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       const result = await fetcher<SettingsLoadResult>("/api/admin", {
         action: "load-module-settings",
@@ -93,6 +117,7 @@ export default function ModuleSettingsModal({
           </div>
         ) : (
           <Form
+            key={query.dataUpdatedAt}
             className="space-y-4"
             schema={client.schema}
             defaultValues={defaultValues}

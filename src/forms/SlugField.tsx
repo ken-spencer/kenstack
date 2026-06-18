@@ -6,9 +6,8 @@ import { useState, useEffect } from "react";
 import { Lock, LockOpen } from "lucide-react";
 import Button from "@kenstack/components/Button";
 
-import Field, { type FieldProps } from "@kenstack/forms/Field";
-import { Input } from "@kenstack/components/ui/input";
-import { FormControl } from "@kenstack/components/ui/form";
+import Field, { FormControl, type FieldProps } from "@kenstack/forms/Field";
+import { Input } from "@kenstack/forms/controls/Input";
 import { useFormContext } from "react-hook-form";
 import { twMerge } from "tailwind-merge";
 

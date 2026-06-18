@@ -7,8 +7,8 @@ import { X } from "lucide-react";
 import { useAdminEdit } from "@kenstack/admin/Edit/context";
 import Alert from "@kenstack/components/Alert";
 import Progress from "@kenstack/components/Progress";
-import { Badge } from "@kenstack/components/ui/badge";
-import { Button } from "@kenstack/components/ui/button";
+import { Badge } from "@kenstack/components/Badge";
+import { Button } from "@kenstack/components/Button";
 import {
   Combobox,
   ComboboxContent,

@@ -1,5 +1,5 @@
 import { pipelineStage } from "@kenstack/api";
-import type { DefinedAdmin } from "..";
+import type { DefinedAdmin } from "@kenstack/admin/module";
 
 import * as z from "zod";
 

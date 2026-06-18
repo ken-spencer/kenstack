@@ -2,6 +2,81 @@
 
 Use this file to document breaking Kenstack API changes that downstream sites may need to apply.
 
+## Unreleased: Admin Server/Client Module Split
+
+Old APIs:
+
+- Site modules imported `defineModule` from `@kenstack/admin`.
+- `defineModule(...)` accepted a `client` config directly.
+- Server module files imported client config files, form components, list renderers, and field components through the module config.
+- Admin pages could call `createAdminPage()` without passing client loaders.
+- Module settings controls could import the module config and pass it to a shared control component.
+- Custom field components could be passed as already-imported React components on field definitions.
+
+New APIs:
+
+- Server module definitions import `defineModule` from `@kenstack/admin/server`.
+- Server admin registries import `defineAdmin` from `@kenstack/admin/server`.
+- `defineModule(...)` is server-only and no longer accepts `client`.
+- Client admin config stays in each module's `client.ts` and is loaded separately through a site-owned client loader map.
+- Client admin config files import `defineClient` from `@kenstack/admin/client`.
+- Site admin pages call `createAdminPage()` after `defineAdmin(...)` attaches client loaders to the module registry.
+- Client loader maps use `defineAdminClients(...)` from `@kenstack/admin/clientLoaders`, with a map of dynamic imports.
+- Module settings client config uses `defineSettingsClient(...)` from `@kenstack/admin/client`.
+- Server field metadata imports should use explicit server-safe paths such as `@kenstack/admin/metaFields` instead of importing mixed admin APIs from the main admin barrel.
+- Public routes that expose admin-only settings controls should pass the enriched registry module to `ModuleSettingsControl`; the control reads `module.client` internally.
+- Custom field components use loader functions, for example `component: () => import("./components/MyField")`, instead of direct component imports.
+- The main `@kenstack/admin` barrel is for shared admin types, list metadata types, search-param helpers, and meta field constants. Do not use it for server-only builders or client config builders.
+
+Migration steps:
+
+- Change server module imports from `@kenstack/admin` to `@kenstack/admin/server`.
+- Change server admin registry imports from `@kenstack/admin` to `@kenstack/admin/server`.
+- Change client config imports from `@kenstack/admin` to `@kenstack/admin/client`.
+- Change metadata field imports from `@kenstack/admin` to `@kenstack/admin/metaFields` when the file only needs `metaFieldOptions`, `visibilityOptions`, or `visibilityValues`.
+- Keep query helpers such as `listWhere`, `pageWhere`, and `createMetadataLoader` on `@kenstack/admin/queries`, not the main admin barrel.
+- Keep page editor imports on the page editor subpaths, for example `@kenstack/admin/pageEditor`, `@kenstack/admin/pageEditor/loadContent`, `@kenstack/admin/pageEditor/TextEdit`, and `@kenstack/admin/pageEditor/MarkdownEdit`.
+- Remove `client` from every `defineModule(...)` call. Keep only server-safe admin config, settings table config, fields, handlers, cache tags, and route metadata in the server module file.
+- Keep each module's admin UI config in `client.ts`, exported as `client = defineClient(...)`.
+- Add a server-only loader map in the site, for example:
+
+  ```ts
+  import "server-only";
+
+  import { defineAdminClients } from "@kenstack/admin/clientLoaders";
+
+  export const clients = defineAdminClients({
+    news: () => import("./news/client"),
+    users: () => import("./users/client"),
+  });
+  ```
+
+- Pass that loader map to the site module registry so each module entry gets a `client` loader:
+
+  ```ts
+  import { clients } from "./clients";
+
+  export const modules = defineAdmin([news, users], clients);
+  ```
+
+- Use the old admin route syntax: `export default createAdminPage()`. `createAdminPage()` reads `deps.modules[name].client` internally.
+- Do not import `client.ts`, form components, list item renderers, or other admin Client Components from server module files.
+- For module settings, move client-side settings field config into a module-owned `settings.ts` using `defineSettingsClient({ fields: settingsFields })`.
+- Render settings controls with a module entry from the `defineAdmin(...)` registry. Do not pass a separate `loadClient` prop:
+
+  ```tsx
+  import { modules } from "@/modules";
+  import ModuleSettingsControl from "@kenstack/admin/moduleSettings/Control";
+
+  <ModuleSettingsControl module={modules.stays} title="Book a Stay Settings">
+    <BookingRequest />
+  </ModuleSettingsControl>;
+  ```
+
+- For custom field components, replace direct imports like `component: MyField` with loader functions such as `component: () => import("./components/MyField")`. The loaded field file should be a Client Component when it uses hooks, browser APIs, or client-only libraries.
+- For any dynamic/lazy loader intended to keep optional client code out of public route bundles, make the loader file itself a Client Component. Next.js currently does not reliably keep dynamically imported Client Components split when the loader is a Server Component; `ssr: false` also only belongs inside Client Components.
+- Keep loader props serializable when a Client Component loader is rendered by a Server Component.
+
 ## Unreleased: Shared List Utilities
 
 Old APIs:

@@ -2,12 +2,12 @@
 
 import { CircleHelp } from "lucide-react";
 
-import { Button } from "@kenstack/components/ui/button";
+import { Button } from "@kenstack/components/Button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@kenstack/components/ui/popover";
+} from "@kenstack/components/Popover";
 import { cn } from "@kenstack/lib/utils";
 
 type HelpProps = {

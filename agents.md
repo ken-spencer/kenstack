@@ -9,6 +9,11 @@ Before any Next.js work, find and read the relevant doc in `node_modules/next/di
 - Add `"use client"` only when needed.
 - Do not pass non-serializable values from server to client components.
 - Keep data loading on the server unless the UI requires client-side updates.
+- For lazy/dynamic loaders that are meant to keep optional client code out of the initial bundle, make the loader itself a Client Component. A Next.js bug can cause a Server Component loader, even one with a conditional or dynamic import, to pull the loaded client module and its dependencies into the build/route bundle.
+- Do not remove `"use client"` from files whose purpose is to define, wrap, or export dynamic imports of Client Components, including admin/client registries such as `defineAdminClients` or module `clients` maps.
+- Do not fix public bundle leakage by moving Client Component loaders into Server Components, `server-only` files, or server-safe helper files. That can trigger the same Next.js bundling bug and pull the dynamically imported Client Components and their dependencies into route bundles.
+- If a client registry leaks into a public route, fix the import graph instead: keep the loader/client registry as a Client Component, and ensure public server code, root layouts, metadata loaders, and shared deps do not import that registry. Split server-only module definitions from admin client registries, or pass client-enabled modules only at the admin entry point.
+- Before changing any file with `"use client"` or any dynamic import of a Client Component, stop and explain why the boundary is safe. If the goal is bundle reduction, verify with a production build before and after.
 - Use route handlers for API endpoints.
 - Do not enumerate private, account, auth, or unlisted page paths in `robots.txt` or `robots.ts`. Robots files are public and are not access control; use auth, redirects, and `noindex` metadata/headers for those pages instead. Keep robots disallow rules to broad technical buckets such as `/admin` and `/api/`, unless the user explicitly asks for a public crawl rule.
 - In cached functions or components, place `cacheTag(...)` as high as it can go without changing behavior, near `"use cache"` and `cacheLife(...)`, so cache identity is visible with the other cache setup.
@@ -37,7 +42,7 @@ For bug fixes, proceed autonomously only when the cause is clear and the fix is 
 
 ## Situational instructions
 
-- For UI, styling, Tailwind, shadcn, or shared component work, read `agents/ui.md` before coding.
+- For UI, styling, Tailwind, or shared component work, read `agents/ui.md` before coding.
 - For database, Drizzle, table schema, Zod, validation, or pipeline schema work, read `agents/data.md` before coding.
 - When a Kenstack API, export, helper, type, route, or behavior referenced by the site is missing, renamed, incompatible, or intentionally changed, read and update `agents/migrations.md` as applicable.
 

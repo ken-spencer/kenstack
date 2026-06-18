@@ -8,11 +8,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@kenstack/components/ui/alert-dialog";
+} from "@kenstack/components/AlertDialog";
 
 import { Trash, Undo2 } from "lucide-react";
 import Button from "@kenstack/components/Button";
-import { Badge } from "@kenstack/components/ui/badge";
+import { Badge } from "@kenstack/components/Badge";
 import { type AdminListQueryData, useAdminList } from "./context";
 import fetcher from "@kenstack/api/fetcher";
 import { useMutation, useQueryClient } from "@tanstack/react-query";

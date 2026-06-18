@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Skeleton } from "@kenstack/components/ui/skeleton";
+import { Skeleton } from "@kenstack/components/Skeleton";
 
 import type { InputProps } from "./MarkdownField";
 

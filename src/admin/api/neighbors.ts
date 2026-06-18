@@ -1,7 +1,7 @@
 import * as z from "zod";
 
 import { pipelineStage } from "@kenstack/api";
-import type { AnyAdminConfig } from "@kenstack/admin";
+import type { AnyAdminConfig } from "@kenstack/admin/module";
 import { loadAdminListNeighbors } from "@kenstack/admin/queries/list";
 
 const schema = z.object({

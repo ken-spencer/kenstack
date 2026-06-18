@@ -57,7 +57,7 @@ export type FieldOption<
   kind: TKind;
   zod: z.ZodType;
   default: TDefault;
-  component?: FieldComponent;
+  component?: FieldComponentLoader;
   label?: string;
   description?: string;
   options?: readonly FieldInputOption[];
@@ -84,6 +84,9 @@ export type FieldComponentProps = {
 };
 
 export type FieldComponent = ComponentType<FieldComponentProps>;
+export type FieldComponentLoader = () => Promise<{
+  default: FieldComponent;
+}>;
 
 type DefinedFieldBase<
   TKind extends FieldKind = FieldKind,
@@ -92,7 +95,7 @@ type DefinedFieldBase<
   kind: TKind;
   zod: z.ZodType;
   default: TDefault;
-  component?: FieldComponent;
+  component?: FieldComponentLoader;
   label?: string;
   description?: string;
   options?: readonly FieldInputOption[];

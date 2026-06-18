@@ -1,11 +1,11 @@
 # UI Instructions
 
-Read this before UI, styling, Tailwind, shadcn, or shared component work.
+Read this before UI, styling, Tailwind, or shared component work.
 
 ## Styling
 
 - Use Tailwind utilities.
 - Prefer existing shared components before adding new ones.
 - Keep class names compatible with Prettier/Tailwind sorting.
-- Do not modify `components/ui` because shadcn can overwrite those files.
-- Avoid making custom components if shadcn has one that will do the job.
+- Shared components live directly under `src/components`.
+- Keep shared UI behavior in Kenstack-owned components with narrow APIs.

@@ -3,7 +3,7 @@ import { and, getTableName, inArray, isNotNull, isNull } from "drizzle-orm";
 import { revalidateTag } from "next/cache";
 
 import { pipelineStage } from "@kenstack/api";
-import type { DefinedAdmin } from "..";
+import type { DefinedAdmin } from "@kenstack/admin/module";
 import { adminListCacheTag } from "@kenstack/admin/queries/list";
 import { adminLoadCacheTag } from "@kenstack/admin/queries/load";
 import { deps } from "@app/deps";

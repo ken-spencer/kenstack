@@ -6,36 +6,33 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import Alert from "@kenstack/components/Alert";
 import fetcher, { type FetchResult } from "@kenstack/api/fetcher";
 import useDebounce from "@kenstack/hooks/useDebounce";
-import { Input } from "@kenstack/components/ui/input";
 import { useAdminEdit } from "@kenstack/admin/Edit/context";
 import kebabCase from "lodash-es/kebabCase";
 
 import {
-  Command,
-  CommandEmpty,
-  CommandItem,
-  CommandList,
-} from "@kenstack/components/ui/command";
-
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@kenstack/components/ui/popover";
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@kenstack/forms/controls/Combobox";
 
 import type { Tag } from "./types";
 import { type AnyField } from "@kenstack/forms/types";
 
+type TagSearchOption = Tag & { count: number };
+
 export default function TagSearcht({ field }: { field: AnyField }) {
-  const dialogRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [keywords, debouncedValue, setKeywords] = useDebounce();
   const [focusing, setFocusing] = useState(false);
-  const [commandValue, setCommandValue] = useState("no-value");
+  const [highlightedTag, setHighlightedTag] =
+    useState<TagSearchOption | null>(null);
   const { apiPath, name: adminName } = useAdminEdit();
 
   const { data, error, isPending } = useQuery<
-    FetchResult<{ tags: Tag[] }>,
+    FetchResult<{ tags: TagSearchOption[] }>,
     Error
   >({
     queryKey: ["tags", debouncedValue, field.value],
@@ -50,140 +47,135 @@ export default function TagSearcht({ field }: { field: AnyField }) {
     enabled: focusing,
   });
 
+  const tags = data?.status === "success" ? data.tags : [];
+  const open =
+    focusing && !isPending && data?.status === "success" && !!tags.length;
+
+  function addTag(tag: TagSearchOption) {
+    const newTag = { name: tag.name, slug: tag.slug };
+    field.onChange(
+      [...field.value, newTag].sort((a, b) => a.name.localeCompare(b.name)),
+    );
+    setKeywords("");
+    setHighlightedTag(null);
+    inputRef.current?.focus();
+  }
+
+  function addTypedTags() {
+    const newTags = keywords
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .map((name) => ({ name, slug: kebabCase(name).trim() }))
+      .filter(
+        (tag, index, values) =>
+          tag.slug.length > 0 &&
+          !field.value.some((value: Tag) => value.slug === tag.slug) &&
+          values.findIndex((value) => value.slug === tag.slug) === index,
+      );
+
+    if (newTags.length) {
+      field.onChange(
+        [...field.value, ...newTags].sort((a, b) =>
+          a.name.localeCompare(b.name),
+        ),
+      );
+    }
+
+    setKeywords("");
+    setHighlightedTag(null);
+  }
+
   return (
-    <Popover
-      open={
-        focusing &&
-        !isPending &&
-        data &&
-        data.status === "success" &&
-        !!data.tags.length
+    <Combobox<TagSearchOption>
+      items={tags}
+      open={open}
+      inputValue={keywords}
+      filter={null}
+      autoHighlight
+      itemToStringLabel={(tag) => tag.name}
+      itemToStringValue={(tag) => tag.slug}
+      isItemEqualToValue={(item, currentValue) =>
+        item.slug === currentValue.slug
       }
+      onInputValueChange={(value) => {
+        setKeywords(value);
+        setHighlightedTag(null);
+      }}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) {
+          setFocusing(false);
+          setHighlightedTag(null);
+        }
+      }}
+      onItemHighlighted={(tag) => {
+        setHighlightedTag(tag ?? null);
+      }}
+      onValueChange={(tag) => {
+        if (tag) {
+          addTag(tag);
+        }
+      }}
     >
-      <Command
-        value={commandValue}
-        onValueChange={(v) => {
-          if (v !== "no-value") {
-            setCommandValue(v);
-          }
-        }}
-        shouldFilter={false} // disable built-in filtering
-      >
-        <PopoverTrigger asChild>
-          <div className="flex items-center">
-            <TagIcon className="size-6 text-gray-600" />
-            <Input
-              className="-ml-9 rounded-none border-0 border-b pl-10"
-              placeholder="Enter tag"
-              value={keywords}
-              ref={inputRef}
-              autoComplete="off"
-              onKeyDown={(evt) => {
-                if (
-                  evt.key === "Enter" &&
-                  commandValue === "no-value" &&
-                  keywords.length
-                ) {
-                  evt.preventDefault();
-                  // avoid duplication
-                  const newTags = keywords
-                    .split(",")
-                    .map((value) => value.trim())
-                    .filter(Boolean)
-                    .map((name) => ({ name, slug: kebabCase(name).trim() }))
-                    .filter(
-                      (tag, index, tags) =>
-                        tag.slug.length > 0 &&
-                        !field.value.some(
-                          (value: Tag) => value.slug === tag.slug,
-                        ) &&
-                        tags.findIndex((value) => value.slug === tag.slug) ===
-                          index,
-                    );
-
-                  if (newTags.length) {
-                    const newValue = [...field.value, ...newTags].sort((a, b) =>
-                      a.name.localeCompare(b.name),
-                    );
-                    field.onChange(newValue);
-                  }
-
-                  setKeywords("");
-                  setCommandValue("no-value");
-                }
-              }}
-              onChange={(evt) => {
-                setKeywords(evt.target.value);
-                setCommandValue("no-value");
-              }}
-              onFocus={() => {
-                setFocusing(true);
-              }}
-              onBlur={(evt) => {
-                const d = dialogRef.current;
-                if (!d || !d.contains(evt.relatedTarget)) {
-                  setFocusing(false);
-                }
-              }}
-            />
-          </div>
-        </PopoverTrigger>
-
-        <PopoverContent
-          className="m-0 w-(--radix-popover-trigger-width) p-0"
-          onOpenAutoFocus={(e) => {
-            // prevent the Popover from moving focus into itself
-            e.preventDefault();
+      <div className="relative flex items-center">
+        <TagIcon className="pointer-events-none absolute left-0 z-10 size-6 text-gray-600" />
+        <ComboboxInput
+          className="w-full rounded-none border-0 border-b"
+          inputClassName="pl-10"
+          placeholder="Enter tag"
+          ref={inputRef}
+          showTrigger={false}
+          autoComplete="off"
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !highlightedTag && keywords.length) {
+              event.preventDefault();
+              addTypedTags();
+            }
           }}
-        >
-          {(() => {
-            if (error) {
-              return <Alert>{error.message}</Alert>;
-            }
+          onFocus={() => {
+            setFocusing(true);
+          }}
+        />
+      </div>
 
-            if (focusing === false || isPending) {
-              return (
-                <div className="py-12">
-                  <Progress className="size-12" />
-                </div>
-              );
-            }
+      <ComboboxContent className="p-0" sideOffset={0}>
+        {(() => {
+          if (error) {
+            return <Alert>{error.message}</Alert>;
+          }
 
-            if ("error" === data.status) {
-              return <Alert>{data.message}</Alert>;
-            }
-
+          if (!focusing || isPending || !data) {
             return (
-              <CommandList ref={dialogRef}>
-                <CommandEmpty>No tags found.</CommandEmpty>
-
-                <div>
-                  {data.tags.map(({ count, ...tag }) => (
-                    <CommandItem
-                      key={tag.name}
-                      className="block cursor-pointer"
-                      value={tag.slug}
-                      onSelect={() => {
-                        const newValue = [...field.value, tag].sort((a, b) =>
-                          a.name.localeCompare(b.name),
-                        );
-
-                        field.onChange(newValue);
-                        inputRef.current?.focus();
-                        setKeywords("");
-                      }}
-                    >
-                      <div className="flex justify-between">
-                        <span>{tag.name}</span> <span>{count}</span>
-                      </div>
-                    </CommandItem>
-                  ))}
-                </div>
-              </CommandList>
+              <div className="py-12">
+                <Progress className="size-12" />
+              </div>
             );
-          })()}
-        </PopoverContent>
-      </Command>
-    </Popover>
+          }
+
+          if (data.status === "error") {
+            return <Alert>{data.message}</Alert>;
+          }
+
+          return (
+            <>
+              <ComboboxEmpty>No tags found.</ComboboxEmpty>
+              <ComboboxList>
+                {(tag: TagSearchOption) => (
+                  <ComboboxItem
+                    key={tag.slug}
+                    className="block cursor-pointer"
+                    value={tag}
+                  >
+                    <div className="flex justify-between">
+                      <span>{tag.name}</span> <span>{tag.count}</span>
+                    </div>
+                  </ComboboxItem>
+                )}
+              </ComboboxList>
+            </>
+          );
+        })()}
+      </ComboboxContent>
+    </Combobox>
   );
 }

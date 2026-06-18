@@ -6,7 +6,11 @@ import React, { createContext, useContext, useMemo } from "react";
 import { usePathname } from "next/navigation";
 
 import EditForm from "./Form";
-import { AdminClient, type ClientConfig, PreviewPath } from "..";
+import type {
+  AdminClient,
+  ClientConfig,
+} from "@kenstack/admin/client";
+import type { PreviewPath } from "@kenstack/admin/module";
 import type { AdminEditItem } from "@kenstack/admin/queries/load";
 
 type AdminEditProps = {

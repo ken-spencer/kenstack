@@ -1,7 +1,7 @@
 "use client";
 import { type ReactNode } from "react";
 
-import { useSidebar, SidebarTrigger } from "@kenstack/components/ui/sidebar";
+import { useSidebar, SidebarTrigger } from "@kenstack/components/Sidebar";
 
 import { Menu } from "lucide-react";
 import Link from "next/link";

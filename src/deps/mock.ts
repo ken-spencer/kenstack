@@ -1,5 +1,5 @@
 import { createDeps } from "@kenstack/deps";
-import { defineAdmin } from "@kenstack/admin";
+import { defineAdmin } from "@kenstack/admin/server";
 import usersModule from "@kenstack/modules/users";
 
 import * as users from "@kenstack/modules/users/tables";

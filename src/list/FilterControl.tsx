@@ -2,27 +2,25 @@
 
 import { format } from "date-fns";
 import { parseDate } from "chrono-node";
-import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 import {
   CalendarIcon,
-  CheckIcon,
   ListFilter,
-  MinusIcon,
   RotateCcw,
   X,
 } from "lucide-react";
 import type { ComponentProps, Dispatch, SetStateAction } from "react";
 import { useMemo, useState } from "react";
 
-import { Button } from "@kenstack/components/ui/button";
-import { Calendar } from "@kenstack/components/ui/calendar";
-import { Input } from "@kenstack/components/ui/input";
+import { Button } from "@kenstack/components/Button";
+import { Calendar } from "@kenstack/components/Calendar";
+import { Input } from "@kenstack/forms/controls/Input";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@kenstack/components/ui/popover";
-import { Separator } from "@kenstack/components/ui/separator";
+} from "@kenstack/components/Popover";
+import { Checkbox } from "@kenstack/forms/controls/Checkbox";
+import { Separator } from "@kenstack/components/Separator";
 import type { AdminFilterMeta } from "@kenstack/admin/types/list";
 import Tooltip from "@kenstack/components/Tooltip";
 import { cn } from "@kenstack/lib/utils";
@@ -336,24 +334,15 @@ function FilterHeading({
 function FilterOptionCheckbox({
   className,
   ...props
-}: ComponentProps<typeof CheckboxPrimitive.Root>) {
+}: ComponentProps<typeof Checkbox>) {
   return (
-    <CheckboxPrimitive.Root
-      data-slot="checkbox"
+    <Checkbox
       className={cn(
-        "peer border-input dark:bg-input/30 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground dark:data-[state=checked]:bg-primary data-[state=checked]:border-primary focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive size-4 shrink-0 rounded-[4px] border shadow-xs transition-shadow outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 data-[state=indeterminate]:border-fuchsia-800 data-[state=indeterminate]:bg-fuchsia-800 data-[state=indeterminate]:text-white",
+        "data-[state=indeterminate]:border-fuchsia-800 data-[state=indeterminate]:bg-fuchsia-800 data-[state=indeterminate]:text-white",
         className,
       )}
       {...props}
-    >
-      <CheckboxPrimitive.Indicator
-        data-slot="checkbox-indicator"
-        className="group flex items-center justify-center text-current transition-none"
-      >
-        <CheckIcon className="size-3.5 group-data-[state=indeterminate]:hidden" />
-        <MinusIcon className="hidden size-3.5 group-data-[state=indeterminate]:block" />
-      </CheckboxPrimitive.Indicator>
-    </CheckboxPrimitive.Root>
+    />
   );
 }
 

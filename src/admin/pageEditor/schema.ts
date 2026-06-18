@@ -1,5 +1,5 @@
 import { pageEditorFields } from "./fields";
-import { createZodSchema } from "@kenstack/admin";
+import { createZodSchema } from "@kenstack/fields/createZodSchema";
 import type * as z from "zod";
 
 export const pageEditorSchema = createZodSchema(pageEditorFields).strict();

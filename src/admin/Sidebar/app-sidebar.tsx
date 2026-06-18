@@ -6,10 +6,10 @@ import {
   Sidebar,
   SidebarHeader,
   SidebarContent,
-} from "@kenstack/components/ui/sidebar";
+} from "@kenstack/components/Sidebar";
 
 import { X } from "lucide-react";
-import { Button } from "@kenstack/components/ui/button";
+import { Button } from "@kenstack/components/Button";
 import KenstackLogo from "./KenstackLogo";
 
 export function AppSidebar({ content }: { content: React.ReactNode }) {

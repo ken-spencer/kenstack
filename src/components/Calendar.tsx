@@ -9,7 +9,7 @@ import {
 import { DayButton, DayPicker, getDefaultClassNames } from "react-day-picker";
 
 import { cn } from "@kenstack/lib/utils";
-import { Button, buttonVariants } from "@kenstack/components/ui/button";
+import { Button, buttonVariants } from "@kenstack/components/Button";
 
 function Calendar({
   className,

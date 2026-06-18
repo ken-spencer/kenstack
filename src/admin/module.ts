@@ -1,3 +1,5 @@
+import "server-only";
+
 import type { ComponentType, SVGProps } from "react";
 import startCase from "lodash-es/startCase";
 import type { AnyColumn, InferSelectModel, SQL } from "drizzle-orm";
@@ -13,7 +15,6 @@ import type {
   AdminSortOptions,
   ResolvedAdminSortField,
 } from "@kenstack/admin/types/list";
-import type { defineClient } from "@kenstack/admin/client";
 import { createDefaultValues } from "@kenstack/fields/createDefaultValues";
 import { createZodSchema } from "@kenstack/fields/createZodSchema";
 import {
@@ -22,8 +23,9 @@ import {
   type ServerDefinedFields,
 } from "@kenstack/fields/server";
 import type { AdminKeyTable, AdminTable } from "@kenstack/admin/table";
+import type { AdminClientLoader } from "@kenstack/admin/clientLoaders";
 import type { RevalidateTagRule } from "@kenstack/lib/revalidate";
-import { visibilityOptions } from "./metadata";
+import { visibilityOptions } from "./lib/visibility";
 
 type SelectValue = AnyColumn | SQL | SQL.Aliased;
 type SelectShape = Record<string, SelectValue>;
@@ -56,7 +58,6 @@ export type AnyAdminConfig = NonNullable<ReturnType<typeof resolveAdmin>>;
 type AdminConfig =
   | AdminListConfig<AdminTable, SelectShape | undefined>
   | AdminSingleConfig<AdminKeyTable>;
-type ClientConfig = ReturnType<typeof defineClient>;
 
 type ModuleSettingsConfig<
   TTable extends AdminKeyTable = AdminKeyTable,
@@ -89,7 +90,6 @@ type ModuleOptions = {
   icon?: ComponentType<SVGProps<SVGSVGElement>>;
   admin?: AdminConfig;
   settings?: ModuleSettingsConfig;
-  client?: ClientConfig;
 };
 
 export type DefinedAdmin = Record<
@@ -99,9 +99,9 @@ export type DefinedAdmin = Record<
     title: string;
     basePath: PreviewPath;
     icon?: ComponentType<SVGProps<SVGSVGElement>>;
-    client?: ClientConfig;
     admin?: AnyAdminConfig;
     settings?: ResolvedModuleSettings;
+    client?: AdminClientLoader;
   }
 >;
 

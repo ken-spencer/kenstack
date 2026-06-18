@@ -1,4 +1,4 @@
-import { defineFields } from "@kenstack/fields";
+import { defineFields } from "@kenstack/fields/defineFields";
 import { imageField, textField } from "@kenstack/fields/client";
 import * as z from "zod";
 

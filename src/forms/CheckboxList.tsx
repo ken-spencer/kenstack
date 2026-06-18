@@ -1,16 +1,13 @@
 "use client";
 
 import { twMerge } from "tailwind-merge";
-import Field, { type FieldProps } from "@kenstack/forms/Field";
-import { Checkbox } from "@kenstack/components/ui/checkbox";
-import {
+import Field, {
   FormControl,
-  FormLabel,
   FormItem,
-  FormField,
-} from "@kenstack/components/ui/form";
-
-import { useFormContext } from "react-hook-form";
+  FormLabel,
+  type FieldProps,
+} from "@kenstack/forms/Field";
+import { Checkbox } from "@kenstack/forms/controls/Checkbox";
 
 export type CheckboxListOptions = readonly {
   label: string;
@@ -32,50 +29,41 @@ export default function CheckboxField({
   options = [],
   readOnly,
 }: InputProps) {
-  const { control } = useFormContext();
-
   return (
     <Field
       name={name}
       label={label}
       description={description}
-      render={() => (
+      render={({ field }) => (
         <div className={twMerge("grid grid-cols-2 gap-4", grid)} tabIndex={-1}>
           {options.map((option) => (
-            <FormField
+            <FormItem
               key={option.value}
-              control={control}
-              name={name}
-              render={({ field }) => (
-                <FormItem
-                  key={option.value}
-                  className="flex flex-row items-center gap-2"
-                >
-                  <FormControl>
-                    <Checkbox
-                      {...field}
-                      value={option.value}
-                      checked={field.value.includes(option.value)}
-                      onCheckedChange={(checked) => {
-                        if (readOnly) {
-                          return;
-                        }
-                        return checked
-                          ? field.onChange([...field.value, option.value])
-                          : field.onChange(
-                              field.value?.filter(
-                                (value: string) => value !== option.value,
-                              ),
-                            );
-                      }}
-                    />
-                  </FormControl>
-                  <FormLabel className="text-sm font-normal">
-                    {option.label}
-                  </FormLabel>
-                </FormItem>
-              )}
-            />
+              className="flex flex-row items-center gap-2"
+            >
+              <FormControl>
+                <Checkbox
+                  {...field}
+                  value={option.value}
+                  checked={field.value.includes(option.value)}
+                  onCheckedChange={(checked) => {
+                    if (readOnly) {
+                      return;
+                    }
+                    return checked
+                      ? field.onChange([...field.value, option.value])
+                      : field.onChange(
+                          field.value?.filter(
+                            (value: string) => value !== option.value,
+                          ),
+                        );
+                  }}
+                />
+              </FormControl>
+              <FormLabel className="text-sm font-normal">
+                {option.label}
+              </FormLabel>
+            </FormItem>
           ))}
         </div>
       )}

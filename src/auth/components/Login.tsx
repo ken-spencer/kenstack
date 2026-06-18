@@ -3,13 +3,12 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import cookies from "js-cookie";
-
 import Link from "next/link";
 
 import Form from "@kenstack/forms/Form";
 import loginSchema from "@kenstack/auth/schemas/login";
 import { getSafeReturnToPath } from "@kenstack/auth/returnTo";
+import { deleteCookie, getCookie } from "@kenstack/lib/cookies";
 import Notice from "@kenstack/forms/Notice";
 import Alert from "@kenstack/components/Alert";
 import InputField from "@kenstack/forms/InputField";
@@ -56,8 +55,8 @@ export function LoginForm() {
         "",
         window.location.pathname + (params.size ? `?${params}` : ""),
       );
-    } else if ((m = cookies.get("loginMessage"))) {
-      cookies.remove("loginMessage", { path: "/login" });
+    } else if ((m = getCookie("loginMessage"))) {
+      deleteCookie("loginMessage", "/login");
     }
     return m;
   });
@@ -90,7 +89,7 @@ export function LoginForm() {
       {message && <Alert>{message}</Alert>}
       <Notice />
       <RegisterField name="returnTo" />
-      <InputField name="email" label="Email" type="email" />
+      <InputField name="email" label="Email" type="email" autoFocus />
       <PasswordField name="password" label="Password" />
 
       <div className="flex items-center justify-between">

@@ -34,15 +34,16 @@ export function createAdminPage() {
           isNew: id === "new",
         })),
     },
-    ({ params, searchIn, user }) => {
+    async ({ params, searchIn, user }) => {
       const { name, id, isNew } = params;
       const moduleConfig = deps.modules[name];
-      const adminConfig = moduleConfig?.admin;
-      const clientConfig = moduleConfig?.client;
 
-      if (!moduleConfig || !adminConfig || !clientConfig) {
+      if (!moduleConfig?.admin || !moduleConfig.client) {
         notFound();
       }
+
+      const adminConfig = moduleConfig.admin;
+      const clientConfig = await moduleConfig.client();
 
       if (!("list" in adminConfig) && id !== undefined) {
         notFound();

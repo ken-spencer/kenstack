@@ -6,8 +6,8 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
-} from "@kenstack/components/ui/sidebar";
-import { Skeleton } from "@kenstack/components/ui/skeleton";
+} from "@kenstack/components/Sidebar";
+import { Skeleton } from "@kenstack/components/Skeleton";
 import { AppSidebar } from "./app-sidebar";
 import AccountMenu from "@kenstack/components/AccountMenu";
 import NavLink from "./NavLink";

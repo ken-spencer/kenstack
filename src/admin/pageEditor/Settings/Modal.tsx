@@ -7,7 +7,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@kenstack/components/ui/dialog";
+} from "@kenstack/components/Dialog";
 import { useAdminUi } from "@kenstack/admin/components/PageControls/useAdminUi";
 
 import Form from "./Form";

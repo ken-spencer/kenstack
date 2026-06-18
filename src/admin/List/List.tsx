@@ -7,7 +7,7 @@ import { useAdminList } from "./context";
 
 import Progress from "@kenstack/components/Progress";
 import Alert from "@kenstack/components/Alert";
-import { Checkbox } from "@kenstack/components/ui/checkbox";
+import { Checkbox } from "@kenstack/forms/controls/Checkbox";
 import MetaDates from "@kenstack/admin/components/MetaDates";
 import VisibilityStatus from "./VisibilityStatus";
 import type { AdminClient, BaseListItem } from "@kenstack/admin/client";

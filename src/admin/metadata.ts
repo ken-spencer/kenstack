@@ -1,34 +1,9 @@
+import "server-only";
+
 import type { Metadata } from "next";
 
 import { selectMediaSubquery } from "@kenstack/db/tables/media";
-import {
-  dateTimeField,
-  imageField,
-  radioButtonField,
-  textField,
-} from "@kenstack/fields/client";
 import type { AdminSeoTable } from "./table";
-import { visibilityStatusOptions } from "./lib/visibilityStatus";
-
-export { visibilityOptions, visibilityValues } from "./lib/visibility";
-
-export const metaFieldOptions = {
-  visibility: radioButtonField({
-    default: "draft",
-    options: visibilityStatusOptions,
-  }),
-  publishedAt: dateTimeField({
-    filter: true,
-    sort: { defaultDirection: "desc" },
-  }),
-  ogImage: imageField(),
-  seoTitle: textField({
-    searchable: true,
-  }),
-  seoDescription: textField({
-    searchable: true,
-  }),
-} as const;
 
 export function metaSelect<TTable extends AdminSeoTable>(table: TTable) {
   return {

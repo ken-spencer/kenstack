@@ -61,10 +61,6 @@ const Textarea = ({
     el.style.height = `${el.scrollHeight}px`;
   };
 
-  // const onInput = () => {
-  //   resize();
-  // };
-
   useEffect(() => {
     const el = ref.current;
     if (el) {
@@ -87,13 +83,6 @@ const Textarea = ({
         "outline-gray-500/50 outline-dashed",
       )}
       placeholder={placeholder}
-      // onInput={onInput}
-      // ref={ref}
-      // name={name}
-      // value={value}
-      // onChange={(evt) => {
-      //   setValue(evt.target.value);
-      // }}
       {...field}
       onBlur={() => {
         field.onBlur();

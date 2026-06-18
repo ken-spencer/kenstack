@@ -16,7 +16,7 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
-} from "@kenstack/components/ui/dialog";
+} from "@kenstack/components/Dialog";
 
 export type AttachmentListItem = {
   alt?: SelectedMedia["alt"];
