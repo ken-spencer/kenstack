@@ -8,6 +8,8 @@ Evaluate all changes through that lens. Prefer clear, explicit code over unneces
 
 When reviewing, look for opportunities to reduce complexity, improve readability, and make the intent of the code obvious to the next developer.
 
+When delegating code review or cleanup work, instruct the agent to check for reinvented Kenstack primitives, especially popovers, dialogs, menus, tooltips, buttons, skeletons, list controls, form controls, query/error states, and loading states. If a shared primitive exists, the reviewer should recommend or apply the replacement.
+
 ## Type Shape
 
 - List every new or changed local `type` alias, interface, overload, generic, and cast in each touched TypeScript file. Keep each one only if it is exported, reused, materially simplifies a noisy function signature, documents a real domain contract, or protects a real generic/external boundary.

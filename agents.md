@@ -43,6 +43,7 @@ For bug fixes, proceed autonomously only when the cause is clear and the fix is 
 ## Situational instructions
 
 - For UI, styling, Tailwind, or shared component work, read `agents/ui.md` before coding.
+- When delegating implementation work, instruct the agent to search for existing Kenstack primitives and local usage patterns before building custom UI behavior. Prefer `@kenstack/components/*` and established module patterns over local popover, menu, dialog, tooltip, button, skeleton, list-control, form-control, query-state, or error-state behavior. The agent should explicitly report any custom UI behavior it adds and why no existing primitive fit.
 - For database, Drizzle, table schema, Zod, validation, or pipeline schema work, read `agents/data.md` before coding.
 - When a Kenstack API, export, helper, type, route, or behavior referenced by the site is missing, renamed, incompatible, or intentionally changed, read and update `agents/migrations.md` as applicable.
 
