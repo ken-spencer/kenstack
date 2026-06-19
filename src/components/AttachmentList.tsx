@@ -187,14 +187,14 @@ export default function AttachmentList({
             }
           }}
         >
-          <DialogContent className="max-w-5xl p-2">
+          <DialogContent className="w-fit max-w-[calc(100vw-0.5rem)] gap-0 p-1 sm:max-w-[calc(100vw-0.5rem)] [&_[data-slot=dialog-close]]:top-2 [&_[data-slot=dialog-close]]:right-2 [&_[data-slot=dialog-close]]:rounded-full [&_[data-slot=dialog-close]]:bg-white/85 [&_[data-slot=dialog-close]]:p-1.5 [&_[data-slot=dialog-close]]:shadow-sm [&_[data-slot=dialog-close]]:backdrop-blur">
             <DialogTitle className="sr-only">
               {previewMedia.filename || previewMedia.title || "Attachment"}
             </DialogTitle>
             <img
               alt={previewMedia.alt ?? ""}
-              className="max-h-[80vh] w-full rounded object-contain"
-              src={previewMedia.url ?? previewMedia.originalUrl ?? ""}
+              className="max-h-[calc(100dvh-0.5rem)] max-w-[calc(100vw-0.5rem)] rounded object-contain"
+              src={previewMedia.originalUrl ?? previewMedia.url ?? ""}
             />
           </DialogContent>
         </Dialog>
