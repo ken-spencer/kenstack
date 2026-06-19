@@ -275,6 +275,33 @@ function SheetContent({
     [],
   );
 
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      const dialog = dialogRef.current;
+      if (event.key !== "Escape" || event.defaultPrevented || !dialog?.open) {
+        return;
+      }
+
+      const cancelEvent = new Event("cancel", { cancelable: true });
+      dialog.dispatchEvent(cancelEvent);
+      event.preventDefault();
+
+      if (!cancelEvent.defaultPrevented) {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open, setOpen]);
+
   return (
     <dialog
       aria-describedby={ariaDescribedBy ?? descriptionId}

@@ -34,6 +34,7 @@ export default function SidebarContent({
       <div className="flex flex-grow flex-col gap-1 md:gap-2">
         <div className="grid min-h-10 grid-cols-[1fr_auto_1fr] items-center px-2 pt-1">
           <button
+            aria-label="Toggle Sidebar"
             className={isMobile ? "justify-self-start" : "hidden"}
             type="button"
             onClick={toggleSidebar}

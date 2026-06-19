@@ -25,6 +25,7 @@ export default function AccountMenu({
         <PopoverTrigger asChild>
           <button
             type="button"
+            aria-label="Open account menu"
             className="focus-visible:ring-sidebar-ring cursor-pointer rounded-full underline-offset-4 transition hover:underline focus-visible:ring-2 focus-visible:outline-none"
           >
             <Avatar initials={user.initials} url={user.avatar?.url} />
