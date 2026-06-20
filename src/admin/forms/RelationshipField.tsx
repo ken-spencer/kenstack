@@ -97,7 +97,6 @@ function RelationshipControl({
         value={null}
         filter={null}
         itemToStringLabel={(item) => item.label}
-        itemToStringValue={(item) => String(item.id)}
         isItemEqualToValue={(item, value) => item.id === value.id}
         onInputValueChange={(value) => {
           setKeywords(value);

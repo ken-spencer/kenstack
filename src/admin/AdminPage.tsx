@@ -38,12 +38,12 @@ export function createAdminPage() {
       const { name, id, isNew } = params;
       const moduleConfig = deps.modules[name];
 
-      if (!moduleConfig?.admin || !moduleConfig.client) {
+      if (!moduleConfig?.admin) {
         notFound();
       }
 
       const adminConfig = moduleConfig.admin;
-      const clientConfig = await moduleConfig.client();
+      const clients = moduleConfig.client ?? {};
 
       if (!("list" in adminConfig) && id !== undefined) {
         notFound();
@@ -65,7 +65,7 @@ export function createAdminPage() {
                 basePath={
                   adminConfig.preview ? moduleConfig.basePath : undefined
                 }
-                clientConfig={clientConfig}
+                clients={clients}
                 searchParams={searchIn}
                 userId={user.id}
               />
@@ -75,7 +75,7 @@ export function createAdminPage() {
                 isNew={"list" in adminConfig ? isNew : undefined}
                 name={name}
                 adminConfig={adminConfig}
-                clientConfig={clientConfig}
+                clients={clients}
                 userId={user.id}
               />
             )}

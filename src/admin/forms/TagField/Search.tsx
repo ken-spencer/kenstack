@@ -94,7 +94,6 @@ export default function TagSearcht({ field }: { field: AnyField }) {
       filter={null}
       autoHighlight
       itemToStringLabel={(tag) => tag.name}
-      itemToStringValue={(tag) => tag.slug}
       isItemEqualToValue={(item, currentValue) =>
         item.slug === currentValue.slug
       }
@@ -124,7 +123,7 @@ export default function TagSearcht({ field }: { field: AnyField }) {
           inputClassName="pl-10"
           placeholder="Enter tag"
           ref={inputRef}
-          showTrigger={false}
+          showChevron={false}
           autoComplete="off"
           onKeyDown={(event) => {
             if (event.key === "Enter" && !highlightedTag && keywords.length) {
@@ -138,7 +137,7 @@ export default function TagSearcht({ field }: { field: AnyField }) {
         />
       </div>
 
-      <ComboboxContent className="p-0" sideOffset={0}>
+      <ComboboxContent className="mt-0 p-0">
         {(() => {
           if (error) {
             return <Alert>{error.message}</Alert>;

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, use, useContext, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type {
   AdminFilterMeta,
@@ -19,18 +19,15 @@ import useQueryStore, {
   type SetQueryStore,
 } from "@kenstack/list/useQueryStore";
 
-import type {
-  AdminClient,
-  BaseListItem,
-  ClientConfig,
-} from "@kenstack/admin/client";
+import type { AdminClient, BaseListItem } from "@kenstack/admin/client";
+import type { AdminClientRegistry } from "@kenstack/admin/clientLoaders";
 import { getAdminListQueryKey } from "./queryKey";
 
 const AdminListContext = createContext<UseListProps | null>(null);
 
 type AdminListProps = {
   basePath?: string;
-  clientConfig: ClientConfig;
+  clients: AdminClientRegistry;
   userId: number;
   name: string;
   sort: AdminSortMeta[];
@@ -67,13 +64,20 @@ type UseListProps<
 
 export function AdminListProvider({
   basePath,
-  clientConfig,
+  clients,
   userId,
   name,
   sort,
   filter,
   children,
 }: AdminListProps) {
+  const loadClientConfig = clients[name];
+
+  if (!loadClientConfig) {
+    throw new Error(`Missing admin client config for "${name}".`);
+  }
+
+  const clientConfig = use(loadClientConfig());
   const client = clientConfig.admin;
   if (!client) {
     throw new Error("Admin client config is required for admin list routes.");

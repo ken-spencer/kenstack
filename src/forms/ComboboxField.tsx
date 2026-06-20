@@ -118,7 +118,6 @@ function ComboboxFieldControl({
       value={selected}
       autoHighlight
       itemToStringLabel={(option) => option.label}
-      itemToStringValue={(option) => option.label}
       isItemEqualToValue={(item, currentValue) =>
         item.value === currentValue.value
       }

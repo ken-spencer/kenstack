@@ -101,6 +101,7 @@ If a check fails because the check scope does not match the code's intended runt
 
 ## Files And Boundaries
 
+- Check Kenstack imports for site-specific paths or aliases. Code under `kenstack/` must not import host-site modules directly, including `@/`, root `src/`, relative paths into the host app, or site module paths. All host-site dependencies must flow through the explicit dependency boundary at `@app/deps` or `@app/deps/*`.
 - Keep top-level feature folders reserved for primary APIs and major entry points.
 - Put support code in existing secondary folders such as `lib`, `components`, `api`, or `fields`.
 - Do not put module infrastructure in `modules`; that folder is for actual modules and module-owned files.
@@ -113,6 +114,7 @@ If a check fails because the check scope does not match the code's intended runt
 ## Behavior
 
 - Preserve existing capabilities such as caching, validation, permissions, publishing rules, extension points, query behavior, and revalidation.
+- Check server code for accidental tests against client-only components, dynamic client loaders, or client registries. Server routes and loaders should not decide route existence, permissions, or data availability by checking whether client UI code exists; client components and registries do not reliably exist in the server boundary. For admin routes, validate route existence from server-owned module config such as `moduleConfig.admin`, and validate client config only inside the client components that consume it.
 - Keep cache tags near `"use cache"` and `cacheLife(...)` as high in the function as behavior allows.
 - For user-visible cached loaders whose result depends on `publishedAt`, `publishedAt <= now()`, or `Date.now()` for publishing visibility, use an hours-or-shorter cache lifetime. Do not use `cacheLife("days")` or `cacheLife("max")` unless the loader cannot hide future-published content or another mechanism guarantees timely invalidation.
 - When server loaders might be called from more than one component or query path during a single page render, wrap the shared DB/API work in `React.cache` so duplicate calls dedupe within the request. Prefer primitive cache keys or stable arguments so equivalent calls actually hit the same cache entry.

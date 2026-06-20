@@ -7,7 +7,7 @@ import canUpload from "@kenstack/lib/canUpload";
 import { notFound } from "next/navigation";
 
 import type { AnyAdminConfig } from "@kenstack/admin/module";
-import type { ClientConfig } from "@kenstack/admin/client";
+import type { AdminClientRegistry } from "@kenstack/admin/clientLoaders";
 import { loadAdminEdit } from "@kenstack/admin/queries/load";
 
 export default async function AdminEdit({
@@ -16,14 +16,14 @@ export default async function AdminEdit({
   isNew = false,
   userId,
   adminConfig,
-  clientConfig,
+  clients,
 }: {
   name: string;
   id?: number;
   isNew?: boolean;
   userId: number;
   adminConfig: AnyAdminConfig;
-  clientConfig: ClientConfig;
+  clients: AdminClientRegistry;
 }) {
   const { defaultValues, preview } = adminConfig;
   const item = await loadAdminEdit({
@@ -48,7 +48,7 @@ export default async function AdminEdit({
       defaultValues={defaultValues ?? {}}
       item={item}
       preview={preview}
-      clientConfig={clientConfig}
+      clients={clients}
     >
       <div className="flex flex-col gap-2">
         <Header />

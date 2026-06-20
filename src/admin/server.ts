@@ -8,14 +8,14 @@ export * from "./types/list";
 export * from "./module";
 
 import type { DefinedAdmin } from "./module";
-import type { AdminClientLoader } from "./clientLoaders";
+import type { AdminClientRegistry } from "./clientLoaders";
 
 export type { DefinedAdmin };
 
 type DefinedAdminMap<TModules extends readonly DefinedAdmin[string][]> =
   DefinedAdmin & {
     [TModule in TModules[number] as TModule["name"]]: TModule & {
-      client?: AdminClientLoader;
+      client: AdminClientRegistry;
     };
   };
 
@@ -23,7 +23,7 @@ export function defineAdmin<
   const TModules extends readonly DefinedAdmin[string][],
 >(
   modules: TModules,
-  clients: Record<string, AdminClientLoader> = {},
+  clients: AdminClientRegistry = {},
 ): DefinedAdminMap<TModules> {
   const moduleNames = new Set<string>();
 
@@ -40,7 +40,7 @@ export function defineAdmin<
       moduleConfig.name,
       {
         ...moduleConfig,
-        client: clients[moduleConfig.name],
+        client: clients,
       },
     ]),
   ) as DefinedAdminMap<TModules>;

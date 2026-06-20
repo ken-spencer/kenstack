@@ -2,14 +2,12 @@
 
 import { type ZodObject } from "zod";
 
-import React, { createContext, useContext, useMemo } from "react";
+import React, { createContext, use, useContext, useMemo } from "react";
 import { usePathname } from "next/navigation";
 
 import EditForm from "./Form";
-import type {
-  AdminClient,
-  ClientConfig,
-} from "@kenstack/admin/client";
+import type { AdminClient } from "@kenstack/admin/client";
+import type { AdminClientRegistry } from "@kenstack/admin/clientLoaders";
 import type { PreviewPath } from "@kenstack/admin/module";
 import type { AdminEditItem } from "@kenstack/admin/queries/load";
 
@@ -22,7 +20,7 @@ type AdminEditProps = {
   userId: number;
   canUpload: boolean;
   defaultValues: Record<string, unknown>;
-  clientConfig: ClientConfig;
+  clients: AdminClientRegistry;
   children: React.ReactNode;
   preview?: PreviewPath;
 };
@@ -54,10 +52,17 @@ export function AdminEditProvider({
   userId,
   canUpload,
   defaultValues,
-  clientConfig,
+  clients,
   preview,
   children,
 }: AdminEditProps) {
+  const loadClientConfig = clients[name];
+
+  if (!loadClientConfig) {
+    throw new Error(`Missing admin client config for "${name}".`);
+  }
+
+  const clientConfig = use(loadClientConfig());
   const client = clientConfig.admin;
   if (!client) {
     throw new Error("Admin client config is required for admin edit routes.");

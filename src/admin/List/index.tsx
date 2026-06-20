@@ -7,7 +7,7 @@ import List from "./List";
 
 import type { AnyAdminConfig } from "@kenstack/admin/module";
 import { getFilterMeta, getSortMeta } from "@kenstack/admin/types/list";
-import type { ClientConfig } from "@kenstack/admin/client";
+import type { AdminClientRegistry } from "@kenstack/admin/clientLoaders";
 import {
   parseListSearchParams,
   type ListSearchParams,
@@ -22,7 +22,7 @@ import {
 type AdminListProps = {
   adminConfig: AnyAdminConfig;
   basePath?: string;
-  clientConfig: ClientConfig;
+  clients: AdminClientRegistry;
   searchParams: ListSearchParams;
   userId: number;
   name: string;
@@ -31,7 +31,7 @@ type AdminListProps = {
 export default async function AdminListCont({
   adminConfig,
   basePath,
-  clientConfig,
+  clients,
   searchParams,
   userId,
   name,
@@ -65,7 +65,7 @@ export default async function AdminListCont({
       <AdminListProvider
         name={name}
         basePath={basePath}
-        clientConfig={clientConfig}
+        clients={clients}
         userId={userId}
         sort={sortMeta}
         filter={filterMeta}

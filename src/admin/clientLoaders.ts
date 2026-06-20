@@ -1,19 +1,26 @@
+"use client";
+
 import type { ClientConfig } from "./client";
 
 type ClientConfigModule = { client: ClientConfig } | { default: ClientConfig };
 
 export type AdminClientLoader = () => Promise<ClientConfig>;
+export type AdminClientRegistry = Record<string, AdminClientLoader>;
 
 export function defineAdminClients(
   loaders: Record<string, () => Promise<ClientConfigModule>>,
 ) {
-  const clients: Record<string, AdminClientLoader> = {};
+  const clients: AdminClientRegistry = {};
 
   for (const [name, load] of Object.entries(loaders)) {
-    clients[name] = async () => {
-      const mod = await load();
+    let clientConfig: Promise<ClientConfig> | undefined;
 
-      return "client" in mod ? mod.client : mod.default;
+    clients[name] = () => {
+      clientConfig ??= load().then((mod) =>
+        "client" in mod ? mod.client : mod.default,
+      );
+
+      return clientConfig;
     };
   }
 

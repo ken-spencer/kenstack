@@ -23,7 +23,7 @@ import {
   type ServerDefinedFields,
 } from "@kenstack/fields/server";
 import type { AdminKeyTable, AdminTable } from "@kenstack/admin/table";
-import type { AdminClientLoader } from "@kenstack/admin/clientLoaders";
+import type { AdminClientRegistry } from "@kenstack/admin/clientLoaders";
 import type { RevalidateTagRule } from "@kenstack/lib/revalidate";
 import { visibilityOptions } from "./lib/visibility";
 
@@ -101,7 +101,7 @@ export type DefinedAdmin = Record<
     icon?: ComponentType<SVGProps<SVGSVGElement>>;
     admin?: AnyAdminConfig;
     settings?: ResolvedModuleSettings;
-    client?: AdminClientLoader;
+    client?: AdminClientRegistry;
   }
 >;
 

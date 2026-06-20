@@ -1,5 +1,5 @@
 import AuthGuard from "@kenstack/auth/components/AuthGuard";
-import type { ClientConfig } from "@kenstack/admin/client";
+import type { AdminClientRegistry } from "@kenstack/admin/clientLoaders";
 import type { DefinedAdmin } from "@kenstack/admin/module";
 
 import ModuleSettingsControlClient from "./ControlClient";
@@ -19,26 +19,24 @@ export default async function ModuleSettingsControl(
     return props.children;
   }
 
-  const client = await props.module.client();
-
   return (
     <AuthGuard access="admin" fallback={props.children}>
-      <ModuleSettingsControlContent {...props} client={client} />
+      <ModuleSettingsControlContent {...props} clients={props.module.client} />
     </AuthGuard>
   );
 }
 
 function ModuleSettingsControlContent({
   children,
-  client,
+  clients,
   description,
   label,
   module,
   title,
-}: ModuleSettingsControlProps & { client: ClientConfig }) {
+}: ModuleSettingsControlProps & { clients: AdminClientRegistry }) {
   return (
     <ModuleSettingsControlClient
-      client={client}
+      clients={clients}
       description={description}
       label={label ?? `Edit ${title} settings`}
       name={module.name}
