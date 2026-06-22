@@ -24,10 +24,10 @@ const onlyBelowClassNames = {
 } satisfies Record<TooltipBreakpoint, string>;
 
 const sideClassNames = {
-  top: "bottom-full left-1/2 mb-1 -translate-x-1/2 translate-y-1 group-hover/tooltip:translate-y-0 group-focus-within/tooltip:translate-y-0",
+  top: "bottom-full left-1/2 mb-1 -translate-x-1/2 translate-y-1 group-hover/tooltip:translate-y-0",
   right:
-    "top-1/2 left-full ml-1 -translate-y-1/2 -translate-x-1 group-hover/tooltip:translate-x-0 group-focus-within/tooltip:translate-x-0",
-  left: "top-1/2 right-full mr-1 -translate-y-1/2 translate-x-1 group-hover/tooltip:translate-x-0 group-focus-within/tooltip:translate-x-0",
+    "top-1/2 left-full ml-1 -translate-y-1/2 -translate-x-1 group-hover/tooltip:translate-x-0",
+  left: "top-1/2 right-full mr-1 -translate-y-1/2 translate-x-1 group-hover/tooltip:translate-x-0",
 } satisfies Record<TooltipSide, string>;
 
 const stemClassNames = {
@@ -54,7 +54,7 @@ export default function Tooltip({
       {children}
       <span
         className={twMerge(
-          "pointer-events-none absolute z-50 w-max max-w-xs scale-0 rounded-md bg-foreground px-3 py-1.5 text-xs text-background opacity-0 shadow-sm transition-[opacity,transform] duration-100 ease-out group-hover/tooltip:scale-100 group-hover/tooltip:opacity-100 group-focus-within/tooltip:scale-100 group-focus-within/tooltip:opacity-100",
+          "pointer-events-none absolute z-50 w-max max-w-xs scale-95 rounded-md bg-foreground px-3 py-1.5 text-xs text-background opacity-0 shadow-sm transition-[opacity,transform] delay-0 duration-150 ease-out group-hover/tooltip:scale-100 group-hover/tooltip:opacity-100 group-hover/tooltip:delay-500",
           sideClassNames[side],
           stemClassNames[side],
           onlyBelow ? onlyBelowClassNames[onlyBelow] : undefined,
