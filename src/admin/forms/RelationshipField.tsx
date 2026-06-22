@@ -6,9 +6,9 @@ import { X } from "lucide-react";
 
 import { useAdminEdit } from "@kenstack/admin/Edit/context";
 import Alert from "@kenstack/components/Alert";
-import Progress from "@kenstack/components/Progress";
 import { Badge } from "@kenstack/components/Badge";
 import { Button } from "@kenstack/components/Button";
+import { Skeleton } from "@kenstack/components/Skeleton";
 import {
   Combobox,
   ComboboxContent,
@@ -122,8 +122,9 @@ function RelationshipControl({
           ) : data?.status === "error" ? (
             <Alert>{data.message}</Alert>
           ) : isPending ? (
-            <div className="py-6">
-              <Progress className="size-8" />
+            <div className="space-y-2 p-2">
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-5/6" />
             </div>
           ) : (
             <>

@@ -18,7 +18,7 @@ export default function FormNavButton({
   href: string;
 }) {
   const {
-    formState: { isDirty },
+    formState: { isDirty, isReady },
   } = useFormContext();
   const { mutation, uploadingFields } = useForm();
 
@@ -43,8 +43,13 @@ export default function FormNavButton({
   }
 
   return (
-    <Button variant="ghost" {...props} asChild={!disabled} disabled={disabled}>
-      {disabled ? children : <Link href={href}>{children}</Link>}
+    <Button
+      variant="ghost"
+      {...props}
+      asChild={isReady && !disabled}
+      disabled={disabled || !isReady}
+    >
+      {disabled || !isReady ? children : <Link href={href}>{children}</Link>}
     </Button>
   );
 }

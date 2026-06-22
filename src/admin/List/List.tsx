@@ -5,8 +5,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { useAdminList } from "./context";
 
-import Progress from "@kenstack/components/Progress";
 import Alert from "@kenstack/components/Alert";
+import { Skeleton } from "@kenstack/components/Skeleton";
 import { Checkbox } from "@kenstack/forms/controls/Checkbox";
 import MetaDates from "@kenstack/admin/components/MetaDates";
 import VisibilityStatus from "./VisibilityStatus";
@@ -41,7 +41,7 @@ function AdminList() {
   }
 
   if (isPending) {
-    return <Progress className="my-16" />;
+    return <AdminListRowsSkeleton />;
   }
 
   if ("error" === data.status) {
@@ -107,6 +107,26 @@ function AdminList() {
           </Fragment>
         );
       })}
+    </div>
+  );
+}
+
+function AdminListRowsSkeleton() {
+  return (
+    <div className="divide-y">
+      {Array.from({ length: 5 }, (_, index) => (
+        <div
+          key={index}
+          className="grid grid-cols-[auto_1fr_auto] items-center gap-3 py-3"
+        >
+          <Skeleton className="size-4" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="h-3 w-1/3" />
+          </div>
+          <Skeleton className="hidden h-5 w-20 sm:block" />
+        </div>
+      ))}
     </div>
   );
 }

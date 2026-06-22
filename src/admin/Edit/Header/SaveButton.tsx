@@ -7,14 +7,14 @@ import { useFormContext } from "react-hook-form";
 
 export default function SaveButton() {
   const {
-    formState: { isDirty },
+    formState: { isDirty, isReady },
   } = useFormContext();
   const { mutation, uploadingFields } = useForm();
   const hasUploads = uploadingFields.size > 0;
 
   return (
     <Button
-      disabled={!isDirty || mutation.isPending || hasUploads}
+      disabled={!isReady || !isDirty || mutation.isPending || hasUploads}
       isPending={mutation.isPending && mutation.variables.submitter === "save"}
       name="action"
       size="icon"

@@ -6,7 +6,7 @@ import { History } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 
 import Alert from "@kenstack/components/Alert";
-import Progress from "@kenstack/components/Progress";
+import { Skeleton } from "@kenstack/components/Skeleton";
 import Tooltip from "@kenstack/components/Tooltip";
 import { Button } from "@kenstack/components/Button";
 import {
@@ -134,7 +134,11 @@ export default function RevisionHistoryButton() {
         {revisionsQuery.error ? (
           <Alert className="m-2">{revisionsQuery.error.message}</Alert>
         ) : revisionsQuery.isPending ? (
-          <Progress className="my-8 size-8" />
+          <div className="space-y-2 p-2">
+            <RevisionSkeleton />
+            <RevisionSkeleton />
+            <RevisionSkeleton />
+          </div>
         ) : revisionsQuery.data?.status === "error" ? (
           <Alert className="m-2" {...revisionsQuery.data} />
         ) : !revisionsQuery.data?.revisions.length ? (
@@ -185,5 +189,15 @@ export default function RevisionHistoryButton() {
         )}
       </PopoverContent>
     </Popover>
+  );
+}
+
+function RevisionSkeleton() {
+  return (
+    <div className="flex items-center gap-3 px-2 py-2">
+      <Skeleton className="size-2 rounded-full" />
+      <Skeleton className="h-4 flex-1" />
+      <Skeleton className="h-3 w-16" />
+    </div>
   );
 }

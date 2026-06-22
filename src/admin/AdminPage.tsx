@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import * as z from "zod";
 
-import Progress from "@kenstack/components/Progress";
+import { Skeleton } from "@kenstack/components/Skeleton";
 import AdminList from "@kenstack/admin/List";
 import Edit from "@kenstack/admin/Edit";
 import { deps } from "@app/deps";
@@ -12,7 +12,7 @@ export function createAdminPage() {
   return pageRoute(
     {
       access: "admin",
-      fallback: <Progress className="my-16" />,
+      fallback: <AdminPageSkeleton />,
       params: z
         .object({
           admin: z.tuple([
@@ -57,7 +57,7 @@ export function createAdminPage() {
             {Icon && <Icon className="size-4 text-gray-800" />}
             <span className="font-bold">{moduleConfig.title}</span>
           </div>
-          <Suspense fallback={<Progress className="my-16" />}>
+          <Suspense fallback={<AdminPageSkeleton />}>
             {"list" in adminConfig && !isNew && id === undefined ? (
               <AdminList
                 name={name}
@@ -83,5 +83,44 @@ export function createAdminPage() {
         </div>
       );
     },
+  );
+}
+
+function AdminPageSkeleton() {
+  return (
+    <div className="space-y-3 py-2">
+      <div className="flex items-center gap-2 border-b pb-2">
+        <Skeleton className="size-9" />
+        <div className="ml-auto flex gap-2">
+          <Skeleton className="size-9" />
+          <Skeleton className="size-9" />
+          <Skeleton className="size-9" />
+          <Skeleton className="size-9" />
+        </div>
+      </div>
+      <div className="divide-y border-y">
+        {Array.from({ length: 5 }, (_, index) => (
+          <div
+            key={index}
+            className="grid grid-cols-[auto_1fr_auto] items-center gap-3 py-3"
+          >
+            <Skeleton className="size-4" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-2/3" />
+              <Skeleton className="h-3 w-1/3" />
+            </div>
+            <Skeleton className="hidden h-5 w-20 sm:block" />
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-4 w-24" />
+        <div className="flex gap-2">
+          <Skeleton className="size-7" />
+          <Skeleton className="size-7" />
+          <Skeleton className="size-7" />
+        </div>
+      </div>
+    </div>
   );
 }

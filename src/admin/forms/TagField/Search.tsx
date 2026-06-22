@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 
 import { Tag as TagIcon } from "lucide-react";
-import Progress from "@kenstack/components/Progress";
+import { Skeleton } from "@kenstack/components/Skeleton";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import Alert from "@kenstack/components/Alert";
 import fetcher, { type FetchResult } from "@kenstack/api/fetcher";
@@ -27,8 +27,9 @@ export default function TagSearcht({ field }: { field: AnyField }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [keywords, debouncedValue, setKeywords] = useDebounce();
   const [focusing, setFocusing] = useState(false);
-  const [highlightedTag, setHighlightedTag] =
-    useState<TagSearchOption | null>(null);
+  const [highlightedTag, setHighlightedTag] = useState<TagSearchOption | null>(
+    null,
+  );
   const { apiPath, name: adminName } = useAdminEdit();
 
   const { data, error, isPending } = useQuery<
@@ -145,8 +146,10 @@ export default function TagSearcht({ field }: { field: AnyField }) {
 
           if (!focusing || isPending || !data) {
             return (
-              <div className="py-12">
-                <Progress className="size-12" />
+              <div className="space-y-2 p-2">
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-5/6" />
+                <Skeleton className="h-8 w-2/3" />
               </div>
             );
           }

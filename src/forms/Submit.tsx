@@ -11,7 +11,7 @@ export default function SubmitButton({
   disabledUntilDirty?: boolean;
 }) {
   const {
-    formState: { isDirty, isSubmitting },
+    formState: { isDirty, isReady, isSubmitting },
   } = useFormContext();
   const { mutation, uploadingFields } = useForm();
   const isPending = isSubmitting || mutation.isPending;
@@ -22,7 +22,7 @@ export default function SubmitButton({
       disabled={
         disabled ||
         isPending ||
-        (disabledUntilDirty && !isDirty) ||
+        (disabledUntilDirty && (!isReady || !isDirty)) ||
         uploadingFields.size > 0
       }
       isPending={isPending}
