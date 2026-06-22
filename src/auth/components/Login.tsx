@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import Link from "next/link";
@@ -8,15 +8,12 @@ import Link from "next/link";
 import Form from "@kenstack/forms/Form";
 import loginSchema from "@kenstack/auth/schemas/login";
 import { getSafeReturnToPath } from "@kenstack/auth/returnTo";
-import { deleteCookie, getCookie } from "@kenstack/lib/cookies";
 import Notice from "@kenstack/forms/Notice";
 import Alert from "@kenstack/components/Alert";
 import InputField from "@kenstack/forms/InputField";
 import PasswordField from "@kenstack/forms/PasswordField";
-import RegisterField from "@kenstack/forms/RegisterField";
 
 import Submit from "@kenstack/forms/Submit";
-import Suspense from "@kenstack/components/Suspense";
 
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 import RecaptchaTerms from "@kenstack/components/RecaptchaTerms";
@@ -24,57 +21,30 @@ import RecaptchaTerms from "@kenstack/components/RecaptchaTerms";
 const loginDefaultValues = {
   email: "",
   password: "",
-  returnTo: "",
 };
 
-export default function LoginFormCont() {
-  return (
-    <Suspense>
-      <LoginForm />
-    </Suspense>
-  );
-}
-
 export function LoginForm() {
-  const searchParams = useSearchParams();
   const router = useRouter();
   const { executeRecaptcha } = useGoogleReCaptcha();
-  const returnTo = getSafeReturnToPath(searchParams.get("returnTo")) ?? "";
-
-  const [message, setMessage] = useState(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    let m;
-    if ((m = searchParams.get("loginMessage"))) {
-      const params = new URLSearchParams(window.location.search);
-      params.delete("loginMessage");
-      window.history.replaceState(
-        null,
-        "",
-        window.location.pathname + (params.size ? `?${params}` : ""),
-      );
-    } else if ((m = getCookie("loginMessage"))) {
-      deleteCookie("loginMessage", "/login");
-    }
-    return m;
-  });
+  const [isMessageCleared, setIsMessageCleared] = useState(false);
 
   return (
     <Form
       className="space-y-4"
       apiPath="/api/auth"
       schema={loginSchema}
-      defaultValues={{ ...loginDefaultValues, returnTo }}
-      key={returnTo}
+      defaultValues={loginDefaultValues}
       onSubmit={async ({ data, mutation, form }) => {
-        setMessage("");
+        setIsMessageCleared(true);
         const recaptchaToken = executeRecaptcha
           ? await executeRecaptcha("login")
           : null;
+        const returnTo =
+          getSafeReturnToPath(
+            new URLSearchParams(window.location.search).get("returnTo"),
+          ) ?? "";
         return mutation
-          .mutateAsync({ ...data, recaptchaToken, action: "login" })
+          .mutateAsync({ ...data, returnTo, recaptchaToken, action: "login" })
           .then((res) => {
             if (res.status === "success") {
               form.reset();
@@ -86,9 +56,10 @@ export function LoginForm() {
           });
       }}
     >
-      {message && <Alert>{message}</Alert>}
+      <Suspense fallback={null}>
+        <LoginMessage isCleared={isMessageCleared} />
+      </Suspense>
       <Notice />
-      <RegisterField name="returnTo" />
       <InputField name="email" label="Email" type="email" autoFocus />
       <PasswordField name="password" label="Password" />
 
@@ -101,3 +72,31 @@ export function LoginForm() {
     </Form>
   );
 }
+
+function LoginMessage({ isCleared }: { isCleared: boolean }) {
+  const searchParams = useSearchParams();
+  const loginMessage = searchParams.get("loginMessage") ?? "";
+  const [message] = useState(loginMessage);
+
+  useEffect(() => {
+    if (!loginMessage) {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    params.delete("loginMessage");
+    window.history.replaceState(
+      null,
+      "",
+      window.location.pathname + (params.size ? `?${params}` : ""),
+    );
+  }, [loginMessage]);
+
+  if (isCleared || !message) {
+    return null;
+  }
+
+  return <Alert>{message}</Alert>;
+}
+
+export default LoginForm;

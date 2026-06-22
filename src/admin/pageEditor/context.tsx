@@ -64,10 +64,6 @@ export function PageEditorProvider({
 
   useEffect(() => {
     store.getState().init({ scope, slug, tenant, content });
-
-    return () => {
-      store.getState().reset(scope);
-    };
   }, [store, scope, slug, tenant, content]);
 
   return (
