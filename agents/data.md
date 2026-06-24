@@ -8,6 +8,7 @@ Read this before database, Drizzle, table schema, Zod, validation, or pipeline s
 - Do not edit generated migrations casually.
 - Do not change schema names or column names without checking existing migrations.
 - Prefer explicit nullability and defaults.
+- Avoid Drizzle `.select()` with no field projection unless the code truly consumes the full row as the domain object. Prefer `.select({ ... })` with the exact columns or expressions the caller reads, so query cost and TypeScript inference stay obvious. If a full-row select is necessary for an extension point such as field lifecycle hooks or revalidation callbacks, add a short nearby comment naming that boundary.
 
 ## Validation
 

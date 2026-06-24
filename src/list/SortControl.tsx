@@ -10,11 +10,9 @@ import {
   PopoverTrigger,
 } from "@kenstack/components/Popover";
 import Tooltip from "@kenstack/components/Tooltip";
-import type { AdminSortMeta } from "@kenstack/admin/types/list";
+import type { AdminSortMeta, SortDirection } from "@kenstack/admin/types/list";
 import type { ListQueryStoreState } from "@kenstack/list/querySchema";
 import type { SetQueryStore } from "@kenstack/list/useQueryStore";
-
-type Direction = "asc" | "desc";
 
 export default function SortControl({
   filters,
@@ -33,8 +31,9 @@ export default function SortControl({
 }) {
   const [open, setOpen] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const sortOptions =
-    sort.filter((option) => filters.trash || option.name !== "deletedAt") ?? [];
+  const sortOptions = sort.filter(
+    (option) => filters.trash || option.name !== "deletedAt",
+  );
   const currentSort =
     sortOptions.find((option) => option.name === filters.sort) ??
     sortOptions[0];
@@ -80,10 +79,12 @@ export default function SortControl({
         <span className={showLabel ? "inline" : "hidden sm:inline"}>
           {label ?? currentSort.label}
         </span>
-        <DirectionIcon
-          direction={direction}
-          className={showLabel ? "block size-4" : "hidden sm:block"}
-        />
+        {currentSort.direction ? (
+          <DirectionIcon
+            direction={direction}
+            className={showLabel ? "block size-4" : "hidden sm:block"}
+          />
+        ) : null}
       </Button>
     </PopoverTrigger>
   );
@@ -117,9 +118,11 @@ export default function SortControl({
                     (prev) => ({
                       ...prev,
                       sort: option.name,
-                      direction: isSelected
-                        ? flipDirection(prev.direction)
-                        : option.defaultDirection,
+                      direction: option.direction === false
+                        ? option.defaultDirection
+                        : isSelected
+                          ? flipDirection(prev.direction)
+                          : option.defaultDirection,
                     }),
                     false,
                   );
@@ -130,7 +133,9 @@ export default function SortControl({
                   {isSelected ? <Check className="size-4" /> : null}
                 </span>
                 <span className="grow">{option.label}</span>
-                <DirectionIcon direction={optionDirection} />
+                {option.direction ? (
+                  <DirectionIcon direction={optionDirection} />
+                ) : null}
               </button>
             );
           })}
@@ -144,7 +149,7 @@ function DirectionIcon({
   direction,
   className,
 }: {
-  direction: Direction;
+  direction: SortDirection;
   className?: string;
 }) {
   return direction === "asc" ? (
@@ -154,6 +159,6 @@ function DirectionIcon({
   );
 }
 
-function flipDirection(direction: Direction) {
+function flipDirection(direction: SortDirection) {
   return direction === "asc" ? "desc" : "asc";
 }

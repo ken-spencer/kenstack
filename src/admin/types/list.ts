@@ -36,6 +36,7 @@ export type AdminSort = Record<
     label: string;
     fields: readonly ResolvedAdminSortField[];
     defaultDirection: SortDirection;
+    direction: boolean;
   }
 >;
 
@@ -43,6 +44,12 @@ export type AdminSortMeta = {
   name: string;
   label: string;
   defaultDirection: SortDirection;
+  direction: boolean;
+};
+
+export type AdminListReorderOptions = {
+  field: AdminFieldReference;
+  label?: string;
 };
 
 export type AdminFilterKind =
@@ -120,6 +127,7 @@ export function getSortMeta(sort: AdminSort): AdminSortMeta[] {
     name,
     label: option.label,
     defaultDirection: option.defaultDirection,
+    direction: option.direction,
   }));
 }
 

@@ -23,7 +23,8 @@ import type { AdminClient, BaseListItem } from "@kenstack/admin/client";
 import type { AdminClientRegistry } from "@kenstack/admin/clientLoaders";
 import { getAdminListQueryKey } from "./queryKey";
 
-const AdminListContext = createContext<UseListProps | null>(null);
+const AdminListContext =
+  createContext<UseListProps<Record<string, unknown>> | null>(null);
 
 type AdminListProps = {
   basePath?: string;
@@ -58,6 +59,8 @@ type UseListProps<
   setFilters: SetQueryStore<ListQueryStoreState>;
   userId: number;
   page: number;
+  isReorderSort: boolean;
+  canReorder: boolean;
   query: UseQueryResult<AdminListQueryData<TDoc>, Error>;
   limit: number;
 };
@@ -86,7 +89,7 @@ export function AdminListProvider({
   const [selected, setSelected] = useState<number[]>([]);
   const defaultFilterState = createDefaultListQueryState(sort);
   const [filters, debouncedFilters, setFilters] =
-    useQueryStore<ListQueryStoreState>(defaultFilterState, {
+    useQueryStore(defaultFilterState, {
       schema: createListSearchSchema({
         filters: filter,
         sort,
@@ -100,7 +103,14 @@ export function AdminListProvider({
     });
 
   const searchParams = useSearchParams();
-  const page = parseListPage(searchParams.get("page"));
+  const isReorderSort =
+    sort.find((option) => option.name === filters.sort)?.direction === false;
+  const page = isReorderSort ? 1 : parseListPage(searchParams.get("page"));
+  const canReorder =
+    isReorderSort &&
+    !filters.keywords &&
+    !filters.trash &&
+    Object.keys(filters.filters).length === 0;
 
   const apiPath = "/api/admin/";
 
@@ -139,6 +149,8 @@ export function AdminListProvider({
     setFilters,
     userId,
     page,
+    isReorderSort,
+    canReorder,
     query,
     limit: 25,
   };
@@ -154,5 +166,5 @@ export function useAdminList() {
   if (context === null) {
     throw new Error("useAdminList must be used within an AdminListProvider");
   }
-  return context as UseListProps;
+  return context;
 }

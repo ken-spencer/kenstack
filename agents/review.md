@@ -16,7 +16,7 @@ When delegating code review or cleanup work, instruct the agent to check for rei
 - Inline one-use private shapes instead of creating names such as `SavedRow`, `Result`, `Error`, `Options`, `Query`, or `Callback` when the name only repeats the surrounding function or file context.
 - Do not leave a top-of-file type block just because a file has several typed values. Prefer inference and inline function-boundary object types unless a named type earns its place.
 - Remove casts that can be replaced cleanly with inference, a type guard, Zod parsing, or `satisfies`.
-- Keep necessary casts narrow and at real generic, Drizzle, React polymorphic, or untyped external boundaries.
+- Keep necessary casts narrow and only at real generic, Drizzle, React polymorphic, or untyped external boundaries after simpler inference-friendly shapes have failed. For Drizzle queries, prefer explicit selected fields, narrower config/table inputs, `satisfies`, type guards, or schema parsing before casting. Do not cast broad query results when selecting the consumed columns would infer the type.
 - Prefer inferred return types when the implementation already expresses the type clearly.
 - Prefer `satisfies` for validating returned object shapes without forcing a function return annotation.
 - Check `Resolved*`, `Defined*`, and similarly named output types that mirror a builder or resolver. Prefer deriving broad consumer types from `ReturnType<typeof builder>` or letting the call site infer the specific shape; keep a named resolved type only when it is reused independently or documents a real public contract that cannot be inferred cleanly.
@@ -94,6 +94,8 @@ If a check fails because the check scope does not match the code's intended runt
 ## Field And Form Behavior
 
 - Keep field definitions, field helpers, field handlers, field lifecycle code, and field-based record helpers in `src/fields` when they are reusable outside admin.
+- Before adding custom form behavior, check whether Kenstack already owns it through field component props, field schemas, React Hook Form blur/submit validation, or field lifecycle behavior such as server fields, select/load/save transforms. Do not add input-level guards, mirrored local state, custom `onChange` filtering, duplicate validation, or convenience formatting unless the existing Kenstack field lifecycle cannot express the behavior. Prefer schema-owned validation and field lifecycle transforms over bespoke component behavior.
+- Validation messages should be short sentence-case fragments without trailing periods, such as `Enter a valid date like June 25, 2026`, not full punctuated sentences.
 - Do not hand-plumb save, load, delete, display, list, filter, or sort behavior in actions when the field lifecycle should own it.
 - Ensure client field definitions stay client-safe; server-only handlers and transforms should be applied through server field helpers.
 - For forms, rely on schema/default/mutation inference instead of repeating generic arguments at usage sites. In particular, review `useForm<...>()`, `useFormContext<...>()`, and similar context-hook calls by first trying the unparameterized call.
@@ -129,6 +131,7 @@ If a check fails because the check scope does not match the code's intended runt
 - Keep URL/search-param parsing at the loader or action boundary. Server components should pass raw `searchParams` to the query loader instead of rebuilding list/query objects at the render call site.
 - Check hand-written validators and `value is ...` guards against existing Zod schemas. Prefer the canonical schema for submitted data unless the guard is only a lightweight UI/rendering branch.
 - Check field lifecycle behavior for duplicate schema parsing. If the action pipeline already parsed the payload, do not parse again inside the handler; use the parsed value shape at the lifecycle boundary.
+- Review every Drizzle `.select()` with no projection. If the caller only reads a few fields, require an explicit projection instead. Treat select-star plus a result cast as a cleanup finding unless full-row behavior is required and documented.
 - Check for placeholders, dummy values, temporary review states, test-only copy, fake data, and scaffold comments. Remove them before finalizing unless the user explicitly asked to keep them.
 
 ## Final Checks

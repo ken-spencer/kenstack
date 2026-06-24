@@ -172,7 +172,6 @@ function FormProvider<
   const [uploadingFields, setUploadingFields] = useState<Set<string>>(
     () => new Set(),
   );
-  const initialDefaultValuesRef = useRef(defaultValues);
   const lastFieldRef = useRef(null);
 
   const startUploading = useCallback((fieldName: string) => {
@@ -203,7 +202,7 @@ function FormProvider<
   useEffect(
     () => () => {
       // Fixes a problem in Next where form state can persist navigation.
-      reset(initialDefaultValuesRef.current);
+      reset();
       setStatusMessage(null);
       setUploadingFields(new Set());
       lastFieldRef.current = null;

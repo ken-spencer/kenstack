@@ -1,4 +1,5 @@
-import Suspense from "@kenstack/components/Suspense";
+import { Suspense } from "react";
+
 import { PageEditorProvider } from "./context";
 import {
   loadContent,
@@ -16,12 +17,13 @@ type Props = {
   tenant?: string;
   defaultValues: DefaultValues;
   children: React.ReactNode;
+  fallback?: React.ReactNode;
 };
 export { default as PageEditorSettings } from "./Settings";
 
 export const PageEditor = (props: Props) => {
   return (
-    <Suspense>
+    <Suspense fallback={props.fallback}>
       <PageEditorAsync {...props} />
     </Suspense>
   );

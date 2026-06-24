@@ -96,9 +96,8 @@ export async function queryAdminList(
   adminConfig: AdminListConfig,
   data: AdminListQuery,
 ) {
-  const { page } = data;
-  const limit = adminConfig.list.limit || 25;
-  const offset = (page - 1) * limit;
+  const isReorderSort = adminConfig.list.sort[data.sort]?.direction === false;
+  const limit = adminConfig.list.limit ?? 25;
 
   const { db } = deps;
   const { table, fields } = adminConfig;
@@ -120,28 +119,27 @@ export async function queryAdminList(
       data,
     ),
   );
+  const query = db
+    .select({
+      id: table.id,
+      createdAt: table.createdAt,
+      updatedAt: table.updatedAt,
+      ...listSelect,
+      ...(adminConfig.list.select ?? {}),
+    })
+    .from(table)
+    .where(whereClause)
+    .orderBy(
+      ...resolveListOrderBy(
+        {
+          sort: adminConfig.list.sort,
+          table,
+        },
+        data,
+      ),
+  );
   const [rows, [{ count }]] = await Promise.all([
-    db
-      .select({
-        id: table.id,
-        createdAt: table.createdAt,
-        updatedAt: table.updatedAt,
-        ...listSelect,
-        ...(adminConfig.list.select ?? {}),
-      })
-      .from(table)
-      .where(whereClause)
-      .orderBy(
-        ...resolveListOrderBy(
-          {
-            sort: adminConfig.list.sort,
-            table,
-          },
-          data,
-        ),
-      )
-      .limit(limit)
-      .offset(offset),
+    isReorderSort ? query : query.limit(limit).offset((data.page - 1) * limit),
     db
       .select({ count: sql`count(*)`.mapWith(Number) })
       .from(table)

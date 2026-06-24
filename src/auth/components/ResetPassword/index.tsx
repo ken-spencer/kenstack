@@ -1,4 +1,6 @@
-import Suspense from "@kenstack/components/Suspense";
+import { Suspense } from "react";
+
+import Progress from "@kenstack/components/Progress";
 import Loader from "./Loader";
 
 export default async function ResetPasswordFormCont({
@@ -7,7 +9,7 @@ export default async function ResetPasswordFormCont({
   token?: string;
 }) {
   return (
-    <Suspense>
+    <Suspense fallback={<Progress />}>
       <Loader token={token} />
     </Suspense>
   );

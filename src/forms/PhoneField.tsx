@@ -1,10 +1,11 @@
 "use client";
 
 import InputField from "@kenstack/forms/InputField";
-import type { FieldProps } from "@kenstack/forms/Field";
 
-type PhoneFieldProps = FieldProps &
-  Omit<React.ComponentProps<"input">, "name" | "type" | "onBlur" | "onChange">;
+type PhoneFieldProps = Omit<
+  React.ComponentProps<typeof InputField>,
+  "onBlur" | "onChange" | "type"
+>;
 
 function formatPhoneNumber(value: string) {
   const trimmed = value.trim();

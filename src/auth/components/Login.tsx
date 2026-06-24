@@ -30,7 +30,7 @@ export function LoginForm() {
 
   return (
     <Form
-      className="space-y-4"
+      className="w-full space-y-4"
       apiPath="/api/auth"
       schema={loginSchema}
       defaultValues={loginDefaultValues}

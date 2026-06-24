@@ -26,6 +26,7 @@ export default function AdminEditForm({
 
   return (
     <Form
+      key={`${name}:${single ? "single" : isNew ? "new" : id}`}
       schema={schema}
       defaultValues={defaultValues}
       apiPath={apiPath}
@@ -61,7 +62,7 @@ export default function AdminEditForm({
             pathname + (searchParams.size ? "?" + searchParams : "");
 
           if (variables.submitter === currentPath) {
-            form.reset(defaultValues);
+            form.reset(data.values ?? defaultValues);
           } else {
             router.push(variables.submitter);
           }

@@ -22,8 +22,6 @@ type InputProps = FieldProps &
     inputClass?: string;
   };
 
-const datePattern = /^\d{4}-\d{2}-\d{2}$/;
-
 function padDatePart(value: number) {
   return String(value).padStart(2, "0");
 }
@@ -41,6 +39,13 @@ function toDateObject(value: string) {
   return new Date(year, month - 1, day);
 }
 
+function isDateValue(value: string) {
+  return (
+    /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+    toDateValue(toDateObject(value)) === value
+  );
+}
+
 function parseDateValue(value: string | Date) {
   if (value instanceof Date) {
     return toDateValue(value);
@@ -51,7 +56,7 @@ function parseDateValue(value: string | Date) {
     return "";
   }
 
-  if (datePattern.test(trimmed)) {
+  if (isDateValue(trimmed)) {
     return trimmed;
   }
 
@@ -84,7 +89,19 @@ function normalizeFormValue(value: unknown) {
     return "";
   }
 
-  return datePattern.test(value) ? value : value.slice(0, 10);
+  return isDateValue(value) ? value : "";
+}
+
+function formatFormValue(value: unknown) {
+  if (value instanceof Date) {
+    return formatDate(toDateValue(value));
+  }
+
+  if (typeof value !== "string" || !value) {
+    return "";
+  }
+
+  return isDateValue(value) ? formatDate(value) : value;
 }
 
 export default function DateField({
@@ -99,14 +116,12 @@ export default function DateField({
 }: InputProps) {
   const { watch, getValues } = useFormContext();
   const [prevFormValue, setPrevFormValue] = useState(getValues(name));
-  const [value, setValue] = useState(() =>
-    formatDate(normalizeFormValue(getValues(name))),
-  );
+  const [value, setValue] = useState(() => formatFormValue(getValues(name)));
 
   const formValue = watch(name);
   if (formValue !== prevFormValue) {
     setPrevFormValue(formValue);
-    setValue(formatDate(normalizeFormValue(formValue)));
+    setValue(formatFormValue(formValue));
   }
 
   return (
@@ -119,9 +134,13 @@ export default function DateField({
       render={({ field }) => {
         const handleDate = (newDate: string | Date) => {
           const result = newDate ? parseDateValue(newDate) : "";
-          field.onChange(result);
+          const nextValue =
+            result ||
+            (typeof newDate === "string" && newDate.trim() ? newDate : "");
+
+          field.onChange(nextValue);
           field.onBlur();
-          setValue(formatDate(result));
+          setValue(result ? formatDate(result) : nextValue);
         };
 
         return (

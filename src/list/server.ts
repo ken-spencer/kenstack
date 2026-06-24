@@ -210,7 +210,9 @@ export function resolveListOrderBy(
     requestedSort && sort[requestedSort] ? requestedSort : Object.keys(sort)[0];
   const option = sort[sortName];
   const direction: SortDirection =
-    requestedDirection ?? option.defaultDirection;
+    option.direction === false
+      ? option.defaultDirection
+      : (requestedDirection ?? option.defaultDirection);
   const orderBy = option.fields.map((field) => {
     const column = "field" in field ? field.field : field;
     const fieldDirection =
@@ -224,7 +226,7 @@ export function resolveListOrderBy(
       (field) => ("field" in field ? field.field : field) === table.id,
     )
   ) {
-    orderBy.push(desc(table.id));
+    orderBy.push(option.direction === false ? asc(table.id) : desc(table.id));
   }
 
   return orderBy;

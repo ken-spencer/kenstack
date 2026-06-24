@@ -1,5 +1,5 @@
 import { pipelineStage } from "@kenstack/api";
-import type { DefinedAdmin } from "@kenstack/admin/module";
+import type { DefinedAdminModule } from "@kenstack/admin/module";
 
 import * as z from "zod";
 
@@ -37,14 +37,8 @@ function withServerPublishDate<
   };
 }
 
-export const saveAction = (moduleConfig: DefinedAdmin[string]) => {
-  const { name, admin: adminConfig } = moduleConfig;
-
-  if (!adminConfig) {
-    return pipelineStage({ access: "admin" }, async ({ response }) =>
-      response.error(`Module "${name}" does not have admin records.`),
-    );
-  }
+export const saveAction = (moduleConfig: DefinedAdminModule) => {
+  const { admin: adminConfig } = moduleConfig;
 
   return pipelineStage(
     {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 
 import Link from "next/link";
 
@@ -12,7 +12,7 @@ import Alert from "@kenstack/components/Alert";
 import { deleteCookie, getCookie } from "@kenstack/lib/cookies";
 
 import Submit from "@kenstack/forms/Submit";
-import Suspense from "@kenstack/components/Suspense";
+import Progress from "@kenstack/components/Progress";
 
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 import RecaptchaTerms from "@kenstack/components/RecaptchaTerms";
@@ -24,7 +24,7 @@ const defaultValues = {
 
 export default function ForgotPasswordFormCont() {
   return (
-    <Suspense>
+    <Suspense fallback={<Progress />}>
       <ForgotPasswordForm />
     </Suspense>
   );
@@ -50,7 +50,7 @@ export function ForgotPasswordForm() {
 
   return (
     <Form
-      className="max-w-lg space-y-4"
+      className="w-full max-w-lg space-y-4"
       apiPath="/api/auth"
       schema={schema}
       defaultValues={defaultValues}

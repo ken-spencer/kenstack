@@ -1,5 +1,4 @@
 "use client";
-import { useMemo } from "react";
 import {
   Pagination,
   PaginationContent,
@@ -16,7 +15,7 @@ import { useAdminList } from "./context";
 import omit from "lodash-es/omit";
 
 export default function AdminListFooter() {
-  const { page, query, limit } = useAdminList();
+  const { isReorderSort, page, query, limit } = useAdminList();
 
   if (query.isPending || query.error || "error" === query.data.status) {
     return;
@@ -30,9 +29,11 @@ export default function AdminListFooter() {
       <div className="hidden md:flex md:flex-1">
         {total} {total > 1 ? "entries" : "entry"}
       </div>
-      <div className="flex-1 md:flex-0">
-        <PaginationCont page={page} totalPages={totalPages} />
-      </div>
+      {!isReorderSort ? (
+        <div className="flex-1 md:flex-0">
+          <PaginationCont page={page} totalPages={totalPages} />
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -46,32 +47,17 @@ function PaginationCont({
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  /** Convert search params to an object we can use.  */
   const params = omit(Object.fromEntries(searchParams.entries()), "page");
-
   const isFirst = page <= 1;
-
-  //   const searchParamsPlain = omit(
-  // p    "page"
-  //   );
-
-  const [firstPages, lastPages] = useMemo(() => {
-    const first = Array.from({ length: 5 }, (_, i) => i + 1).slice(
-      0,
-      totalPages <= 5 ? totalPages : 5,
-    );
-
-    let last: number[] = [];
-    if (totalPages > 5) {
-      // if only one extra page beyond 5, show just that; otherwise show last two
-      const extraCount = totalPages === 6 ? 1 : 2;
-      last = Array.from(
-        { length: extraCount },
-        (_, i) => totalPages - extraCount + 1 + i,
-      );
-    }
-    return [first, last];
-  }, [totalPages]);
+  const firstPages = Array.from({ length: Math.min(totalPages, 5) }, (_, i) =>
+    i + 1,
+  );
+  const lastPages =
+    totalPages === 6
+      ? [6]
+      : totalPages > 6
+        ? [totalPages - 1, totalPages]
+      : [];
 
   return (
     <Pagination>

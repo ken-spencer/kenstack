@@ -18,7 +18,7 @@ export default function ResetPasswordForm({ token }: { token?: string }) {
   const pathname = usePathname();
   return (
     <Form
-      className="max-w-lg space-y-4"
+      className="w-full max-w-lg space-y-4"
       apiPath="/api/auth"
       schema={schema}
       defaultValues={defaultValues}

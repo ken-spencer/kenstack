@@ -1,6 +1,7 @@
 import { revalidateTag } from "next/cache";
+import { isNull, sql } from "drizzle-orm";
 
-import type { DefinedAdmin } from "../module";
+import type { DefinedAdminModule } from "../module";
 import { saveRecord } from "@kenstack/fields/records";
 import type { ServerDefinedFields } from "@kenstack/fields/server";
 import { adminLoadCacheTag } from "./load";
@@ -18,16 +19,14 @@ export async function saveAdminRecord({
   changes?: string[];
   fields?: ServerDefinedFields;
   id?: number | null;
-  moduleConfig: DefinedAdmin[string];
+  moduleConfig: DefinedAdminModule;
   values: Record<string, unknown>;
 }) {
   const { name, admin: adminConfig } = moduleConfig;
 
-  if (!adminConfig) {
-    throw new Error(`Module "${name}" does not have admin records.`);
-  }
-
   const saveFields = fields ?? adminConfig.fields;
+  const appendToReorder =
+    "list" in adminConfig && !id && adminConfig.list.reorder;
   const result = !("list" in adminConfig)
     ? await saveRecord({
         actionPrefix,
@@ -65,6 +64,29 @@ export async function saveAdminRecord({
         changes: id ? changes : undefined,
         id,
         revalidate: adminConfig.revalidate,
+        query: appendToReorder
+          ? async ({ tx, data, select, user }) => {
+              const [position] = await tx
+                .select({
+                  sortOrder:
+                    sql<number>`coalesce(max(${appendToReorder.field}), 0) + 10`.mapWith(
+                      Number,
+                    ),
+                })
+                .from(adminConfig.table)
+                .where(isNull(adminConfig.table.deletedAt));
+              const [row] = await tx
+                .insert(adminConfig.table)
+                .values({
+                  ...data,
+                  [appendToReorder.fieldKey]: position?.sortOrder ?? 10,
+                  createdBy: user.id,
+                })
+                .returning(select);
+
+              return row;
+            }
+          : undefined,
       });
 
   if (result.status === "success") {

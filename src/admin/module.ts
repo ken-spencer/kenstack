@@ -9,6 +9,7 @@ import type {
   AdminFilterFieldReference,
   AdminFilterOptions,
   AdminFilters,
+  AdminListReorderOptions,
   AdminSortFieldReference,
   AdminSort,
   AdminSortField,
@@ -47,6 +48,7 @@ type AdminListConfig<
   list: {
     filters?: AdminFilterOptions;
     limit?: number;
+    reorder?: AdminListReorderOptions;
     sort?: AdminSortOptions;
     select?: TListSelect;
   };
@@ -105,6 +107,10 @@ export type DefinedAdmin = Record<
   }
 >;
 
+export type DefinedAdminModule = DefinedAdmin[string] & {
+  admin: AnyAdminConfig;
+};
+
 export function defineModule<const TModule extends ModuleOptions>(
   options: TModule,
 ) {
@@ -159,14 +165,16 @@ function resolveAdmin(admin: AdminConfig | undefined, basePath: PreviewPath) {
 
   if ("list" in admin) {
     const { table, list } = admin;
-    const { sort, filters, ...listOptions } = list;
+    const { sort, filters, reorder, ...listOptions } = list;
     const resolvedAdmin = resolveBase(admin);
+    const resolvedReorder = defineReorder(table, reorder);
 
     return {
       ...resolvedAdmin,
       list: {
         ...listOptions,
-        sort: defineSort(table, resolvedAdmin.fields, sort),
+        reorder: resolvedReorder,
+        sort: defineSort(table, resolvedAdmin.fields, sort, resolvedReorder),
         filters: defineFilters(table, resolvedAdmin.fields, filters),
       },
     };
@@ -179,14 +187,32 @@ function defineSort<TTable extends AdminTable>(
   table: TTable,
   fields: ServerDefinedFields,
   options: AdminSortOptions | undefined,
+  reorder: ReturnType<typeof defineReorder>,
 ) {
   const custom = normalizeSort(table, options ?? {});
   const fieldSort = normalizeSort(table, getFieldSortOptions(fields));
+  if (reorder && custom.reorder) {
+    throw new Error('The "reorder" sort key is reserved for list.reorder.');
+  }
+
+  const reorderSort: AdminSort = reorder
+    ? {
+        reorder: {
+          label: reorder.label,
+          fields: [reorder.field],
+          defaultDirection: "asc",
+          direction: false,
+        },
+      }
+    : {};
 
   return {
+    ...reorderSort,
     ...custom,
     ...Object.fromEntries(
-      Object.entries(fieldSort).filter(([name]) => !custom[name]),
+      Object.entries(fieldSort).filter(
+        ([name]) => !custom[name] && !reorderSort[name],
+      ),
     ),
     ...Object.fromEntries(
       (
@@ -196,17 +222,52 @@ function defineSort<TTable extends AdminTable>(
           ["deletedAt", table.deletedAt, "Deleted"],
         ] as const
       )
-        .filter(([name]) => !custom[name])
+        .filter(([name]) => !custom[name] && !reorderSort[name])
         .map(([name, field, label]) => [
           name,
           {
             label,
             fields: [field],
             defaultDirection: "desc",
+            direction: true,
           },
         ]),
     ),
   } satisfies AdminSort;
+}
+
+function defineReorder(
+  table: AdminTable,
+  options: AdminListReorderOptions | undefined,
+) {
+  if (!options) {
+    return undefined;
+  }
+
+  const columns = getTableColumns(table);
+  let fieldKey: string | undefined;
+  let field: (typeof columns)[string] | undefined;
+
+  if (typeof options.field === "string") {
+    fieldKey = options.field;
+    field = columns[fieldKey];
+  } else {
+    const column = Object.entries(columns).find(
+      ([, tableColumn]) => tableColumn === options.field,
+    );
+    fieldKey = column?.[0];
+    field = column?.[1];
+  }
+
+  if (!field || !fieldKey) {
+    throw new Error("Unknown admin table field reference.");
+  }
+
+  return {
+    field,
+    fieldKey,
+    label: options.label ?? "Reorder",
+  };
 }
 
 function normalizeSort(table: AdminTable, options: AdminSortOptions) {
@@ -217,6 +278,7 @@ function normalizeSort(table: AdminTable, options: AdminSortOptions) {
         label: option.label ?? startCase(name),
         fields: option.fields.map((field) => resolveSortField(table, field)),
         defaultDirection: option.defaultDirection ?? "asc",
+        direction: true,
       },
     ]),
   ) satisfies AdminSort;

@@ -96,6 +96,7 @@ function createListSearchParamsSchema({
   return searchParamsSchema.transform((searchParams) => {
     const filterValues = parseFilters(filters, searchParams);
     const sortValue = parseSortParam(searchParams.sort, sort, defaults);
+    const selectedSort = sort.find((option) => option.name === sortValue.sort);
 
     return {
       keywords: getKeywordSchema(defaults.keywords).parse(searchParams.q),
@@ -104,7 +105,10 @@ function createListSearchParamsSchema({
       filters: Object.keys(filterValues).length
         ? filterValues
         : defaults.filters,
-      page: getPageSchema().parse(firstValue(searchParams.page)),
+      page:
+        selectedSort?.direction === false
+          ? 1
+          : getPageSchema().parse(firstValue(searchParams.page)),
     };
   });
 }
@@ -151,7 +155,14 @@ export function listQuerySearchParams(
 
   const sortOption = sort.find((option) => option.name === query.sort);
   const sortDirection = sortOption?.defaultDirection ?? defaults.direction;
-  if (query.sort !== defaults.sort || query.direction !== sortDirection) {
+  if (sortOption?.direction === false) {
+    if (query.sort !== defaults.sort) {
+      params.set("sort", query.sort);
+    }
+  } else if (
+    query.sort !== defaults.sort ||
+    query.direction !== sortDirection
+  ) {
     params.set(
       "sort",
       query.direction === sortDirection ? query.sort : "-" + query.sort,
@@ -166,7 +177,7 @@ export function listQuerySearchParams(
     addFilterSearchParam(params, name, value);
   }
 
-  if (query.page && query.page > 1) {
+  if (query.page && query.page > 1 && sortOption?.direction !== false) {
     params.set("page", String(query.page));
   }
 
@@ -182,26 +193,36 @@ export function createListRequestSchema({
 }) {
   const filterMeta = getFilterMeta(filters);
   const sortMeta = getSortMeta(sort);
-  const sortNames = sortMeta.map((option) => option.name);
   const defaults = createDefaultListQueryState(sortMeta);
 
   return z
     .object({
       keywords: getKeywordSchema(defaults.keywords),
       trash: getBooleanSchema(defaults.trash),
-      sort: getSortSchema(sortNames, defaults.sort),
+      sort: getSortSchema(
+        sortMeta.map((option) => option.name),
+        defaults.sort,
+      ),
       direction: getDirectionSchema(defaults.direction),
       filters: getFilterObjectSchema(filterMeta),
       page: z.coerce.number().int().positive().max(10000).catch(1),
     })
-    .transform((value) => ({
-      keywords: value.keywords ?? defaults.keywords,
-      trash: value.trash ?? defaults.trash,
-      sort: value.sort ?? defaults.sort,
-      direction: value.direction ?? defaults.direction,
-      filters: value.filters ?? defaults.filters,
-      page: value.page,
-    }));
+    .transform((value) => {
+      const sortValue = value.sort ?? defaults.sort;
+      const selectedSort = sortMeta.find((option) => option.name === sortValue);
+
+      return {
+        keywords: value.keywords ?? defaults.keywords,
+        trash: value.trash ?? defaults.trash,
+        sort: sortValue,
+        direction:
+          selectedSort?.direction === false
+            ? selectedSort.defaultDirection
+            : (value.direction ?? defaults.direction),
+        filters: value.filters ?? defaults.filters,
+        page: selectedSort?.direction === false ? 1 : value.page,
+      };
+    });
 }
 
 function getKeywordSchema(defaultValue: string) {
@@ -357,9 +378,12 @@ function parseSortParam(
 
   return {
     sort: option.name,
-    direction: reversed
-      ? flipDirection(option.defaultDirection)
-      : option.defaultDirection,
+    direction:
+      option.direction === false
+        ? option.defaultDirection
+        : reversed
+          ? flipDirection(option.defaultDirection)
+          : option.defaultDirection,
   };
 }
 

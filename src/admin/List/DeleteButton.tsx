@@ -18,8 +18,15 @@ import fetcher from "@kenstack/api/fetcher";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export default function DeleteButton() {
-  const { name, selected, setSelected, apiPath, queryKey, filters } =
-    useAdminList();
+  const {
+    name,
+    selected,
+    setSelected,
+    apiPath,
+    queryKey,
+    filters,
+    isReorderSort,
+  } = useAdminList();
   const queryClient = useQueryClient();
   const inTrash = filters.trash;
   const mutation = useMutation({
@@ -72,7 +79,7 @@ export default function DeleteButton() {
           className="relative"
           size="icon"
           tooltip={inTrash ? "Delete Forever" : "Delete"}
-          disabled={!selected.length}
+          disabled={!selected.length || isReorderSort}
           variant="ghost"
         >
           <Badge
@@ -111,8 +118,15 @@ export default function DeleteButton() {
 }
 
 export function RestoreButton() {
-  const { name, selected, setSelected, apiPath, queryKey, filters } =
-    useAdminList();
+  const {
+    name,
+    selected,
+    setSelected,
+    apiPath,
+    queryKey,
+    filters,
+    isReorderSort,
+  } = useAdminList();
   const queryClient = useQueryClient();
   const inTrash = filters.trash;
   const mutation = useMutation({
@@ -168,7 +182,7 @@ export function RestoreButton() {
       className="relative"
       size="icon"
       tooltip="Restore"
-      disabled={!selected.length}
+      disabled={!selected.length || isReorderSort}
       variant="ghost"
       onClick={() => mutation.mutate(selected)}
     >

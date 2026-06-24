@@ -1,9 +1,16 @@
 import * as z from "zod";
-import { and, getTableName, inArray, isNotNull, isNull } from "drizzle-orm";
+import {
+  and,
+  getTableColumns,
+  getTableName,
+  inArray,
+  isNotNull,
+  isNull,
+} from "drizzle-orm";
 import { revalidateTag } from "next/cache";
 
 import { pipelineStage } from "@kenstack/api";
-import type { DefinedAdmin } from "@kenstack/admin/module";
+import type { DefinedAdminModule } from "@kenstack/admin/module";
 import { adminListCacheTag } from "@kenstack/admin/queries/list";
 import { adminLoadCacheTag } from "@kenstack/admin/queries/load";
 import { deps } from "@app/deps";
@@ -14,10 +21,6 @@ const schema = z.object({
   mode: z.enum(["trash", "restore", "permanent"]).default("trash"),
 });
 
-type RemovedRow = {
-  id: number;
-} & Record<string, unknown>;
-
 const actionNames = {
   permanent: "delete",
   restore: "restore",
@@ -27,14 +30,8 @@ const actionNames = {
 export const removeAction = ({
   name,
   admin: adminConfig,
-}: DefinedAdmin[string]) => {
-  if (!adminConfig) {
-    return pipelineStage({ access: "admin" }, async ({ response }) =>
-      response.error(`Module "${name}" does not have admin records.`),
-    );
-  }
-
-  return pipelineStage(
+}: DefinedAdminModule) =>
+  pipelineStage(
     { access: "admin", schema },
     async ({ response, user, data }) => {
       if (!("list" in adminConfig)) {
@@ -46,16 +43,24 @@ export const removeAction = ({
       }
       const { table } = adminConfig;
       const { db } = deps;
-      const tableName = getTableName(table);
-      const deletedAtFilter =
+      const columns = getTableColumns(table);
+      const targetFilter = and(
+        inArray(table.id, data.remove),
         data.mode === "trash"
           ? isNull(table.deletedAt)
-          : isNotNull(table.deletedAt);
-      const targetFilter = and(inArray(table.id, data.remove), deletedAtFilter);
-      const rows = (await db
-        .select()
+          : isNotNull(table.deletedAt),
+      );
+      // Full row is required by field delete hooks and row-based revalidation.
+      const rows = await db
+        .select({
+          ...columns,
+          id: table.id,
+          ...("publicId" in columns ? { publicId: columns.publicId } : {}),
+          ...("slug" in columns ? { slug: columns.slug } : {}),
+          ...("title" in columns ? { title: columns.title } : {}),
+        })
         .from(table)
-        .where(targetFilter)) as RemovedRow[];
+        .where(targetFilter);
 
       if (rows.length !== data.remove.length) {
         return response.error("Unable to find the requested records.");
@@ -84,7 +89,7 @@ export const removeAction = ({
       await deps.logger.audit({
         userId: user.id,
         rowId: rows.length === 1 ? rows[0].id : null,
-        table: tableName,
+        table: getTableName(table),
         action: actionNames[data.mode],
         data: {
           records: rows.map((row) => ({
@@ -109,4 +114,3 @@ export const removeAction = ({
       return response.success({});
     },
   );
-};

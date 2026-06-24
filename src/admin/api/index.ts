@@ -14,6 +14,7 @@ import { listAction } from "@kenstack/admin/api/list";
 import { neighborsAction } from "@kenstack/admin/api/neighbors";
 import { saveAction } from "@kenstack/admin/api/save";
 import { removeAction } from "@kenstack/admin/api/remove";
+import { reorderAction } from "@kenstack/admin/api/reorder";
 import { revisionsAction } from "@kenstack/admin/api/revisions";
 import { tagsAction } from "@kenstack/admin/api/tags";
 import { relationshipSearchAction } from "@kenstack/admin/api/relationshipSearch";
@@ -143,6 +144,7 @@ const runAdminPipeline = async (request: NextRequest) => {
       message: `Module "${name}" does not have admin records.`,
     });
   }
+  const adminModuleConfig = { ...moduleConfig, admin: adminConfig };
 
   switch (action) {
     case "list":
@@ -150,9 +152,11 @@ const runAdminPipeline = async (request: NextRequest) => {
     case "neighbors":
       return pipeline({ request, json }, neighborsAction(adminConfig));
     case "save":
-      return pipeline({ request, json }, saveAction(moduleConfig));
+      return pipeline({ request, json }, saveAction(adminModuleConfig));
     case "remove":
-      return pipeline({ request, json }, removeAction(moduleConfig));
+      return pipeline({ request, json }, removeAction(adminModuleConfig));
+    case "reorder":
+      return pipeline({ request, json }, reorderAction(adminModuleConfig));
     case "revisions":
       return pipeline({ request, json }, revisionsAction(adminConfig));
     case "get-presigned-url":
