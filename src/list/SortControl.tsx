@@ -79,7 +79,7 @@ export default function SortControl({
         <span className={showLabel ? "inline" : "hidden sm:inline"}>
           {label ?? currentSort.label}
         </span>
-        {currentSort.direction ? (
+        {currentSort.direction !== false ? (
           <DirectionIcon
             direction={direction}
             className={showLabel ? "block size-4" : "hidden sm:block"}
@@ -133,7 +133,7 @@ export default function SortControl({
                   {isSelected ? <Check className="size-4" /> : null}
                 </span>
                 <span className="grow">{option.label}</span>
-                {option.direction ? (
+                {option.direction !== false ? (
                   <DirectionIcon direction={optionDirection} />
                 ) : null}
               </button>

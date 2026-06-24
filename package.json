@@ -7,8 +7,7 @@
     "lint": "eslint .",
     "prettier": "npx prettier src --check",
     "prettier:fix": "npm run prettier -- --write",
-    "format": "npm run prettier:fix && npm run lint -- --fix",
-    "users:add-admin": "tsx --tsconfig ../tsconfig.json ./src/modules/users/scripts/add-admin-user.ts"
+    "format": "npm run prettier:fix && npm run lint -- --fix"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1047.0",

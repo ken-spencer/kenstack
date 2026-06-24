@@ -133,10 +133,11 @@ function ComboboxFieldControl({
         placeholder={placeholder}
         showClear={showClear}
         className={twMerge("w-full", inputClass)}
-        onBlur={(event) => {
-          commitTypedValue(
-            latestInputValue.current ?? event.currentTarget.value,
-          );
+        onBlur={() => {
+          if (latestInputValue.current !== null) {
+            commitTypedValue(latestInputValue.current);
+          }
+
           latestInputValue.current = null;
           field.onBlur();
         }}

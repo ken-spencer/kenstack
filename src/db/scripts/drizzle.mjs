@@ -18,6 +18,9 @@ const bin = join(
 );
 
 const env = { ...process.env };
+env.NODE_OPTIONS = [env.NODE_OPTIONS, "--conditions=react-server"]
+  .filter(Boolean)
+  .join(" ");
 
 if (command === "migrate") {
   env.PGOPTIONS = [env.PGOPTIONS, "-c client_min_messages=warning"]

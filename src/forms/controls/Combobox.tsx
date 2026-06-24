@@ -135,7 +135,7 @@ function Combobox<T>({
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false);
   const [uncontrolledInputValue, setUncontrolledInputValue] =
-    React.useState(() => (value ? itemToStringLabel(value) : ""));
+    React.useState("");
   const [highlightedIndexState, setHighlightedIndexState] =
     React.useState(-1);
   const isOpen = openProp ?? uncontrolledOpen;
@@ -177,13 +177,17 @@ function Combobox<T>({
         setUncontrolledOpen(nextOpen);
       }
 
+      if (nextOpen && inputValueProp === undefined) {
+        setUncontrolledInputValue("");
+      }
+
       if (!nextOpen) {
         setHighlightedIndexState(-1);
       }
 
       onOpenChange?.(nextOpen);
     },
-    [onOpenChange, openProp],
+    [inputValueProp, onOpenChange, openProp],
   );
 
   const setInputValue = React.useCallback(
