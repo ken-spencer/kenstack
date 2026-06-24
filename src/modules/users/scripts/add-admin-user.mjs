@@ -6,7 +6,9 @@ env.NODE_OPTIONS = [env.NODE_OPTIONS, "--conditions=react-server"]
   .filter(Boolean)
   .join(" ");
 
-const scriptPath = fileURLToPath(new URL("./add-admin-user.ts", import.meta.url));
+const scriptPath = fileURLToPath(
+  new URL("./create-admin-user.ts", import.meta.url),
+);
 
 const child = spawn(
   process.platform === "win32" ? "tsx.cmd" : "tsx",
