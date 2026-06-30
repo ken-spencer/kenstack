@@ -92,6 +92,10 @@ const imageRender = ({
         : "object-scale-down object-center w-full h-full",
       imageClass,
     );
+    const placeholderClass = twMerge(
+      "flex h-full w-full items-center justify-center rounded border border-dashed border-gray-300 bg-gray-50/80 shadow-inner",
+      imageClass,
+    );
     const disabledHelp = canUpload ? null : <UploadDisabledHelp />;
 
     const [uploading, setUploading] = useState(false);
@@ -367,10 +371,10 @@ const imageRender = ({
     if (!canUpload) {
       return (
         <div className={contClass}>
-          <div className="h-full w-full opacity-50">
+          <div className="h-full w-full">
             {placeholder ?? (
-              <div className={imgClass + " flex items-center justify-center"}>
-                <AddImageIcon className="h-16 w-16 text-gray-600" />
+              <div className={placeholderClass}>
+                <AddImageIcon className="h-16 w-16 text-gray-500" />
               </div>
             )}
           </div>
@@ -382,8 +386,8 @@ const imageRender = ({
     return (
       <label className={twMerge(contClass, "cursor-pointer")} {...dragEvents}>
         {placeholder ?? (
-          <div className={imgClass + " flex items-center justify-center"}>
-            <AddImageIcon className="h-16 w-16 text-gray-600" />
+          <div className={placeholderClass}>
+            <AddImageIcon className="h-16 w-16 text-gray-500" />
           </div>
         )}
         {input}

@@ -177,7 +177,7 @@ function Combobox<T>({
         setUncontrolledOpen(nextOpen);
       }
 
-      if (nextOpen && inputValueProp === undefined) {
+      if (nextOpen && !isOpen && inputValueProp === undefined) {
         setUncontrolledInputValue("");
       }
 
@@ -187,7 +187,7 @@ function Combobox<T>({
 
       onOpenChange?.(nextOpen);
     },
-    [inputValueProp, onOpenChange, openProp],
+    [inputValueProp, isOpen, onOpenChange, openProp],
   );
 
   const setInputValue = React.useCallback(
@@ -451,6 +451,7 @@ const ComboboxInput = React.forwardRef<HTMLInputElement, ComboboxInputProps>(
     return (
       <ComboboxInputShell className={cn("w-auto", className)}>
         <ComboboxInputControl
+          {...props}
           aria-activedescendant={
             context.highlightedIndex >= 0
               ? context.optionId(context.highlightedIndex)
@@ -511,7 +512,6 @@ const ComboboxInput = React.forwardRef<HTMLInputElement, ComboboxInputProps>(
           }}
           role="combobox"
           value={context.inputValue}
-          {...props}
         />
         <ComboboxInputActions>
           {showChevron && (

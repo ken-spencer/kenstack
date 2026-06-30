@@ -1,17 +1,15 @@
 "use client";
 
 import { Globe } from "lucide-react";
-import LinkedInIcon from "@kenstack/icons/LinkedIn";
-import FacebookIcon from "@kenstack/icons/FacebookColor";
-import TwitterIcon from "@kenstack/icons/Twitter";
 
 import Field, { FormControl, type FieldProps } from "@kenstack/forms/Field";
 import { Input } from "@kenstack/forms/controls/Input";
+import { cn } from "@kenstack/lib/utils";
 
 type InputProps = FieldProps &
   React.ComponentProps<"input"> & {
     inputClass?: string;
-    icon?: "url" | "twitter" | "facebook" | "linkedin";
+    icon?: React.ReactNode;
   };
 
 export default function UrlField({
@@ -19,9 +17,12 @@ export default function UrlField({
   label,
   description,
   className,
-  icon = "url",
+  inputClass,
+  icon = <Globe className="text-gray-800" />,
   ...props
 }: InputProps) {
+  const hasIcon = icon != null && icon !== false;
+
   return (
     <Field
       name={name}
@@ -29,22 +30,23 @@ export default function UrlField({
       description={description}
       className={className}
       render={({ field }) => (
-        <div className="flex-cl flex items-center">
-          {(() => {
-            switch (icon) {
-              case "url":
-                return <Globe className="text-gray-800" />;
-              case "linkedin":
-                return <LinkedInIcon className="text-[#0a66c2]" />;
-              case "facebook":
-                return <FacebookIcon className="text-[#0866ff]" />;
-              case "twitter":
-                return <TwitterIcon className="text-gray-800" />;
-            }
-            return null;
-          })()}
+        <div className="relative">
+          {hasIcon ? (
+            <span
+              className={cn(
+                "absolute top-1/2 left-2 z-10 flex size-5 -translate-y-1/2 items-center justify-center",
+              )}
+            >
+              {icon}
+            </span>
+          ) : null}
           <FormControl>
-            <Input {...props} {...field} className="-ml-8 pl-9" type="url" />
+            <Input
+              {...props}
+              {...field}
+              className={cn(hasIcon && "pl-9", inputClass)}
+              type="url"
+            />
           </FormControl>
         </div>
       )}
