@@ -150,6 +150,20 @@ Migration steps:
 - Replace imports from `@kenstack/components/forms/InputGroup` with `@kenstack/forms/controls/InputGroup`.
 - Keep RHF-bound form fields, such as `ComboboxField`, imported from `@kenstack/forms/*` or `@kenstack/admin/forms`.
 
+## Unreleased: Popover Import Path
+
+Old APIs:
+
+- `@kenstack/components/ui/popover`
+
+New APIs:
+
+- `@kenstack/components/Popover`
+
+Migration steps:
+
+- Replace imports of `Popover`, `PopoverContent`, and `PopoverTrigger` from `@kenstack/components/ui/popover` with `@kenstack/components/Popover`.
+
 ## Unreleased: Node 24 Runtime Floor
 
 New requirement:

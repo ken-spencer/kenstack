@@ -173,6 +173,10 @@ function Combobox<T>({
 
   const setOpen = React.useCallback(
     (nextOpen: boolean) => {
+      if (nextOpen === isOpen) {
+        return;
+      }
+
       if (openProp === undefined) {
         setUncontrolledOpen(nextOpen);
       }
@@ -187,7 +191,7 @@ function Combobox<T>({
 
       onOpenChange?.(nextOpen);
     },
-    [inputValueProp, onOpenChange, openProp],
+    [inputValueProp, isOpen, onOpenChange, openProp],
   );
 
   const setInputValue = React.useCallback(
@@ -634,7 +638,7 @@ function ComboboxContent({
     <div
       data-slot="combobox-content"
       className={cn(
-        "bg-popover text-popover-foreground ring-foreground/10 fixed inset-auto z-50 m-0 overflow-hidden rounded-lg shadow-md ring-1",
+        "bg-popover text-popover-foreground ring-foreground/10 dark:ring-border fixed inset-auto z-50 m-0 overflow-hidden rounded-lg shadow-md ring-1",
         className,
       )}
       ref={setContentElement}
@@ -703,7 +707,7 @@ function ComboboxItem<T = AnyItem>({
       role="option"
       ref={itemRef}
       className={cn(
-        "border-border/45 data-highlighted:border-accent-foreground/15 data-highlighted:bg-accent data-highlighted:text-accent-foreground relative flex w-full cursor-default items-center gap-2 rounded-md border py-1 pr-8 pl-1.5 text-sm outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "border-border/45 data-highlighted:border-accent-foreground/15 data-highlighted:bg-accent data-highlighted:text-accent-foreground dark:data-highlighted:border-accent-foreground/20 relative flex w-full cursor-default items-center gap-2 rounded-md border py-1 pr-8 pl-1.5 text-sm outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       onClick={(event) => {
