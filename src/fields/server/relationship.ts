@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import type { AnyColumn } from "drizzle-orm";
 import type { deps } from "@app/deps";
 import isEqual from "lodash-es/isEqual";
@@ -155,7 +155,7 @@ async function saveRelationships({
   relationships,
   values,
 }: {
-  db: Pick<typeof deps.db, "delete" | "insert" | "select">;
+  db: Pick<typeof deps.db, "delete" | "insert" | "select" | "update">;
   tableId: number;
   relationships: Relationships;
   values: RelationshipValues;
@@ -168,17 +168,25 @@ async function saveRelationships({
       continue;
     }
 
+    const where = [
+      eq(relationship.fromColumn, tableId),
+      eq(relationship.through.relationship, relationship.relationship),
+    ];
+
+    const currentWhere = [...where];
+
+    if ("deletedAt" in relationship.through) {
+      const table = relationship.through as typeof relationship.through &
+        SoftDeleteTable;
+      currentWhere.push(isNull(table.deletedAt));
+    }
+
     const current = await db
       .select({
         id: sql<number>`${relationship.toColumn}`.mapWith(Number),
       })
       .from(relationship.through)
-      .where(
-        and(
-          eq(relationship.fromColumn, tableId),
-          eq(relationship.through.relationship, relationship.relationship),
-        ),
-      );
+      .where(and(...currentWhere));
     const selectedIds = [...new Set(selected.map((item) => item.id))].sort(
       (a, b) => a - b,
     );
@@ -191,22 +199,54 @@ async function saveRelationships({
       continue;
     }
 
-    await db
-      .delete(relationship.through)
-      .where(
-        and(
-          eq(relationship.fromColumn, tableId),
-          eq(relationship.through.relationship, relationship.relationship),
-        ),
-      );
+    const removedIds = currentIds.filter((id) => !selectedIds.includes(id));
+    const addedIds = selectedIds.filter((id) => !currentIds.includes(id));
 
-    if (selected.length) {
+    if (removedIds.length) {
+      if ("deletedAt" in relationship.through) {
+        const table = relationship.through as typeof relationship.through &
+          SoftDeleteTable;
+
+        await db
+          .update(relationship.through)
+          .set({ deletedAt: new Date() })
+          .where(
+            and(
+              ...where,
+              inArray(relationship.toColumn, removedIds),
+              isNull(table.deletedAt),
+            ),
+          );
+      } else {
+        await db
+          .delete(relationship.through)
+          .where(and(...where, inArray(relationship.toColumn, removedIds)));
+      }
+    }
+
+    if (addedIds.length) {
+      if ("deletedAt" in relationship.through) {
+        const table = relationship.through as typeof relationship.through &
+          SoftDeleteTable;
+
+        await db
+          .update(relationship.through)
+          .set({ deletedAt: null })
+          .where(
+            and(
+              ...where,
+              inArray(relationship.toColumn, addedIds),
+              isNotNull(table.deletedAt),
+            ),
+          );
+      }
+
       await db
         .insert(relationship.through)
         .values(
-          selected.map((item) => ({
+          addedIds.map((id) => ({
             [relationship.fromColumnKey]: tableId,
-            [relationship.toColumnKey]: item.id,
+            [relationship.toColumnKey]: id,
             relationship: relationship.relationship,
           })),
         )
