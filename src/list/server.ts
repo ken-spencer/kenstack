@@ -37,23 +37,27 @@ export function resolveListWhere(
   data: Pick<ListQueryStoreState, "filters" | "keywords" | "trash">,
 ) {
   const { keywords, trash } = data;
-  const searchable = Object.entries(fields)
+  const searchableColumns = Object.entries(fields)
     .filter(([, field]) => field.searchable)
-    .map(([key]) => key);
+    .map(([key]) => key)
+    .filter((key): key is Extract<keyof typeof table, string> => key in table);
   const where = [
     trash ? isNotNull(table.deletedAt) : isNull(table.deletedAt),
     ...resolveFilters(filters, data.filters),
   ];
 
-  if (keywords && searchable.length) {
-    const searchConditions = searchable
-      .filter((key): key is Extract<keyof typeof table, string> => key in table)
-      .map((key) => ilike(sql`${table[key]}`, `%${keywords}%`));
+  const keywordTerms = keywords.trim().split(/\s+/).filter(Boolean);
+  if (keywordTerms.length && searchableColumns.length) {
+    for (const term of keywordTerms) {
+      const searchConditions = searchableColumns.map((key) =>
+        ilike(sql`${table[key]}`, `%${term}%`),
+      );
 
-    if (searchConditions.length === 1) {
-      where.push(searchConditions[0]);
-    } else if (searchConditions.length > 1) {
-      where.push(or(...searchConditions) ?? searchConditions[0]);
+      if (searchConditions.length === 1) {
+        where.push(searchConditions[0]);
+      } else if (searchConditions.length > 1) {
+        where.push(or(...searchConditions) ?? searchConditions[0]);
+      }
     }
   }
 
