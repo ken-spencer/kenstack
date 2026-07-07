@@ -15,8 +15,17 @@ export default function AdminEditForm({
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const { defaultValues, schema, isNew, id, single, apiPath, name, userId } =
-    useAdminEdit();
+  const {
+    defaultValues,
+    schema,
+    isNew,
+    id,
+    single,
+    apiPath,
+    name,
+    parentId,
+    userId,
+  } = useAdminEdit();
   const loadTarget = single ? name : id;
   const basePathname = useMemo(() => {
     const parts = pathname.split("/").filter(Boolean);
@@ -38,6 +47,7 @@ export default function AdminEditForm({
             name,
             id,
             isNew,
+            parentId,
             changes,
             values,
           },
@@ -68,9 +78,9 @@ export default function AdminEditForm({
           }
         } else if (isNew) {
           router.push(
-            basePathname +
-              "/" +
-              data.id +
+            (parentId
+              ? `/admin/${name}/${data.id}`
+              : basePathname + "/" + data.id) +
               (searchParams.size ? "?" + searchParams : ""),
           );
         }

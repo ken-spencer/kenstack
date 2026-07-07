@@ -9,6 +9,7 @@ import DateTimeField from "@kenstack/forms/DateTimeField";
 import InputField from "@kenstack/forms/InputField";
 import MarkdownField from "@kenstack/forms/MarkdownField";
 import RadioButtonField from "@kenstack/forms/RadioButtonField";
+import SelectField from "@kenstack/forms/SelectField";
 import SwitchField from "@kenstack/forms/SwitchField";
 import TextareaField from "@kenstack/forms/TextareaField";
 import type {
@@ -60,6 +61,8 @@ function FieldLayoutItem({
       return <DateField {...props} />;
     case "datetime":
       return <DateTimeField {...props} />;
+    case "select":
+      return <SelectField {...props} options={field.options ?? []} />;
     case "radio-button":
       return <RadioButtonField {...props} options={field.options ?? []} />;
     case "checkbox-list":

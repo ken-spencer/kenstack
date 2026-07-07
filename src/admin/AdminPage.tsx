@@ -7,6 +7,22 @@ import AdminList from "@kenstack/admin/List";
 import Edit from "@kenstack/admin/Edit";
 import { deps } from "@app/deps";
 import { pageRoute } from "@kenstack/pageRoute";
+import { parseAdminRouteSegments } from "@kenstack/admin/lib/route";
+
+const adminRouteSchema = z.array(z.string()).transform((segments, ctx) => {
+  const route = parseAdminRouteSegments(segments);
+
+  if (!route) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Invalid admin route.",
+    });
+
+    return z.NEVER;
+  }
+
+  return route;
+});
 
 export function createAdminPage() {
   return pageRoute(
@@ -15,30 +31,31 @@ export function createAdminPage() {
       fallback: <AdminPageSkeleton />,
       params: z
         .object({
-          admin: z.tuple([
-            z.string(),
-            z
-              .union([
-                z.literal("new"),
-                z
-                  .string()
-                  .regex(/^\d+$/)
-                  .transform((id) => Number(id)),
-              ])
-              .optional(),
-          ]),
+          admin: adminRouteSchema,
         })
-        .transform(({ admin: [name, id] }) => ({
-          name,
-          id: typeof id === "number" ? id : undefined,
-          isNew: id === "new",
-        })),
+        .transform(({ admin }) => admin),
     },
     async ({ params, searchIn, user }) => {
-      const { name, id, isNew } = params;
+      const { name, id, isNew = false, parentId } = params;
       const moduleConfig = deps.modules[name];
 
       if (!moduleConfig?.admin) {
+        notFound();
+      }
+
+      const moduleParent = moduleConfig.parent;
+
+      if (parentId) {
+        if (!moduleParent) {
+          notFound();
+        }
+
+        const parentModuleConfig = deps.modules[moduleParent.module];
+
+        if (!parentModuleConfig?.admin) {
+          notFound();
+        }
+      } else if (moduleParent && (id === undefined || isNew)) {
         notFound();
       }
 
@@ -61,6 +78,7 @@ export function createAdminPage() {
             {"list" in adminConfig && !isNew && id === undefined ? (
               <AdminList
                 name={name}
+                moduleTitle={moduleConfig.title}
                 adminConfig={adminConfig}
                 basePath={
                   adminConfig.preview ? moduleConfig.basePath : undefined
@@ -68,14 +86,19 @@ export function createAdminPage() {
                 clients={clients}
                 searchParams={searchIn}
                 userId={user.id}
+                parentId={parentId}
+                moduleParent={moduleParent}
               />
             ) : (
               <Edit
                 id={"list" in adminConfig ? id : undefined}
                 isNew={"list" in adminConfig ? isNew : undefined}
                 name={name}
+                moduleTitle={moduleConfig.title}
                 adminConfig={adminConfig}
                 clients={clients}
+                moduleParent={moduleParent}
+                parentId={parentId}
                 userId={user.id}
               />
             )}

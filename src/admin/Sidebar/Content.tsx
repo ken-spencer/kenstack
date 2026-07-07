@@ -6,12 +6,13 @@ import { useSidebar, SidebarTrigger } from "@kenstack/components/Sidebar";
 import { Menu } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { getAdminPathModuleName } from "@kenstack/admin/lib/route";
 
 type SidebarContentProps = {
   logo?: ReactNode;
   moduleLinks: {
-    href: string;
     icon: ReactNode;
+    name: string;
     title: string;
   }[];
   accountMenu: ReactNode;
@@ -61,18 +62,19 @@ function HeaderModuleTitle({
   moduleLinks: SidebarContentProps["moduleLinks"];
 }) {
   const pathname = usePathname();
+  const activeModuleName = getAdminPathModuleName(pathname);
   const activeModule = moduleLinks.find(
-    ({ href }) => pathname === href || pathname.startsWith(`${href}/`),
+    ({ name }) => name === activeModuleName,
   );
-
-  if (!activeModule) {
-    return null;
-  }
 
   return (
     <div className="hidden items-center gap-2 justify-self-center text-gray-700 md:flex">
-      {activeModule.icon}
-      <span className="font-bold">{activeModule.title}</span>
+      {activeModule ? (
+        <>
+          {activeModule.icon}
+          <span className="font-bold">{activeModule.title}</span>
+        </>
+      ) : null}
     </div>
   );
 }

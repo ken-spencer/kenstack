@@ -10,7 +10,15 @@ When reviewing, look for opportunities to reduce complexity, improve readability
 
 When delegating code review or cleanup work, instruct the agent to check for reinvented Kenstack primitives, especially popovers, dialogs, menus, tooltips, buttons, skeletons, list controls, form controls, query/error states, and loading states. If a shared primitive exists, the reviewer should recommend or apply the replacement.
 
-Before reviewing the diff details, confirm the relevant `agents/*.md` guidance for the touched area was considered. During review, look for any newly duplicated source of truth, such as copied identifiers, labels, options, mappings, statuses, schemas, config, or metadata. Reuse or extend the existing owner instead of keeping a parallel version.
+Before reviewing the diff details, confirm the relevant `agents/*.md` guidance for the touched area was considered. Do not read every area file by default; route the review to the files that match the touched code:
+
+- Admin routes, modules, forms, lists, sidebars, or admin layout: read `agents/admin.md`.
+- UI components, styling, overlays, interactions, visual states, or shared controls: read `agents/ui.md`.
+- Drizzle tables, Zod schemas, validation, pipeline actions, persistence, or database behavior: read `agents/data.md`.
+- Kenstack API, export, helper, type, route, or behavior compatibility changes: read `agents/migrations.md`.
+- Errors, warnings, broken states, failing tests, runtime exceptions, or bug-fix/debugging work: read `agents/debug.md`.
+
+During review, look for any newly duplicated source of truth, such as copied identifiers, labels, options, mappings, statuses, schemas, config, or metadata. Reuse or extend the existing owner instead of keeping a parallel version. Treat paired signals where one value is canonical and the other is only a request, prop, local, or descriptive copy as a sign to inspect the surrounding code path. If disagreement only causes an error, recommend deriving from the canonical owner and pruning the duplicate input, validation branch, helper argument, schema field, or API path.
 
 ## Type Shape
 
@@ -40,6 +48,7 @@ Before reviewing the diff details, confirm the relevant `agents/*.md` guidance f
 - When both branches of a conditional apply the same wrapper, coercion, fallback, or formatting helper, move that shared operation outside the conditional so the branch only chooses the differing value.
 - Avoid nested ternaries for multi-way choices, especially discriminator-to-label/icon/component mappings. Prefer a `switch` or explicit branches so each case is named plainly.
 - In JSX components, check one-use event handlers and local aliases. Inline them when the event site is clearer; keep named handlers for reuse, complex branching, domain workflows, or stable callback identity.
+- Check callback/helper names against their side effects. Helpers named like readers or calculations, such as `get*`, `calculate*`, `compute*`, `derive*`, or `resolve*`, should not call React state setters, mutate refs/DOM, or also return a computed value after mutating state. Keep pure calculation separate from event, effect, and state-sync handlers. It is fine for an obviously side-effecting setter or handler to update several related state values when the name and call site make that explicit.
 - Do not pass `initial*` props that duplicate data already owned by the same query, context, or provider. Seed the shared state at the boundary and read it from one source.
 - Remove generic temporary variables that merge distinct cases only to feed a nearby branch or call. Prefer explicit branches when the cases have different domain meanings, such as separate list-record and single-record cache targets.
 - Prefer direct guard returns for terminal UI states such as errors, empty states, redirects, and permission denials. Do not gather a temporary message or status value only to render that terminal branch a few lines later.
@@ -56,6 +65,7 @@ Before reviewing the diff details, confirm the relevant `agents/*.md` guidance f
 - Check helpers whose whole body is a single call to another local helper. Keep the name that best describes the real operation, and remove or inline the other helper unless it is a deliberate compatibility alias, preset, or public API boundary.
 - In component wrappers, do not destructure props only to pass them through unchanged. Leave ordinary child-component props in `...props`; separate only values the wrapper reads, transforms, branches on, or defaults. When supplying a wrapper default that callers may override, pass the default before `{...props}`.
 - Before keeping a new feature, helper, component, hook, field, or API utility, search for the closest existing Kenstack/admin/forms/list/page-editor implementation. If the new code duplicates behavior too closely, reuse the existing piece, extend it at the shared owner, or explain why the local version is intentionally different.
+- For new or changed shared React controls, check current React docs for APIs that may have changed. Do not introduce deprecated React patterns when the installed version supports the simpler current syntax, such as passing `ref` as a prop instead of using `React.forwardRef`.
 - Keep data loading at the narrowest boundary that consumes the data. Avoid aggregate helpers that return mixed concerns, such as config, auth state, routing decisions, and page-specific records, just to simplify a parent. Extract a loader only when it owns a clear cache/API boundary, is reused, or gives a specific data shape a clear name.
 - Avoid rename-only or move-only churn. Preserve existing local type names, variable names, and declaration placement unless the new name or location makes a real behavior, ownership, or API boundary clearer.
 - Avoid thin wrappers around stable library APIs when the wrapper only renames the library function or hides a one-line call. Keep a wrapper only when it enforces project policy, preserves a boundary such as server/client separation, normalizes repeated nontrivial behavior, or isolates an unstable dependency.

@@ -31,6 +31,7 @@ type AdminListProps = {
   clients: AdminClientRegistry;
   userId: number;
   name: string;
+  parentId?: number;
   sort: AdminSortMeta[];
   filter: AdminFilterMeta[];
   children: React.ReactNode;
@@ -51,6 +52,7 @@ type UseListProps<
   filter: AdminFilterMeta[];
   selected: number[];
   name: string;
+  parentId?: number;
   basePath?: string;
   setSelected: React.Dispatch<React.SetStateAction<number[]>>;
   apiPath: string;
@@ -70,6 +72,7 @@ export function AdminListProvider({
   clients,
   userId,
   name,
+  parentId,
   sort,
   filter,
   children,
@@ -114,9 +117,13 @@ export function AdminListProvider({
 
   const apiPath = "/api/admin/";
 
-  const queryKey = getAdminListQueryKey(name, {
-    ...debouncedFilters,
-    page,
+  const queryKey = getAdminListQueryKey({
+    name,
+    parentId,
+    query: {
+      ...debouncedFilters,
+      page,
+    },
   });
 
   const query = useQuery({
@@ -127,6 +134,7 @@ export function AdminListProvider({
       }>(apiPath, {
         action: "list",
         name,
+        parentId,
         ...debouncedFilters,
         page,
       }),
@@ -141,6 +149,7 @@ export function AdminListProvider({
     sort,
     filter,
     name,
+    parentId,
     selected,
     setSelected,
     apiPath,

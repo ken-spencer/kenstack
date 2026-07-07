@@ -1,15 +1,19 @@
 import * as z from "zod";
 
 import { pipelineStage } from "@kenstack/api";
-import type { AnyAdminConfig } from "@kenstack/admin/module";
+import type { DefinedAdminModule } from "@kenstack/admin/module";
 import { loadAdminListNeighbors } from "@kenstack/admin/queries/list";
 
 const schema = z.object({
   id: z.coerce.number().int().positive(),
+  parentId: z.coerce.number().int().positive().optional(),
   query: z.string().max(5000).optional().catch(""),
 });
 
-export const neighborsAction = (adminConfig: AnyAdminConfig) =>
+export const neighborsAction = ({
+  admin: adminConfig,
+  parent,
+}: DefinedAdminModule) =>
   pipelineStage(
     {
       access: "admin",
@@ -20,11 +24,17 @@ export const neighborsAction = (adminConfig: AnyAdminConfig) =>
         return response.error("This admin config is not listable.");
       }
 
-      const result = await loadAdminListNeighbors(
+      if ((parent && !data.parentId) || (!parent && data.parentId)) {
+        return response.error("Parent ID is missing.");
+      }
+
+      const result = await loadAdminListNeighbors({
         adminConfig,
-        data.query ?? "",
-        data.id,
-      );
+        id: data.id,
+        moduleParent: parent,
+        parentId: data.parentId,
+        queryString: data.query ?? "",
+      });
 
       return response.success({
         previousId: result.previousId,

@@ -1,5 +1,8 @@
 "use client";
 
+// Keep this primitive backed by native <dialog> top-layer behavior. Nested
+// Escape handling belongs in useOverlayStack, not in ad hoc overlay rewrites.
+
 import {
   Children,
   cloneElement,
@@ -12,15 +15,22 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type ComponentProps,
   type MouseEvent,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { XIcon } from "lucide-react";
 
 import { cn } from "@kenstack/lib/utils";
+import { useOverlayStack } from "./overlayStack";
 
 const transitionDurationMs = 200;
+
+const subscribeToClientSnapshot = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
 
 const DialogContext = createContext<{
   descriptionId: string;
@@ -215,7 +225,16 @@ function DialogContent({
   const dialogRef = useRef<HTMLDialogElement | null>(null);
   const closeTimerRef = useRef<number | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const mounted = useSyncExternalStore(
+    subscribeToClientSnapshot,
+    getClientSnapshot,
+    getServerSnapshot,
+  );
   const [visibleOpen, setVisibleOpen] = useState(false);
+  const { isTopOverlay } = useOverlayStack({
+    onClose: () => setOpen(false),
+    open,
+  });
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -276,7 +295,13 @@ function DialogContent({
     [],
   );
 
-  return (
+  const portalTarget = mounted ? document.body : null;
+
+  if (!portalTarget) {
+    return null;
+  }
+
+  return createPortal(
     <dialog
       aria-describedby={ariaDescribedBy ?? descriptionId}
       aria-labelledby={ariaLabelledBy ?? titleId}
@@ -290,20 +315,28 @@ function DialogContent({
       data-state={visibleOpen ? "open" : "closed"}
       onCancel={(event) => {
         onCancel?.(event);
-
-        if (!event.defaultPrevented) {
-          event.preventDefault();
-          setOpen(false);
-        }
+        event.preventDefault();
+        event.stopPropagation();
       }}
       onClick={(event) => {
         onClick?.(event);
 
-        if (!event.defaultPrevented && event.target === event.currentTarget) {
+        if (event.target !== event.currentTarget) {
+          return;
+        }
+
+        event.stopPropagation();
+
+        if (!event.defaultPrevented && isTopOverlay()) {
           setOpen(false);
         }
       }}
       onClose={(event) => {
+        if (event.target !== event.currentTarget) {
+          event.stopPropagation();
+          return;
+        }
+
         onClose?.(event);
 
         if (open) {
@@ -320,7 +353,8 @@ function DialogContent({
           <span className="sr-only">Close</span>
         </DialogClose>
       ) : null}
-    </dialog>
+    </dialog>,
+    portalTarget,
   );
 }
 

@@ -1,5 +1,8 @@
 "use client";
 
+// Keep this primitive backed by native <dialog> top-layer behavior. Nested
+// Escape handling belongs in useOverlayStack, not in ad hoc overlay rewrites.
+
 import {
   Children,
   cloneElement,
@@ -12,14 +15,21 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type ComponentProps,
   type MouseEvent,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 
 import { cn } from "@kenstack/lib/utils";
+import { useOverlayStack } from "./overlayStack";
 
 const transitionDurationMs = 150;
+
+const subscribeToClientSnapshot = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
 
 const PopoverContext = createContext<{
   contentId: string;
@@ -153,7 +163,19 @@ function PopoverContent({
   const dialogRef = useRef<HTMLDialogElement | null>(null);
   const closeTimerRef = useRef<number | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const mounted = useSyncExternalStore(
+    subscribeToClientSnapshot,
+    getClientSnapshot,
+    getServerSnapshot,
+  );
   const [visibleOpen, setVisibleOpen] = useState(false);
+  const { isTopOverlay } = useOverlayStack({
+    onClose: () => {
+      onEscape?.();
+      setOpen(false);
+    },
+    open,
+  });
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -192,7 +214,7 @@ function PopoverContent({
     }
 
     if (!dialog.open) {
-      dialog.show();
+      dialog.showModal();
     }
 
     positionDialog(dialog, contentId, align, sideOffset);
@@ -248,24 +270,20 @@ function PopoverContent({
         return;
       }
 
+      if (!isTopOverlay()) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
       setOpen(false);
     }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        onEscape?.();
-        setOpen(false);
-      }
-    }
-
     document.addEventListener("pointerdown", handlePointerDown, true);
-    document.addEventListener("keydown", handleKeyDown);
 
     return () => {
       document.removeEventListener("pointerdown", handlePointerDown, true);
-      document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [contentId, onEscape, open, setOpen]);
+  }, [contentId, isTopOverlay, open, setOpen]);
 
   useEffect(
     () => () => {
@@ -280,11 +298,17 @@ function PopoverContent({
     [],
   );
 
-  return (
+  const portalTarget = mounted ? document.body : null;
+
+  if (!portalTarget) {
+    return null;
+  }
+
+  return createPortal(
     <dialog
       {...props}
       className={cn(
-        "bg-popover text-popover-foreground fixed inset-auto z-50 m-0 max-h-[calc(100dvh-1rem)] w-72 scale-95 overflow-auto rounded-md border p-4 opacity-0 shadow-md transition-[opacity,transform] duration-150 ease-out outline-hidden data-[state=open]:scale-100 data-[state=open]:opacity-100",
+        "bg-popover text-popover-foreground fixed inset-auto z-50 m-0 max-h-[calc(100dvh-1rem)] w-72 scale-95 overflow-auto rounded-md border p-4 opacity-0 shadow-md transition-[opacity,transform] duration-150 ease-out outline-hidden backdrop:bg-transparent data-[state=open]:scale-100 data-[state=open]:opacity-100",
         className,
         "hidden open:block",
       )}
@@ -292,11 +316,42 @@ function PopoverContent({
       data-slot="popover-content"
       data-state={visibleOpen ? "open" : "closed"}
       id={contentId}
+      onCancel={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+      }}
+      onClick={(event) => {
+        props.onClick?.(event);
+
+        if (event.target !== event.currentTarget) {
+          return;
+        }
+
+        if (!event.defaultPrevented && isTopOverlay()) {
+          event.preventDefault();
+          event.stopPropagation();
+          setOpen(false);
+        }
+      }}
+      onClose={(event) => {
+        event.stopPropagation();
+
+        if (event.target !== event.currentTarget) {
+          return;
+        }
+
+        props.onClose?.(event);
+
+        if (open) {
+          setOpen(false);
+        }
+      }}
       ref={dialogRef}
       tabIndex={tabIndex}
     >
       {children}
-    </dialog>
+    </dialog>,
+    portalTarget,
   );
 }
 

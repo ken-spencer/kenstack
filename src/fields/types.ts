@@ -10,6 +10,7 @@ export type FieldKind =
   | "boolean"
   | "date"
   | "datetime"
+  | "select"
   | "radio-button"
   | "checkbox-list"
   | "image"

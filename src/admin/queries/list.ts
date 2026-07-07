@@ -17,7 +17,10 @@ import {
   searchParamsToRecord,
   type ListQuery,
 } from "@kenstack/list/querySchema";
-import type { AnyAdminConfig } from "@kenstack/admin/module";
+import type {
+  AnyAdminConfig,
+  ModuleParentOptions,
+} from "@kenstack/admin/module";
 import type { BaseListItem } from "@kenstack/admin/client";
 import type { AdminContentTable } from "@kenstack/admin/table";
 import { getSortMeta } from "@kenstack/admin/types/list";
@@ -34,12 +37,27 @@ export function adminListCacheTag(name: string) {
 export async function loadAdminList({
   adminConfig,
   name,
+  moduleParent,
+  parentId,
   query,
 }: {
   adminConfig: AdminListConfig;
   name: string;
+  moduleParent?: ModuleParentOptions;
+  parentId?: number;
   query: ListQuery;
 }) {
+  if (moduleParent || parentId) {
+    return {
+      data: await queryAdminList({
+        adminConfig,
+        moduleParent,
+        parentId,
+        query,
+      }),
+    };
+  }
+
   if (isDefaultAdminListQuery(adminConfig, query)) {
     return {
       data: await loadCachedBaseAdminList(name),
@@ -47,7 +65,7 @@ export async function loadAdminList({
   }
 
   return {
-    data: await queryAdminList(adminConfig, query),
+    data: await queryAdminList({ adminConfig, query }),
   };
 }
 
@@ -71,7 +89,7 @@ async function loadCachedBaseAdminList(name: string) {
     page: 1,
   };
 
-  return queryAdminList(adminConfig, baseListQuery);
+  return queryAdminList({ adminConfig, query: baseListQuery });
 }
 
 function isDefaultAdminListQuery(
@@ -92,15 +110,39 @@ function isDefaultAdminListQuery(
   );
 }
 
-export async function queryAdminList(
-  adminConfig: AdminListConfig,
-  data: AdminListQuery,
-) {
+export async function queryAdminList({
+  adminConfig,
+  moduleParent,
+  parentId,
+  query: data,
+}: {
+  adminConfig: AdminListConfig;
+  moduleParent?: ModuleParentOptions;
+  parentId?: number;
+  query: AdminListQuery;
+}) {
+  if ((moduleParent && !parentId) || (!moduleParent && parentId)) {
+    return {
+      status: "error",
+      message: "Parent ID is missing.",
+    } as const;
+  }
+
   const isReorderSort = adminConfig.list.sort[data.sort]?.direction === false;
   const limit = adminConfig.list.limit ?? 25;
 
   const { db } = deps;
   const { table, fields } = adminConfig;
+  const parentColumn = moduleParent
+    ? getTableColumns(table)[moduleParent.foreignKey]
+    : undefined;
+  if (moduleParent && !parentColumn) {
+    return {
+      status: "error",
+      message: "This list is not configured for parent records.",
+    } as const;
+  }
+
   const listSelect = getListSelect(table, fields);
   if (!Object.keys(listSelect).length) {
     return {
@@ -118,6 +160,9 @@ export async function queryAdminList(
       },
       data,
     ),
+    moduleParent && parentId && parentColumn
+      ? eq(parentColumn, parentId)
+      : undefined,
   );
   const query = db
     .select({
@@ -153,11 +198,26 @@ export async function queryAdminList(
   } as const;
 }
 
-export async function loadAdminListNeighbors(
-  adminConfig: AdminListConfig,
-  queryString: string,
-  id: number,
-) {
+export async function loadAdminListNeighbors({
+  adminConfig,
+  id,
+  moduleParent,
+  parentId,
+  queryString,
+}: {
+  adminConfig: AdminListConfig;
+  id: number;
+  moduleParent?: ModuleParentOptions;
+  parentId?: number;
+  queryString: string;
+}) {
+  if ((moduleParent && !parentId) || (!moduleParent && parentId)) {
+    return {
+      previousId: null,
+      nextId: null,
+    };
+  }
+
   const data = parseListSearchParams({
     filters: adminConfig.list.filters,
     searchParams: searchParamsToRecord(new URLSearchParams(queryString)),
@@ -165,6 +225,16 @@ export async function loadAdminListNeighbors(
   });
   const { db } = deps;
   const { table } = adminConfig;
+  const parentColumn = moduleParent
+    ? getTableColumns(table)[moduleParent.foreignKey]
+    : undefined;
+  if (moduleParent && !parentColumn) {
+    return {
+      previousId: null,
+      nextId: null,
+    };
+  }
+
   const orderBy = resolveListOrderBy(
     {
       sort: adminConfig.list.sort,
@@ -198,6 +268,9 @@ export async function loadAdminListNeighbors(
             },
             data,
           ),
+          moduleParent && parentId && parentColumn
+            ? eq(parentColumn, parentId)
+            : undefined,
         ),
       ),
   );

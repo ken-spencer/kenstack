@@ -148,9 +148,9 @@ const runAdminPipeline = async (request: NextRequest) => {
 
   switch (action) {
     case "list":
-      return pipeline({ request, json }, listAction(adminConfig));
+      return pipeline({ request, json }, listAction(adminModuleConfig));
     case "neighbors":
-      return pipeline({ request, json }, neighborsAction(adminConfig));
+      return pipeline({ request, json }, neighborsAction(adminModuleConfig));
     case "save":
       return pipeline({ request, json }, saveAction(adminModuleConfig));
     case "remove":

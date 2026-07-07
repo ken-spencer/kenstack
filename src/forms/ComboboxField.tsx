@@ -1,7 +1,12 @@
 "use client";
 
 import { useRef, type ComponentProps } from "react";
-import type { ControllerRenderProps, FieldValues, Path } from "react-hook-form";
+import {
+  useFormContext,
+  type ControllerRenderProps,
+  type FieldValues,
+  type Path,
+} from "react-hook-form";
 import { twMerge } from "tailwind-merge";
 
 import {
@@ -12,11 +17,10 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@kenstack/forms/controls/Combobox";
+import type { SelectOption } from "@kenstack/forms/controls/Select";
 import Field, { type FieldProps } from "@kenstack/forms/Field";
 
-type ComboboxFieldOption = {
-  value: string;
-  label: string;
+type ComboboxFieldOption = SelectOption & {
   disabled?: boolean;
 };
 
@@ -24,6 +28,7 @@ type ComboboxFieldProps = FieldProps &
   Omit<ComponentProps<"div">, "onChange"> & {
     disabled?: boolean;
     emptyMessage?: string;
+    inputAutoComplete?: string;
     inputClass?: string;
     options: ComboboxFieldOption[];
     placeholder?: string;
@@ -54,18 +59,28 @@ function findTypedOption(inputValue: string, options: ComboboxFieldOption[]) {
   }
 
   const possibleMatches = enabledOptions.filter(
-    (option) =>
-      normalizeSearchValue(option.label).includes(searchValue) ||
-      normalizeSearchValue(option.value).includes(searchValue),
+    (option) => optionMatchesInput(option, searchValue),
   );
 
   return possibleMatches.length === 1 ? possibleMatches[0] : null;
+}
+
+function optionMatchesInput(
+  option: ComboboxFieldOption,
+  normalizedInputValue: string,
+) {
+  return (
+    [option.label, option.value, ...(option.keywords ?? [])].some((value) =>
+      normalizeSearchValue(value).includes(normalizedInputValue),
+    )
+  );
 }
 
 function ComboboxFieldControl({
   disabled,
   emptyMessage,
   field,
+  inputAutoComplete,
   inputClass,
   options,
   placeholder,
@@ -75,28 +90,42 @@ function ComboboxFieldControl({
   disabled: boolean;
   emptyMessage: string;
   field: ControllerRenderProps<FieldValues, Path<FieldValues>>;
+  inputAutoComplete?: string;
   inputClass?: string;
   options: ComboboxFieldOption[];
   placeholder: string;
   showClear: boolean;
   onChange?: (value: string, option: ComboboxFieldOption | null) => void;
 }) {
+  const { setValue } = useFormContext();
   const latestInputValue = useRef<string | null>(null);
   const value = typeof field.value === "string" ? field.value : "";
   const selected =
     options.find((option) => option.value === value) ??
     (value ? { value, label: value } : null);
+  const comboboxOptions =
+    selected && !options.some((option) => option.value === selected.value)
+      ? [selected, ...options]
+      : options;
 
   function commitOption(option: ComboboxFieldOption | null) {
     const nextValue = option?.value ?? "";
 
-    if (nextValue === value) {
+    if (option) {
+      setValue(field.name, nextValue, {
+        shouldDirty: nextValue !== value,
+        shouldTouch: true,
+        shouldValidate: true,
+      });
+    } else if (nextValue !== value) {
+      field.onChange(nextValue);
+    } else {
+      latestInputValue.current = null;
       return;
     }
 
-    field.onChange(nextValue);
     onChange?.(nextValue, option);
-    latestInputValue.current = option?.label ?? "";
+    latestInputValue.current = null;
   }
 
   function commitTypedValue(inputValue: string) {
@@ -113,15 +142,11 @@ function ComboboxFieldControl({
   }
 
   return (
-    <Combobox<ComboboxFieldOption>
-      items={options}
-      value={selected}
+    <Combobox
+      items={comboboxOptions}
+      value={value}
       autoHighlight
-      itemToStringLabel={(option) => option.label}
-      isItemEqualToValue={(item, currentValue) =>
-        item.value === currentValue.value
-      }
-      onValueChange={(option) => {
+      onValueChange={(_nextValue, option) => {
         commitOption(option);
       }}
       onInputValueChange={(nextInputValue) => {
@@ -129,6 +154,7 @@ function ComboboxFieldControl({
       }}
     >
       <ComboboxInput
+        autoComplete={inputAutoComplete}
         disabled={disabled}
         placeholder={placeholder}
         showClear={showClear}
@@ -168,6 +194,7 @@ export default function ComboboxField({
   className,
   disabled = false,
   emptyMessage = "No matches found.",
+  inputAutoComplete,
   inputClass,
   options,
   placeholder = "Search...",
@@ -188,6 +215,7 @@ export default function ComboboxField({
           disabled={disabled}
           emptyMessage={emptyMessage}
           field={field}
+          inputAutoComplete={inputAutoComplete}
           inputClass={inputClass}
           options={options}
           placeholder={placeholder}

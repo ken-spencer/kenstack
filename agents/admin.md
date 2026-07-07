@@ -6,7 +6,7 @@ Read this before Kenstack admin module, list, or edit-form work.
 
 - Follow the established two-column admin edit rhythm:
   - primary identity fields first, such as `name`, `title`, `slug`, or `code`;
-  - right-column operational/meta fields next on mobile, such as visibility, publish date, module-specific selectors, and sort order;
+  - right-column operational/meta fields next on mobile, such as visibility, publish date, and module-specific selectors;
   - long content fields, such as description/body/details, after those controls.
 - Preserve that mobile order without making the desktop layout codependent.
 - Do not put the primary column and right column into a shared grid where later left-column fields are forced to wait for the full sidebar height.

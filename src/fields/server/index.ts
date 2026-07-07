@@ -235,6 +235,10 @@ function getDefaultServerField(field: DefinedField): ServerFieldDefaults {
     return radioButtonField(field);
   }
 
+  if (field.kind === "select") {
+    return radioButtonField(field);
+  }
+
   if (field.kind === "text" || field.kind === "email") {
     return textField();
   }

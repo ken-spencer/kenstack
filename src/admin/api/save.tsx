@@ -46,12 +46,28 @@ export const saveAction = (moduleConfig: DefinedAdminModule) => {
       schema: z.object({
         id: z.number().nullish(),
         changes: z.array(z.string()),
+        parentId: z.number().int().positive().optional(),
         values: adminConfig.schema,
       }),
       fieldsKey: "values",
     },
     async ({ response, data: rawData }) => {
-      const { changes, id, values } = withServerPublishDate(rawData);
+      const { parent } = moduleConfig;
+      const rawSaveData = withServerPublishDate(rawData);
+      const { id } = rawSaveData;
+      const { changes } = rawSaveData;
+      let { values } = rawSaveData;
+
+      if (!id && parent) {
+        if (!rawSaveData.parentId) {
+          return response.error("Parent ID is missing.");
+        }
+
+        values = {
+          ...values,
+          [parent.foreignKey]: rawSaveData.parentId,
+        };
+      }
 
       const result = await saveAdminRecord({
         changes,

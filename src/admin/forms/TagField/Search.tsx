@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useRef, useState } from "react";
 
 import { Tag as TagIcon } from "lucide-react";
 import { Skeleton } from "@kenstack/components/Skeleton";
@@ -17,11 +17,12 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@kenstack/forms/controls/Combobox";
+import type { SelectOption } from "@kenstack/forms/controls/Select";
 
 import type { Tag } from "./types";
 import { type AnyField } from "@kenstack/forms/types";
 
-type TagSearchOption = Tag & { count: number };
+type TagSearchOption = Tag & SelectOption;
 
 export default function TagSearcht({ field }: { field: AnyField }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -37,13 +38,27 @@ export default function TagSearcht({ field }: { field: AnyField }) {
     Error
   >({
     queryKey: ["tags", debouncedValue, field.value],
-    queryFn: async () =>
-      fetcher(apiPath, {
+    queryFn: async () => {
+      const result = await fetcher<{ tags: Tag[] }>(apiPath, {
         action: "tags",
         name: adminName,
         keywords: debouncedValue,
         exclude: field.value,
-      }),
+      });
+
+      if (result.status === "error") {
+        return result;
+      }
+
+      return {
+        ...result,
+        tags: result.tags.map((tag) => ({
+          ...tag,
+          label: tag.name,
+          value: tag.slug,
+        })),
+      };
+    },
     placeholderData: keepPreviousData,
     enabled: focusing,
   });
@@ -88,16 +103,12 @@ export default function TagSearcht({ field }: { field: AnyField }) {
   }
 
   return (
-    <Combobox<TagSearchOption>
+    <Combobox
       items={tags}
       open={open}
       inputValue={keywords}
       filter={null}
       autoHighlight
-      itemToStringLabel={(tag) => tag.name}
-      isItemEqualToValue={(item, currentValue) =>
-        item.slug === currentValue.slug
-      }
       onInputValueChange={(value) => {
         setKeywords(value);
         setHighlightedTag(null);
@@ -111,7 +122,7 @@ export default function TagSearcht({ field }: { field: AnyField }) {
       onItemHighlighted={(tag) => {
         setHighlightedTag(tag ?? null);
       }}
-      onValueChange={(tag) => {
+      onValueChange={(_value, tag) => {
         if (tag) {
           addTag(tag);
         }
@@ -169,7 +180,7 @@ export default function TagSearcht({ field }: { field: AnyField }) {
                     value={tag}
                   >
                     <div className="flex justify-between">
-                      <span>{tag.name}</span> <span>{tag.count}</span>
+                      <span>{tag.label}</span> <span>{tag.count}</span>
                     </div>
                   </ComboboxItem>
                 )}

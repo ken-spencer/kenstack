@@ -22,6 +22,7 @@ type AdminEditProps = {
   defaultValues: Record<string, unknown>;
   clients: AdminClientRegistry;
   children: React.ReactNode;
+  parentId?: number;
   preview?: PreviewPath;
 };
 
@@ -37,6 +38,7 @@ type AdminEditContext = {
   listPath: string;
   item: null | AdminEditItem;
   defaultValues: Record<string, unknown>;
+  parentId?: number;
   schema: ZodObject;
   preview?: PreviewPath;
 };
@@ -53,6 +55,7 @@ export function AdminEditProvider({
   canUpload,
   defaultValues,
   clients,
+  parentId,
   preview,
   children,
 }: AdminEditProps) {
@@ -71,10 +74,14 @@ export function AdminEditProvider({
   const pathname = usePathname();
   const apiPath = "/api/admin";
   const listPath = useMemo(() => {
+    if (parentId) {
+      return `/admin/${parentId}/${name}`;
+    }
+
     const parts = pathname.split("/").filter(Boolean);
     parts.pop();
     return "/" + parts.join("/");
-  }, [pathname]);
+  }, [name, parentId, pathname]);
 
   const values: AdminEditContext = {
     name,
@@ -88,6 +95,7 @@ export function AdminEditProvider({
     userId: userId,
     item,
     defaultValues: item ?? defaultValues,
+    parentId,
     schema: client.schema,
     preview,
   };

@@ -9,6 +9,8 @@ Read this before database, Drizzle, table schema, Zod, validation, or pipeline s
 - Do not change schema names or column names without checking existing migrations.
 - Prefer explicit nullability and defaults.
 - Avoid Drizzle `.select()` with no field projection unless the code truly consumes the full row as the domain object. Prefer `.select({ ... })` with the exact columns or expressions the caller reads, so query cost and TypeScript inference stay obvious. If a full-row select is necessary for an extension point such as field lifecycle hooks or revalidation callbacks, add a short nearby comment naming that boundary.
+- For child-collection persistence, do not delete and recreate all rows on save. Load current rows, compare against submitted values, bulk insert new rows where practical, update only rows whose values changed, and remove only rows explicitly marked for removal. Preserve durable row IDs, especially for records that may be referenced by sales, tickets, audit rows, schedules, or future integrations.
+- Prefer explicit client markers such as `isNew` and `isRemoved` for editable collection rows. Do not infer removal from an omitted row when the UI can keep the row in form state and hide it after marking it removed.
 
 ## Validation
 

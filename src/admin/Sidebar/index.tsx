@@ -50,24 +50,44 @@ function AdminSidebarContent({
   children,
   defaultOpen,
 }: AdminSidebarProps & { defaultOpen: boolean }) {
-  const adminModules = Object.entries(deps.modules).flatMap(
-    ([name, module]) => {
-      if (!module.admin) {
-        return [];
-      }
+  const moduleLinks = Object.entries(deps.modules).flatMap(([name, module]) => {
+    if (!module.admin) {
+      return [];
+    }
 
-      return [
-        {
-          href: "/admin/" + name,
-          headerIcon: module.icon ? (
-            <module.icon className="size-4 text-gray-800" />
-          ) : null,
-          icon: module.icon ? <module.icon /> : <span className="w-3" />,
-          title: module.title,
-        },
-      ];
-    },
-  );
+    return [
+      {
+        href: "/admin/" + name,
+        headerIcon: module.icon ? (
+          <module.icon className="size-4 text-gray-800" />
+        ) : null,
+        icon: module.icon ? <module.icon /> : <span className="w-3" />,
+        name,
+        title: module.title,
+      },
+    ];
+  });
+  const childLinksByParent = new Map<string, typeof moduleLinks>();
+
+  for (const link of moduleLinks) {
+    const moduleConfig = deps.modules[link.name];
+    const navigationParent = moduleConfig?.navigationParent;
+
+    if (!navigationParent || moduleConfig.parent) {
+      continue;
+    }
+
+    childLinksByParent.set(navigationParent, [
+      ...(childLinksByParent.get(navigationParent) ?? []),
+      link,
+    ]);
+  }
+
+  const adminModules = moduleLinks.filter(({ name }) => {
+    const moduleConfig = deps.modules[name];
+
+    return !moduleConfig?.parent && !moduleConfig?.navigationParent;
+  });
 
   const sidebarNav = (
     <>
@@ -76,9 +96,15 @@ function AdminSidebarContent({
         <SidebarGroupLabel>Administration</SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
-            {adminModules.map(({ href, icon, title }) => {
+            {adminModules.map(({ href, icon, name, title }) => {
               return (
-                <NavLink key={href} href={href} icon={icon} title={title} />
+                <NavLink
+                  key={href}
+                  href={href}
+                  icon={icon}
+                  title={title}
+                  navChildren={childLinksByParent.get(name)}
+                />
               );
             })}
           </SidebarMenu>
@@ -93,9 +119,9 @@ function AdminSidebarContent({
       <AppSidebar content={sidebarNav} />
       <Content
         logo={logo}
-        moduleLinks={adminModules.map(({ headerIcon, href, title }) => ({
-          href,
+        moduleLinks={moduleLinks.map(({ headerIcon, name, title }) => ({
           icon: headerIcon,
+          name,
           title,
         }))}
         accountMenu={

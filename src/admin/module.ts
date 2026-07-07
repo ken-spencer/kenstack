@@ -85,6 +85,11 @@ export type ResolvedModuleSettings = NonNullable<
   ReturnType<typeof resolveSettings>
 >;
 
+export type ModuleParentOptions = {
+  module: string;
+  foreignKey: string;
+};
+
 type ModuleOptions = {
   name: string;
   title?: string;
@@ -92,6 +97,7 @@ type ModuleOptions = {
   icon?: ComponentType<SVGProps<SVGSVGElement>>;
   admin?: AdminConfig;
   settings?: ModuleSettingsConfig;
+  parent?: ModuleParentOptions;
 };
 
 export type DefinedAdmin = Record<
@@ -104,6 +110,8 @@ export type DefinedAdmin = Record<
     admin?: AnyAdminConfig;
     settings?: ResolvedModuleSettings;
     client?: AdminClientRegistry;
+    parent?: ModuleParentOptions;
+    navigationParent?: string;
   }
 >;
 
@@ -122,6 +130,7 @@ export function defineModule<const TModule extends ModuleOptions>(
     basePath,
     admin: resolveAdmin(options.admin, basePath),
     settings: resolveSettings(options.settings),
+    parent: options.parent,
   } satisfies DefinedAdmin[string];
 }
 

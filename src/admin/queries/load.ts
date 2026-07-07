@@ -1,8 +1,11 @@
-import { eq } from "drizzle-orm";
+import { eq, getTableColumns } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
 
 import { deps } from "@app/deps";
-import type { AnyAdminConfig } from "@kenstack/admin/module";
+import type {
+  AnyAdminConfig,
+  ModuleParentOptions,
+} from "@kenstack/admin/module";
 import { loadRecord } from "@kenstack/fields/records";
 
 type AdminLoadTarget = number | "single";
@@ -12,6 +15,7 @@ export type AdminEditItem = {
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;
+  parentId?: number;
 } & Record<string, unknown>;
 
 export function adminLoadCacheTag(name: string, target: AdminLoadTarget) {
@@ -22,11 +26,13 @@ export async function loadAdminEdit({
   adminConfig,
   id,
   isNew,
+  moduleParent,
   name,
 }: {
   adminConfig: AnyAdminConfig;
   id?: number;
   isNew: boolean;
+  moduleParent?: ModuleParentOptions;
   name: string;
 }) {
   if (isNew) {
@@ -39,12 +45,13 @@ export async function loadAdminEdit({
     return null;
   }
 
-  return loadCachedAdminRecord(name, target);
+  return loadCachedAdminRecord(name, target, moduleParent?.foreignKey);
 }
 
 async function loadCachedAdminRecord(
   name: string,
   target: AdminLoadTarget,
+  parentForeignKey?: string,
 ): Promise<AdminEditItem | null> {
   "use cache";
   cacheLife("max");
@@ -61,11 +68,16 @@ async function loadCachedAdminRecord(
       return null;
     }
 
+    const parentColumn = parentForeignKey
+      ? getTableColumns(adminConfig.table)[parentForeignKey]
+      : undefined;
+
     const result = await loadRecord({
       table: adminConfig.table,
       fields: adminConfig.fields,
       defaults: adminConfig.defaultValues,
       id: target,
+      select: parentColumn ? { parentId: parentColumn } : undefined,
     });
 
     return result.row ? serializeAdminEditItem(result.values) : null;

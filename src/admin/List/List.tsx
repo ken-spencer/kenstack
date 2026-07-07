@@ -6,7 +6,7 @@ import {
   type CSSProperties,
   type DragEvent,
 } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { GripVertical } from "lucide-react";
@@ -35,7 +35,6 @@ export default function AdminListWrapper() {
 }
 
 function AdminList() {
-  const pathname = usePathname();
   const searchParams = useSearchParams();
   const {
     selected,
@@ -214,9 +213,7 @@ function AdminList() {
       >
         {data.items.map((item, key) => {
           const path =
-            pathname +
-            "/" +
-            item.id +
+            `/admin/${name}/${item.id}` +
             (searchParams.size ? "?" + searchParams : "");
 
           return (

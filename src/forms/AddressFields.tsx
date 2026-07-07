@@ -6,26 +6,28 @@ import { useFormContext } from "react-hook-form";
 import type { CountryData } from "country-region-data";
 import { twMerge } from "tailwind-merge";
 
+import {
+  findSupportedCountry,
+  type SupportedCountry,
+} from "@kenstack/fields/supportedCountries";
 import ComboboxField from "@kenstack/forms/ComboboxField";
 import InputField from "@kenstack/forms/InputField";
 
 type AddressFieldsProps = {
   className?: string;
+  countries?: readonly SupportedCountry[];
   title?: ReactNode;
-};
-
-type CountryOption = {
-  code: string;
-  name: string;
-  regions: {
-    code: string;
-    name: string;
-  }[];
 };
 
 const countryPriority = ["US", "CA"];
 
-const countryLabels = {
+const defaultLabels = {
+  locality: "City / Town",
+  region: "Region",
+  postalCode: "Postal Code",
+};
+
+const countryLabels: Record<string, typeof defaultLabels> = {
   US: {
     locality: "City",
     region: "State",
@@ -46,33 +48,29 @@ const countryLabels = {
     region: "State / Territory",
     postalCode: "Postcode",
   },
-} satisfies Record<
-  string,
-  { locality: string; postalCode: string; region: string }
->;
-
-const defaultLabels = {
-  locality: "City / Town",
-  region: "Region",
-  postalCode: "Postal Code",
 };
 
 function orderCountries(countries: CountryData[]) {
-  const options = countries.map(([name, code, regions]): CountryOption => {
+  const options: SupportedCountry[] = countries.map(([name, code, regions]) => {
+    const labels = countryLabels[code] ?? defaultLabels;
+
     return {
       code,
       name,
+      localityLabel: labels.locality,
+      postalCodeLabel: labels.postalCode,
+      regionLabel: labels.region,
       regions: regions.map(([regionName, regionCode]) => ({
         code: regionCode,
         name: regionName,
       })),
-    };
+    } satisfies SupportedCountry;
   });
 
   return [
     ...countryPriority
       .map((code) => options.find((country) => country.code === code))
-      .filter((country): country is CountryOption => Boolean(country)),
+      .filter((country): country is SupportedCountry => Boolean(country)),
     ...options.filter((country) => !countryPriority.includes(country.code)),
   ];
 }
@@ -81,7 +79,7 @@ function normalizeRegionSearch(value: string) {
   return value.trim().toLocaleLowerCase();
 }
 
-function findRegion(country: CountryOption | undefined, value: string) {
+function findRegion(country: SupportedCountry | undefined, value: string) {
   const searchValue = normalizeRegionSearch(value);
 
   if (!country?.regions.length || !searchValue) {
@@ -99,27 +97,40 @@ function findRegion(country: CountryOption | undefined, value: string) {
 
 export default function AddressFields({
   className,
+  countries,
   title = "Address",
 }: AddressFieldsProps) {
   const { setValue, watch } = useFormContext();
-  const [countries, setCountries] = useState<CountryOption[]>([]);
+  const [loadedCountries, setLoadedCountries] = useState<SupportedCountry[]>(
+    [],
+  );
   const regionDrafts = useRef<Record<string, string>>({});
+  const countryOptions = countries ?? loadedCountries;
   const countryCode = watch("countryCode");
   const regionCode = watch("regionCode");
   const selectedCountryCode =
     typeof countryCode === "string" ? countryCode.toUpperCase() : "";
-  const selectedCountry = countries.find(
-    (country) => country.code === selectedCountryCode,
+  const selectedCountry = findSupportedCountry(
+    countryOptions,
+    selectedCountryCode,
   );
-  const labels =
-    countryLabels[selectedCountryCode as keyof typeof countryLabels] ??
-    defaultLabels;
+  const labels = selectedCountry
+    ? {
+        locality: selectedCountry.localityLabel,
+        region: selectedCountry.regionLabel,
+        postalCode: selectedCountry.postalCodeLabel,
+      }
+    : defaultLabels;
 
   useEffect(() => {
+    if (countries) {
+      return;
+    }
+
     void import("country-region-data").then(({ allCountries }) => {
-      setCountries(orderCountries(allCountries));
+      setLoadedCountries(orderCountries(allCountries));
     });
-  }, []);
+  }, [countries]);
 
   return (
     <section className={twMerge("space-y-4", className)}>
@@ -127,14 +138,15 @@ export default function AddressFields({
       <ComboboxField
         name="countryCode"
         label="Country"
-        disabled={!countries.length}
+        disabled={!countryOptions.length}
         emptyMessage="No countries found."
         placeholder="Select country"
         onChange={(nextCountryCode) => {
           const currentRegion =
             typeof regionCode === "string" ? regionCode : "";
-          const nextCountry = countries.find(
-            (country) => country.code === nextCountryCode,
+          const nextCountry = findSupportedCountry(
+            countryOptions,
+            nextCountryCode,
           );
           const matchedRegion = findRegion(nextCountry, currentRegion);
           const nextRegion =
@@ -149,7 +161,7 @@ export default function AddressFields({
             shouldValidate: true,
           });
         }}
-        options={countries.map((country) => ({
+        options={countryOptions.map((country) => ({
           value: country.code,
           label: country.name,
         }))}

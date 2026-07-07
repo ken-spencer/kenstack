@@ -5,7 +5,11 @@ import Header from "./Header";
 import Footer from "./Footer";
 import List from "./List";
 
-import type { AnyAdminConfig } from "@kenstack/admin/module";
+import type {
+  AnyAdminConfig,
+  ModuleParentOptions,
+} from "@kenstack/admin/module";
+import Breadcrumbs from "@kenstack/admin/components/Breadcrumbs";
 import { getFilterMeta, getSortMeta } from "@kenstack/admin/types/list";
 import type { AdminClientRegistry } from "@kenstack/admin/clientLoaders";
 import {
@@ -13,6 +17,8 @@ import {
   type ListSearchParams,
 } from "@kenstack/list/querySchema";
 import { loadAdminList } from "@kenstack/admin/queries/list";
+import { loadAdminParentRecord } from "@kenstack/admin/queries/parent";
+import { notFound } from "next/navigation";
 import {
   dehydrate,
   HydrationBoundary,
@@ -26,6 +32,9 @@ type AdminListProps = {
   searchParams: ListSearchParams;
   userId: number;
   name: string;
+  moduleTitle: string;
+  parentId?: number;
+  moduleParent?: ModuleParentOptions;
 };
 
 export default async function AdminListCont({
@@ -35,6 +44,9 @@ export default async function AdminListCont({
   searchParams,
   userId,
   name,
+  moduleTitle,
+  parentId,
+  moduleParent,
 }: AdminListProps) {
   if (!("list" in adminConfig)) {
     return null;
@@ -48,15 +60,31 @@ export default async function AdminListCont({
     searchParams,
     sort,
   });
-  const { data: initialData } = await loadAdminList({
-    adminConfig,
-    name,
-    query: initialQuery,
-  });
+  const [{ data: initialData }, parentRecord] = await Promise.all([
+    loadAdminList({
+      adminConfig,
+      name,
+      moduleParent: parentId ? moduleParent : undefined,
+      parentId,
+      query: initialQuery,
+    }),
+    parentId && moduleParent
+      ? loadAdminParentRecord({ id: parentId, name: moduleParent.module })
+      : null,
+  ]);
+
+  if (parentId && !parentRecord) {
+    notFound();
+  }
+
   const queryClient = new QueryClient();
 
   queryClient.setQueryData(
-    getAdminListQueryKey(name, initialQuery),
+    getAdminListQueryKey({
+      name,
+      parentId,
+      query: initialQuery,
+    }),
     initialData,
   );
 
@@ -64,6 +92,7 @@ export default async function AdminListCont({
     <HydrationBoundary state={dehydrate(queryClient)}>
       <AdminListProvider
         name={name}
+        parentId={parentId}
         basePath={basePath}
         clients={clients}
         userId={userId}
@@ -71,6 +100,11 @@ export default async function AdminListCont({
         filter={filterMeta}
       >
         <section>
+          <Breadcrumbs
+            moduleName={name}
+            moduleTitle={moduleTitle}
+            parent={parentRecord}
+          />
           <Header />
           <List />
           <Footer />

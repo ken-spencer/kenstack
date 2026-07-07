@@ -11,7 +11,7 @@ import { useAdminEdit } from "./context";
 
 export default function NeighborButtons() {
   const searchParams = useSearchParams();
-  const { id, name, listPath, single } = useAdminEdit();
+  const { id, name, listPath, parentId, single } = useAdminEdit();
   const query = searchParams.toString();
   const recordId = id ?? 0;
   const { data } = useQuery({
@@ -24,9 +24,17 @@ export default function NeighborButtons() {
         action: "neighbors",
         id: recordId,
         name,
+        parentId,
         query,
       }),
-    queryKey: ["admin-list", name, "neighbors", recordId, query],
+    queryKey: [
+      "admin-list",
+      name,
+      parentId ?? null,
+      "neighbors",
+      recordId,
+      query,
+    ],
     staleTime: 60 * 1000,
   });
 
@@ -42,6 +50,7 @@ export default function NeighborButtons() {
     <div className="flex items-center gap-1">
       <NeighborButton
         listPath={listPath}
+        moduleName={name}
         searchParams={searchParams}
         targetId={data.previousId}
         tooltip="Previous Entry"
@@ -50,6 +59,7 @@ export default function NeighborButtons() {
       </NeighborButton>
       <NeighborButton
         listPath={listPath}
+        moduleName={name}
         searchParams={searchParams}
         targetId={data.nextId}
         tooltip="Next Entry"
@@ -63,18 +73,21 @@ export default function NeighborButtons() {
 function NeighborButton({
   children,
   listPath,
+  moduleName,
   searchParams,
   targetId,
   tooltip,
 }: {
   children: ReactNode;
   listPath: string;
+  moduleName: string;
   searchParams: ReturnType<typeof useSearchParams>;
   targetId: number | null;
   tooltip: string;
 }) {
   const href = targetId
-    ? listPath + "/" + targetId + (searchParams.size ? "?" + searchParams : "")
+    ? `/admin/${moduleName}/${targetId}` +
+      (searchParams.size ? "?" + searchParams : "")
     : listPath;
 
   return (

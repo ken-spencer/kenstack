@@ -21,6 +21,12 @@ type FieldOptionOfKind<
   TOptions extends object = Record<never, never>,
 > = FieldOption<TKind, TDefault> & TOptions;
 
+type DefaultFromOptions<TOptions, TDefault> = TOptions extends {
+  default: infer TOptionDefault;
+}
+  ? TOptionDefault
+  : TDefault;
+
 type CommonFieldOptions<TDefault = unknown> = {
   zod?: z.ZodType;
   default?: TDefault;
@@ -58,6 +64,15 @@ type RadioButtonFieldOptions = Omit<
   "zod" | "searchable"
 > & {
   options: readonly FieldInputOption[];
+  zod?: z.ZodType;
+};
+
+type SelectFieldOptions = Omit<
+  CommonFieldOptions<string>,
+  "zod" | "searchable"
+> & {
+  options: readonly FieldInputOption[];
+  placeholder?: string;
   zod?: z.ZodType;
 };
 
@@ -118,9 +133,14 @@ export function textField<
   };
 }
 
-export function numberField(
-  options: CommonFieldOptions<number> = {},
-): FieldOptionOfKind<"number", number> {
+export function numberField<
+  const TOptions extends CommonFieldOptions<number | null> = Record<
+    never,
+    never
+  >,
+>(
+  options: TOptions = {} as TOptions,
+): FieldOptionOfKind<"number", DefaultFromOptions<TOptions, number>, TOptions> {
   return {
     __kenstackField: true,
     kind: "number",
@@ -129,7 +149,11 @@ export function numberField(
     revisions: true,
     zod: z.coerce.number(),
     ...options,
-  };
+  } as unknown as FieldOptionOfKind<
+    "number",
+    DefaultFromOptions<TOptions, number>,
+    TOptions
+  >;
 }
 
 export function emailField<
@@ -249,6 +273,37 @@ export function radioButtonField<
           new Set([defaultValue, ...options.options.map(({ value }) => value)]),
         ),
       ),
+    ...options,
+  };
+}
+
+export function selectField<const TOptions extends SelectFieldOptions>(
+  options: TOptions,
+): FieldOptionOfKind<"select", string, TOptions> {
+  const defaultValue = options.default ?? "";
+
+  return {
+    __kenstackField: true,
+    kind: "select",
+    default: defaultValue,
+    searchable: false,
+    revisions: true,
+    zod:
+      options.zod ??
+      z.enum(
+        Array.from(
+          new Set([defaultValue, ...options.options.map(({ value }) => value)]),
+        ),
+      ),
+    display({ value }) {
+      if (typeof value !== "string") {
+        return "";
+      }
+
+      return (
+        options.options.find((option) => option.value === value)?.label ?? value
+      );
+    },
     ...options,
   };
 }

@@ -3,6 +3,7 @@ export { default as ComboboxField } from "@kenstack/forms/ComboboxField";
 export { default as InputField } from "@kenstack/forms/InputField";
 export { default as PhoneField } from "@kenstack/forms/PhoneField";
 export { default as RadioButtonField } from "@kenstack/forms/RadioButtonField";
+export { default as SelectField } from "@kenstack/forms/SelectField";
 export { default as SlugField } from "@kenstack/forms/SlugField";
 export { default as MarkdownField } from "@kenstack/forms/MarkdownField";
 export { default as TagField } from "./TagField";

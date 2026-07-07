@@ -150,6 +150,30 @@ Migration steps:
 - Replace imports from `@kenstack/components/forms/InputGroup` with `@kenstack/forms/controls/InputGroup`.
 - Keep RHF-bound form fields, such as `ComboboxField`, imported from `@kenstack/forms/*` or `@kenstack/admin/forms`.
 
+## Unreleased: Combobox Option Shape
+
+Old APIs:
+
+- `Combobox` accepted arbitrary item shapes.
+- Callers supplied label and equality behavior with props such as `itemToStringLabel` and `isItemEqualToValue`.
+- `Combobox` `value` was the selected item object, and `onValueChange` received the selected item or `null`.
+
+New APIs:
+
+- `Combobox` uses the same option shape as `Select`: `{ value: string, label: string, description?, icon?, keywords? }`.
+- `value` is the selected option value string.
+- `onValueChange` receives `(value, option)`, with `option` set to `null` when the combobox is cleared.
+- Built-in browser filtering uses `label`, `value`, and optional `keywords`.
+- Remote-search comboboxes should keep `filter={null}` and normalize API rows to the shared option shape before passing them to `Combobox`.
+
+Migration steps:
+
+- Replace arbitrary combobox item arrays with option arrays using at least `value` and `label`.
+- Remove `itemToStringLabel` and `isItemEqualToValue`; use stable string `value` fields instead.
+- Change `value={selectedItem}` to `value={selectedValue}`.
+- Change `onValueChange={(item) => ...}` to `onValueChange={(value, option) => ...}`.
+- For domain records that do not naturally use this shape, add a narrow adapter at the API/query boundary where practical. For example, map `{ id, label }` to `{ id, label, value: String(id) }`, or `{ slug, name }` to `{ slug, name, value: slug, label: name }`.
+
 ## Unreleased: Node 24 Runtime Floor
 
 New requirement:

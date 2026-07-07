@@ -17,15 +17,18 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@kenstack/forms/controls/Combobox";
+import type { SelectOption } from "@kenstack/forms/controls/Select";
 import Field, { type FieldProps } from "@kenstack/forms/Field";
 import useDebounce from "@kenstack/hooks/useDebounce";
 import fetcher, { type FetchResult } from "@kenstack/api/fetcher";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 
-type RelationshipOption = {
+type RelationshipValue = {
   id: number;
   label: string;
 };
+
+type RelationshipOption = RelationshipValue & SelectOption;
 
 type RelationshipFieldProps = React.ComponentProps<"div"> &
   FieldProps & {
@@ -33,7 +36,7 @@ type RelationshipFieldProps = React.ComponentProps<"div"> &
     placeholder?: string;
   };
 
-function isRelationshipOption(value: unknown): value is RelationshipOption {
+function isRelationshipOption(value: unknown): value is RelationshipValue {
   return (
     typeof value === "object" &&
     value !== null &&
@@ -44,7 +47,7 @@ function isRelationshipOption(value: unknown): value is RelationshipOption {
   );
 }
 
-function toRelationshipOptions(value: unknown): RelationshipOption[] {
+function toRelationshipValues(value: unknown): RelationshipValue[] {
   return Array.isArray(value) ? value.filter(isRelationshipOption) : [];
 }
 
@@ -60,7 +63,7 @@ function RelationshipControl({
   const { apiPath, name: adminName } = useAdminEdit();
   const [keywords, debouncedKeywords, setKeywords] = useDebounce();
   const [open, setOpen] = useState(false);
-  const selected = toRelationshipOptions(field.value);
+  const selected = toRelationshipValues(field.value);
   const exclude = selected.map((item) => item.id);
 
   const { data, error, isPending } = useQuery<
@@ -74,14 +77,27 @@ function RelationshipControl({
       debouncedKeywords,
       exclude,
     ],
-    queryFn: async () =>
-      fetcher(apiPath, {
+    queryFn: async () => {
+      const result = await fetcher<{ items: RelationshipValue[] }>(apiPath, {
         action: "relationship-search",
         name: adminName,
         relationship,
         keywords: debouncedKeywords,
         exclude,
-      }),
+      });
+
+      if (result.status === "error") {
+        return result;
+      }
+
+      return {
+        ...result,
+        items: result.items.map((item) => ({
+          ...item,
+          value: String(item.id),
+        })),
+      };
+    },
     placeholderData: keepPreviousData,
     enabled: open || debouncedKeywords.length > 0,
   });
@@ -90,24 +106,24 @@ function RelationshipControl({
 
   return (
     <div className="space-y-2">
-      <Combobox<RelationshipOption>
+      <Combobox
         items={items}
         open={open}
         inputValue={keywords}
-        value={null}
+        value=""
         filter={null}
-        itemToStringLabel={(item) => item.label}
-        isItemEqualToValue={(item, value) => item.id === value.id}
         onInputValueChange={(value) => {
           setKeywords(value);
         }}
         onOpenChange={(nextOpen) => {
           setOpen(nextOpen);
         }}
-        onValueChange={(item) => {
+        onValueChange={(_value, item) => {
           if (item) {
+            const selectedItem = { id: item.id, label: item.label };
+
             field.onChange(
-              [...selected, item].sort((a, b) =>
+              [...selected, selectedItem].sort((a, b) =>
                 a.label.localeCompare(b.label),
               ),
             );

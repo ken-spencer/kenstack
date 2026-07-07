@@ -123,21 +123,21 @@ export async function saveRecord<TTable extends SaveRecordTable>(
           updatedAt: new Date(),
         };
 
-        const [row] = await tx
+        const [row] = (await tx
           .update(table)
           .set(updateData)
           .where(eq(table.id, id))
-          .returning(select) as SavedRow[];
+          .returning(select)) as SavedRow[];
 
         savedRow = row;
       } else {
-        const [row] = await tx
+        const [row] = (await tx
           .insert(table)
           .values({
             ...data,
             createdBy: user.id,
           } as InferInsertModel<TTable>)
-          .returning(select) as SavedRow[];
+          .returning(select)) as SavedRow[];
 
         savedRow = row;
       }

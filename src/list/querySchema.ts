@@ -206,6 +206,7 @@ export function createListRequestSchema({
       direction: getDirectionSchema(defaults.direction),
       filters: getFilterObjectSchema(filterMeta),
       page: z.coerce.number().int().positive().max(10000).catch(1),
+      parentId: z.coerce.number().int().positive().optional(),
     })
     .transform((value) => {
       const sortValue = value.sort ?? defaults.sort;
@@ -221,6 +222,7 @@ export function createListRequestSchema({
             : (value.direction ?? defaults.direction),
         filters: value.filters ?? defaults.filters,
         page: selectedSort?.direction === false ? 1 : value.page,
+        parentId: value.parentId,
       };
     });
 }
