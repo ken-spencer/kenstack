@@ -1,6 +1,8 @@
 "use client";
 
-import type { ReactElement, ReactNode } from "react";
+import { useCallback, useRef, useState } from "react";
+import type { CSSProperties, ReactElement, ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { twMerge } from "tailwind-merge";
 
 export type TooltipBreakpoint = "sm" | "md" | "lg" | "xl" | "2xl";
@@ -23,19 +25,40 @@ const onlyBelowClassNames = {
   "2xl": "2xl:hidden",
 } satisfies Record<TooltipBreakpoint, string>;
 
-const sideClassNames = {
-  top: "bottom-full left-1/2 mb-1 -translate-x-1/2 translate-y-1 group-hover/tooltip:translate-y-0",
-  right:
-    "top-1/2 left-full ml-1 -translate-y-1/2 -translate-x-1 group-hover/tooltip:translate-x-0",
-  left: "top-1/2 right-full mr-1 -translate-y-1/2 translate-x-1 group-hover/tooltip:translate-x-0",
-} satisfies Record<TooltipSide, string>;
-
 const stemClassNames = {
   top: "after:absolute after:top-full after:left-1/2 after:size-2 after:-translate-x-1/2 after:-translate-y-1/2 after:rotate-45 after:bg-foreground",
   right:
     "after:absolute after:top-1/2 after:right-full after:size-2 after:translate-x-1/2 after:-translate-y-1/2 after:rotate-45 after:bg-foreground",
   left: "after:absolute after:top-1/2 after:left-full after:size-2 after:-translate-x-1/2 after:-translate-y-1/2 after:rotate-45 after:bg-foreground",
 } satisfies Record<TooltipSide, string>;
+
+function getTooltipPosition(
+  trigger: HTMLElement,
+  side: TooltipSide,
+): CSSProperties {
+  const rect = trigger.getBoundingClientRect();
+
+  switch (side) {
+    case "right":
+      return {
+        left: rect.right + 8,
+        top: rect.top + rect.height / 2,
+        transform: "translateY(-50%)",
+      };
+    case "left":
+      return {
+        left: rect.left - 8,
+        top: rect.top + rect.height / 2,
+        transform: "translate(-100%, -50%)",
+      };
+    case "top":
+      return {
+        left: rect.left + rect.width / 2,
+        top: rect.top - 8,
+        transform: "translate(-50%, -100%)",
+      };
+  }
+}
 
 export default function Tooltip({
   children,
@@ -45,23 +68,48 @@ export default function Tooltip({
   onlyBelow,
   side = "top",
 }: TooltipProps) {
+  const triggerRef = useRef<HTMLSpanElement>(null);
+  const [tooltipStyle, setTooltipStyle] = useState<CSSProperties | null>(null);
+  const showTooltip = useCallback(() => {
+    if (triggerRef.current) {
+      setTooltipStyle(getTooltipPosition(triggerRef.current, side));
+    }
+  }, [side]);
+
   if (hidden) {
     return children;
   }
 
   return (
-    <span className={twMerge("group/tooltip relative inline-flex", className)}>
+    <span
+      className={twMerge("inline-flex", className)}
+      onBlur={() => {
+        setTooltipStyle(null);
+      }}
+      onFocus={showTooltip}
+      onMouseEnter={showTooltip}
+      onMouseLeave={() => {
+        setTooltipStyle(null);
+      }}
+      ref={triggerRef}
+    >
       {children}
-      <span
-        className={twMerge(
-          "pointer-events-none absolute z-50 w-max max-w-xs scale-95 rounded-md bg-foreground px-3 py-1.5 text-xs text-background opacity-0 shadow-sm transition-[opacity,transform] delay-0 duration-150 ease-out group-hover/tooltip:scale-100 group-hover/tooltip:opacity-100 group-hover/tooltip:delay-500",
-          sideClassNames[side],
-          stemClassNames[side],
-          onlyBelow ? onlyBelowClassNames[onlyBelow] : undefined,
-        )}
-      >
-        {content}
-      </span>
+      {tooltipStyle && typeof document !== "undefined"
+        ? createPortal(
+            <span
+              className={twMerge(
+                "pointer-events-none fixed z-50 w-max max-w-xs rounded-md bg-foreground px-3 py-1.5 text-xs text-background shadow-sm",
+                stemClassNames[side],
+                onlyBelow ? onlyBelowClassNames[onlyBelow] : undefined,
+              )}
+              role="tooltip"
+              style={tooltipStyle}
+            >
+              {content}
+            </span>,
+            document.body,
+          )
+        : null}
     </span>
   );
 }
