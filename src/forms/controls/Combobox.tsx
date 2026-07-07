@@ -106,6 +106,10 @@ function Combobox<T extends SelectOption>({
 
   const setOpen = React.useCallback(
     (nextOpen: boolean) => {
+      if (nextOpen === isOpen) {
+        return;
+      }
+
       if (openProp === undefined) {
         setUncontrolledOpen(nextOpen);
       }

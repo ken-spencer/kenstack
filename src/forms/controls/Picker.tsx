@@ -436,7 +436,7 @@ function PickerContent({
     <div
       data-slot="picker-content"
       className={cn(
-        "bg-popover text-popover-foreground ring-foreground/10 fixed inset-auto z-50 m-0 overflow-hidden rounded-lg shadow-md ring-1",
+        "bg-popover text-popover-foreground ring-foreground/10 dark:ring-border fixed inset-auto z-50 m-0 overflow-hidden rounded-lg shadow-md ring-1",
         className,
       )}
       data-side={dropdownSide}
@@ -506,7 +506,7 @@ function PickerItem<T = AnyItem>({
       role="option"
       ref={itemRef}
       className={cn(
-        "border-border/45 relative flex w-full cursor-pointer items-center gap-2 rounded-md border py-1 pl-1.5 text-sm outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 data-highlighted:border-gray-300 data-highlighted:bg-gray-200 data-highlighted:text-gray-950 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "border-border/45 data-highlighted:border-accent-foreground/15 data-highlighted:bg-accent data-highlighted:text-accent-foreground dark:data-highlighted:border-accent-foreground/20 relative flex w-full cursor-pointer items-center gap-2 rounded-md border py-1 pl-1.5 text-sm outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         checkPosition === "right" ? "pr-8" : "pr-1.5",
         className,
       )}

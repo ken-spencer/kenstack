@@ -174,6 +174,20 @@ Migration steps:
 - Change `onValueChange={(item) => ...}` to `onValueChange={(value, option) => ...}`.
 - For domain records that do not naturally use this shape, add a narrow adapter at the API/query boundary where practical. For example, map `{ id, label }` to `{ id, label, value: String(id) }`, or `{ slug, name }` to `{ slug, name, value: slug, label: name }`.
 
+## Unreleased: Popover Import Path
+
+Old APIs:
+
+- `@kenstack/components/ui/popover`
+
+New APIs:
+
+- `@kenstack/components/Popover`
+
+Migration steps:
+
+- Replace imports of `Popover`, `PopoverContent`, and `PopoverTrigger` from `@kenstack/components/ui/popover` with `@kenstack/components/Popover`.
+
 ## Unreleased: Node 24 Runtime Floor
 
 New requirement:
