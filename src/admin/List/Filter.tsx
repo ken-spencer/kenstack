@@ -24,7 +24,7 @@ const Filter: React.FC = () => {
   const value = [];
 
   const filters = adminConfig.filters;
-  if (typeof document === "undefined" || !filters) {
+  if (!filters) {
     return null;
   }
   // console.log("foo", state);

@@ -33,7 +33,7 @@ export default function SlugField({
     formState: { defaultValues },
   } = useFormContext();
   const watchedValue = watch(watchField);
-  const defaultValue = defaultValues[name];
+  const defaultValue = defaultValues?.[name];
   const [locked, setLocked] = useState(defaultValue ? true : false);
   const [wasEdited, setWasEdited] = useState(false);
 
