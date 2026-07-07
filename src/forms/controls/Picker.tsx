@@ -1,13 +1,16 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { CheckIcon } from "lucide-react";
 
+import { useOverlayStack } from "@kenstack/components/overlayStack";
 import { cn } from "@kenstack/lib/utils";
 
 type AnyItem = unknown;
 
 type PickerContextValue = {
+  contentRef: React.RefObject<HTMLDivElement | null>;
   dropdownSide: "bottom" | "top";
   highlightedIndex: number;
   isItemDisabled: (item: AnyItem) => boolean;
@@ -16,6 +19,7 @@ type PickerContextValue = {
   items: readonly AnyItem[];
   pickerListId: string;
   optionId: (index: number) => string;
+  portalTarget: HTMLElement | null;
   rootRef: React.RefObject<HTMLDivElement | null>;
   selectItem: (item: AnyItem) => void;
   setDropdownSide: (side: "bottom" | "top") => void;
@@ -91,13 +95,25 @@ function Picker<T>({
   ...props
 }: PickerProps<T>) {
   const id = React.useId();
+  const contentRef = React.useRef<HTMLDivElement | null>(null);
   const rootRef = React.useRef<HTMLDivElement | null>(null);
+  const [portalTarget, setPortalTarget] = React.useState<HTMLElement | null>(
+    null,
+  );
   const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false);
   const [dropdownSide, setDropdownSideState] = React.useState<"bottom" | "top">(
     "bottom",
   );
   const [highlightedIndexState, setHighlightedIndexState] = React.useState(-1);
   const isOpen = openProp ?? uncontrolledOpen;
+
+  const updatePortalTarget = React.useCallback(() => {
+    const node = rootRef.current;
+
+    setPortalTarget(
+      node ? (node.closest("dialog[open]") ?? node.ownerDocument.body) : null,
+    );
+  }, []);
 
   const isSelected = React.useCallback(
     (item: AnyItem) =>
@@ -109,6 +125,10 @@ function Picker<T>({
 
   const setOpen = React.useCallback(
     (nextOpen: boolean) => {
+      if (nextOpen) {
+        updatePortalTarget();
+      }
+
       if (openProp === undefined) {
         setUncontrolledOpen(nextOpen);
       }
@@ -119,7 +139,7 @@ function Picker<T>({
 
       onOpenChange?.(nextOpen);
     },
-    [onOpenChange, openProp],
+    [onOpenChange, openProp, updatePortalTarget],
   );
 
   const selectItem = React.useCallback(
@@ -158,6 +178,19 @@ function Picker<T>({
         ? items.findIndex((item) => !isItemDisabled(item))
         : -1;
 
+  useOverlayStack({
+    onClose: () => setOpen(false),
+    open: isOpen,
+  });
+
+  const setRootElement = React.useCallback(
+    (node: HTMLDivElement | null) => {
+      rootRef.current = node;
+      updatePortalTarget();
+    },
+    [updatePortalTarget],
+  );
+
   React.useEffect(() => {
     onItemHighlighted?.(
       highlightedIndex >= 0 ? ((items[highlightedIndex] as T) ?? null) : null,
@@ -172,7 +205,11 @@ function Picker<T>({
     function handlePointerDown(event: PointerEvent) {
       const target = event.target;
 
-      if (target instanceof Node && rootRef.current?.contains(target)) {
+      if (
+        target instanceof Node &&
+        (rootRef.current?.contains(target) ||
+          contentRef.current?.contains(target))
+      ) {
         return;
       }
 
@@ -188,6 +225,7 @@ function Picker<T>({
 
   const context = React.useMemo<PickerContextValue>(
     () => ({
+      contentRef,
       dropdownSide,
       highlightedIndex,
       isItemDisabled: (item) => isItemDisabled(item as T),
@@ -196,6 +234,7 @@ function Picker<T>({
       items,
       pickerListId,
       optionId,
+      portalTarget,
       rootRef,
       selectItem,
       setDropdownSide,
@@ -211,6 +250,7 @@ function Picker<T>({
       items,
       pickerListId,
       optionId,
+      portalTarget,
       selectItem,
       setDropdownSide,
       setOpen,
@@ -230,14 +270,15 @@ function Picker<T>({
           if (
             !isOpen ||
             (nextTarget instanceof Node &&
-              event.currentTarget.contains(nextTarget))
+              (event.currentTarget.contains(nextTarget) ||
+                contentRef.current?.contains(nextTarget)))
           ) {
             return;
           }
 
           setOpen(false);
         }}
-        ref={rootRef}
+        ref={setRootElement}
         {...props}
       >
         {children}
@@ -350,19 +391,33 @@ function PickerContent({
   style,
   ...props
 }: React.ComponentProps<"div">) {
-  const { dropdownSide, isOpen, rootRef, setDropdownSide } =
-    usePickerContext("PickerContent");
-  const contentRef = React.useRef<HTMLDivElement | null>(null);
+  const {
+    contentRef,
+    dropdownSide,
+    isOpen,
+    portalTarget,
+    rootRef,
+    setDropdownSide,
+  } = usePickerContext("PickerContent");
 
   const updateContentPosition = React.useCallback(() => {
     const root = rootRef.current;
     const content = contentRef.current;
+    const target = portalTarget ?? root?.ownerDocument.body;
 
-    if (!root || !content) {
+    if (!root || !content || !target) {
       return;
     }
 
     const rootRect = root.getBoundingClientRect();
+    const targetRect =
+      target instanceof HTMLDialogElement
+        ? target.getBoundingClientRect()
+        : { left: 0, top: 0 };
+    const targetScroll =
+      target instanceof HTMLDialogElement
+        ? { left: target.scrollLeft, top: target.scrollTop }
+        : { left: 0, top: 0 };
     const viewportPadding = 8;
     const sideOffset = 4;
     const viewportWidth = document.documentElement.clientWidth;
@@ -381,19 +436,21 @@ function PickerContent({
       Math.max(viewportPadding, rootRect.left),
       viewportWidth - width - viewportPadding,
     );
-    const top =
+    const topViewport =
       nextSide === "top"
         ? Math.max(viewportPadding, rootRect.top - sideOffset - height)
         : Math.max(viewportPadding, rootRect.bottom + sideOffset);
 
     setDropdownSide(nextSide);
     content.dataset.side = nextSide;
-    content.style.left = left + "px";
+    content.style.left = left - targetRect.left + targetScroll.left + "px";
     content.style.maxHeight = maxHeight + "px";
     content.style.minWidth = width + "px";
-    content.style.top = top + "px";
+    content.style.position =
+      target instanceof HTMLDialogElement ? "absolute" : "fixed";
+    content.style.top = topViewport - targetRect.top + targetScroll.top + "px";
     content.style.width = width + "px";
-  }, [rootRef, setDropdownSide]);
+  }, [contentRef, portalTarget, rootRef, setDropdownSide]);
 
   React.useEffect(() => {
     if (!isOpen) {
@@ -411,7 +468,7 @@ function PickerContent({
         updateContentPosition();
       }
     },
-    [updateContentPosition],
+    [contentRef, updateContentPosition],
   );
 
   React.useEffect(() => {
@@ -432,18 +489,23 @@ function PickerContent({
     return null;
   }
 
-  return (
+  if (!portalTarget) {
+    return null;
+  }
+
+  return createPortal(
     <div
       data-slot="picker-content"
       className={cn(
-        "bg-popover text-popover-foreground ring-foreground/10 dark:ring-border fixed inset-auto z-50 m-0 overflow-hidden rounded-lg shadow-md ring-1",
+        "bg-popover text-popover-foreground ring-foreground/10 dark:ring-border inset-auto z-50 m-0 overflow-hidden rounded-lg shadow-md ring-1",
         className,
       )}
       data-side={dropdownSide}
       ref={setContentElement}
       style={style}
       {...props}
-    />
+    />,
+    portalTarget,
   );
 }
 
