@@ -2,6 +2,49 @@
 
 Use this file to document breaking Kenstack API changes that downstream sites may need to apply.
 
+## Unreleased: Admin Table and Field Capabilities
+
+Old APIs:
+
+- `defineTable(...)` always added `publicId`.
+- Reorderable admin tables manually added a `sortOrder` column to `columns`.
+- Reorderable admin lists used `list.reorder = { field: "sortOrder" }` for the standard reorder column.
+- Publishable tables manually added `metaColumns.visibility` and `metaColumns.publishedAt` to `columns`.
+- SEO tables manually added `metaColumns.seoTitle`, `metaColumns.seoDescription`, and `metaColumns.ogImage` to `columns`.
+- Publishable admin field maps used `defineFields({ ..., visibility: metaFieldOptions.visibility, publishedAt: metaFieldOptions.publishedAt })`.
+- SEO admin field maps used `defineFields({ ..., seoTitle: metaFieldOptions.seoTitle, seoDescription: metaFieldOptions.seoDescription, ogImage: metaFieldOptions.ogImage })`.
+- Plain field maps imported `defineFields` from `@kenstack/fields/defineFields`.
+- An intermediate admin field-map API used `defineAdminFields` from `@kenstack/admin/fields`.
+- `AdminTable` implied a `publicId` column.
+
+New APIs:
+
+- `defineTable(...)` accepts `publicId`, `reorder`, `publish`, and `seo` options.
+- `reorder: true` adds the standard `sortOrder` column.
+- `list.reorder: true` uses the standard `sortOrder` field. Use `{ field, label }` only for custom reorder columns or labels.
+- `publish: true` adds the standard `visibility` and `publishedAt` columns.
+- `seo: true` adds the standard `seoTitle`, `seoDescription`, and `ogImage` columns.
+- Isomorphic `defineFields(...)` from `@kenstack/admin/fields` is the single field-map authoring API.
+- `defineFields({ fields: { ... } })` defines plain field maps.
+- `defineFields({ publish: true, fields: { ... } })` adds the standard `visibility` and `publishedAt` field definitions.
+- `defineFields({ seo: true, fields: { ... } })` adds the standard `seoTitle`, `seoDescription`, and `ogImage` field definitions.
+- `publicId: false` opts a table out of the generated `publicId` column.
+- `AdminTable` represents the base defined-table contract. Use `AdminPublicIdTable`, `AdminPublishTable`, or `AdminSeoTable` when code requires those generated columns.
+
+Migration steps:
+
+- For admin modules with `admin.list.reorder.field = "sortOrder"`, remove the manual `sortOrder` column from `columns` and set `reorder: true` on `defineTable(...)`.
+- Replace standard `list.reorder = { field: "sortOrder" }` with `list.reorder = true`.
+- For admin modules with standard publishing fields, remove manual `visibility: metaColumns.visibility` and `publishedAt: metaColumns.publishedAt` columns and set `publish: true` on `defineTable(...)`.
+- For admin modules with standard SEO fields, remove manual `seoTitle`, `seoDescription`, and `ogImage` meta columns and set `seo: true` on `defineTable(...)`.
+- Replace field-map imports from `@kenstack/fields/defineFields` with `@kenstack/admin/fields`.
+- Replace `defineAdminFields(...)` with `defineFields(...)` from `@kenstack/admin/fields`.
+- Wrap plain field maps in the new object shape, changing `defineFields({ title: textField() })` to `defineFields({ fields: { title: textField() } })`.
+- For admin field maps with standard publishing fields, use `defineFields({ publish: true, fields: { ... } })` and remove the manual `metaFieldOptions` entries.
+- For admin field maps with standard SEO fields, use `defineFields({ seo: true, fields: { ... } })` and remove the manual `metaFieldOptions` entries.
+- For table types or helpers that require `table.publicId`, use `AdminPublicIdTable`.
+- Omitted `publicId` currently preserves the legacy generated `publicId` column. Use `publicId: false` only after verifying the table does not need opaque public IDs.
+
 ## Unreleased: Admin Server/Client Module Split
 
 Old APIs:
@@ -42,7 +85,6 @@ Migration steps:
 
   ```ts
   import "server-only";
-
   import { defineAdminClients } from "@kenstack/admin/clientLoaders";
 
   export const clients = defineAdminClients({
@@ -76,6 +118,37 @@ Migration steps:
 - For custom field components, replace direct imports like `component: MyField` with loader functions such as `component: () => import("./components/MyField")`. The loaded field file should be a Client Component when it uses hooks, browser APIs, or client-only libraries.
 - For any dynamic/lazy loader intended to keep optional client code out of public route bundles, make the loader file itself a Client Component. Next.js currently does not reliably keep dynamically imported Client Components split when the loader is a Server Component; `ssr: false` also only belongs inside Client Components.
 - Keep loader props serializable when a Client Component loader is rendered by a Server Component.
+
+## Unreleased: Field Set Super Refinements
+
+Old APIs:
+
+- Field helpers accepted `recordRefinement` on individual field options.
+- Cross-field validation was attached to one field even when it validated the whole record.
+- `defineFields({ ... })` from `@kenstack/fields/defineFields` collected per-field `recordRefinement` hooks and applied them to the object schema.
+
+New APIs:
+
+- Field maps use `defineFields({ superRefine, fields: { ... } })` from `@kenstack/admin/fields`.
+- `superRefine` matches Zod's object-level `.superRefine((values, ctx) => { ... })` callback shape.
+- Use `ctx.addIssue({ path: ["fieldName"], ... })` to place a whole-record validation error on a specific field.
+- Reusable field bundles may attach their own field-set `superRefine` metadata internally; callers spread the bundle as before.
+
+Migration steps:
+
+- Move cross-field validation from a field's `recordRefinement` option to the surrounding `defineFields({ superRefine, fields })` call.
+- Rename callback intent to match Zod semantics, for example `validateAgeRange` remains a `(values, ctx)` function passed as `superRefine`.
+- Remove `recordRefinement` from field helper calls:
+
+  ```ts
+  export const fields = defineFields({
+    superRefine: validateAgeRange,
+    fields: {
+      minAge: numberField({ ... }),
+      maxAge: numberField({ ... }),
+    },
+  });
+  ```
 
 ## Unreleased: Shared List Utilities
 
@@ -116,21 +189,39 @@ Migration steps:
 - Use `access: "authenticated"` for actions that only require a signed-in user.
 - Use role values such as `access: "admin"` for actions that require a specific role.
 
-## Unreleased: Address Field Options Import Path
+## Unreleased: Address Field Helpers
 
 Old APIs:
 
 - `@kenstack/admin/address`
+- `createAddressFieldOptions({ defaultCountryCode, required })`
+- `addressFieldOptions`
+- `requiredAddressFieldOptions`
 
 New APIs:
 
 - `@kenstack/fields/address`
-- `addressFieldOptions`, `requiredAddressFieldOptions`, and `createAddressFieldOptions` are field-layer helpers.
+- `defineAddressFields({ required, countryCode, addressLine1, addressLine2, locality, regionCode, postalCode })`
+- Address field customization is keyed by field name.
+- Use `countryCode: { default: "CA" }` instead of `defaultCountryCode: "CA"`.
 
 Migration steps:
 
 - Replace direct imports from `@kenstack/admin/address` with `@kenstack/fields/address`.
-- Prefer importing address field helpers from `@kenstack/fields` or `@kenstack/fields/address` instead of the admin barrel.
+- Replace `createAddressFieldOptions(...)` with `defineAddressFields(...)`.
+- Spread address field bundles directly into the field map instead of assigning the bundle and copying each field one by one.
+- Move `defaultCountryCode` to the `countryCode` override:
+
+  ```ts
+  ...defineAddressFields({
+    required: true,
+    countryCode: { default: "CA" },
+    addressLine1: { list: true },
+    locality: { list: true },
+    regionCode: { list: true },
+    postalCode: { list: true },
+  });
+  ```
 
 ## Unreleased: Form Control Import Paths
 
@@ -451,7 +542,7 @@ New APIs:
 Migration steps:
 
 - Replace public `kind` field definitions with field helpers, for example `ogImage: imageField()` and `to: emailField()`.
-- `defineFields(...)` now expects helper-created fields; raw `{ default, zod }` objects should become helpers such as `textField({ default, zod })`.
+- Field maps passed to `defineFields({ fields: { ... } })` expect helper-created fields; raw `{ default, zod }` objects should become helpers such as `textField({ default, zod })`.
 - Keep plain object fields only when no built-in form component or built-in field behavior is needed.
 - For generated settings forms, define settings fields with helpers so each field has a component.
 - Prefer direct server behavior patches such as `tags: tagHandler({ table })`; `{ handler: ... }` remains accepted for transitional code.

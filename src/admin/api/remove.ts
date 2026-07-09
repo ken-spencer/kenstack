@@ -55,7 +55,6 @@ export const removeAction = ({
         .select({
           ...columns,
           id: table.id,
-          ...("publicId" in columns ? { publicId: columns.publicId } : {}),
           ...("slug" in columns ? { slug: columns.slug } : {}),
           ...("title" in columns ? { title: columns.title } : {}),
         })
@@ -94,8 +93,6 @@ export const removeAction = ({
         data: {
           records: rows.map((row) => ({
             id: row.id,
-            publicId:
-              typeof row.publicId === "string" ? row.publicId : undefined,
             slug: typeof row.slug === "string" ? row.slug : undefined,
             title: typeof row.title === "string" ? row.title : undefined,
           })),

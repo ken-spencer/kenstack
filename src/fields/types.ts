@@ -29,11 +29,6 @@ export type FieldDisplay = (
   ctx: FieldDisplayContext,
 ) => Promise<unknown> | unknown;
 
-export type FieldRecordRefinement = (
-  values: Record<string, unknown>,
-  ctx: z.RefinementCtx,
-) => void;
-
 type FieldOptionMarker = {
   __kenstackField: true;
 };
@@ -62,7 +57,6 @@ export type FieldOption<
   label?: string;
   description?: string;
   options?: readonly FieldInputOption[];
-  recordRefinement?: FieldRecordRefinement;
   searchable?: boolean;
   revisions?: boolean;
   list?: boolean | "square" | "original";
@@ -100,7 +94,6 @@ type DefinedFieldBase<
   label?: string;
   description?: string;
   options?: readonly FieldInputOption[];
-  recordRefinement?: FieldRecordRefinement;
   searchable: boolean;
   revisions: boolean;
   list?: boolean | "square" | "original";

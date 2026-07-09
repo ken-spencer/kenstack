@@ -3,10 +3,10 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 import { hashToken } from "./token";
 import { and, isNull, eq, gt } from "drizzle-orm";
-import { type User } from "@kenstack/types";
 import { redirect } from "next/navigation";
 import { selectMediaSubquery } from "@kenstack/db/tables";
 import type { AuthAccess } from "@kenstack/auth/server/auth";
+import type { User } from "@kenstack/types";
 import { formatUserInitials, formatUserName } from "@kenstack/lib/user";
 
 export function createUser<
@@ -19,7 +19,7 @@ export function createUser<
   } = deps;
 
   const getUserBySessionToken = cache(
-    async (token: string) /*: Promise<User | undefined>*/ => {
+    async (token: string) => {
       if (!token) {
         return;
       }
@@ -29,7 +29,6 @@ export function createUser<
         .select({
           id: users.id,
           impersonatedBy: sessions.impersonatedBy,
-          publicId: users.publicId,
           givenName: users.givenName,
           middleName: users.middleName,
           familyName: users.familyName,
@@ -63,7 +62,7 @@ export function createUser<
     },
   );
 
-  const getCurrentUser = async () /*: Promise<User<TRoles> | undefined>*/ => {
+  const getCurrentUser = async () => {
     const cookieStore = await cookies();
     const token = cookieStore.get("sessionId");
 
@@ -76,7 +75,7 @@ export function createUser<
 
   const requireUser = cache(async function requireUser(
     access: AuthAccess<TRoles[number]> = "authenticated",
-  ): Promise<User> {
+  ): Promise<User<TRoles>> {
     const user = await getCurrentUser();
 
     if (!user) {

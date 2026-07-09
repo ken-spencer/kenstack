@@ -1,7 +1,6 @@
 export * from "./types";
 export * from "./address";
 export * from "./relationshipSchema";
-export * from "./defineFields";
 export * from "./createZodSchema";
 export * from "./createDefaultValues";
 export * from "./getFieldNames";

@@ -24,6 +24,7 @@ type AdminEditProps = {
   children: React.ReactNode;
   parentId?: number;
   preview?: PreviewPath;
+  childModuleLinks?: React.ReactNode;
 };
 
 type AdminEditContext = {
@@ -41,6 +42,7 @@ type AdminEditContext = {
   parentId?: number;
   schema: ZodObject;
   preview?: PreviewPath;
+  childModuleLinks?: React.ReactNode;
 };
 
 const AdminEditContext = createContext<AdminEditContext | null>(null);
@@ -57,6 +59,7 @@ export function AdminEditProvider({
   clients,
   parentId,
   preview,
+  childModuleLinks,
   children,
 }: AdminEditProps) {
   const loadClientConfig = clients[name];
@@ -98,6 +101,7 @@ export function AdminEditProvider({
     parentId,
     schema: client.schema,
     preview,
+    childModuleLinks,
   };
   return (
     <AdminEditContext.Provider value={values}>

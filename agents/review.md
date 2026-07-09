@@ -82,6 +82,7 @@ During review, look for any newly duplicated source of truth, such as copied ide
 - Check styling props. If a prop only toggles a small class preset, prefer `className`, composition, or a local wrapper over component-specific mode props.
 - Avoid creating alternate return shapes, enhanced schemas, or parallel config objects when the original can be defined correctly at the point of use.
 - Do not split simple local logic into builder, mapper, normalizer, converter, or adapter functions unless the split removes meaningful repeated complexity.
+- Check call sites for leaked implementation detail. If several adjacent calls, temporary values, or helper compositions are only assembling one conceptual operation, move that behavior behind the function that owns it instead of making each caller know the steps. Do not hide genuinely different decisions, but avoid forcing callers to repeat sequencing such as read-then-attach, normalize-then-apply, or resolve-then-preserve when one well-named function can express the operation.
 
 ## Cleanup Definition
 
@@ -120,6 +121,7 @@ If a check fails because the check scope does not match the code's intended runt
 - Put support code in existing secondary folders such as `lib`, `components`, `api`, or `fields`.
 - Do not put module infrastructure in `modules`; that folder is for actual modules and module-owned files.
 - Do not add compatibility shims, pass-through re-exports, or barrels unless explicitly requested or already established as a public API.
+- Check runtime boundaries on exports and barrels. Isomorphic code must not be re-exported through a server-only barrel just because current callers are server-side; keep it on an isomorphic entry point or subpath. Likewise, do not expose server-only code through client or shared entry points.
 - For internal moves, update the internal call sites to the new owner and delete the old file. Do not leave old-path wrapper components, re-export files, or local adapter imports just to make the move feel smaller.
 - When moving or renaming a tracked repository file, use `git mv` so the move is recorded deliberately instead of leaving Git to infer it from separate delete/add changes.
 - When deleting a tracked repository file, use `git rm` so the deletion is recorded deliberately instead of leaving Git to infer it from a filesystem delete.

@@ -11,7 +11,6 @@ import type {
   FieldComponentLoader,
   FieldKind,
   FieldOption,
-  FieldRecordRefinement,
   MediaListUploadOptions,
 } from "./types";
 
@@ -33,7 +32,6 @@ type CommonFieldOptions<TDefault = unknown> = {
   label?: string;
   description?: string;
   component?: FieldComponentLoader;
-  recordRefinement?: FieldRecordRefinement;
   searchable?: boolean;
   revisions?: boolean;
   list?: boolean;

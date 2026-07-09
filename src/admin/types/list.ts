@@ -47,10 +47,12 @@ export type AdminSortMeta = {
   direction?: boolean;
 };
 
-export type AdminListReorderOptions = {
-  field: AdminFieldReference;
-  label?: string;
-};
+export type AdminListReorderOptions =
+  | true
+  | {
+      field?: AdminFieldReference;
+      label?: string;
+    };
 
 export type AdminFilterKind =
   | "date-range"

@@ -1,9 +1,22 @@
 import * as z from "zod";
 
+import { attachFieldSetRefinements } from "./fieldSetRefinements";
 import { textField } from "./client";
+import type { FieldOption } from "./types";
+
+type AddressFieldOverride = Partial<
+  Omit<FieldOption<"text", string>, "__kenstackField" | "kind" | "list">
+> & {
+  list?: boolean;
+};
 
 type AddressFieldOptions = {
-  defaultCountryCode?: string;
+  countryCode?: AddressFieldOverride;
+  addressLine1?: AddressFieldOverride;
+  addressLine2?: AddressFieldOverride;
+  locality?: AddressFieldOverride;
+  regionCode?: AddressFieldOverride;
+  postalCode?: AddressFieldOverride;
   required?: boolean;
 };
 
@@ -67,45 +80,59 @@ function validatePostalCode(
   }
 }
 
-export function createAddressFieldOptions({
-  defaultCountryCode = "US",
+export function defineAddressFields({
+  countryCode,
+  addressLine1,
+  addressLine2,
+  locality,
+  regionCode,
+  postalCode,
   required = false,
 }: AddressFieldOptions = {}) {
-  return {
-    countryCode: textField({
-      default: defaultCountryCode.toUpperCase(),
-      zod: z
-        .string()
-        .trim()
-        .transform((value) => value.toUpperCase())
-        .refine((value) => !required || value.length > 0, "Country is required")
-        .refine((value) => !value || value.length === 2, "Select a country"),
-    }),
-    addressLine1: textField({
-      label: "Address",
-      zod: addressTextSchema("Address", required),
-    }),
-    addressLine2: textField({
-      label: "Address 2",
-      zod: addressTextSchema("Address 2", false),
-    }),
-    locality: textField({
-      label: "City / Town",
-      zod: addressTextSchema("City / town", required),
-    }),
-    regionCode: textField({
-      label: "Region",
-      zod: addressTextSchema("Region", required),
-    }),
-    postalCode: textField({
-      label: "Postal Code",
-      zod: postalCodeSchema(required),
-      recordRefinement: validatePostalCode,
-    }),
-  };
-}
+  const { default: countryDefault = "US", ...countryCodeOptions } =
+    countryCode ?? {};
 
-export const addressFieldOptions = createAddressFieldOptions();
-export const requiredAddressFieldOptions = createAddressFieldOptions({
-  required: true,
-});
+  return attachFieldSetRefinements(
+    {
+      countryCode: textField({
+        default: countryDefault.toUpperCase(),
+        zod: z
+          .string()
+          .trim()
+          .transform((value) => value.toUpperCase())
+          .refine(
+            (value) => !required || value.length > 0,
+            "Country is required",
+          )
+          .refine((value) => !value || value.length === 2, "Select a country"),
+        ...countryCodeOptions,
+      }),
+      addressLine1: textField({
+        label: "Address",
+        zod: addressTextSchema("Address", required),
+        ...addressLine1,
+      }),
+      addressLine2: textField({
+        label: "Address 2",
+        zod: addressTextSchema("Address 2", false),
+        ...addressLine2,
+      }),
+      locality: textField({
+        label: "City / Town",
+        zod: addressTextSchema("City / town", required),
+        ...locality,
+      }),
+      regionCode: textField({
+        label: "Region",
+        zod: addressTextSchema("Region", required),
+        ...regionCode,
+      }),
+      postalCode: textField({
+        label: "Postal Code",
+        zod: postalCodeSchema(required),
+        ...postalCode,
+      }),
+    },
+    validatePostalCode,
+  );
+}

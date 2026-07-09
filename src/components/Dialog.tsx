@@ -213,6 +213,7 @@ function DialogContent({
   onCancel,
   onClick,
   onClose,
+  onSubmit,
   showCloseButton = true,
   tabIndex = -1,
   ...props
@@ -342,6 +343,10 @@ function DialogContent({
         if (open) {
           setOpen(false);
         }
+      }}
+      onSubmit={(event) => {
+        onSubmit?.(event);
+        event.stopPropagation();
       }}
       ref={dialogRef}
       tabIndex={tabIndex}

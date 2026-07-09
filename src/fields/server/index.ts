@@ -7,6 +7,7 @@ import { type SQL, type getTableColumns } from "drizzle-orm";
 import type { AnyPgColumn, AnyPgTable } from "drizzle-orm/pg-core";
 
 import type { DefinedField, DefinedFields, FieldDisplay } from "../types";
+import { attachFieldSetRefinements } from "../fieldSetRefinements";
 import type { TagsTable } from "@kenstack/db/tables/tags";
 import type { Relationship } from "../relationships";
 import { booleanField } from "./boolean";
@@ -187,7 +188,7 @@ export function resolveServerFields<const TFields extends DefinedFields>(
   fields: TFields,
 ): ServerDefinedFieldsFrom<TFields>;
 export function resolveServerFields(fields: DefinedFields) {
-  return Object.fromEntries(
+  const resolvedFields = Object.fromEntries(
     Object.entries(fields).map(([key, field]) => {
       const defaults = getDefaultServerField(field);
       const isServerField = "behavior" in field;
@@ -208,6 +209,8 @@ export function resolveServerFields(fields: DefinedFields) {
       ];
     }),
   );
+
+  return attachFieldSetRefinements(resolvedFields, { from: fields });
 }
 
 function getDefaultServerField(field: DefinedField): ServerFieldDefaults {

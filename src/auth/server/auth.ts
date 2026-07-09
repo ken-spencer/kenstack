@@ -3,8 +3,7 @@ import { cookies } from "next/headers";
 import { generateToken, hashToken } from "./token";
 import { AuthDeps } from "./types";
 import { eq } from "drizzle-orm";
-
-import { type User } from "@kenstack/types";
+import type { User } from "@kenstack/types";
 
 export type AuthAccess<TRole extends string> =
   | "authenticated"

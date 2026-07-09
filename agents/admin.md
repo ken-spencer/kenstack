@@ -18,5 +18,5 @@ Read this before Kenstack admin module, list, or edit-form work.
 - Prefer configuring list behavior on field definitions with field options such as `list`, `filter`, and `sort`.
 - Treat module-level `admin.list.sort`, `admin.list.filters`, and similar explicit list maps as escape hatches for custom behavior that field options cannot express.
 - Use `admin.list.reorder` when the module has an explicit ordering field; that is separate from ordinary sortable field configuration.
-- Do not render reorder fields, such as `sortOrder`, as manually editable fields in admin edit forms. They are edited through the list reorder interface.
+- Do not create reorder fields, such as `sortOrder`, in module `fields.ts` definitions or render them as manually editable fields in admin edit forms. Keep the database column, enable `admin.list.reorder`, and let the admin list reorder interface own those values.
 - Do not duplicate field-level `sort: true` entries in `admin.list.sort`.

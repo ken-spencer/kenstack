@@ -1,5 +1,5 @@
 import roles from "@app/deps/roles";
-import { defineFields } from "@kenstack/fields/defineFields";
+import { defineFields } from "@kenstack/admin/fields";
 import {
   checkboxListField,
   emailField,
@@ -30,6 +30,8 @@ export const userFields = {
 };
 
 export const fields = defineFields({
-  ...userFields,
-  roles: checkboxListField({ options: roles }),
+  fields: {
+    ...userFields,
+    roles: checkboxListField({ options: roles }),
+  },
 });

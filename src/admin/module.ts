@@ -256,13 +256,15 @@ function defineReorder(
   const columns = getTableColumns(table);
   let fieldKey: string | undefined;
   let field: (typeof columns)[string] | undefined;
+  const fieldOption =
+    options === true ? "sortOrder" : (options.field ?? "sortOrder");
 
-  if (typeof options.field === "string") {
-    fieldKey = options.field;
+  if (typeof fieldOption === "string") {
+    fieldKey = fieldOption;
     field = columns[fieldKey];
   } else {
     const column = Object.entries(columns).find(
-      ([, tableColumn]) => tableColumn === options.field,
+      ([, tableColumn]) => tableColumn === fieldOption,
     );
     fieldKey = column?.[0];
     field = column?.[1];
@@ -275,7 +277,7 @@ function defineReorder(
   return {
     field,
     fieldKey,
-    label: options.label ?? "Reorder",
+    label: options === true ? "Reorder" : (options.label ?? "Reorder"),
   };
 }
 
