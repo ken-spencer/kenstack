@@ -5,8 +5,6 @@ import { twMerge } from "tailwind-merge";
 import createEditor from "../wrapper";
 import React from "react";
 
-// import component from "@kenstack/components/Markdown";
-
 import type {
   BlockTag,
   ComponentProps,
@@ -29,7 +27,6 @@ function Markdown<T extends BlockTag = "div">({
 }
 
 export const MarkdownEdit = createEditor({
-  // componentLoader: () => import("@kenstack/components/Markdown"),
   component: Markdown,
   editor: () => import("./MarkdownAdmin"),
 });

@@ -76,7 +76,7 @@ export default function FormContainer<
   FormProps<TResult, TVariables, TSchema, TValues>) {
   return (
     <QueryBoundary>
-      <FormProvider<TResult, TVariables, TSchema, TValues>
+      <FormProvider
         mutationFn={mutationFn}
         apiPath={apiPath}
         schema={schema}
@@ -84,7 +84,7 @@ export default function FormContainer<
         onError={onError}
         onSuccess={onSuccess}
       >
-        <Form<TResult, TVariables, TSchema, TValues>
+        <Form
           onSubmit={onSubmit}
           onChange={onChange}
           onBlur={onBlur}

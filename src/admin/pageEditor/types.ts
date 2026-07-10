@@ -14,10 +14,6 @@ export type BlockTag =
   | "div"
   | "pre";
 
-// type BlockElementProps = {
-//   [K in BlockTag]: { tag: K } & React.ComponentProps<K>;
-// }[BlockTag];
-
 type EditableTextFieldKind = "text" | "textarea" | "markdown";
 
 export type Name = {
@@ -38,24 +34,11 @@ export type PageEditorProps<T extends BlockTag = "div"> = {
   placeholder?: string;
 } & React.ComponentProps<T>;
 
-// export type PageEditorInternalProps = {
-//   name: Name;
-//   placeholder?: string;
-//   tag: BlockTag;
-// } & React.ComponentProps<"div">;
-
 export type PageEditorAdminProps = {
   name: Name;
   placeholder?: string;
-  // value: string;
-  // setValue: React.Dispatch<React.SetStateAction<string>>;
-  // commit: (currentValue: string) => void;
   className?: string;
 };
-
-// export type PageComponentLoader = () => Promise<{
-//   default: React.ComponentType<ComponentProps<"div">>;
-// }>;
 
 export type EditorWrapperProps<T extends BlockTag = "div"> = {
   name: Name;

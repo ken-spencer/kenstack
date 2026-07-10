@@ -21,9 +21,6 @@ import {
 import type { BuildColumns } from "drizzle-orm/column-builder";
 import { createId } from "@paralleldrive/cuid2";
 
-type ColumnKey<TColumnsMap extends Record<string, PgColumnBuilderBase>> =
-  Extract<keyof TColumnsMap, string>;
-
 declare const definedTableBrand: unique symbol;
 
 type DefinedTableBrand = {
@@ -43,7 +40,10 @@ const baseTableColumns = () => ({
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
 });
 const publicIdColumn = () =>
-  text("public_id").$defaultFn(() => createId()).notNull().unique();
+  text("public_id")
+    .$defaultFn(() => createId())
+    .notNull()
+    .unique();
 const sortOrderColumn = () => integer("sort_order").notNull().default(0);
 const visibilityColumn = () =>
   text("visibility", {
@@ -150,8 +150,8 @@ export type ExtraTable<
   updatedAt: AnyPgColumn;
   deletedAt: AnyPgColumn;
 } & ([TPublicId] extends [false]
-    ? Record<never, never>
-    : { publicId: AnyPgColumn }) &
+  ? Record<never, never>
+  : { publicId: AnyPgColumn }) &
   ([TReorder] extends [true]
     ? { sortOrder: AnyPgColumn }
     : Record<never, never>) &
@@ -165,8 +165,8 @@ export type ExtraTable<
         seoDescription: AnyPgColumn;
       }
     : Record<never, never>) & {
-  [K in ColumnKey<TColumnsMap>]: AnyPgColumn;
-};
+    [K in Extract<keyof TColumnsMap, string>]: AnyPgColumn;
+  };
 
 export type BuildTableOptions<
   TName extends string,
@@ -217,14 +217,7 @@ export const defineTable = <
   TReorder,
   TPublish,
   TSeo
->): DefinedPgTable<
-  TName,
-  TColumnsMap,
-  TPublicId,
-  TReorder,
-  TPublish,
-  TSeo
-> => {
+>): DefinedPgTable<TName, TColumnsMap, TPublicId, TReorder, TPublish, TSeo> => {
   const tableColumns = {
     ...baseTableColumns(),
     ...(publicId !== false ? { publicId: publicIdColumn() } : {}),
@@ -246,13 +239,7 @@ export const defineTable = <
         .where(sql`${t.deletedAt} IS NULL`),
       ...(extraConfig
         ? extraConfig(
-            t as ExtraTable<
-              TColumnsMap,
-              TPublicId,
-              TReorder,
-              TPublish,
-              TSeo
-            >,
+            t as ExtraTable<TColumnsMap, TPublicId, TReorder, TPublish, TSeo>,
           )
         : []),
     ],
@@ -294,12 +281,12 @@ export const defineKeyTable = <
 
 export type AdminTable = AnyPgTable &
   DefinedTableBrand & {
-  id: AnyPgColumn<{ data: number; notNull: true }>;
-  createdBy: AnyPgColumn<{ data: number | null; notNull: false }>;
-  createdAt: AnyPgColumn<{ data: Date; notNull: true }>;
-  updatedAt: AnyPgColumn<{ data: Date; notNull: true }>;
-  deletedAt: AnyPgColumn<{ data: Date | null; notNull: false }>;
-};
+    id: AnyPgColumn<{ data: number; notNull: true }>;
+    createdBy: AnyPgColumn<{ data: number | null; notNull: false }>;
+    createdAt: AnyPgColumn<{ data: Date; notNull: true }>;
+    updatedAt: AnyPgColumn<{ data: Date; notNull: true }>;
+    deletedAt: AnyPgColumn<{ data: Date | null; notNull: false }>;
+  };
 
 export type AdminPublicIdTable = AdminTable & {
   publicId: AnyPgColumn<{ data: string; notNull: true }>;

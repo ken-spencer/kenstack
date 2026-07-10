@@ -10,7 +10,6 @@ import {
   type Path,
   type ControllerRenderProps,
   type ControllerFieldState,
-  // type FieldError,
 } from "react-hook-form";
 
 import { cn } from "@kenstack/lib/utils";
@@ -57,9 +56,7 @@ export default function Field({
             )}
             {render({ field, fieldState })}
             {description && (
-              <div className="text-muted-foreground text-sm">
-                {description}
-              </div>
+              <div className="text-muted-foreground text-sm">{description}</div>
             )}
             <FormMessage className="" />
           </FormItem>
@@ -115,7 +112,7 @@ function FormLabel({ className, ...props }: React.ComponentProps<"label">) {
     <label
       data-error={!!error}
       className={cn(
-        "flex items-center gap-2 text-sm leading-none font-medium select-none data-[error=true]:text-destructive group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
+        "data-[error=true]:text-destructive flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
         className,
       )}
       htmlFor={formItemId}

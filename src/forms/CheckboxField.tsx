@@ -1,6 +1,5 @@
 "use client";
 
-// import { twMerge } from "tailwind-merge";
 import Field, { type FieldProps } from "@kenstack/forms/Field";
 import { Checkbox } from "@kenstack/forms/controls/Checkbox";
 
@@ -20,7 +19,6 @@ export default function CheckboxField({
   return (
     <Field
       name={name}
-      // label={label}
       description={description}
       className={className}
       render={({ field }) => (

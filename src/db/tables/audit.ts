@@ -9,8 +9,6 @@ import {
   inet,
   boolean,
 } from "drizzle-orm/pg-core";
-// import { organizations } from "./organizations";
-// import { users } from "./users";
 import { type Geo } from "@vercel/functions";
 
 export const auditLogs = pgTable(

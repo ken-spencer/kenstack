@@ -2,10 +2,7 @@ import * as z from "zod";
 import { eq } from "drizzle-orm";
 
 import { pipelineStage } from "@kenstack/api";
-import type {
-  DefinedAdmin,
-  ResolvedModuleSettings,
-} from "@kenstack/admin/module";
+import type { DefinedAdmin } from "@kenstack/admin/module";
 import { loadRecord, saveRecord } from "@kenstack/fields/records";
 
 export const loadModuleSettingsAction = (
@@ -20,25 +17,16 @@ export const loadModuleSettingsAction = (
   }
 
   return pipelineStage({ access: "admin" }, async ({ response }) => {
-    return response.success({
-      values: await loadModuleSettings(name, settings),
+    const result = await loadRecord({
+      table: settings.table,
+      fields: settings.fields,
+      defaults: settings.defaultValues,
+      where: eq(settings.table.key, name),
     });
+
+    return response.success({ values: result.values });
   });
 };
-
-async function loadModuleSettings(
-  name: string,
-  settings: ResolvedModuleSettings,
-) {
-  const result = await loadRecord({
-    table: settings.table,
-    fields: settings.fields,
-    defaults: settings.defaultValues,
-    where: eq(settings.table.key, name),
-  });
-
-  return result.values;
-}
 
 export const saveModuleSettingsAction = (
   moduleConfig: DefinedAdmin[string],

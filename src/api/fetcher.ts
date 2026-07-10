@@ -2,9 +2,6 @@
 
 import { UserFacingError } from "./errors";
 
-// type ReservedKeys = "status" | "message" | "fieldErrors" | "success" | "error";
-// type WithoutReserved<T extends Record<string, unknown>> = Omit<T, ReservedKeys>;
-
 export type FetchSuccess<T extends Record<string, unknown>> = {
   status: "success";
   message?: string;

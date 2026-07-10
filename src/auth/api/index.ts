@@ -10,8 +10,6 @@ import {
   type ForgotPasswordProps,
 } from "@kenstack/auth/handlers/forgotPassword";
 
-// import Email, { attachments } from '@kenstack/auth/email/ForgotPassword';
-
 import merge from "lodash-es/merge";
 import FpEmail, {
   attachments as FpAttachments,

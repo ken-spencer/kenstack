@@ -4,11 +4,9 @@ import React, { Suspense } from "react";
 import { useAdminUi } from "@kenstack/admin/components/PageControls/useAdminUi";
 import { usePageEditor } from "@kenstack/admin/pageEditor/context";
 
-// import dynamic from "next/dynamic";
 import type {
   PageEditorProps,
   PageEditorLoader,
-  // PageComponentLoader,
   ComponentProps,
   BlockTag,
 } from "../types";
@@ -33,24 +31,10 @@ type EditorWrapperProps<TTag extends BlockTag> = {
   placeholder?: string;
 };
 
-export default function createEditor({
-  component: Component,
-  // componentLoader,
-  editor,
-}: Props) {
+export default function createEditor({ component: Component, editor }: Props) {
   const PageEditor = React.lazy(editor) as React.ComponentType<
     EditorWrapperProps<BlockTag>
   >;
-  // const PageEditor = dynamic(editor, {
-  //   ssr: false,
-  //   loading: () => <div className="h-13 bg-red-500"></div>,
-  // });
-  // const PageEditorAny = PageEditor as React.ComponentType<
-  //   EditorWrapperProps<BlockTag>
-  // >;
-
-  // const Component = component; //componentLoader ? React.lazy(componentLoader) : component;
-
   const PageEditCont = function PageEditCont<Tag extends BlockTag>({
     tag,
     name,
@@ -59,7 +43,6 @@ export default function createEditor({
   }: PageEditorProps<Tag>) {
     const { showAdminControls } = useAdminUi();
     const { content } = usePageEditor();
-    const value = content.data[name];
     const displayValue = content.display[name];
 
     const tagProp = tag ?? ("div" as Tag);
@@ -93,7 +76,7 @@ export default function createEditor({
       );
     }
 
-    if (value) {
+    if (content.data[name]) {
       return (
         <ComponentForTag
           tag={tagProp}

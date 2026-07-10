@@ -42,19 +42,9 @@ const fallbackPostalCodeFormat = {
   message: "Enter a valid postal code",
 };
 
-function normalizePostalCode(value: string) {
-  return value.toUpperCase().replace(/\s+/g, " ").trim();
-}
-
 function addressTextSchema(label: string, required: boolean) {
   const schema = z.string().trim();
   return required ? schema.min(1, `${label} is required`) : schema;
-}
-
-function postalCodeSchema(required: boolean) {
-  return addressTextSchema("Postal code", required).transform(
-    normalizePostalCode,
-  );
 }
 
 function validatePostalCode(
@@ -129,7 +119,9 @@ export function defineAddressFields({
       }),
       postalCode: textField({
         label: "Postal Code",
-        zod: postalCodeSchema(required),
+        zod: addressTextSchema("Postal code", required).transform((value) =>
+          value.toUpperCase().replace(/\s+/g, " ").trim(),
+        ),
         ...postalCode,
       }),
     },

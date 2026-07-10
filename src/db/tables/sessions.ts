@@ -115,5 +115,4 @@ export const passwordResetRequests = pgTable(
   ],
 );
 
-// export type PasswordResetRequest = typeof passwordResetRequests.$inferSelect;
 export type Sessions = typeof sessions;

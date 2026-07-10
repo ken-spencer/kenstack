@@ -25,7 +25,6 @@ export interface Attachment {
   /** MIME type of the attachment */
   contentType: string;
   /** Raw data (Buffer, Uint8Array, or base64 string) */
-  // data: Buffer | Uint8Array | string;
   data: string;
   /** Optional additional headers for the attachment */
   headers?: Record<string, string>;

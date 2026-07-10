@@ -45,8 +45,6 @@ export function makeEditorWrapper(
           <PageEditorForm>
             <Editor
               name={name}
-              // value={value}
-              // setValue={setValue}
               placeholder={placeholder}
               className={componentProps.className}
             />

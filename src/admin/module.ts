@@ -54,12 +54,10 @@ type AdminListConfig<
   };
 };
 
-type AdminSingleConfig<TTable extends AdminKeyTable> = AdminConfigBase<TTable>;
-
 export type AnyAdminConfig = NonNullable<ReturnType<typeof resolveAdmin>>;
 type AdminConfig =
   | AdminListConfig<AdminTable, SelectShape | undefined>
-  | AdminSingleConfig<AdminKeyTable>;
+  | AdminConfigBase<AdminKeyTable>;
 
 type ModuleSettingsConfig<
   TTable extends AdminKeyTable = AdminKeyTable,

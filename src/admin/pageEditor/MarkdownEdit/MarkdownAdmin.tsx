@@ -75,7 +75,6 @@ const MilkdownEditor: React.FC<
   const commit = useCommit();
   useEditor((root) =>
     Editor.make()
-      // .config(nord)
       .config((ctx) => {
         ctx.set(rootCtx, root);
         ctx.set(defaultValueCtx, field.value);

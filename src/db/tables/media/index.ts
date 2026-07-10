@@ -126,7 +126,6 @@ export const selectMedia = (
   const variantKey = mediaVariantKey(variant);
 
   return {
-    // id: alias.publicId,
     kind: alias.kind,
     url: sql<string>`
       case

@@ -7,10 +7,7 @@ export type EmailContainerProps = {
 
 export type EmailContainer = React.FC<EmailContainerProps>;
 
-const EmailCont: EmailContainer = ({
-  children,
-  // preview = false,
-}) => (
+const EmailCont: EmailContainer = ({ children }) => (
   <Html>
     <Head>
       <meta name="color-scheme" content="light" />

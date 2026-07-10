@@ -21,16 +21,12 @@ function isTopOverlay(id: symbol) {
   return overlayStack.at(-1)?.id === id;
 }
 
-function getTopOverlay() {
-  return overlayStack.at(-1);
-}
-
 function handleOverlayKeyDown(event: KeyboardEvent) {
   if (event.key !== "Escape" || event.repeat) {
     return;
   }
 
-  const topOverlay = getTopOverlay();
+  const topOverlay = overlayStack.at(-1);
 
   if (!topOverlay) {
     return;
@@ -66,7 +62,7 @@ export function useOverlayStack({
   onClose: () => void;
   open: boolean;
 }) {
-  const idRef = useRef<symbol>(Symbol("overlay"));
+  const idRef = useRef(Symbol("overlay"));
   const onCloseRef = useRef(onClose);
 
   useEffect(() => {

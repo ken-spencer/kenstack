@@ -85,7 +85,8 @@ export function defineFields<
     assertGeneratedFieldAvailable(fields, "ogImage", "seo: true");
   }
 
-  const generatedFields = {
+  const allFields = {
+    ...fields,
     ...(publish
       ? {
           visibility: metaFieldOptions.visibility,
@@ -99,11 +100,6 @@ export function defineFields<
           ogImage: metaFieldOptions.ogImage,
         }
       : {}),
-  } as GeneratedAdminFieldOptions<TPublish, TSeo>;
-
-  const allFields = {
-    ...fields,
-    ...generatedFields,
   } as TFields & GeneratedAdminFieldOptions<TPublish, TSeo>;
 
   const definedFields = Object.fromEntries(

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 
-// declare const PIPELINE_BRAND: unique symbol;
 const PIPELINE_BRAND = Symbol("PipelineResponseBrand");
 
 export interface PipelineResponseShape {
@@ -21,10 +20,6 @@ export class PipelineResponse implements PipelineResponseShape {
   private _stopped = false;
   private _status = 200;
 
-  // Grab real headers & cookies stores from a throwaway NextResponse
-  // public readonly headers: NextResponse["headers"];
-  // public readonly cookies: NextResponse["cookies"];
-
   public readonly headers: NextResponse["headers"] = new NextResponse(null, {
     status: 200,
   }).headers;
@@ -32,12 +27,6 @@ export class PipelineResponse implements PipelineResponseShape {
   public readonly cookies: NextResponse["cookies"] = new NextResponse(null, {
     status: 200,
   }).cookies;
-
-  constructor() {
-    // const tmp = new NextResponse(null, { status: 200 });
-    // this.headers = tmp.headers;
-    // this.cookies = tmp.cookies;
-  }
 
   get stopped() {
     return this._stopped;
@@ -60,16 +49,6 @@ export class PipelineResponse implements PipelineResponseShape {
   }
 
   redirectToLogin() {
-    // response.cookies.set({
-    //   name: "loginMessage",
-    //   value: "You are no longer logged in. Please log in and try again.",
-    //   maxAge: 60,
-    //   path: "/login",
-    //   sameSite: "lax",
-    //   secure: process.env.NODE_ENV === "production",
-    //   httpOnly: false, // cookie read and deleted in client.
-    // });
-
     const message = encodeURIComponent(
       "You are no longer logged in. Please log in and try again.",
     );
@@ -81,7 +60,7 @@ export class PipelineResponse implements PipelineResponseShape {
     ...payload
   }: { message?: string } & TPayload) {
     return this.json({
-      status: "success", // thinking of switching to this syntax.
+      status: "success",
       message,
       ...payload,
     });

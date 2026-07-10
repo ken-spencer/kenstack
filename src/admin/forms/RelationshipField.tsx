@@ -17,18 +17,15 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@kenstack/forms/controls/Combobox";
-import type { SelectOption } from "@kenstack/forms/controls/Select";
 import Field, { type FieldProps } from "@kenstack/forms/Field";
 import useDebounce from "@kenstack/hooks/useDebounce";
-import fetcher, { type FetchResult } from "@kenstack/api/fetcher";
+import fetcher from "@kenstack/api/fetcher";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 
 type RelationshipValue = {
   id: number;
   label: string;
 };
-
-type RelationshipOption = RelationshipValue & SelectOption;
 
 type RelationshipFieldProps = React.ComponentProps<"div"> &
   FieldProps & {
@@ -47,10 +44,6 @@ function isRelationshipOption(value: unknown): value is RelationshipValue {
   );
 }
 
-function toRelationshipValues(value: unknown): RelationshipValue[] {
-  return Array.isArray(value) ? value.filter(isRelationshipOption) : [];
-}
-
 function RelationshipControl({
   field,
   relationship,
@@ -63,13 +56,12 @@ function RelationshipControl({
   const { apiPath, name: adminName } = useAdminEdit();
   const [keywords, debouncedKeywords, setKeywords] = useDebounce();
   const [open, setOpen] = useState(false);
-  const selected = toRelationshipValues(field.value);
+  const selected = Array.isArray(field.value)
+    ? field.value.filter(isRelationshipOption)
+    : [];
   const exclude = selected.map((item) => item.id);
 
-  const { data, error, isPending } = useQuery<
-    FetchResult<{ items: RelationshipOption[] }>,
-    Error
-  >({
+  const { data, error, isPending } = useQuery({
     queryKey: [
       "relationship-search",
       adminName,

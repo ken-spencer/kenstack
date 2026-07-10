@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { deps } from "@app/deps";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { type Prettify } from "@kenstack/types";
 
 import { cache } from "react";
@@ -55,7 +55,7 @@ export const loadContent = cache(
       table: content,
       fields: pageEditorServerFields,
       defaults,
-      where: and(eq(content.slug, slug)),
+      where: eq(content.slug, slug),
     });
 
     const data = Object.fromEntries(
@@ -99,12 +99,7 @@ export const loadMeta = async (
       seoDescription: content.seoDescription,
     })
     .from(content)
-    .where(
-      and(
-        eq(content.slug, slug),
-        // multiTenant && tenant ? eq(content.orgId, org!.id) : undefined
-      ),
-    );
+    .where(eq(content.slug, slug));
   const title =
     row?.seoTitle ||
     row?.title ||

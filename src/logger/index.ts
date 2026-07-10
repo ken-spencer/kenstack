@@ -67,9 +67,3 @@ export class Logger<TSchema extends Record<string, unknown>> {
     });
   }
 }
-
-// export const createLogger = <TSchema extends Record<string, unknown>>({
-//   db,
-// }: {
-//   db: PostgresJsDatabase<TSchema>;
-// }) => new Logger({ db });

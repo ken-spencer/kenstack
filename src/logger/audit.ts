@@ -18,10 +18,8 @@ export const createAuditLogger =
     const userAgent = headersList.get("user-agent");
     const ipAddress = headersList.get("x-real-ip") ?? "127.0.0.1";
     const pathname = headersList.get("x-pathname") ?? null;
-    // const org = await getCurrentOrganization();
     await db.insert(auditLogs).values({
       ...props,
-      // orgId: org ? org.id : null,
       geo,
       ipAddress,
       userAgent,

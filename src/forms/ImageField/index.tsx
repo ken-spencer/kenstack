@@ -26,7 +26,6 @@ type ImageRenderProps = {
   square?: boolean;
   apiPath: string;
   data?: Record<string, unknown>;
-  // setStatusMessage?: (message) => void;
   placeholder?: React.ReactNode;
   imageClass?: string;
   accept?: readonly string[];
@@ -66,7 +65,6 @@ const imageRender = ({
   square = true,
   apiPath,
   data: extraData,
-  // setStatusMessage,
   placeholder,
   imageClass,
   className,
@@ -99,7 +97,7 @@ const imageRender = ({
     const disabledHelp = canUpload ? null : <UploadDisabledHelp />;
 
     const [uploading, setUploading] = useState(false);
-    const [src, setSrc] = useState<string>("");
+    const [src, setSrc] = useState("");
 
     const reset = useCallback(() => {
       setSrc("");
@@ -156,7 +154,6 @@ const imageRender = ({
           headers: {
             "Content-Type": file.type,
             "Content-Length": file.size.toString(),
-            // 'x-amz-checksum-crc32': 'AAAAAA=='   // ← add the header that was signed
           },
 
           body: file,
@@ -248,7 +245,6 @@ const imageRender = ({
         evt.stopPropagation();
 
         const dt = evt.dataTransfer;
-        // cont[file] = dt.files ?? [];
         if (dt.files?.length) {
           const [file] = dt.files;
           if (accept.includes(file.type)) {
@@ -319,8 +315,6 @@ const imageRender = ({
             variant="ghost"
             onClick={(evt) => {
               field.onChange(null);
-
-              // commit();
               evt.stopPropagation();
             }}
           >

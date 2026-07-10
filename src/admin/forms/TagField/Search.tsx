@@ -4,7 +4,7 @@ import { Tag as TagIcon } from "lucide-react";
 import { Skeleton } from "@kenstack/components/Skeleton";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import Alert from "@kenstack/components/Alert";
-import fetcher, { type FetchResult } from "@kenstack/api/fetcher";
+import fetcher from "@kenstack/api/fetcher";
 import useDebounce from "@kenstack/hooks/useDebounce";
 import { useAdminEdit } from "@kenstack/admin/Edit/context";
 import kebabCase from "lodash-es/kebabCase";
@@ -33,10 +33,7 @@ export default function TagSearcht({ field }: { field: AnyField }) {
   );
   const { apiPath, name: adminName } = useAdminEdit();
 
-  const { data, error, isPending } = useQuery<
-    FetchResult<{ tags: TagSearchOption[] }>,
-    Error
-  >({
+  const { data, error, isPending } = useQuery({
     queryKey: ["tags", debouncedValue, field.value],
     queryFn: async () => {
       const result = await fetcher<{ tags: Tag[] }>(apiPath, {

@@ -1,14 +1,12 @@
 import type * as z from "zod";
 
 import React, {
-  useRef,
   createContext,
   useCallback,
   useContext,
   useState,
   useEffect,
 } from "react";
-// import { nanoid } from "nanoid";
 import {
   FormProvider as ReactHookFormProvider,
   useForm as useReactHookForm,
@@ -19,11 +17,7 @@ import {
 } from "react-hook-form";
 
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
-import {
-  useMutation,
-  // type MutationFunction,
-  type UseMutationResult,
-} from "@tanstack/react-query";
+import { useMutation, type UseMutationResult } from "@tanstack/react-query";
 import fetcher, {
   type FetchResult,
   type FetchSuccess,
@@ -94,8 +88,6 @@ function normalizeStatusMessage(
   return null;
 }
 
-// export type WithExtra<TResult> = TResult & { values: Record<string, unknown> };
-
 export type MutationFn<TResult extends Record<string, unknown>, TVariables> = (
   variables: TVariables,
   context: unknown,
@@ -129,8 +121,8 @@ export type FormProviderProps<
 };
 
 export type UseFormResult<
-  TResult extends Record<string, unknown>, // = Record<string, unknown>,
-  TVariables extends Record<string, unknown>, // = Record<string, unknown>,
+  TResult extends Record<string, unknown>,
+  TVariables extends Record<string, unknown>,
   TValues extends FieldValues,
 > = {
   apiPath?: string;
@@ -140,12 +132,7 @@ export type UseFormResult<
   uploadingFields: Set<string>;
   startUploading: (fieldName: string) => void;
   finishUploading: (fieldName: string) => void;
-  mutation: UseMutationResult<
-    // FetchResult<WithExtra<TResult>>,
-    FetchResult<TResult>,
-    Error,
-    TVariables
-  >;
+  mutation: UseMutationResult<FetchResult<TResult>, Error, TVariables>;
 };
 
 function FormProvider<
@@ -156,7 +143,6 @@ function FormProvider<
 >({
   apiPath,
   defaultValues,
-  // schema: schemaInitial,
   schema,
   mutationFn,
   onError,
@@ -172,8 +158,6 @@ function FormProvider<
   const [uploadingFields, setUploadingFields] = useState<Set<string>>(
     () => new Set(),
   );
-  const lastFieldRef = useRef(null);
-
   const startUploading = useCallback((fieldName: string) => {
     setUploadingFields((current) => {
       const next = new Set(current);
@@ -205,16 +189,10 @@ function FormProvider<
       reset();
       setStatusMessage(null);
       setUploadingFields(new Set());
-      lastFieldRef.current = null;
     },
     [reset, setStatusMessage],
   );
 
-  // const mutation = useMutation<
-  //   FetchResult<WithExtra<TResult>>,
-  //   Error,
-  //   TVariables
-  // >({
   const mutation = useMutation({
     mutationFn: async (variables: TVariables, context) => {
       if (mutationFn) {
@@ -240,21 +218,16 @@ function FormProvider<
       onError?.(err, variables, { form, setStatusMessage });
     },
     onSuccess: (data, variables) => {
-      if ("error" === data.status) {
+      if (data.status === "error") {
         const extraErrors: React.ReactNode[] = [];
-        const { fieldErrors /*, formErrors*/ } = data;
+        const { fieldErrors } = data;
         if (fieldErrors) {
           clearErrors();
           Object.entries(fieldErrors).forEach(([field, err], index) => {
             setError(
               field as Path<TValues>,
               { type: "server", message: Array.isArray(err) ? err[0] : err },
-              {
-                shouldFocus: true,
-                // shouldFocus: (variables as CommitVariables)?.commit
-                //   ? false
-                //   : true,
-              },
+              { shouldFocus: true },
             );
             if (!form.control._fields[field]) {
               extraErrors.push(
@@ -279,14 +252,10 @@ function FormProvider<
         } else {
           setStatusMessage(data);
         }
-
-        // if (formErrors.length) {
-        //   setError('_form', { type: 'server', message: formErrors[0] })
-        // }
         return;
       }
 
-      if ("success" === data.status) {
+      if (data.status === "success") {
         if (data.values) {
           // this will only update fields that are rendered
           Object.entries(data.values).forEach(([fieldName, value]) => {
@@ -300,14 +269,8 @@ function FormProvider<
         }
 
         setStatusMessage(data);
-        if (onSuccess) {
-          //  && !("commit" in (variables as CommitVariables))) {
-          onSuccess(data, variables, { form });
-        }
+        onSuccess?.(data, variables, { form });
       }
-    },
-    onSettled: () => {
-      lastFieldRef.current = null;
     },
   });
 
@@ -334,9 +297,10 @@ function useForm<
   TVariables extends Record<string, unknown>,
   TValues extends FieldValues,
 >() {
-  //}: UseFormResult {
   const ctx = useContext(FormContext);
-  if (!ctx) throw new Error("useForm must be used within FormProvider");
+  if (!ctx) {
+    throw new Error("useForm must be used within FormProvider");
+  }
   return ctx as UseFormResult<TResult, TVariables, TValues>;
 }
 

@@ -14,11 +14,6 @@ const schema = z.object({
   exclude: z.array(z.number()).default([]),
 });
 
-type RelationshipResult = {
-  id: number;
-  label: string;
-};
-
 type SoftDeleteTable = {
   deletedAt: AnyColumn;
 };
@@ -68,7 +63,5 @@ export const relationshipSearchAction = (adminConfig: AnyAdminConfig) =>
       .orderBy(...(relationship.orderBy ?? [asc(sql`${label}`)]))
       .limit(10);
 
-    return response.success({
-      items: items satisfies RelationshipResult[],
-    });
+    return response.success({ items });
   });

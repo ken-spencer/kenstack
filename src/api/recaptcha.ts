@@ -17,9 +17,7 @@ import { pipelineStage } from "@kenstack/api";
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
-type RecaptchaConfig = string | { message: string };
-
-const getRecaptchaConfig = (): RecaptchaConfig | undefined => {
+const getRecaptchaConfig = () => {
   const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY?.trim();
   const secretKey = process.env.RECAPTCHA_SECRET_KEY?.trim();
 

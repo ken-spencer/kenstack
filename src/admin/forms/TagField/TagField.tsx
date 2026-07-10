@@ -7,10 +7,7 @@ import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 import Search from "./Search";
 import type { Tag } from "./types";
 
-type InputProps = React.ComponentProps<"input"> &
-  FieldProps & {
-    // inputClass?: string;
-  };
+type InputProps = React.ComponentProps<"input"> & FieldProps;
 
 export default function Tags({
   name,

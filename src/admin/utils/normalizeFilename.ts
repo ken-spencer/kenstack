@@ -7,7 +7,6 @@ export default function normalizeFilename(filename: string) {
     .trim()
     .replace(/[\s\._]+/g, "-") // remove spaces
     .replace(/[^\w\-.]/g, "") // remove any non word characters
-    // .replace(/^-+|-+$/g, "") // remove dash from beginning or end
     .replace(/^\W+|\W+$/g, "") // trim non word characters from beginning | end
     .replace(/--{2,}/g, "-") // remove any double dashes
     .toLowerCase();

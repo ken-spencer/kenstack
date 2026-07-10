@@ -30,9 +30,9 @@ export default function NavLink({
   const pathname = usePathname();
   const { isMobile, setOpenMobile } = useSidebar();
   const isCurrent = isActivePath(pathname, href);
-  const activeChild = Boolean(navChildren?.some((child) =>
-    isActivePath(pathname, child.href),
-  ));
+  const activeChild = Boolean(
+    navChildren?.some((child) => isActivePath(pathname, child.href)),
+  );
   const isActive = isCurrent || activeChild;
   const [isHovered, setIsHovered] = useState(false);
   const textClassName =

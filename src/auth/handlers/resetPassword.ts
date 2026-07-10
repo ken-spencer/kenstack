@@ -79,7 +79,6 @@ const resetPasswordAction = pipelineStage(
       }
 
       const passwordHash = await bcrypt.hash(data.password, 12);
-      // let updated;
       try {
         await deps.db.transaction(async (tx) => {
           const consumed = await tx
@@ -110,7 +109,6 @@ const resetPasswordAction = pipelineStage(
             .where(eq(users.id, user.id))
             .returning({ id: users.id });
 
-          /**  */
           if (updatedUser.length !== 1) {
             throw new TransactionError(
               "USER_UPDATE_FAILED",
@@ -135,14 +133,6 @@ const resetPasswordAction = pipelineStage(
         }
         throw err;
       }
-
-      // if (!updated.length) {
-      //   /** token is consumed so the user will need a new one.  */
-      //   return errorResponse(
-      //     response,
-      //     "We couldn't update your password. Please request a new link below."
-      //   );
-      // }
 
       await deps.auth.login(user.id);
       await deps.logger.audit({

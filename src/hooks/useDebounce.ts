@@ -6,11 +6,10 @@ export default function useDebounce(
   initialValue: string = "",
   delay: number = 300,
 ): [string, string, (newValue: string) => void] {
-  const [value, setValueBase] = useState<string>(initialValue);
-  const [debouncedValue, setDebouncedValueBase] =
-    useState<string>(initialValue);
+  const [value, setValueBase] = useState(initialValue);
+  const [debouncedValue, setDebouncedValueBase] = useState(initialValue);
 
-  const debouncedFunction = useMemo<(newValue: string) => void>(
+  const debouncedFunction = useMemo(
     () =>
       debounce((newValue: string) => setDebouncedValueBase(newValue), delay),
     [delay],

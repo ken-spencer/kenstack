@@ -58,8 +58,8 @@ function optionMatchesInput(option: SelectOption, inputValue: string) {
     return true;
   }
 
-  return [option.label, option.value, ...(option.keywords ?? [])].some((value) =>
-    value.toLowerCase().includes(query),
+  return [option.label, option.value, ...(option.keywords ?? [])].some(
+    (value) => value.toLowerCase().includes(query),
   );
 }
 
@@ -148,7 +148,7 @@ function Combobox<T extends SelectOption>({
 
   return (
     <ComboboxInputContext.Provider value={context}>
-      <Picker<T>
+      <Picker
         {...props}
         autoHighlight={autoHighlight}
         items={filteredItems}
