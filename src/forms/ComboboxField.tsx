@@ -170,11 +170,7 @@ function ComboboxFieldControl({
         <ComboboxEmpty>{emptyMessage}</ComboboxEmpty>
         <ComboboxList>
           {(option: ComboboxFieldOption) => (
-            <ComboboxItem
-              key={option.value}
-              value={option}
-              disabled={option.disabled}
-            >
+            <ComboboxItem key={option.value} value={option}>
               {option.label}
             </ComboboxItem>
           )}

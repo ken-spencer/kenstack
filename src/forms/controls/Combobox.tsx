@@ -30,6 +30,7 @@ type ComboboxProps<T extends SelectOption = SelectOption> = Omit<
   children: React.ReactNode;
   filter?: ((item: T, inputValue: string) => boolean) | null;
   inputValue?: string;
+  isItemDisabled?: (item: T) => boolean;
   items: readonly T[];
   onInputValueChange?: (value: string) => void;
   onItemHighlighted?: (item: T | null) => void;

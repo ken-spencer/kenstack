@@ -54,7 +54,6 @@ type PickerItemProps<T = AnyItem> = Omit<
   "value"
 > & {
   checkPosition?: "left" | "right" | "none";
-  disabled?: boolean;
   value: T;
 };
 
@@ -539,7 +538,6 @@ function PickerItem<T = AnyItem>({
   checkPosition = "right",
   className,
   children,
-  disabled = false,
   onClick,
   onMouseEnter,
   value,
@@ -548,6 +546,7 @@ function PickerItem<T = AnyItem>({
   const context = usePickerContext("PickerItem");
   const itemRef = React.useRef<HTMLDivElement | null>(null);
   const index = context.items.findIndex((item) => Object.is(item, value));
+  const disabled = context.isItemDisabled(value);
   const highlighted = index === context.highlightedIndex;
   const selected = context.isSelected(value);
 

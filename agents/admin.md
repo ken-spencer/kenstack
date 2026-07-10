@@ -18,6 +18,10 @@ Read this before Kenstack admin module, list, or edit-form work.
 - Treat the field schema as the owner of field-value validation. Before adding `preSave` validation, trace the submitted value through the form and schema and state why those boundaries cannot enforce the requirement. Use `preSave` only when correctness depends on current server state and accepting a stale submission would have a meaningful consequence; a hypothetical race or extra layer of checking is not sufficient.
 - Prefer the shared `Field` and `FormControl` components for a custom control that represents one registered field; they own the field message and accessible `aria-invalid` / `aria-describedby` wiring. When a composite or repeated control must use React Hook Form controllers directly because one field wrapper cannot represent its nested error paths, render each relevant error with the shared `FieldErrorMessage` beside the affected control and wire that control's invalid and described-by state to the message. Do not infer that schema validation is missing merely because a custom control bypasses the standard field wrapper that normally presents those errors.
 
+## Form State
+
+- Treat React Hook Form `reset` and `resetField` as baseline-changing operations: they redefine the values considered saved and can clear dirty state. Reserve them for loading a different record, accepting a successful save response, or an explicit revert. When synchronizing browser or query state into a form without replacing the loaded record baseline, use `setValue` and choose `shouldDirty`, `shouldTouch`, and `shouldValidate` deliberately. Do not reset a field merely to add or update externally supplied options while the user may have unsaved edits.
+
 ## List Config
 
 - Prefer configuring list behavior on field definitions with field options such as `list`, `filter`, and `sort`.
