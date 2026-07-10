@@ -79,7 +79,7 @@ export function defineAddressFields({
   postalCode,
   required = false,
 }: AddressFieldOptions = {}) {
-  const { default: countryDefault = "US", ...countryCodeOptions } =
+  const { default: countryDefault = "", ...countryCodeOptions } =
     countryCode ?? {};
 
   return attachFieldSetRefinements(

@@ -5,52 +5,45 @@ import type * as z from "zod";
 import { tags as tagsTable, type TagsTable } from "@kenstack/db/tables/tags";
 import type { deps } from "@app/deps";
 import { tagsSchema } from "@kenstack/zod/tags";
-import type {
-  FieldBehavior,
-  ServerField,
-  ServerFieldDefaults,
-  ServerFieldResolver,
-} from ".";
-
-type TagFieldBehavior = FieldBehavior & {
-  tagRelations: TagsTable;
-};
+import type { DefinedField } from "../types";
+import type { ServerDefinedFields, ServerFieldResolver } from ".";
 
 export function tagField({
   table,
 }: {
   table: TagsTable;
-}): ServerFieldResolver<ServerField & { kind: "tags" }> {
-  return (): ServerFieldDefaults => ({
-    behavior: {
-      tagRelations: table,
-      async load({ db, tableId }) {
-        return db
-          .select({
-            name: tagsTable.name,
-            slug: tagsTable.slug,
-          })
-          .from(table)
-          .innerJoin(tagsTable, eq(table.tagId, tagsTable.id))
-          .where(eq(table.tableId, tableId))
-          .orderBy(asc(tagsTable.name));
-      },
-      async save({ db, tableId, value }) {
-        return saveTags({
-          db,
-          tags: value as z.output<typeof tagsSchema>,
-          tableId,
-          tagRelations: table,
-        });
-      },
+}): ServerFieldResolver<DefinedField<"tags">> {
+  return () => ({
+    tagRelations: table,
+    async load({ db, tableId }) {
+      return db
+        .select({
+          name: tagsTable.name,
+          slug: tagsTable.slug,
+        })
+        .from(table)
+        .innerJoin(tagsTable, eq(table.tagId, tagsTable.id))
+        .where(eq(table.tableId, tableId))
+        .orderBy(asc(tagsTable.name));
+    },
+    async save({ db, tableId, value }) {
+      return saveTags({
+        db,
+        tags: value as z.output<typeof tagsSchema>,
+        tableId,
+        tagRelations: table,
+      });
     },
   });
 }
 
 export function isTagField(
-  field: ServerField | undefined,
-): field is ServerField & { kind: "tags"; behavior: TagFieldBehavior } {
-  return field?.kind === "tags" && Boolean(field.behavior?.tagRelations);
+  field: ServerDefinedFields[string] | undefined,
+): field is ServerDefinedFields[string] & {
+  kind: "tags";
+  tagRelations: TagsTable;
+} {
+  return field?.kind === "tags" && Boolean(field.tagRelations);
 }
 
 type TagInput = z.output<typeof tagsSchema>[number];

@@ -10,7 +10,6 @@ import type {
   FieldAfterSave,
   FieldPreSaveContext,
   FieldPreSaveResult,
-  ServerFieldDefaults,
   ServerFieldResolver,
 } from ".";
 
@@ -21,22 +20,20 @@ export function imageField({
 }: { variant?: ImageVariant } = {}): ServerFieldResolver<
   DefinedField<"image">
 > {
-  return (field): ServerFieldDefaults => ({
-    behavior: {
-      upload: true,
-      listSelect: ({ column }) => {
-        return column
-          ? selectMediaSubquery(
-              column,
-              typeof field.list === "string" ? field.list : "square",
-            )
-          : undefined;
-      },
-      select: ({ column }) => {
-        return column ? selectMediaSubquery(column, variant) : undefined;
-      },
-      preSave: prepareImageSave,
+  return (field) => ({
+    upload: true,
+    listSelect: ({ column }) => {
+      return column
+        ? selectMediaSubquery(
+            column,
+            typeof field.list === "string" ? field.list : "square",
+          )
+        : undefined;
     },
+    select: ({ column }) => {
+      return column ? selectMediaSubquery(column, variant) : undefined;
+    },
+    preSave: prepareImageSave,
   });
 }
 
@@ -90,8 +87,6 @@ export async function prepareImageSave({
     return { status: "success", value: null, afterSave };
   } else if (fieldData === null) {
     return { status: "success" };
-  } else if (typeof fieldData === "number") {
-    return { status: "success", remove: true };
   } else if (!("action" in fieldData)) {
     if (typeof fieldData.id === "number") {
       const imageId = fieldData.id;

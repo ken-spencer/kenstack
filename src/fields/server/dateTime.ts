@@ -1,5 +1,5 @@
 import * as z from "zod";
-import type { ServerFieldDefaults } from ".";
+import type { ServerField } from ".";
 
 const dateTimeServerSchema = z.union([
   z.date(),
@@ -12,11 +12,9 @@ const dateTimeServerSchema = z.union([
   z.undefined().transform(() => null),
 ]);
 
-export function dateTimeField(): ServerFieldDefaults {
+export function dateTimeField(): ServerField {
   return {
     zod: dateTimeServerSchema,
-    behavior: {
-      filter: { kind: "date-range" },
-    },
+    filterConfig: { kind: "date-range" },
   };
 }

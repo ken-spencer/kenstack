@@ -118,11 +118,12 @@ export default function SortControl({
                     (prev) => ({
                       ...prev,
                       sort: option.name,
-                      direction: option.direction === false
-                        ? option.defaultDirection
-                        : isSelected
-                          ? flipDirection(prev.direction)
-                          : option.defaultDirection,
+                      direction:
+                        option.direction === false
+                          ? option.defaultDirection
+                          : isSelected
+                            ? flipDirection(prev.direction)
+                            : option.defaultDirection,
                     }),
                     false,
                   );

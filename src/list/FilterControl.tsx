@@ -2,12 +2,7 @@
 
 import { format } from "date-fns";
 import { parseDate } from "chrono-node";
-import {
-  CalendarIcon,
-  ListFilter,
-  RotateCcw,
-  X,
-} from "lucide-react";
+import { CalendarIcon, ListFilter, RotateCcw, X } from "lucide-react";
 import type { ComponentProps, Dispatch, SetStateAction } from "react";
 import { useMemo, useState } from "react";
 

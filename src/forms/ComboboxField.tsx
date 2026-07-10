@@ -58,8 +58,8 @@ function findTypedOption(inputValue: string, options: ComboboxFieldOption[]) {
     return exactMatch;
   }
 
-  const possibleMatches = enabledOptions.filter(
-    (option) => optionMatchesInput(option, searchValue),
+  const possibleMatches = enabledOptions.filter((option) =>
+    optionMatchesInput(option, searchValue),
   );
 
   return possibleMatches.length === 1 ? possibleMatches[0] : null;
@@ -69,10 +69,8 @@ function optionMatchesInput(
   option: ComboboxFieldOption,
   normalizedInputValue: string,
 ) {
-  return (
-    [option.label, option.value, ...(option.keywords ?? [])].some((value) =>
-      normalizeSearchValue(value).includes(normalizedInputValue),
-    )
+  return [option.label, option.value, ...(option.keywords ?? [])].some(
+    (value) => normalizeSearchValue(value).includes(normalizedInputValue),
   );
 }
 

@@ -148,13 +148,27 @@ function FormControl({
 
 function FormMessage({ className, ...props }: React.ComponentProps<"p">) {
   const { error, formMessageId } = useFormField();
-  const firstError = findFirstMessageObject(error);
-  const body = firstError
-    ? String(
-        Array.isArray(firstError.message)
-          ? firstError.message.at(0)
-          : firstError.message,
-      )
+
+  return (
+    <FieldErrorMessage
+      {...props}
+      className={className}
+      error={error}
+      id={formMessageId}
+    />
+  );
+}
+
+function FieldErrorMessage({
+  className,
+  error,
+  ...props
+}: React.ComponentProps<"p"> & { error: unknown }) {
+  const errorMessage = findFirstMessage(error);
+  const body = errorMessage
+    ? Array.isArray(errorMessage)
+      ? errorMessage.at(0)
+      : errorMessage
     : props.children;
   if (!body) {
     return null;
@@ -163,7 +177,6 @@ function FormMessage({ className, ...props }: React.ComponentProps<"p">) {
   return (
     <p
       data-slot="form-message"
-      id={formMessageId}
       className={cn(
         "text-destructive flex items-center gap-2 text-sm",
         className,
@@ -176,22 +189,30 @@ function FormMessage({ className, ...props }: React.ComponentProps<"p">) {
   );
 }
 
-type MessageCarrier = { message?: string | string[] };
+function findFirstMessage(value: unknown): string | string[] | undefined {
+  if (!value || typeof value !== "object") {
+    return;
+  }
 
-function findFirstMessageObject(obj: unknown): MessageCarrier | null {
-  if (obj && typeof obj === "object") {
-    if (Object.prototype.hasOwnProperty.call(obj, "message")) {
-      return obj;
+  if ("message" in value) {
+    if (typeof value.message === "string") {
+      return value.message;
     }
-    const record = obj as Record<string, unknown>;
-    for (const key of Object.keys(record)) {
-      const found = findFirstMessageObject(record[key]);
-      if (found) {
-        return found;
-      }
+
+    if (
+      Array.isArray(value.message) &&
+      value.message.every((message) => typeof message === "string")
+    ) {
+      return value.message;
     }
   }
-  return null;
+
+  for (const item of Object.values(value)) {
+    const message = findFirstMessage(item);
+    if (message) {
+      return message;
+    }
+  }
 }
 
-export { FormControl, FormItem, FormLabel, useFormField };
+export { FieldErrorMessage, FormControl, FormItem, FormLabel, useFormField };

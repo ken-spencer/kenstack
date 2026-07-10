@@ -6,62 +6,50 @@ import type * as z from "zod";
 
 import type { Relationship, Relationships } from "../relationships";
 import { relationshipSchema } from "../relationshipSchema";
-import type {
-  FieldBehavior,
-  ServerField,
-  ServerFieldDefaults,
-  ServerFieldResolver,
-} from ".";
-
-type RelationshipFieldBehavior = FieldBehavior & {
-  relationship: Relationship;
-};
+import type { DefinedField } from "../types";
+import type { ServerDefinedFields, ServerFieldResolver } from ".";
 
 export function relationshipField(
   relationship: Relationship,
-): ServerFieldResolver<ServerField & { kind: "relationship" }> {
-  return (): ServerFieldDefaults => ({
-    behavior: {
-      filter: {
-        field: relationshipFilterField(relationship),
-        kind: "includes",
-        options: [],
-      },
-      relationship,
-      async load({ db, key, tableId }) {
-        const values = await loadRelationships({
-          db,
-          tableId,
-          relationships: { [key]: relationship },
-        });
+): ServerFieldResolver<DefinedField<"relationship">> {
+  return () => ({
+    filterConfig: {
+      field: relationshipFilterField(relationship),
+      kind: "includes",
+      options: [],
+    },
+    relationship,
+    async load({ db, key, tableId }) {
+      const values = await loadRelationships({
+        db,
+        tableId,
+        relationships: { [key]: relationship },
+      });
 
-        return values[key] ?? [];
-      },
-      async save({ db, key, tableId, value }) {
-        const values = await saveRelationships({
-          db,
-          tableId,
-          relationships: { [key]: relationship },
-          values: {
-            [key]: value as z.output<typeof relationshipSchema>,
-          },
-        });
+      return values[key] ?? [];
+    },
+    async save({ db, key, tableId, value }) {
+      const values = await saveRelationships({
+        db,
+        tableId,
+        relationships: { [key]: relationship },
+        values: {
+          [key]: value as z.output<typeof relationshipSchema>,
+        },
+      });
 
-        return values[key] ?? [];
-      },
+      return values[key] ?? [];
     },
   });
 }
 
 export function isRelationshipField(
-  field: ServerField | undefined,
-): field is ServerField & {
+  field: ServerDefinedFields[string] | undefined,
+): field is ServerDefinedFields[string] & {
   kind: "relationship";
-  behavior: RelationshipFieldBehavior;
+  relationship: Relationship;
 } {
-  return (
-    field?.kind === "relationship" && Boolean(field.behavior?.relationship)
-  );
+  return field?.kind === "relationship" && Boolean(field.relationship);
 }
 
 function relationshipFilterField(relationship: Relationship) {

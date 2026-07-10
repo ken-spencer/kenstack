@@ -5,7 +5,7 @@ import usersModule from "@kenstack/modules/users";
 import * as users from "@kenstack/modules/users/tables";
 import * as coreTables from "@kenstack/db/tables";
 
-const tables = { ...users, ...coreTables };
+export const tables = { ...users, ...coreTables };
 
 export const deps = createDeps({
   modules: defineAdmin([usersModule]),

@@ -15,7 +15,6 @@ import {
   useMemo,
   useRef,
   useState,
-  useSyncExternalStore,
   type ComponentProps,
   type MouseEvent,
   type ReactNode,
@@ -26,10 +25,6 @@ import { cn } from "@kenstack/lib/utils";
 import { useOverlayStack } from "./overlayStack";
 
 const transitionDurationMs = 150;
-
-const subscribeToClientSnapshot = () => () => {};
-const getClientSnapshot = () => true;
-const getServerSnapshot = () => false;
 
 const PopoverContext = createContext<{
   contentId: string;
@@ -133,12 +128,7 @@ function PopoverTrigger({
   }
 
   return (
-    <button
-      type="button"
-      {...props}
-      {...sharedProps}
-      onClick={handleClick}
-    >
+    <button type="button" {...props} {...sharedProps} onClick={handleClick}>
       {children}
     </button>
   );
@@ -163,11 +153,7 @@ function PopoverContent({
   const dialogRef = useRef<HTMLDialogElement | null>(null);
   const closeTimerRef = useRef<number | null>(null);
   const animationFrameRef = useRef<number | null>(null);
-  const mounted = useSyncExternalStore(
-    subscribeToClientSnapshot,
-    getClientSnapshot,
-    getServerSnapshot,
-  );
+  const [mounted, setMounted] = useState(false);
   const [visibleOpen, setVisibleOpen] = useState(false);
   const { isTopOverlay } = useOverlayStack({
     onClose: () => {
@@ -178,6 +164,15 @@ function PopoverContent({
   });
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Portals require a browser document after hydration.
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) {
+      return;
+    }
+
     const dialog = dialogRef.current;
 
     if (!dialog) {
@@ -227,7 +222,7 @@ function PopoverContent({
     if (autoFocus) {
       dialog.focus({ preventScroll: true });
     }
-  }, [align, autoFocus, contentId, open, sideOffset]);
+  }, [align, autoFocus, contentId, mounted, open, sideOffset]);
 
   useEffect(() => {
     if (!open) {
@@ -308,7 +303,7 @@ function PopoverContent({
     <dialog
       {...props}
       className={cn(
-        "bg-popover text-popover-foreground fixed inset-auto z-50 m-0 max-h-[calc(100dvh-1rem)] w-72 scale-95 overflow-auto rounded-md border p-4 opacity-0 shadow-md transition-[opacity,transform] duration-150 ease-out outline-hidden backdrop:bg-transparent data-[state=open]:scale-100 data-[state=open]:opacity-100",
+        "bg-popover text-popover-foreground fixed inset-auto z-50 m-0 max-h-[calc(100dvh-1rem)] w-72 scale-95 overflow-auto rounded-md border p-4 opacity-0 shadow-md outline-hidden transition-[opacity,transform] duration-150 ease-out backdrop:bg-transparent data-[state=open]:scale-100 data-[state=open]:opacity-100",
         className,
         "hidden open:block",
       )}

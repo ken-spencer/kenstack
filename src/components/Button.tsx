@@ -143,7 +143,11 @@ export default function Button({
 
     const content =
       ButtonIcon || collapseBelow
-        ? React.cloneElement(child, undefined, renderContent(child.props.children))
+        ? React.cloneElement(
+            child,
+            undefined,
+            renderContent(child.props.children),
+          )
         : child;
 
     const button = React.cloneElement(content, {

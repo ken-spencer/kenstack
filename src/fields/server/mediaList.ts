@@ -3,12 +3,15 @@ import type * as z from "zod";
 import type { AnyPgColumn, AnyPgTable } from "drizzle-orm/pg-core";
 import isEqual from "lodash-es/isEqual";
 
-import type { deps } from "@app/deps";
 import { media as mediaTable, selectMediaSubquery } from "@kenstack/db/tables";
 import type { User } from "@kenstack/types";
 import { mediaListSchema } from "@kenstack/zod/mediaList";
 import type { DefinedField, MediaListUploadOptions } from "../types";
-import type { ServerFieldDefaults, ServerFieldResolver } from ".";
+import type {
+  FieldLoadContext,
+  FieldSaveContext,
+  ServerFieldResolver,
+} from ".";
 import { imageMetadata } from "./image";
 
 type MediaConfig = {
@@ -58,48 +61,43 @@ export function mediaListField({
     sortOrder,
   };
 
-  return (field): ServerFieldDefaults => ({
-    behavior: {
-      upload: {
-        accept: field.accept,
-        maxSize: field.uploadMaxSize,
-        maxSizeMessage: field.uploadMaxSizeMessage,
-      },
-      async load({ db, key, tableId }) {
-        const values = await loadMedia({
-          db,
-          tableId,
-          media: { [key]: media },
-        });
+  return (field) => ({
+    upload: {
+      accept: field.accept,
+      maxSize: field.uploadMaxSize,
+      maxSizeMessage: field.uploadMaxSizeMessage,
+    },
+    async load({ db, key, tableId }) {
+      const values = await loadMedia({
+        db,
+        tableId,
+        media: { [key]: media },
+      });
 
-        return values[key] ?? [];
-      },
-      async save({ db, key, tableId, value, user }) {
-        const values = await saveMedia({
-          db,
-          tableId,
-          media: { [key]: media },
-          values: { [key]: value as z.output<typeof mediaListSchema> },
-          user,
-        });
+      return values[key] ?? [];
+    },
+    async save({ db, key, tableId, value, user }) {
+      const values = await saveMedia({
+        db,
+        tableId,
+        media: { [key]: media },
+        values: { [key]: value as z.output<typeof mediaListSchema> },
+        user,
+      });
 
-        return values[key] ?? [];
-      },
+      return values[key] ?? [];
     },
   });
 }
 
 type MediaValues = Record<string, z.output<typeof mediaListSchema>>;
-type TransactionDb = Parameters<
-  Parameters<(typeof deps)["db"]["transaction"]>[0]
->[0];
 
 async function loadMedia({
   db,
   tableId,
   media,
 }: {
-  db: Pick<typeof deps.db, "select">;
+  db: FieldLoadContext["db"];
   tableId: number;
   media?: Record<string, MediaConfig>;
 }) {
@@ -159,7 +157,7 @@ async function saveMedia({
   values,
   user,
 }: {
-  db: TransactionDb;
+  db: FieldSaveContext["db"];
   tableId: number;
   media: Record<string, MediaConfig>;
   values: MediaValues;

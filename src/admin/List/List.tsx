@@ -277,7 +277,7 @@ function ReorderHandle({
   return (
     <Button
       aria-label="Drag to reorder"
-      className="touch-none !cursor-grab active:!cursor-grabbing"
+      className="!cursor-grab touch-none active:!cursor-grabbing"
       data-reorder-id={itemId}
       disabled={disabled}
       draggable={!disabled}

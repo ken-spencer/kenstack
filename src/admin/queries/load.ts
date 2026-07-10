@@ -55,7 +55,7 @@ async function loadCachedAdminRecord(
 ): Promise<AdminEditItem | null> {
   "use cache";
   cacheLife("max");
-  cacheTag(adminLoadCacheTag(name, target));
+  cacheTag(adminLoadCacheTag(name, target), name);
 
   const adminConfig = deps.modules[name]?.admin;
 

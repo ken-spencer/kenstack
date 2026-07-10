@@ -15,11 +15,12 @@ Before any Next.js work, find and read the relevant doc in `node_modules/next/di
 - Do not fix public bundle leakage by moving Client Component loaders into Server Components, `server-only` files, or server-safe helper files. That can trigger the same Next.js bundling bug and pull the dynamically imported Client Components and their dependencies into route bundles.
 - If a client registry appears in a public route graph, do not reinterpret that as evidence the registry should be server-safe. Either fix the importing route/module graph while keeping the registry as a Client Component, or explicitly accept the measured bundle trade-off. If a larger fix is justified, split server-only module definitions from admin client registries, or pass client-enabled modules only at the admin entry point.
 - Before changing any file with `"use client"` or any dynamic import of a Client Component, stop and explain why the boundary is safe. If the goal is bundle reduction, verify with a production build before and after.
+- Before adding `server-only`, a server-only import, or a server builder to an existing `index.ts` or barrel, search every importer of that entry point. If any importer belongs to a Client Component graph, keep the barrel client-safe or update those consumers to explicit client-safe subpaths in the same change. A barrel's runtime boundary is determined by its consumers, not only by its directives.
 - Use route handlers for API endpoints.
 - Do not enumerate private, account, auth, or unlisted page paths in `robots.txt` or `robots.ts`. Robots files are public and are not access control; use auth, redirects, and `noindex` metadata/headers for those pages instead. Keep robots disallow rules to broad technical buckets such as `/admin` and `/api/`, unless the user explicitly asks for a public crawl rule.
 - In cached functions or components, place `cacheTag(...)` as high as it can go without changing behavior, near `"use cache"` and `cacheLife(...)`, so cache identity is visible with the other cache setup.
 - Keep admin data cacheable, but do not let admin mutations serve stale data while the affected cache entries regenerate. Configure that behavior at the invalidation point with blocking expiration, such as `revalidateTag(tag, { expire: 0 })`, rather than by forcing custom cache profiles on cached loaders or host sites.
-- Do not use `<Suspense fallback={null}>`, or component APIs that silently default to a null loading fallback, for page bodies, full-page content, or content sections that affect page height. Null fallbacks collapse the streamed content area and can make the header and footer touch during loading. Use a height-preserving loading component or skeleton instead. A null fallback is only acceptable for small fixed-size slots where the surrounding layout already reserves the space.
+- Do not use `<Suspense fallback={null}>`, or component APIs that silently default to a null loading fallback, when the fallback can be perceptibly rendered and collapsing the suspended content would create a visible layout problem, especially by pulling persistent headers and footers together. Use a height-preserving loading component or skeleton for page bodies or content sections with meaningful latency. A null fallback is acceptable for small fixed-size slots whose surrounding layout already reserves the space, work that resolves before the fallback is visibly displayed, or standalone layouts without surrounding chrome that would collapse into the missing content. Judge the actual surrounding layout and expected latency; do not add a large duplicate skeleton solely because a Suspense boundary covers a large subtree.
 
 ## Preserve Existing Capabilities
 
@@ -30,6 +31,28 @@ If there is a clear implementation path that preserves current behavior, use it.
 Treat existing behavior as intentional unless the user explicitly asks to remove it. If a change would trade away an existing capability for a minor simplification, stop and confirm before making that change.
 
 When fixing a bug, do not remove or clean up existing behavior-bearing code unless you have traced the workflow it supports and can prove the replacement preserves that behavior. If a line looks redundant but is outside the exact bug being fixed, leave it in place. Treat existing conditionals, resets, invalidations, redirects, and cache updates as intentional until proven otherwise. A cleanup is not valid if it requires guessing why the old code existed.
+
+## Change Threshold
+
+Do not make a code change unless it produces a concrete current improvement: fixing correctness or user behavior, preserving meaningfully stronger types, removing real duplication or indirection, or completing a necessary coherent migration.
+
+Equivalence is a reason not to edit. Do not change code merely because another form is equally valid, more explicit, newer-looking, or stylistically preferable. If runtime behavior, inferred types, readability, and maintenance cost are materially unchanged, leave the file untouched.
+
+Apply this threshold before editing, not as a final diff cleanup. Be able to state the specific before-and-after improvement in one sentence at the affected call site or ownership boundary. If the benefit is theoretical, cannot be verified, or only moves complexity, do not start the change. If investigation shows that a proposed edit makes no meaningful difference, stop and preserve the existing code.
+
+Mechanical migrations clear the threshold when a real contract or representation has changed and the same required transformation must be applied consistently. Do not mix those migrations with optional renames, inference-neutral type edits, or adjacent cleanup.
+
+Configured Prettier output is an explicit exception to this threshold. Treat formatting-only changes produced by Prettier in in-scope or touched files as deterministic mechanical output: stage them without asking for human review, and do not report them as cleanup findings. Do not expand formatting to unrelated files unless the task or repository workflow requires it.
+
+## Defense in Depth
+
+Add a defensive check when the guarded state has a credible path through supported use, stale or concurrent state, external input, or a boundary the application does not control, and when reaching it would have a meaningful consequence. Also add a check when the consequence is sufficiently serious or difficult to reverse that a low likelihood does not make the risk acceptable.
+
+Before adding a guard, identify the path that can reach it, the consequence it prevents, the guarantees already enforced elsewhere, and how a user or operator can recover. If no credible path or meaningful consequence can be stated, do not add runtime checks, blocking errors, or recovery UI for the hypothetical state. Record or defer the concern when appropriate instead of making the common workflow carry its cost.
+
+Prefer non-blocking visibility when an unlikely state is recoverable and the application can continue safely. Use blocking validation only when continuing would create a materially worse state. A blocking message must identify the affected value or operation closely enough that the user can resolve it; do not add generic defensive errors that merely report an internal invariant.
+
+Do not duplicate an invariant at every layer by default. Add another enforcement point only when it protects a distinct boundary, improves the failure mode, or contains a consequence that the existing enforcement cannot reliably prevent.
 
 ## Debugging Churn
 
@@ -47,6 +70,7 @@ For bug fixes, proceed autonomously only when the cause is clear and the fix is 
 - For errors, warnings, hydration mismatches, broken UI states, failing tests, runtime exceptions, console errors, or regressions, read `agents/debug.md` before coding.
 - For Kenstack admin module definitions, edit forms, list views, field list/filter/sort behavior, or admin layout work, read `agents/admin.md` before coding.
 - When delegating implementation work, instruct the agent to search for existing Kenstack primitives and local usage patterns before building custom UI behavior. Prefer `@kenstack/components/*` and established module patterns over local popover, menu, dialog, tooltip, button, skeleton, list-control, form-control, query-state, or error-state behavior. The agent should explicitly report any custom UI behavior it adds and why no existing primitive fit.
+- For TypeScript type aliases, interfaces, overloads, generic arguments, casts, explicit return annotations, or type-heavy helper APIs, read `agents/typescript.md` before coding.
 - For database, Drizzle, table schema, Zod, validation, or pipeline schema work, read `agents/data.md` before coding.
 - When a Kenstack API, export, helper, type, route, or behavior referenced by the site is missing, renamed, incompatible, or intentionally changed, read and update `agents/migrations.md` as applicable.
 
@@ -56,21 +80,12 @@ For bug fixes, proceed autonomously only when the cause is clear and the fix is 
 - Do not use `any`.
 - Use curly braces for all conditionals.
 - Prefer existing `lodash-es` utilities for common transformations and collection helpers instead of writing local one-off utility functions.
-- Do not export types, helpers, components, or configuration solely to satisfy linting, TypeScript convenience, or anticipated future use. Keep new API surface limited to values that are used now or explicitly requested.
-- Do not extract or share small structural types solely because several call sites have similarly named properties. A shared type should mean every consumer supports the full contract. If consumers only share a subset of fields, or some consumers ignore fields the type allows, keep local types or define narrower explicit variants.
-- Prefer inferred types unless explicit types improve clarity.
-- Treat each new local type alias as suspect until proven useful. Before adding one, confirm it is exported, reused, materially simplifies a noisy function signature, documents a real domain contract, or protects a real generic/external boundary. Otherwise inline the shape and let inference carry it.
-- Do not build a top-of-file type block by habit. Keep one-off private object shapes at the function boundary, and avoid naming result, error, row, option, or callback shapes that are used only once.
+- Follow `agents/typescript.md` for type aliases, interfaces, overloads, generic arguments, casts, explicit return annotations, type-heavy helper APIs, and TypeScript inference decisions.
+- Name shared and exported types for the concept a caller passes, receives, or implements, not for an internal construction or merge step. Do not rename a type solely because its implementation changed; follow the call-site and rename-safety checks in `agents/typescript.md`.
+- Do not export helpers, components, configuration, or types solely to satisfy linting, TypeScript convenience, or anticipated future use. Keep new API surface limited to values that are used now or explicitly requested.
 - Do not move complexity around to make an error disappear. If a change only shifts awkward typing, runtime guards, duplicated data shaping, or config translation to another file, stop and simplify the underlying shape instead.
-- If TypeScript pressure leads toward complex conditional types, overloads, casts, duplicated `Resolved*` types, or helper types that mirror inferred values, pause and reassess. Prefer changing the API shape so inference works naturally; ask for guidance before committing to type machinery.
-- When a function derives extra properties such as `schema`, `defaultValues`, or normalized config, type the input shape directly and let the return value infer. Do not define a resolved output type only to use `Omit` or a parallel props type for the unresolved input; derive consumer types from the function return when a named type is truly needed.
-- For generic helpers, query builders, Drizzle selections, and callback-mapped results, rely on TypeScript inference wherever possible. Avoid adding explicit return generics or result annotations that restate what the compiler can infer from the call site.
-- Do not specify component generics at call sites when props such as `schema`, `defaultValues`, `mutationFn`, or callbacks can infer them. Prefer fixing the component/helper typing over repeating type arguments at each use.
-- Avoid type casts. A cast is usually a sign that the design or generic boundary has gone off track. If a cast feels necessary, first make several concrete attempts at an inference-friendly shape, such as selecting explicit Drizzle columns, narrowing the input type, using `satisfies`, adding a type guard, or moving validation to a schema boundary. If those attempts fail and a cast is still the only orthodox solution, keep it narrow and flag the tradeoff before proceeding.
-- Before adding local type declarations, shims, or small wrappers for an external package, first check whether the package ships its own types or whether the workspace already has appropriate types installed. If types are missing, check npm for the relevant `@types/*` package and install it when available. Use a narrow local boundary only when package/workspace types are not available.
 - Do not add alternate return shapes, overloads, or configuration options just to avoid returning a few unused fields or doing a tiny local fallback. Prefer one consistent data shape unless the second shape removes meaningful complexity at several call sites.
-- Do not make required values optional in lower-level APIs just to throw runtime errors when they are missing. Let TypeScript describe the real requirement, and validate optional runtime configuration at the boundary that reads or supplies it.
-- Do not add runtime fail branches for states that TypeScript should make impossible, such as a required module config missing from a module that defines it. Fix the type shape instead of adding a defensive throw.
+- Before proposing or adding a callback, hook, lifecycle result, configuration option, or parallel code path, trace the existing extension points for that behavior end to end. Prefer configuring or narrowly extending the existing path. Introduce another path only when the current mechanism cannot express the required behavior, and identify that limitation explicitly.
 - Normalize submitted values at the Zod/input boundary when practical, such as trimming strings in field schemas, instead of adding downstream query or render checks for empty-looking values the schema should already have cleaned up.
 - Do not make breaking API or call-site shape changes without checking in first. If a cleanup or type fix would require changing an agreed API, stop and ask before proceeding.
 - When renaming or reshaping code that only exists in uncommitted work, update the affected call sites directly. Do not add compatibility aliases, shim exports, or temporary re-export paths for APIs that have not shipped or been committed.
@@ -88,7 +103,7 @@ Before finishing a code change, run the narrowest relevant checks:
 
 Before finalizing code changes, read `agents/review.md` and compare the generated code against that checklist. Fix issues that are clearly local and low-risk. If the checklist points to something that would require a broader refactor or a tradeoff, call it out instead of forcing a messy cleanup.
 
-Before finalizing any touched TypeScript file, explicitly audit every new or changed `type` alias, interface, overload, generic, and cast in that file. Remove it unless it has a current, concrete reason under the code style rules above.
+Before finalizing any touched TypeScript file, read `agents/typescript.md` and explicitly audit every new or changed type alias, interface, overload, generic argument, explicit return annotation, and cast in that file. Remove it unless it has a current, concrete reason under those rules.
 
 After each focused edit, quickly compare the touched hunk against `agents/review.md` before moving on. Catch small local issues while the context is fresh, especially duplicated branches, unnecessary helpers, unclear type extraction, and effects that are not synchronizing with an external system.
 
@@ -126,7 +141,7 @@ Inline simple expressions when they are used once, especially in JSX props. Do n
 
 Use the clearest string construction for the expression. Prefer plain concatenation when a template literal would mostly wrap a conditional or short fragments in punctuation; use template literals when interpolation makes the result easier to read.
 
-Prefer destructuring callback parameters or local objects when it removes one-off property aliases and lets JSX return directly, especially in `map` callbacks. Keep an explicit callback body when it needs meaningful setup, branching, or reused derived values.
+Prefer destructuring callback parameters or local objects when it removes one-off property aliases and lets JSX return directly, especially in `map` callbacks. Alias a property at the destructuring boundary, such as `({ value: prices })`, instead of immediately following `({ value })` with `const prices = value`. Keep an explicit callback body when it needs meaningful setup, branching, or reused derived values.
 
 Inline small object parameter types for private functions when the type is used once and the fields are easier to understand at the function boundary. Extract a named type when it is exported, reused, large enough to distract from the function body, or represents a real domain concept.
 
@@ -143,6 +158,8 @@ When branching between several peer cases outside JSX, such as named actions, mo
 Prefer rendering markup directly in JSX over breaking it into separate variables. If direct JSX would require a complex nested ternary, use an inline function pattern with explicit `return` branches so the markup stays local but the control flow remains readable. Extract markup only when it materially improves readability, removes meaningful duplication, or creates a real reusable component.
 
 Avoid `useEffect` unless synchronizing with an external system or browser API that cannot be handled during render, event handling, or by the data library itself. Do not add effects only to mirror derived state, react to `useQuery` data/errors, log query results, or trigger follow-up work that belongs in a query function, mutation callback, route action, or explicit user event.
+
+When browser-only state cannot be available during server rendering, initialize with a deterministic server-safe value and restore the browser value after hydration. A narrow, explained `react-hooks/set-state-in-effect` suppression is acceptable for that synchronization; do not add indirection solely to satisfy the lint rule. Reserve `useSyncExternalStore` for values owned outside React that provide a meaningful subscription and snapshot contract. Do not use a no-op subscription merely to detect mounting, distinguish server from client, or avoid an effect suppression.
 
 When multiple components or files are designed to work together as one unit, put them in a dedicated folder and avoid repeating the folder concept in each filename when the shorter names remain clear. For example, prefer `components/AdminShortcutLink/index.tsx` and `components/AdminShortcutLink/Client.tsx` over sibling files named `AdminShortcutLink.tsx` and `AdminShortcutLinkClient.tsx`.
 

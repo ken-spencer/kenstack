@@ -12,12 +12,7 @@ const scriptPath = fileURLToPath(
 
 const child = spawn(
   process.platform === "win32" ? "tsx.cmd" : "tsx",
-  [
-    "--tsconfig",
-    "tsconfig.json",
-    scriptPath,
-    ...process.argv.slice(2),
-  ],
+  ["--tsconfig", "tsconfig.json", scriptPath, ...process.argv.slice(2)],
   {
     env,
     stdio: "inherit",

@@ -76,7 +76,7 @@ export async function saveRecord<TTable extends SaveRecordTable>(
       continue;
     }
 
-    if (fields[key]?.behavior?.save) {
+    if (fields[key]?.save) {
       handledValues[key] = value;
     } else {
       data[key] = value;
@@ -155,12 +155,12 @@ export async function saveRecord<TTable extends SaveRecordTable>(
       }
 
       for (const [fieldKey, value] of Object.entries(handledValues)) {
-        const behavior = fields[fieldKey]?.behavior;
-        if (!behavior?.save) {
+        const field = fields[fieldKey];
+        if (!field?.save) {
           continue;
         }
 
-        savedValues[fieldKey] = await behavior.save({
+        savedValues[fieldKey] = await field.save({
           db: tx,
           key: fieldKey,
           tableId: savedRow.id,
@@ -261,20 +261,20 @@ async function preSaveFields<TTable extends SaveRecordTable>({
     }
 
     const column = columns[key];
-    if (!column && !field.behavior?.save && !field.behavior?.preSave) {
+    if (!column && !field.save && !field.preSave) {
       return {
         status: "error" as const,
         message: `Field "${key}" cannot be saved without field save behavior.`,
       };
     }
 
-    if (!field.behavior?.preSave) {
+    if (!field.preSave) {
       continue;
     }
 
-    const hasFieldSave = Boolean(field.behavior.save);
+    const hasFieldSave = Boolean(field.save);
     const value = hasFieldSave ? handledValues[key] : data[key];
-    const result = await field.behavior.preSave({
+    const result = await field.preSave({
       db: tx,
       key,
       column,

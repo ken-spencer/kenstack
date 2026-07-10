@@ -72,8 +72,8 @@ export async function loadRecord<
 
   if (row) {
     for (const [fieldKey, field] of Object.entries(fields)) {
-      if (field.behavior?.load) {
-        values[fieldKey] = await field.behavior.load({
+      if (field.load) {
+        values[fieldKey] = await field.load({
           db: deps.db,
           key: fieldKey,
           tableId: row.id,

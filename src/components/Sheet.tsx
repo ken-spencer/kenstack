@@ -67,7 +67,9 @@ function Sheet({
     [descriptionId, open, setOpen, titleId],
   );
 
-  return <SheetContext.Provider value={value}>{children}</SheetContext.Provider>;
+  return (
+    <SheetContext.Provider value={value}>{children}</SheetContext.Provider>
+  );
 }
 
 function SheetTrigger({
@@ -126,12 +128,7 @@ function SheetTrigger({
   }
 
   return (
-    <button
-      type="button"
-      {...props}
-      {...sharedProps}
-      onClick={handleClick}
-    >
+    <button type="button" {...props} {...sharedProps} onClick={handleClick}>
       {children}
     </button>
   );

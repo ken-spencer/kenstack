@@ -31,11 +31,13 @@ type EntryModule<TEntry> = TEntry extends AdminModule
         module: infer TModule extends AdminModule;
         children?: readonly (infer TChild)[];
       }
-    ? TModule | (TChild extends AdminModule
-        ? TChild
-        : TChild extends { module: infer TChildModule extends AdminModule }
-          ? TChildModule
-          : never)
+    ?
+        | TModule
+        | (TChild extends AdminModule
+            ? TChild
+            : TChild extends { module: infer TChildModule extends AdminModule }
+              ? TChildModule
+              : never)
     : never;
 
 type DefinedAdminMap<TEntries extends readonly AdminEntry[]> = DefinedAdmin & {

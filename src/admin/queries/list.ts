@@ -182,7 +182,7 @@ export async function queryAdminList({
         },
         data,
       ),
-  );
+    );
   const [rows, [{ count }]] = await Promise.all([
     isReorderSort ? query : query.limit(limit).offset((data.page - 1) * limit),
     db
@@ -321,7 +321,7 @@ function getListSelect(
     }
 
     const column = columns[key];
-    const fieldSelect = field.behavior?.listSelect?.({
+    const fieldSelect = field.listSelect?.({
       key,
       field,
       column,

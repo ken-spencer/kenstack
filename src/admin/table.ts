@@ -134,7 +134,7 @@ export const addressColumns = {
   locality: text("locality").notNull().default(""),
   regionCode: varchar("region_code", { length: 64 }).notNull().default(""),
   postalCode: varchar("postal_code", { length: 32 }).notNull().default(""),
-  countryCode: varchar("country_code", { length: 2 }).notNull().default("US"),
+  countryCode: varchar("country_code", { length: 2 }).notNull().default(""),
 };
 
 export type ExtraTable<

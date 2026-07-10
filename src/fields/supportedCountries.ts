@@ -157,6 +157,9 @@ export function isSupportedRegionCode(
   countries: readonly SupportedCountry[] = supportedCountries,
 ) {
   return Boolean(
-    findSupportedRegion(findSupportedCountry(countries, countryCode), regionCode),
+    findSupportedRegion(
+      findSupportedCountry(countries, countryCode),
+      regionCode,
+    ),
   );
 }

@@ -22,7 +22,7 @@ export const relationshipSearchAction = (adminConfig: AnyAdminConfig) =>
   pipelineStage({ access: "admin", schema }, async ({ response, data }) => {
     const field = adminConfig.fields[data.relationship];
     const relationship = isRelationshipField(field)
-      ? field.behavior.relationship
+      ? field.relationship
       : undefined;
 
     if (!relationship) {

@@ -1,10 +1,7 @@
 import { twMerge } from "tailwind-merge";
 import * as React from "react";
 
-const SvgYouTube = ({
-  className,
-  ...props
-}: React.SVGProps<SVGSVGElement>) => (
+const SvgYouTube = ({ className, ...props }: React.SVGProps<SVGSVGElement>) => (
   <svg
     aria-hidden="true"
     tabIndex={-1}

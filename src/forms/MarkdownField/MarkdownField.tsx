@@ -24,10 +24,7 @@ import { twMerge } from "tailwind-merge";
 
 import Field, { type FieldProps } from "@kenstack/forms/Field";
 import { MarkdownEditorToolbar } from "@kenstack/forms/MarkdownEditor/Toolbar";
-import {
-  markdownMentionPlugin,
-  type MarkdownMentionConfig,
-} from "./mentions";
+import { markdownMentionPlugin, type MarkdownMentionConfig } from "./mentions";
 
 export type InputProps = React.ComponentProps<"input"> &
   FieldProps & {

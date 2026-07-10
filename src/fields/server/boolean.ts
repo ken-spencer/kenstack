@@ -1,9 +1,5 @@
-import type { ServerFieldDefaults } from ".";
+import type { ServerField } from ".";
 
-export function booleanField(): ServerFieldDefaults {
-  return {
-    behavior: {
-      filter: { kind: "boolean" },
-    },
-  };
+export function booleanField(): ServerField {
+  return { filterConfig: { kind: "boolean" } };
 }

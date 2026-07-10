@@ -23,8 +23,9 @@ import type { AdminClient, BaseListItem } from "@kenstack/admin/client";
 import type { AdminClientRegistry } from "@kenstack/admin/clientLoaders";
 import { getAdminListQueryKey } from "./queryKey";
 
-const AdminListContext =
-  createContext<UseListProps<Record<string, unknown>> | null>(null);
+const AdminListContext = createContext<UseListProps<
+  Record<string, unknown>
+> | null>(null);
 
 type AdminListProps = {
   basePath?: string;
@@ -91,8 +92,9 @@ export function AdminListProvider({
 
   const [selected, setSelected] = useState<number[]>([]);
   const defaultFilterState = createDefaultListQueryState(sort);
-  const [filters, debouncedFilters, setFilters] =
-    useQueryStore(defaultFilterState, {
+  const [filters, debouncedFilters, setFilters] = useQueryStore(
+    defaultFilterState,
+    {
       schema: createListSearchSchema({
         filters: filter,
         sort,
@@ -103,7 +105,8 @@ export function AdminListProvider({
           defaults: defaultFilterState,
           sort,
         }),
-    });
+    },
+  );
 
   const searchParams = useSearchParams();
   const isReorderSort =

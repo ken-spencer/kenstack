@@ -1,35 +1,16 @@
-import { useState, useCallback, useMemo } from "react";
-
-import debounce from "lodash-es/debounce";
+import { useEffect, useState } from "react";
 
 export default function useDebounce(
   initialValue: string = "",
   delay: number = 300,
 ): [string, string, (newValue: string) => void] {
-  const [value, setValueBase] = useState(initialValue);
-  const [debouncedValue, setDebouncedValueBase] = useState(initialValue);
+  const [value, setValue] = useState(initialValue);
+  const [debouncedValue, setDebouncedValue] = useState(initialValue);
 
-  const debouncedFunction = useMemo(
-    () =>
-      debounce((newValue: string) => setDebouncedValueBase(newValue), delay),
-    [delay],
-  );
-
-  const setDebouncedValue = useCallback(
-    (newValue: string): void => {
-      setValueBase(newValue);
-      debouncedFunction(newValue);
-    },
-    [debouncedFunction],
-  );
-
-  const setValue = useCallback(
-    (newValue: string): void => {
-      setValueBase(newValue);
-      setDebouncedValue(newValue);
-    },
-    [setDebouncedValue],
-  );
+  useEffect(() => {
+    const timeout = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(timeout);
+  }, [delay, value]);
 
   return [value, debouncedValue, setValue];
 }

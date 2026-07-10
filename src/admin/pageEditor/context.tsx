@@ -46,9 +46,12 @@ type PageContentProviderProps = {
 };
 
 const PageEditorStoreContext = createContext<PageEditorStoreApi | null>(null);
-const FloatingError = dynamic(() => import("@kenstack/components/FloatingError"), {
-  ssr: false,
-});
+const FloatingError = dynamic(
+  () => import("@kenstack/components/FloatingError"),
+  {
+    ssr: false,
+  },
+);
 
 export function PageEditorProvider({
   children,

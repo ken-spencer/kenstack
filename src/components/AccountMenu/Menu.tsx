@@ -35,7 +35,10 @@ export default function AccountMenu({
           align="end"
           className="flex w-44 flex-col gap-1 p-1.5"
           onClick={(event) => {
-            if ((event.target as HTMLElement).closest("a,button")) {
+            if (
+              event.target instanceof Element &&
+              event.target.closest("a,button")
+            ) {
               setOpen(false);
             }
           }}

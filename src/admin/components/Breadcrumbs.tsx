@@ -36,7 +36,7 @@ export default function Breadcrumbs({
         }
       : {
           title: moduleTitle,
-    },
+        },
     ...(currentTitle ? [{ title: currentTitle }] : []),
   ] satisfies { href?: string; title: string }[];
 

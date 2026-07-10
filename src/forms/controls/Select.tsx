@@ -12,29 +12,29 @@ import {
   PickerTrigger,
 } from "@kenstack/forms/controls/Picker";
 
-export type SelectOption = {
+export type SelectOption<TValue extends string = string> = {
   description?: string;
   icon?: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   keywords?: readonly string[];
   label: string;
-  value: string;
+  value: TValue;
 };
 
-type SelectProps = Omit<
+type SelectProps<TOption extends SelectOption = SelectOption> = Omit<
   React.ComponentPropsWithRef<"button">,
   "children" | "onChange" | "value"
 > & {
   contentClassName?: string;
   itemClassName?: string;
   listLabel?: string;
-  options: readonly SelectOption[];
+  options: readonly TOption[];
   placeholder?: string;
   rootClassName?: string;
   value?: string;
-  onValueChange?: (value: string, option: SelectOption) => void;
+  onValueChange?: (value: TOption["value"], option: TOption) => void;
 };
 
-function Select({
+function Select<TOption extends SelectOption = SelectOption>({
   className,
   contentClassName,
   disabled = false,
@@ -48,7 +48,7 @@ function Select({
   onBlur,
   onValueChange,
   ...props
-}: SelectProps) {
+}: SelectProps<TOption>) {
   const selectedOption =
     options.find((option) => option.value === value) ?? null;
   const SelectedIcon = selectedOption?.icon;

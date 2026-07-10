@@ -433,7 +433,7 @@ function mediaUploadSuccess(payload: Record<string, unknown>) {
 }
 
 function getUploadConfig(field: ServerDefinedFields[string]) {
-  const upload = field.behavior?.upload;
+  const { upload } = field;
   if (!upload) {
     return;
   }

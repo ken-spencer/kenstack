@@ -71,7 +71,7 @@ function AdminSidebarContent({
 
   for (const link of moduleLinks) {
     const moduleConfig = deps.modules[link.name];
-    const navigationParent = moduleConfig?.navigationParent;
+    const navigationParent = moduleConfig.navigationParent;
 
     if (!navigationParent || moduleConfig.parent) {
       continue;
@@ -86,7 +86,7 @@ function AdminSidebarContent({
   const adminModules = moduleLinks.filter(({ name }) => {
     const moduleConfig = deps.modules[name];
 
-    return !moduleConfig?.parent && !moduleConfig?.navigationParent;
+    return !moduleConfig.parent && !moduleConfig.navigationParent;
   });
 
   const sidebarNav = (

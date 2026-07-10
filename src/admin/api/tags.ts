@@ -15,8 +15,9 @@ export const tagsAction = (adminConfig: AnyAdminConfig) =>
     const { keywords, exclude } = data;
     const excludedSlugs = exclude.map((e) => e.slug);
 
-    const tagRelations = Object.values(adminConfig.fields).find(isTagField)
-      ?.behavior.tagRelations;
+    const tagRelations = Object.values(adminConfig.fields).find(
+      isTagField,
+    )?.tagRelations;
 
     if (!tagRelations) {
       return response.error("A tag field handler is required to use tags.");

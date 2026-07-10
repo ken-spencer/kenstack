@@ -20,7 +20,6 @@ import { createDefaultValues } from "@kenstack/fields/createDefaultValues";
 import { createZodSchema } from "@kenstack/fields/createZodSchema";
 import {
   resolveServerFields,
-  type ServerField,
   type ServerDefinedFields,
 } from "@kenstack/fields/server";
 import type { AdminKeyTable, AdminTable } from "@kenstack/admin/table";
@@ -74,7 +73,7 @@ type ModuleSettingsRow<TTable extends AdminKeyTable> = Omit<
 >;
 
 type ModuleSettingsFields<TTable extends AdminKeyTable> = {
-  [K in keyof ModuleSettingsRow<TTable>]: ServerField & {
+  [K in keyof ModuleSettingsRow<TTable>]: ServerDefinedFields[string] & {
     default: ModuleSettingsRow<TTable>[K];
   };
 };
@@ -348,7 +347,7 @@ export function defineFieldFilters(
   Object.entries(fields)
     .filter(([, field]) => field.filter === true)
     .forEach(([name, field]) => {
-      const filter = field.behavior?.filter;
+      const filter = field.filterConfig;
       if (!filter) {
         throw new Error(
           `Field "${name}" is filterable but has no filter behavior.`,

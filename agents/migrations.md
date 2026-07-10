@@ -2,6 +2,50 @@
 
 Use this file to document breaking Kenstack API changes that downstream sites may need to apply.
 
+## Unreleased: Flat Server Field Behavior
+
+Old APIs:
+
+- `serverFields(...)` resolvers returned server behavior inside `{ behavior: { ... } }`.
+- Resolved server fields exposed lifecycle and query behavior through `field.behavior`, such as `field.behavior.save` and `field.behavior.select`.
+- Server filter configuration was stored at `field.behavior.filter`, alongside the client field's `filter: boolean` option.
+- Custom resolver helpers used the `ServerFieldDefaults` return type.
+
+New APIs:
+
+- `serverFields(...)` resolvers return `load`, `save`, `preSave`, `delete`, `select`, `listSelect`, `upload`, and other server properties directly.
+- Resolved server fields expose those properties directly, such as `field.save` and `field.select`.
+- The client `filter: boolean` option remains unchanged. Resolved server filter configuration is now `filterConfig` so the flat property names remain distinct.
+- Custom resolver helpers do not need a patch-specific return type.
+
+Migration steps:
+
+- Remove the `behavior` object from every `serverFields(...)` resolver:
+
+  ```ts
+  // Before
+  serverFields(fields, {
+    title: () => ({
+      behavior: {
+        preSave: validateTitle,
+        select: selectTitle,
+      },
+    }),
+  });
+
+  // After
+  serverFields(fields, {
+    title: () => ({
+      preSave: validateTitle,
+      select: selectTitle,
+    }),
+  });
+  ```
+
+- Remove `ServerFieldDefaults` return annotations from custom server-field helpers. Let TypeScript infer the return type, use `ServerField` for a direct field contribution, or use `ServerFieldResolver` for a helper that receives the client field.
+- Replace resolved-field reads such as `field.behavior?.load`, `field.behavior?.save`, and `field.behavior?.select` with `field.load`, `field.save`, and `field.select`.
+- Replace custom server filter patches and reads from `behavior.filter` with `filterConfig`. Do not rename the client field option `filter: true`.
+
 ## Unreleased: Admin Table and Field Capabilities
 
 Old APIs:
@@ -73,6 +117,7 @@ New APIs:
 
 Migration steps:
 
+- Before moving `defineModule(...)` from `admin.ts` or `server.ts` into a module `index.ts`, check whether that index currently exports shared components, browser-safe data, or types used by Client Components. Do not combine those boundaries; retain a separate server entry point or migrate every client consumer to explicit client-safe subpaths.
 - Change server module imports from `@kenstack/admin` to `@kenstack/admin/server`.
 - Change server admin registry imports from `@kenstack/admin` to `@kenstack/admin/server`.
 - Change client config imports from `@kenstack/admin` to `@kenstack/admin/client`.
@@ -197,6 +242,7 @@ Old APIs:
 - `createAddressFieldOptions({ defaultCountryCode, required })`
 - `addressFieldOptions`
 - `requiredAddressFieldOptions`
+- `addressColumns.countryCode` and the address field helpers implicitly defaulted the country to `"US"`.
 
 New APIs:
 
@@ -204,12 +250,34 @@ New APIs:
 - `defineAddressFields({ required, countryCode, addressLine1, addressLine2, locality, regionCode, postalCode })`
 - Address field customization is keyed by field name.
 - Use `countryCode: { default: "CA" }` instead of `defaultCountryCode: "CA"`.
+- Address columns and fields no longer assume a country. Their default country code is now `""` unless the site sets one explicitly.
 
 Migration steps:
 
 - Replace direct imports from `@kenstack/admin/address` with `@kenstack/fields/address`.
 - Replace `createAddressFieldOptions(...)` with `defineAddressFields(...)`.
 - Spread address field bundles directly into the field map instead of assigning the bundle and copying each field one by one.
+- Review every table that spreads `addressColumns` and every field map that uses `defineAddressFields(...)`. Keep their country defaults aligned.
+- Existing database columns retain their previous default until a migration changes it. Generate and apply a migration that sets `country_code` to `DEFAULT ''`, or deliberately retain the site's country with an explicit default such as `DEFAULT 'US'` or `DEFAULT 'CA'`. This changes future inserts only; it does not rewrite existing country values.
+- Sites that should keep an implicit country must also set the form default explicitly:
+
+  ```ts
+  ...defineAddressFields({
+    countryCode: { default: "US" },
+  }),
+  ```
+
+- Override the generated table column to match that field default:
+
+  ```ts
+  columns: {
+    ...addressColumns,
+    countryCode: varchar("country_code", { length: 2 })
+      .notNull()
+      .default("US"),
+  }
+  ```
+
 - Move `defaultCountryCode` to the `countryCode` override:
 
   ```ts

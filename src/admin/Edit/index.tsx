@@ -101,12 +101,15 @@ export default async function AdminEdit({
   );
 }
 
-function renderChildModuleLinks(modules: DefinedAdmin, name: string, id: number) {
-  const childModules = Object.values(modules)
-    .filter(
-      (moduleConfig) =>
-        moduleConfig.parent?.module === name && moduleConfig.admin,
-    );
+function renderChildModuleLinks(
+  modules: DefinedAdmin,
+  name: string,
+  id: number,
+) {
+  const childModules = Object.values(modules).filter(
+    (moduleConfig) =>
+      moduleConfig.parent?.module === name && moduleConfig.admin,
+  );
 
   if (!childModules.length) {
     return null;

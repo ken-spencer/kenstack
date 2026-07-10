@@ -18,49 +18,47 @@ export function createUser<
     tables: { users, sessions },
   } = deps;
 
-  const getUserBySessionToken = cache(
-    async (token: string) => {
-      if (!token) {
-        return;
-      }
-      const tokenHash = hashToken(token);
+  const getUserBySessionToken = cache(async (token: string) => {
+    if (!token) {
+      return;
+    }
+    const tokenHash = hashToken(token);
 
-      const [user] = await db
-        .select({
-          id: users.id,
-          impersonatedBy: sessions.impersonatedBy,
-          givenName: users.givenName,
-          middleName: users.middleName,
-          familyName: users.familyName,
-          email: users.email,
-          avatar: selectMediaSubquery(users.avatar, "square"),
-          roles: users.roles,
-        })
-        .from(sessions)
-        .innerJoin(users, eq(users.id, sessions.userId))
-        .where(
-          and(
-            eq(sessions.tokenHash, tokenHash),
-            gt(sessions.expiresAt, new Date()),
-            isNull(users.deletedAt),
-          ),
-        )
-        .limit(1);
+    const [user] = await db
+      .select({
+        id: users.id,
+        impersonatedBy: sessions.impersonatedBy,
+        givenName: users.givenName,
+        middleName: users.middleName,
+        familyName: users.familyName,
+        email: users.email,
+        avatar: selectMediaSubquery(users.avatar, "square"),
+        roles: users.roles,
+      })
+      .from(sessions)
+      .innerJoin(users, eq(users.id, sessions.userId))
+      .where(
+        and(
+          eq(sessions.tokenHash, tokenHash),
+          gt(sessions.expiresAt, new Date()),
+          isNull(users.deletedAt),
+        ),
+      )
+      .limit(1);
 
-      if (!user) {
-        return undefined;
-      }
+    if (!user) {
+      return undefined;
+    }
 
-      const { impersonatedBy, ...publicUser } = user;
+    const { impersonatedBy, ...publicUser } = user;
 
-      return {
-        ...publicUser,
-        ...(impersonatedBy ? { impersonatedBy } : {}),
-        name: formatUserName(user),
-        initials: formatUserInitials(user),
-      };
-    },
-  );
+    return {
+      ...publicUser,
+      ...(impersonatedBy ? { impersonatedBy } : {}),
+      name: formatUserName(user),
+      initials: formatUserInitials(user),
+    };
+  });
 
   const getCurrentUser = async () => {
     const cookieStore = await cookies();

@@ -68,7 +68,7 @@ export const removeAction = ({
       if (data.mode === "permanent") {
         for (const row of rows) {
           for (const [fieldKey, field] of Object.entries(adminConfig.fields)) {
-            await field.behavior?.delete?.({
+            await field.delete?.({
               db,
               key: fieldKey,
               tableId: row.id,

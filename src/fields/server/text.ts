@@ -1,9 +1,5 @@
-import type { ServerFieldDefaults } from ".";
+import type { ServerField } from ".";
 
-export function textField(): ServerFieldDefaults {
-  return {
-    behavior: {
-      filter: { kind: "text" },
-    },
-  };
+export function textField(): ServerField {
+  return { filterConfig: { kind: "text" } };
 }

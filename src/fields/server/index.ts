@@ -1,7 +1,8 @@
 import "server-only";
 
+import type { tables } from "@app/deps";
+import type { createDb } from "@kenstack/db";
 import type { User } from "@kenstack/types";
-import type { deps } from "@app/deps";
 import type * as z from "zod";
 import { type SQL, type getTableColumns } from "drizzle-orm";
 import type { AnyPgColumn, AnyPgTable } from "drizzle-orm/pg-core";
@@ -28,9 +29,8 @@ export { relationshipField, isRelationshipField } from "./relationship";
 export { tagField, isTagField } from "./tags";
 export { textField } from "./text";
 
-type TransactionDb = Parameters<
-  Parameters<(typeof deps)["db"]["transaction"]>[0]
->[0];
+type FieldDatabase = ReturnType<typeof createDb<typeof tables>>;
+type TransactionDb = Parameters<Parameters<FieldDatabase["transaction"]>[0]>[0];
 type TableColumns = ReturnType<typeof getTableColumns<AnyPgTable>>;
 type SelectValue = TableColumns[string] | SQL;
 export type FieldAfterSave = (tx: TransactionDb) => Promise<unknown>;
@@ -45,22 +45,22 @@ type FieldFilterOption = {
 };
 
 export type FieldLoadContext = {
-  db: Pick<typeof deps.db, "select">;
+  db: Pick<FieldDatabase, "select">;
   key: string;
   tableId: number;
 };
 
-export type FieldSaveContext = {
+export type FieldSaveContext<TValue = unknown> = {
   db: TransactionDb;
   key: string;
   tableId: number;
-  value: unknown;
+  value: TValue;
   values: Record<string, unknown>;
   user: User;
 };
 
 export type FieldDeleteContext = {
-  db: typeof deps.db;
+  db: FieldDatabase;
   key: string;
   tableId: number;
   row: Record<string, unknown>;
@@ -68,16 +68,16 @@ export type FieldDeleteContext = {
 
 export type FieldListSelectContext = {
   key: string;
-  field: ServerField;
+  field: ResolvedServerField;
   column: TableColumns[string] | undefined;
   columns: TableColumns;
 };
 
-export type FieldPreSaveContext = {
+export type FieldPreSaveContext<TValue = unknown> = {
   db: TransactionDb;
   key: string;
   column: TableColumns[string] | undefined;
-  value: unknown;
+  value: TValue;
   values: Record<string, unknown>;
   id?: number | null;
   user: User;
@@ -116,45 +116,46 @@ export type FieldFilterConfig =
       options: readonly FieldFilterOption[];
     };
 
-export type FieldBehavior = {
+export type FieldBehavior<TValue = unknown> = {
   load?: (ctx: FieldLoadContext) => Promise<unknown>;
-  save?: (ctx: FieldSaveContext) => Promise<unknown>;
+  save?: (ctx: FieldSaveContext<TValue>) => Promise<unknown>;
   delete?: (ctx: FieldDeleteContext) => Promise<void>;
   upload?: FieldUploadBehavior;
   tagRelations?: TagsTable;
   relationship?: Relationship;
   listSelect?: (ctx: FieldListSelectContext) => SelectValue | undefined;
   select?: (ctx: FieldListSelectContext) => SelectValue | undefined;
-  filter?: FieldFilterConfig;
+  filterConfig?: FieldFilterConfig;
   display?: FieldDisplay;
-  preSave?: (ctx: FieldPreSaveContext) => Promise<FieldPreSaveResult>;
+  preSave?: (ctx: FieldPreSaveContext<TValue>) => Promise<FieldPreSaveResult>;
 };
 
-export type ServerFieldDefaults = {
-  zod?: z.ZodType;
-  behavior?: FieldBehavior;
-};
+export type ServerField<TValue = unknown> =
+  | (FieldBehavior<TValue> & { zod?: never })
+  | (Omit<FieldBehavior, "save" | "preSave"> & {
+      zod: z.ZodType;
+      save?: never;
+      preSave?: never;
+    });
 
 export type ServerFieldResolver<TField extends DefinedField = DefinedField> = (
   field: TField,
-) => ServerFieldDefaults;
+) => ServerField<z.output<TField["zod"]>>;
 
-export type ServerField = DefinedField & {
-  behavior?: FieldBehavior;
-};
+type ResolvedServerField = DefinedField & FieldBehavior;
 
-export type ServerDefinedFields = Record<string, ServerField>;
+export type ServerDefinedFields = Record<string, ResolvedServerField>;
 export type ServerDefinedFieldsFrom<TFields extends DefinedFields> = {
-  [TKey in keyof TFields]: ServerField & TFields[TKey];
+  [TKey in keyof TFields]: ResolvedServerField & TFields[TKey];
 };
 
-type ServerFieldPatches<TFields extends DefinedFields> = {
-  [TKey in keyof TFields]?: ServerFieldResolver<TFields[TKey]>;
-};
+const resolvedServerFieldSets = new WeakSet<object>();
 
 export function serverFields<const TFields extends DefinedFields>(
   fields: TFields,
-  patches: ServerFieldPatches<TFields> = {},
+  patches: {
+    [TKey in keyof TFields]?: ServerFieldResolver<TFields[TKey]>;
+  } = {},
 ) {
   const next = resolveServerFields(fields) as ServerDefinedFields;
 
@@ -169,15 +170,12 @@ export function serverFields<const TFields extends DefinedFields>(
 
     const field = next[key];
 
-    const { zod, behavior } = patch(fields[key]);
+    const { zod, ...serverPatch } = patch(fields[key]);
 
     next[key] = {
       ...field,
+      ...serverPatch,
       ...(zod ? { zod } : {}),
-      behavior: {
-        ...(field.behavior ?? {}),
-        ...behavior,
-      },
     };
   });
 
@@ -188,32 +186,28 @@ export function resolveServerFields<const TFields extends DefinedFields>(
   fields: TFields,
 ): ServerDefinedFieldsFrom<TFields>;
 export function resolveServerFields(fields: DefinedFields) {
+  if (resolvedServerFieldSets.has(fields)) {
+    return fields;
+  }
+
   const resolvedFields = Object.fromEntries(
     Object.entries(fields).map(([key, field]) => {
-      const defaults = getDefaultServerField(field);
-      const isServerField = "behavior" in field;
-      const behavior =
-        isServerField && field.behavior && typeof field.behavior === "object"
-          ? field.behavior
-          : {};
       return [
         key,
         {
           ...field,
-          ...(!isServerField && "zod" in defaults ? { zod: defaults.zod } : {}),
-          behavior: {
-            ...defaults.behavior,
-            ...behavior,
-          },
+          ...getDefaultServerField(field),
         },
       ];
     }),
   );
 
-  return attachFieldSetRefinements(resolvedFields, { from: fields });
+  const resolved = attachFieldSetRefinements(resolvedFields, { from: fields });
+  resolvedServerFieldSets.add(resolved);
+  return resolved;
 }
 
-function getDefaultServerField(field: DefinedField): ServerFieldDefaults {
+function getDefaultServerField(field: DefinedField) {
   if (field.kind === "image") {
     return imageField()(field);
   }

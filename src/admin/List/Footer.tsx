@@ -49,15 +49,12 @@ function PaginationCont({
   const searchParams = useSearchParams();
   const params = omit(Object.fromEntries(searchParams.entries()), "page");
   const isFirst = page <= 1;
-  const firstPages = Array.from({ length: Math.min(totalPages, 5) }, (_, i) =>
-    i + 1,
+  const firstPages = Array.from(
+    { length: Math.min(totalPages, 5) },
+    (_, i) => i + 1,
   );
   const lastPages =
-    totalPages === 6
-      ? [6]
-      : totalPages > 6
-        ? [totalPages - 1, totalPages]
-      : [];
+    totalPages === 6 ? [6] : totalPages > 6 ? [totalPages - 1, totalPages] : [];
 
   return (
     <Pagination>

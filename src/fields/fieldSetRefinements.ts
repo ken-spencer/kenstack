@@ -17,10 +17,12 @@ type FieldSetRefinementSource =
 
 export function getFieldSetRefinements(fields: object) {
   return (
-    fields as {
-      [fieldSetRefinementsKey]?: readonly FieldSetSuperRefine[];
-    }
-  )[fieldSetRefinementsKey] ?? [];
+    (
+      fields as {
+        [fieldSetRefinementsKey]?: readonly FieldSetSuperRefine[];
+      }
+    )[fieldSetRefinementsKey] ?? []
+  );
 }
 
 export function attachFieldSetRefinements<TFields extends object>(

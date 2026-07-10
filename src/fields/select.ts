@@ -4,7 +4,7 @@ import { getTableColumns, type SQL } from "drizzle-orm";
 import type { AnyPgColumn, AnyPgTable } from "drizzle-orm/pg-core";
 
 import type { SelectedMedia } from "@kenstack/db/tables";
-import type { ServerDefinedFields, ServerField } from "./server";
+import type { ServerDefinedFields } from "./server";
 
 type SelectFieldsTable = AnyPgTable & {
   id: AnyPgColumn<{ data: number; notNull: true }>;
@@ -33,7 +33,7 @@ type SelectDeletedAt<TTable extends SelectFieldsTable> = TTable extends {
   : Record<never, never>;
 
 type SelectFieldValue<
-  TField extends ServerField,
+  TField extends ServerDefinedFields[string],
   TColumn,
 > = TField["kind"] extends "image" ? SQL<SelectedMedia | null> : TColumn;
 
@@ -57,8 +57,7 @@ export function selectFields<
     if (key in columns) {
       const column = columns[key];
       Object.assign(baseResult, {
-        [key]:
-          field.behavior?.select?.({ key, field, column, columns }) ?? column,
+        [key]: field.select?.({ key, field, column, columns }) ?? column,
       });
     }
   }

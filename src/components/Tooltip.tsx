@@ -98,7 +98,7 @@ export default function Tooltip({
         ? createPortal(
             <span
               className={twMerge(
-                "pointer-events-none fixed z-50 w-max max-w-xs rounded-md bg-foreground px-3 py-1.5 text-xs text-background shadow-sm",
+                "bg-foreground text-background pointer-events-none fixed z-50 w-max max-w-xs rounded-md px-3 py-1.5 text-xs shadow-sm",
                 stemClassNames[side],
                 onlyBelow ? onlyBelowClassNames[onlyBelow] : undefined,
               )}

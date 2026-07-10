@@ -6,7 +6,10 @@ import Field, { FormControl, type FieldProps } from "@kenstack/forms/Field";
 import { TimeInput } from "@kenstack/forms/controls/TimeInput";
 
 type InputProps = FieldProps &
-  Omit<React.ComponentProps<"input">, "name" | "onBlur" | "onChange" | "type"> & {
+  Omit<
+    React.ComponentProps<"input">,
+    "name" | "onBlur" | "onChange" | "type"
+  > & {
     inputClass?: string;
   };
 

@@ -14,7 +14,7 @@ export function useIsMobile() {
     };
     mql.addEventListener("change", onChange);
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Viewport state is unavailable during server rendering.
     setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
     return () => mql.removeEventListener("change", onChange);
   }, []);

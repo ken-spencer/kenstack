@@ -15,7 +15,6 @@ import {
   useMemo,
   useRef,
   useState,
-  useSyncExternalStore,
   type ComponentProps,
   type MouseEvent,
   type ReactNode,
@@ -27,10 +26,6 @@ import { cn } from "@kenstack/lib/utils";
 import { useOverlayStack } from "./overlayStack";
 
 const transitionDurationMs = 200;
-
-const subscribeToClientSnapshot = () => () => {};
-const getClientSnapshot = () => true;
-const getServerSnapshot = () => false;
 
 const DialogContext = createContext<{
   descriptionId: string;
@@ -137,12 +132,7 @@ function DialogTrigger({
   }
 
   return (
-    <button
-      type="button"
-      {...props}
-      {...sharedProps}
-      onClick={handleClick}
-    >
+    <button type="button" {...props} {...sharedProps} onClick={handleClick}>
       {children}
     </button>
   );
@@ -226,11 +216,7 @@ function DialogContent({
   const dialogRef = useRef<HTMLDialogElement | null>(null);
   const closeTimerRef = useRef<number | null>(null);
   const animationFrameRef = useRef<number | null>(null);
-  const mounted = useSyncExternalStore(
-    subscribeToClientSnapshot,
-    getClientSnapshot,
-    getServerSnapshot,
-  );
+  const [mounted, setMounted] = useState(false);
   const [visibleOpen, setVisibleOpen] = useState(false);
   const { isTopOverlay } = useOverlayStack({
     onClose: () => setOpen(false),
@@ -238,6 +224,15 @@ function DialogContent({
   });
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Portals require a browser document after hydration.
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) {
+      return;
+    }
+
     const dialog = dialogRef.current;
 
     if (!dialog) {
@@ -281,7 +276,7 @@ function DialogContent({
       animationFrameRef.current = null;
       setVisibleOpen(true);
     });
-  }, [open]);
+  }, [mounted, open]);
 
   useEffect(
     () => () => {

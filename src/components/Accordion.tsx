@@ -29,7 +29,9 @@ function getHashValue() {
 }
 
 function Accordion(
-  props: ItemAccordionProps | React.ComponentProps<typeof AccordionPrimitive.Root>,
+  props:
+    | ItemAccordionProps
+    | React.ComponentProps<typeof AccordionPrimitive.Root>,
 ) {
   if ("items" in props) {
     return <ItemAccordion {...props} />;
@@ -73,17 +75,18 @@ function ItemAccordion({ defaultValue = "", items }: ItemAccordionProps) {
                 return;
               }
 
-              const parent = button.closest(
-                ".accordion-item",
-              ) as HTMLElement | null;
+              const parent = button.closest(".accordion-item");
               let openNode: HTMLElement | undefined;
               for (
-                let p = parent?.previousElementSibling as HTMLElement | null;
-                p;
-                p = p.previousElementSibling as HTMLElement | null
+                let sibling = parent?.previousElementSibling;
+                sibling;
+                sibling = sibling.previousElementSibling
               ) {
-                if (p.dataset.state === "open") {
-                  openNode = p;
+                if (
+                  sibling instanceof HTMLElement &&
+                  sibling.dataset.state === "open"
+                ) {
+                  openNode = sibling;
                   break;
                 }
               }

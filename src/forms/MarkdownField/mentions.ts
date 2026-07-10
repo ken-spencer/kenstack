@@ -387,7 +387,11 @@ class MentionPluginView {
   private loadOptions(query: string) {
     const action = this.config.action ?? "mention-search";
     const requestKey = `${this.config.apiPath}\n${action}\n${query}`;
-    const queryKey = markdownMentionQueryKey(this.config.apiPath, action, query);
+    const queryKey = markdownMentionQueryKey(
+      this.config.apiPath,
+      action,
+      query,
+    );
 
     if (requestKey === this.requestKey) {
       return;
@@ -410,35 +414,35 @@ class MentionPluginView {
       this.selectedIndex = 0;
     }
 
-    this.fetchTimeout = setTimeout(() => {
-      this.fetchMentions({ action, query, queryKey })
-        .then((result) => {
-          if (requestKey !== this.requestKey) {
-            return;
-          }
+    this.fetchTimeout = setTimeout(
+      () => {
+        this.fetchMentions({ action, query, queryKey })
+          .then((result) => {
+            if (requestKey !== this.requestKey) {
+              return;
+            }
 
-          this.applyResult(result);
-          this.render();
-        })
-        .catch((error: unknown) => {
-          if (
-            error instanceof DOMException &&
-            error.name === "AbortError"
-          ) {
-            return;
-          }
+            this.applyResult(result);
+            this.render();
+          })
+          .catch((error: unknown) => {
+            if (error instanceof DOMException && error.name === "AbortError") {
+              return;
+            }
 
-          if (requestKey !== this.requestKey) {
-            return;
-          }
+            if (requestKey !== this.requestKey) {
+              return;
+            }
 
-          this.loading = false;
-          this.options = [];
-          this.selectedIndex = 0;
-          this.error = "Unable to search.";
-          this.render();
-        });
-    }, cachedResult ? 0 : query ? 150 : 0);
+            this.loading = false;
+            this.options = [];
+            this.selectedIndex = 0;
+            this.error = "Unable to search.";
+            this.render();
+          });
+      },
+      cachedResult ? 0 : query ? 150 : 0,
+    );
   }
 
   private fetchMentions({
@@ -586,8 +590,7 @@ class MentionPluginView {
     }
 
     this.selectedIndex =
-      (this.selectedIndex + offset + this.options.length) %
-      this.options.length;
+      (this.selectedIndex + offset + this.options.length) % this.options.length;
     this.updateOptionStyles();
   }
 
@@ -769,7 +772,11 @@ function createStatusElement(message: string) {
   return element;
 }
 
-function markdownMentionQueryKey(apiPath: string, action: string, query: string) {
+function markdownMentionQueryKey(
+  apiPath: string,
+  action: string,
+  query: string,
+) {
   return ["markdown-mentions", apiPath, action, query] as const;
 }
 

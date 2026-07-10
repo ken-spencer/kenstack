@@ -49,7 +49,7 @@ export default function NavLink({
       <SidebarMenuButton asChild isActive={isActive}>
         <Link
           href={href}
-          aria-current={isActive ? "page" : undefined}
+          aria-current={isCurrent ? "page" : undefined}
           onMouseEnter={() => {
             setIsHovered(true);
           }}

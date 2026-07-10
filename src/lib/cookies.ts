@@ -19,7 +19,5 @@ export function getCookie(name: string) {
 
 export function deleteCookie(name: string, path?: string) {
   document.cookie =
-    encodeURIComponent(name) +
-    "=; Max-Age=0" +
-    (path ? `; Path=${path}` : "");
+    encodeURIComponent(name) + "=; Max-Age=0" + (path ? `; Path=${path}` : "");
 }
