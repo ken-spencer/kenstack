@@ -6,14 +6,14 @@ Use this file to document breaking Kenstack API changes that downstream sites ma
 
 Old APIs:
 
-- `serverFields(...)` resolvers returned server behavior inside `{ behavior: { ... } }`.
+- `serverFields(...)` entries were resolver callbacks that received the client field and returned server behavior inside `{ behavior: { ... } }`.
 - Resolved server fields exposed lifecycle and query behavior through `field.behavior`, such as `field.behavior.save` and `field.behavior.select`.
 - Server filter configuration was stored at `field.behavior.filter`, alongside the client field's `filter: boolean` option.
 - Custom resolver helpers used the `ServerFieldDefaults` return type.
 
 New APIs:
 
-- `serverFields(...)` resolvers return `load`, `save`, `preSave`, `delete`, `select`, `listSelect`, `upload`, and other server properties directly.
+- `serverFields(...)` entries are direct `ServerField` contributions with `load`, `save`, `preSave`, `delete`, `select`, `listSelect`, `upload`, and other server properties at the top level.
 - Resolved server fields expose those properties directly, such as `field.save` and `field.select`.
 - The client `filter: boolean` option remains unchanged. Resolved server filter configuration is now `filterConfig` so the flat property names remain distinct.
 - Custom resolver helpers do not need a patch-specific return type.
@@ -35,14 +35,14 @@ Migration steps:
 
   // After
   serverFields(fields, {
-    title: () => ({
+    title: {
       preSave: validateTitle,
       select: selectTitle,
-    }),
+    },
   });
   ```
 
-- Remove `ServerFieldDefaults` return annotations from custom server-field helpers. Let TypeScript infer the return type, use `ServerField` for a direct field contribution, or use `ServerFieldResolver` for a helper that receives the client field.
+- Remove `ServerFieldDefaults` return annotations from custom server-field helpers. Let TypeScript infer the return type, use `ServerField` for a direct field contribution, or use `ServerFieldResolver` for a helper that derives behavior from the client field.
 - Replace resolved-field reads such as `field.behavior?.load`, `field.behavior?.save`, and `field.behavior?.select` with `field.load`, `field.save`, and `field.select`.
 - Replace custom server filter patches and reads from `behavior.filter` with `filterConfig`. Do not rename the client field option `filter: true`.
 

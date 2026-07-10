@@ -154,7 +154,9 @@ const resolvedServerFieldSets = new WeakSet<object>();
 export function serverFields<const TFields extends DefinedFields>(
   fields: TFields,
   patches: {
-    [TKey in keyof TFields]?: ServerFieldResolver<TFields[TKey]>;
+    [TKey in keyof TFields]?:
+      | ServerField<z.output<TFields[TKey]["zod"]>>
+      | ServerFieldResolver<TFields[TKey]>;
   } = {},
 ) {
   const next = resolveServerFields(fields) as ServerDefinedFields;
@@ -170,7 +172,9 @@ export function serverFields<const TFields extends DefinedFields>(
 
     const field = next[key];
 
-    const { zod, ...serverPatch } = patch(fields[key]);
+    const serverField =
+      typeof patch === "function" ? patch(fields[key]) : patch;
+    const { zod, ...serverPatch } = serverField;
 
     next[key] = {
       ...field,
