@@ -44,6 +44,22 @@ Mechanical migrations clear the threshold when a real contract or representation
 
 Configured Prettier output is an explicit exception to this threshold. Treat formatting-only changes produced by Prettier in in-scope or touched files as deterministic mechanical output: stage them without asking for human review, and do not report them as cleanup findings. Do not expand formatting to unrelated files unless the task or repository workflow requires it.
 
+## Directness Gate
+
+Apply this gate while writing TypeScript and again before finalizing it. Default to direct code. Every added or changed helper, wrapper, factory, adapter, alias, intermediate value, type, export, barrel, or forwarding file must have a concrete current purpose.
+
+One current caller or consumer is presumptive evidence that a layer should be inlined. Keep it only when it provides meaningful repeated behavior, validation, normalization, parsing, nontrivial domain logic, stable callback identity, or a deliberate runtime or public boundary. A descriptive name, conventional organization, a shorter call site, possible future reuse, or anticipated compatibility is not sufficient.
+
+Mechanically audit changed TypeScript for:
+
+- declarations referenced only once;
+- pass-through functions, callback adapters, and factories without meaningful configuration;
+- values assigned and then immediately renamed instead of being bound to the final name;
+- configuration extracted only to be handed to one typed API call;
+- forwarding modules, aliased re-exports, compatibility shims, and exported values without external consumers.
+
+Remove each candidate or be able to state its concrete current reason for remaining. Bind or destructure to final names at the producing boundary, keep typed configuration at the typed call site, and import canonical exports directly. Do not inline when doing so would duplicate meaningful work, obscure a behavioral invariant, hide a complex workflow, or erase a real ownership or runtime boundary.
+
 ## Defense in Depth
 
 Add a defensive check when the guarded state has a credible path through supported use, stale or concurrent state, external input, or a boundary the application does not control, and when reaching it would have a meaningful consequence. Also add a check when the consequence is sufficiently serious or difficult to reverse that a low likelihood does not make the risk acceptable.
@@ -82,7 +98,6 @@ For bug fixes, proceed autonomously only when the cause is clear and the fix is 
 - Prefer existing `lodash-es` utilities for common transformations and collection helpers instead of writing local one-off utility functions.
 - Follow `agents/typescript.md` for type aliases, interfaces, overloads, generic arguments, casts, explicit return annotations, type-heavy helper APIs, and TypeScript inference decisions.
 - Name shared and exported types for the concept a caller passes, receives, or implements, not for an internal construction or merge step. Do not rename a type solely because its implementation changed; follow the call-site and rename-safety checks in `agents/typescript.md`.
-- Do not export helpers, components, configuration, or types solely to satisfy linting, TypeScript convenience, or anticipated future use. Keep new API surface limited to values that are used now or explicitly requested.
 - Do not move complexity around to make an error disappear. If a change only shifts awkward typing, runtime guards, duplicated data shaping, or config translation to another file, stop and simplify the underlying shape instead.
 - Do not add alternate return shapes, overloads, or configuration options just to avoid returning a few unused fields or doing a tiny local fallback. Prefer one consistent data shape unless the second shape removes meaningful complexity at several call sites.
 - Before proposing or adding a callback, hook, lifecycle result, configuration option, or parallel code path, trace the existing extension points for that behavior end to end. Prefer configuring or narrowly extending the existing path. Introduce another path only when the current mechanism cannot express the required behavior, and identify that limitation explicitly.
@@ -119,8 +134,6 @@ For browser/UI verification, check whether a local dev server is already running
 
 ## Local code shape
 
-Prefer keeping small configuration defaults and one-off logic close to the place where they are used. Do not introduce extra constants, helper functions, nested objects, or cross-file modules unless they reduce real duplication, clarify a repeated concept, or create a boundary that is already meaningful in the codebase.
-
 Keep top-level files in broad feature folders, such as `src/admin`, reserved for primary public APIs and major entry points that should be easy to reference. Put secondary implementation details, support constants, and internal UI adapters in a subfolder such as `lib`, `components`, `api`, or another existing domain folder.
 
 Folders named `modules` are for actual module definitions and module-owned files. Do not put helper code that builds, loads, renders, or works with modules in `modules`; place that infrastructure under the feature it belongs to, such as `admin/moduleSettings`.
@@ -133,15 +146,9 @@ Do not create a folder just to hold a single file or an index barrel. Use a dire
 
 Avoid spreading a simple change across multiple locations when it can be expressed clearly in one local place. A small amount of inline repetition is acceptable when it keeps the code easier to read and reason about.
 
-Do not introduce pass-through configuration constants that are only handed to a typed API call. Inline those objects in the typed call so contextual typing, excess property checks, and editor hints work at the point where the shape is validated. This applies broadly to table columns, fields, schemas, module config, options objects, and similar typed configuration. Extract only when the value is reused independently or the extraction creates a real boundary.
-
 Prefer named exports for reusable configuration pieces that are assembled into larger config objects, especially when the export name can match the config role at the call site. Use default exports only when the file has one primary value and callers do not benefit from a role-specific imported name.
 
-Inline simple expressions when they are used once, especially in JSX props. Do not introduce a local variable only to rename a direct function call, property access, or simple boolean expression. Use a local variable when it avoids repeated work, clarifies a non-obvious expression, prevents a long line from becoming hard to read, or gives a meaningful name to a concept reused in nearby logic.
-
 Use the clearest string construction for the expression. Prefer plain concatenation when a template literal would mostly wrap a conditional or short fragments in punctuation; use template literals when interpolation makes the result easier to read.
-
-Prefer destructuring callback parameters or local objects when it removes one-off property aliases and lets JSX return directly, especially in `map` callbacks. Alias a property at the destructuring boundary, such as `({ value: prices })`, instead of immediately following `({ value })` with `const prices = value`. Keep an explicit callback body when it needs meaningful setup, branching, or reused derived values.
 
 Inline small object parameter types for private functions when the type is used once and the fields are easier to understand at the function boundary. Extract a named type when it is exported, reused, large enough to distract from the function body, or represents a real domain concept.
 
@@ -166,8 +173,6 @@ When multiple components or files are designed to work together as one unit, put
 When adding configurable options, choose the shallowest shape that is likely to remain clear. Do not add nested option objects only because future settings might exist. If names are already specific, such as `uploadMaxImageSize`, prefer flat options over `{ upload: { maxImageSize } }` unless there is already an established nested configuration pattern.
 
 Avoid narrow styling mode props such as `framed`, `compact`, or `plain` when they only toggle a small class set. Prefer `className` with `twMerge`, explicit composition, or a local wrapper so callers control presentation without adding component-specific styling vocabulary.
-
-Before adding a helper, ask whether it meaningfully hides complexity or only forces the reader to jump elsewhere. Avoid pass-through helpers, type guards, mappers, normalizers, and adapters that only rename a direct lookup, discriminator check, API call, or local data reshaping. Prefer direct readable code unless the helper provides meaningful reuse, validation, normalization, caching, logging, or a real boundary.
 
 ## Configuration defaults
 

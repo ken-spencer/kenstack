@@ -20,6 +20,11 @@ type FieldOptionOfKind<
   TOptions extends object = Record<never, never>,
 > = FieldOption<TKind, TDefault> & TOptions;
 
+type FieldOptionsFor<TKind extends FieldKind, TDefault> = Omit<
+  FieldOption<TKind, TDefault>,
+  "__kenstackField"
+>;
+
 type DefaultFromOptions<TOptions, TDefault> = TOptions extends {
   default: infer TOptionDefault;
 }
@@ -115,20 +120,30 @@ const dateSchema = z.union([
   z.undefined().transform(() => ""),
 ]);
 
+export function field<
+  const TKind extends FieldKind,
+  const TDefault,
+  const TOptions extends FieldOptionsFor<TKind, TDefault>,
+>(options: TOptions): FieldOptionOfKind<TKind, TDefault, TOptions> {
+  return {
+    __kenstackField: true,
+    ...options,
+  };
+}
+
 export function textField<
   const TOptions extends CommonFieldOptions<string> = Record<never, never>,
 >(
   options: TOptions = {} as TOptions,
 ): FieldOptionOfKind<"text", string, TOptions> {
-  return {
-    __kenstackField: true,
+  return field({
     kind: "text",
     default: "",
     searchable: false,
     revisions: true,
     zod: z.string(),
     ...options,
-  };
+  });
 }
 
 export function numberField<
@@ -139,15 +154,14 @@ export function numberField<
 >(
   options: TOptions = {} as TOptions,
 ): FieldOptionOfKind<"number", DefaultFromOptions<TOptions, number>, TOptions> {
-  return {
-    __kenstackField: true,
+  return field({
     kind: "number",
     default: 0,
     searchable: false,
     revisions: true,
     zod: z.coerce.number(),
     ...options,
-  } as unknown as FieldOptionOfKind<
+  }) as unknown as FieldOptionOfKind<
     "number",
     DefaultFromOptions<TOptions, number>,
     TOptions
@@ -159,50 +173,46 @@ export function emailField<
 >(
   options: TOptions = {} as TOptions,
 ): FieldOptionOfKind<"email", string, TOptions> {
-  return {
-    __kenstackField: true,
+  return field({
     kind: "email",
     default: "",
     searchable: false,
     revisions: true,
     zod: email,
     ...options,
-  };
+  });
 }
 
 export function phoneField(
   options: CommonFieldOptions<string> = {},
 ): FieldOptionOfKind<"text", string> {
-  return {
-    __kenstackField: true,
+  return field({
     kind: "text",
     default: "",
     searchable: false,
     revisions: true,
     zod: phone,
     ...options,
-  };
+  });
 }
 
 export function textareaField(
   options: CommonFieldOptions<string> = {},
 ): FieldOptionOfKind<"textarea", string> {
-  return {
-    __kenstackField: true,
+  return field({
     kind: "textarea",
     default: "",
     searchable: false,
     revisions: true,
     zod: z.string(),
     ...options,
-  };
+  });
 }
 
 export function markdownField(
   options: CommonFieldOptions<string> = {},
 ): FieldOptionOfKind<"markdown", string> {
-  return {
-    __kenstackField: true,
+  return field({
     kind: "markdown",
     default: "",
     searchable: false,
@@ -215,28 +225,26 @@ export function markdownField(
       );
     },
     ...options,
-  };
+  });
 }
 
 export function booleanField(
   options: CommonFieldOptions<boolean> = {},
 ): FieldOptionOfKind<"boolean", boolean> {
-  return {
-    __kenstackField: true,
+  return field({
     kind: "boolean",
     default: false,
     searchable: false,
     revisions: true,
     zod: z.boolean(),
     ...options,
-  };
+  });
 }
 
 export function slugField(
   options: CommonFieldOptions<string> = {},
 ): FieldOptionOfKind<"text", string> {
-  return {
-    __kenstackField: true,
+  return field({
     kind: "text",
     default: "",
     searchable: false,
@@ -250,7 +258,7 @@ export function slugField(
         "Use lowercase letters, numbers, and hyphens.",
       ),
     ...options,
-  };
+  });
 }
 
 export function radioButtonField<
@@ -258,8 +266,7 @@ export function radioButtonField<
 >(options: TOptions): FieldOptionOfKind<"radio-button", string, TOptions> {
   const defaultValue = options.default ?? "";
 
-  return {
-    __kenstackField: true,
+  return field({
     kind: "radio-button",
     default: defaultValue,
     searchable: false,
@@ -270,9 +277,9 @@ export function radioButtonField<
         Array.from(
           new Set([defaultValue, ...options.options.map(({ value }) => value)]),
         ),
-      ),
+    ),
     ...options,
-  };
+  });
 }
 
 export function selectField<const TOptions extends SelectFieldOptions>(
@@ -280,8 +287,7 @@ export function selectField<const TOptions extends SelectFieldOptions>(
 ): FieldOptionOfKind<"select", string, TOptions> {
   const defaultValue = options.default ?? "";
 
-  return {
-    __kenstackField: true,
+  return field({
     kind: "select",
     default: defaultValue,
     searchable: false,
@@ -303,35 +309,33 @@ export function selectField<const TOptions extends SelectFieldOptions>(
       );
     },
     ...options,
-  };
+  });
 }
 
 export function dateTimeField(
   options: CommonFieldOptions<string> = {},
 ): FieldOptionOfKind<"datetime", string> {
-  return {
-    __kenstackField: true,
+  return field({
     kind: "datetime",
     default: "",
     searchable: false,
     revisions: true,
     zod: dateTimeSchema,
     ...options,
-  };
+  });
 }
 
 export function dateField(
   options: CommonFieldOptions<string> = {},
 ): FieldOptionOfKind<"date", string> {
-  return {
-    __kenstackField: true,
+  return field({
     kind: "date",
     default: "",
     searchable: false,
     revisions: true,
     zod: dateSchema,
     ...options,
-  };
+  });
 }
 
 export function checkboxListField({
@@ -339,8 +343,7 @@ export function checkboxListField({
   filter = true,
   ...options
 }: CheckboxListFieldOptions): FieldOptionOfKind<"checkbox-list", string[]> {
-  return {
-    __kenstackField: true,
+  return field({
     kind: "checkbox-list",
     default: defaultValue,
     filter,
@@ -348,7 +351,7 @@ export function checkboxListField({
     revisions: true,
     zod: z.array(z.enum(options.options.map(({ value }) => value))),
     ...options,
-  };
+  });
 }
 
 export function imageField<
@@ -356,55 +359,51 @@ export function imageField<
 >(
   options: TOptions = {} as TOptions,
 ): FieldOptionOfKind<"image", null, TOptions> {
-  return {
-    __kenstackField: true,
+  return field({
     kind: "image",
     default: null,
     searchable: false,
     revisions: true,
     zod: imageSchema,
     ...options,
-  };
+  });
 }
 
 export function mediaListField(
   options: MediaListFieldOptions = {},
 ): FieldOptionOfKind<"media-list", [], MediaListFieldOptions> {
-  return {
-    __kenstackField: true,
+  return field({
     kind: "media-list",
     default: [],
     searchable: false,
     revisions: true,
     zod: mediaListSchema,
     ...options,
-  };
+  });
 }
 
 export function tagField(
   options: TagFieldOptions = {},
 ): FieldOptionOfKind<"tags", []> {
-  return {
-    __kenstackField: true,
+  return field({
     kind: "tags",
     default: [],
     searchable: false,
     revisions: true,
     zod: tagsSchema,
     ...options,
-  };
+  });
 }
 
 export function relationshipField(
   options: RelationshipFieldOptions = {},
 ): FieldOptionOfKind<"relationship", z.output<typeof relationshipSchema>> {
-  return {
-    __kenstackField: true,
+  return field({
     kind: "relationship",
     default: [],
     searchable: false,
     revisions: true,
     zod: relationshipSchema,
     ...options,
-  };
+  });
 }

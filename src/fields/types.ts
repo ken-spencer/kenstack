@@ -7,6 +7,7 @@ export type FieldKind =
   | "email"
   | "textarea"
   | "markdown"
+  | "custom"
   | "boolean"
   | "date"
   | "datetime"

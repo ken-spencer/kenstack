@@ -14,6 +14,8 @@ When reviewing, look for opportunities to reduce complexity, improve readability
 
 When delegating code review or cleanup work, instruct the agent to check for reinvented Kenstack primitives, especially popovers, dialogs, menus, tooltips, buttons, skeletons, list controls, form controls, query/error states, and loading states. If a shared primitive exists, the reviewer should recommend or apply the replacement.
 
+For database and schema changes, also check for existing Kenstack table and field helpers before accepting a hand-written Drizzle/Zod shape. Standard helper-owned shapes such as tag relation tables should use the helper unless the custom table materially differs.
+
 Before reviewing the diff details, confirm the relevant `agents/*.md` guidance for the touched area was considered. Do not read every area file by default; route the review to the files that match the touched code:
 
 - Admin routes, modules, forms, lists, sidebars, or admin layout: read `agents/admin.md`.
@@ -24,6 +26,10 @@ Before reviewing the diff details, confirm the relevant `agents/*.md` guidance f
 - Errors, warnings, broken states, failing tests, runtime exceptions, or bug-fix/debugging work: read `agents/debug.md`.
 
 During review, look for any newly duplicated source of truth, such as copied identifiers, labels, options, mappings, statuses, schemas, config, or metadata. Reuse or extend the existing owner instead of keeping a parallel version. Treat paired signals where one value is canonical and the other is only a request, prop, local, or descriptive copy as a sign to inspect the surrounding code path. If disagreement only causes an error, recommend deriving from the canonical owner and pruning the duplicate input, validation branch, helper argument, schema field, or API path.
+
+## Directness Review
+
+Apply the **Directness Gate** in `../AGENTS.md` as the first mandatory code-shape pass. Perform its mechanical audit over every changed TypeScript file, not only files that already look over-abstracted. Treat every unexplained candidate as a review finding; remove it during cleanup or record the concrete current reason it remains.
 
 ## Type Shape
 
@@ -36,17 +42,10 @@ During review, look for any newly duplicated source of truth, such as copied ide
 
 ## Local Code Shape
 
-- Do an alias pass over new and changed locals. A local name must earn its place by avoiding meaningful repetition, clarifying a real domain concept, or containing complexity that would be harder to read inline; otherwise inline it.
-- Make the alias pass mechanical, not vibes-based: after edits, search or scan touched TypeScript files for local `const` declarations referenced only once. Inline each one unless the remaining name has a concrete current reason, and be ready to name that reason.
-- Avoid resolving data into generic temporary names only to immediately rename it to the intended domain names, such as `rawParams` followed by `paramsIn`. Bind or destructure to the final names at the point where the values are created unless the intermediate name documents a real separate state.
 - Important exception: do not inline auth/current-user lookups into query predicates or other behavior-defining expressions. Resolve values such as `const user = await deps.auth.requireUser()` and `const userId = user.id` near the top of the nearest function boundary so user-scoped behavior is obvious during review.
-- Treat single-use variables as suspect by default, especially when the value is immediately handed to JSX or another nearby call.
-- Inline single-use style objects. When the same styling intent is reused, make a small component at the right owner instead of keeping a shared `*Style` object that is only passed to JSX.
-- Remove aliases that hide the meaningful condition, such as `pendingValue = isPending ? value : undefined`. Keep the condition visible where it drives the branch unless a name captures a real domain concept reused nearby.
 - After deriving a value from a condition, avoid re-checking the same condition or source fields in adjacent code. Reuse the derived value or split the logic into explicit branches when that reads clearer.
 - When both branches of a conditional apply the same wrapper, coercion, fallback, or formatting helper, move that shared operation outside the conditional so the branch only chooses the differing value.
 - Avoid nested ternaries for multi-way choices, especially discriminator-to-label/icon/component mappings. Prefer a `switch` or explicit branches so each case is named plainly.
-- In JSX components, check one-use event handlers and local aliases. Inline them when the event site is clearer; keep named handlers for reuse, complex branching, domain workflows, or stable callback identity.
 - Check callback/helper names against their side effects. Helpers named like readers or calculations, such as `get*`, `calculate*`, `compute*`, `derive*`, or `resolve*`, should not call React state setters, mutate refs/DOM, or also return a computed value after mutating state. Keep pure calculation separate from event, effect, and state-sync handlers. It is fine for an obviously side-effecting setter or handler to update several related state values when the name and call site make that explicit.
 - Do not pass `initial*` props that duplicate data already owned by the same query, context, or provider. Seed the shared state at the boundary and read it from one source.
 - Remove generic temporary variables that merge distinct cases only to feed a nearby branch or call. Prefer explicit branches when the cases have different domain meanings, such as separate list-record and single-record cache targets.
@@ -60,28 +59,18 @@ During review, look for any newly duplicated source of truth, such as copied ide
 - Check string construction. Prefer plain concatenation when it is clearer than a template literal wrapped around short fragments or conditionals; keep template literals when interpolation improves readability.
 - Remove JSX fragments with zero or one meaningful child; return the child directly instead.
 - When the same collection is looped more than once, check whether each pass earns its place. Multiple passes are fine when they express distinct phases or materially improve clarity, but repeated `map` / `filter` / `find` chains over the same data often indicate avoidable churn. Prefer one direct pass when it can validate, classify, or accumulate the needed outputs without hiding the logic.
-- Remove pass-through helpers, wrappers, constants, and barrels unless they reduce real repeated complexity or expose a requested public API.
 - In formatter or normalizer helpers that transform only a few fields from a closed local object shape, destructure the fields that change and spread the untouched rest into the returned object. Use this for known local shapes such as explicit Drizzle projections or locally built draft objects. Do not spread broad external input, request bodies, parsed `unknown`, select-star rows, or user-controlled objects where extra fields could leak into output.
-- Check helpers whose whole body is a single call to another local helper. Keep the name that best describes the real operation, and remove or inline the other helper unless it is a deliberate compatibility alias, preset, or public API boundary.
-- In component wrappers, do not destructure props only to pass them through unchanged. Leave ordinary child-component props in `...props`; separate only values the wrapper reads, transforms, branches on, or defaults. When supplying a wrapper default that callers may override, pass the default before `{...props}`.
 - Before keeping a new feature, helper, component, hook, field, or API utility, search for the closest existing Kenstack/admin/forms/list/page-editor implementation. If the new code duplicates behavior too closely, reuse the existing piece, extend it at the shared owner, or explain why the local version is intentionally different.
 - For new or changed shared React controls, check current React docs for APIs that may have changed. Do not introduce deprecated React patterns when the installed version supports the simpler current syntax, such as passing `ref` as a prop instead of using `React.forwardRef`.
 - Keep data loading at the narrowest boundary that consumes the data. Avoid aggregate helpers that return mixed concerns, such as config, auth state, routing decisions, and page-specific records, just to simplify a parent. Extract a loader only when it owns a clear cache/API boundary, is reused, or gives a specific data shape a clear name.
 - Avoid rename-only or move-only churn. Preserve existing local type names, variable names, and declaration placement unless the new name or location makes a real behavior, ownership, or API boundary clearer.
-- Avoid thin wrappers around stable library APIs when the wrapper only renames the library function or hides a one-line call. Keep a wrapper only when it enforces project policy, preserves a boundary such as server/client separation, normalizes repeated nontrivial behavior, or isolates an unstable dependency.
 - Do not pass through unused option fields just because a shared options type supports them. Keep function parameters to the fields the function reads, and split or narrow option types when forwarding extra fields would obscure ownership.
 - Before keeping local string/date/collection formatting logic, check whether an existing installed utility already owns that behavior, such as `lodash-es`, `pluralize`, `date-fns`, `chrono-node`, or `validator`.
-- Check one-line `is*`, `get*`, and `has*` helpers. Remove them when they only hide a direct discriminator check, property lookup, or local ternary and do not provide meaningful reuse, validation, or type narrowing across an unsafe boundary. This includes wrappers around query/API result statuses, such as `isSuccess(data)` for `data?.status === "success"`.
-- When touching a file, review nearby private helpers that predate the current change. Inline helpers that only return an optional property, defaulted object, mapped key list, or one local branch. Keep helpers that provide real generic narrowing, validation of external/unknown data, shared behavior, or a meaningful domain boundary.
-- Review each newly added function, type, helper, and local alias one by one. Keep it only if it meaningfully improves inference, readability, reuse, validation, or a real boundary; remove it if it merely renames a direct expression, works around a local type issue, or anticipates future use.
 - Review types with `Base` in the name. Keep them only when the shared base is meaningfully reused and makes the composed types easier to understand; inline them when they only factor out one small property group or exist for anticipated reuse.
 - Flatten nested guard `if` statements when the inner branch only returns, throws, continues, or breaks and the combined condition remains readable.
 - Check adjacent JSX branches that return the same wrapper component with only small prop or child differences. Collapse the common wrapper when it stays readable, such as rendering a `Link` child only for the enabled case instead of duplicating the surrounding button.
-- Check factory or maker functions whose body only returns a value such as `pipelineStage(...)`. Prefer concise arrow returns unless the function needs setup, branching, or named intermediate values.
-- Inline typed configuration objects at the typed call site so contextual typing and excess property checks work there.
 - Check styling props. If a prop only toggles a small class preset, prefer `className`, composition, or a local wrapper over component-specific mode props.
 - Avoid creating alternate return shapes, enhanced schemas, or parallel config objects when the original can be defined correctly at the point of use.
-- Do not split simple local logic into builder, mapper, normalizer, converter, or adapter functions unless the split removes meaningful repeated complexity.
 - Check call sites for leaked implementation detail. If several adjacent calls, temporary values, or helper compositions are only assembling one conceptual operation, move that behavior behind the function that owns it instead of making each caller know the steps. Do not hide genuinely different decisions, but avoid forcing callers to repeat sequencing such as read-then-attach, normalize-then-apply, or resolve-then-preserve when one well-named function can express the operation.
 
 ## Cleanup Definition
@@ -91,7 +80,6 @@ Cleanup means making already-touched code simpler, clearer, or more consistent w
 Good cleanup:
 
 - Remove dead comments, unused variables, and stale imports.
-- Inline one-use helpers or types that only rename a direct expression.
 - Apply mechanical shape changes consistently, such as option tuple to object entries.
 - Fix typos, formatting drift, and obvious duplicated branches.
 
@@ -109,8 +97,12 @@ If a check fails because the check scope does not match the code's intended runt
 - Keep field definitions, field helpers, field handlers, field lifecycle code, and field-based record helpers in `src/fields` when they are reusable outside admin.
 - Before adding custom form behavior, check whether Kenstack already owns it through field component props, field schemas, React Hook Form blur/submit validation, or field lifecycle behavior such as server fields, select/load/save transforms. Do not add input-level guards, mirrored local state, custom `onChange` filtering, duplicate validation, or convenience formatting unless the existing Kenstack field lifecycle cannot express the behavior. Prefer schema-owned validation and field lifecycle transforms over bespoke component behavior.
 - Validation messages should be short sentence-case fragments without trailing periods, such as `Enter a valid date like June 25, 2026`, not full punctuated sentences.
+- Flag any site/module field object that hand-writes `__kenstackField`. That marker is an internal helper contract; replace the object with `field(...)` for custom values or a standard convenience helper for normal inputs.
+- Check field definitions for restated defaults. Remove options such as `searchable: false` or `revisions: true` when they only repeat `defineFields` behavior; keep explicit values when they change behavior, such as `revisions: false`.
+- Review local field-schema aliases as indirection. A helper or constant that only names a short Zod preprocess, coerce, or format chain for a couple of nearby fields usually belongs inline; keep it when it owns a canonical field pattern, meaningful per-call options, or repeated complexity that would be harder to audit at each field.
 - Do not hand-plumb save, load, delete, display, list, filter, or sort behavior in actions when the field lifecycle should own it.
 - Ensure client field definitions stay client-safe; server-only handlers and transforms should be applied through server field helpers.
+- Do not pre-trim or otherwise pre-normalize `watch(...)` / `form.watch(...)` values before passing them to request builders, search URL builders, or action helpers that already normalize. Keep normalization at the boundary helper/schema; derive a local normalized value only for immediate UI behavior such as enabling or disabling a control.
 - For forms, rely on schema/default/mutation inference instead of repeating generic arguments at usage sites. In particular, review `useForm<...>()`, `useFormContext<...>()`, and similar context-hook calls by first trying the unparameterized call.
 - Treat form `defaultValues` as initial state, not a reactive reset mechanism. Prefer module-scope constants for static defaults when they naturally live outside render or are reused for explicit resets, and pass server-derived defaults through serialized props when they depend on server data. Do not add `useMemo` only to stabilize `defaultValues`; use a key/remount at the record or route-input boundary when changing defaults should reset the form. If a form needs to reset after submit, do it explicitly from the mutation/navigation path.
 
@@ -120,8 +112,8 @@ If a check fails because the check scope does not match the code's intended runt
 - Keep top-level feature folders reserved for primary APIs and major entry points.
 - Put support code in existing secondary folders such as `lib`, `components`, `api`, or `fields`.
 - Do not put module infrastructure in `modules`; that folder is for actual modules and module-owned files.
-- Do not add compatibility shims, pass-through re-exports, or barrels unless explicitly requested or already established as a public API.
 - Check runtime boundaries on exports and barrels. Isomorphic code must not be re-exported through a server-only barrel just because current callers are server-side; keep it on an isomorphic entry point or subpath. Likewise, do not expose server-only code through client or shared entry points.
+- Keep server-only helpers separate from helpers consumed by Client Components. Do not put `server-only` fetchers, database queries, HTML parsers, API action internals, or server lifecycle helpers in the same module as client-used request builders, URL builders, field helpers, option lists, or presentation helpers. Move API-only helpers under the module's `api/` folder or another server-owned path, and keep shared helpers in an isomorphic file.
 - For internal moves, update the internal call sites to the new owner and delete the old file. Do not leave old-path wrapper components, re-export files, or local adapter imports just to make the move feel smaller.
 - When moving or renaming a tracked repository file, use `git mv` so the move is recorded deliberately instead of leaving Git to infer it from separate delete/add changes.
 - When deleting a tracked repository file, use `git rm` so the deletion is recorded deliberately instead of leaving Git to infer it from a filesystem delete.

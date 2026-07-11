@@ -2,6 +2,7 @@ import * as z from "zod";
 
 import { attachFieldSetRefinements } from "./fieldSetRefinements";
 import { textField } from "./client";
+import { countryCodeSchema, regionCodeSchema } from "./countryRegionSchemas";
 import type { FieldOption } from "./types";
 
 type AddressFieldOverride = Partial<
@@ -86,15 +87,7 @@ export function defineAddressFields({
     {
       countryCode: textField({
         default: countryDefault.toUpperCase(),
-        zod: z
-          .string()
-          .trim()
-          .transform((value) => value.toUpperCase())
-          .refine(
-            (value) => !required || value.length > 0,
-            "Country is required",
-          )
-          .refine((value) => !value || value.length === 2, "Select a country"),
+        zod: countryCodeSchema({ required }),
         ...countryCodeOptions,
       }),
       addressLine1: textField({
@@ -114,7 +107,7 @@ export function defineAddressFields({
       }),
       regionCode: textField({
         label: "Region",
-        zod: addressTextSchema("Region", required),
+        zod: regionCodeSchema({ required }),
         ...regionCode,
       }),
       postalCode: textField({
