@@ -43,7 +43,7 @@ export default function Breadcrumbs({
   return (
     <nav
       aria-label="Admin breadcrumb"
-      className="mb-2 flex min-w-0 flex-wrap items-center gap-1 text-sm text-gray-600"
+      className="text-muted-foreground mb-2 flex min-w-0 flex-wrap items-center gap-1 text-sm"
     >
       {items.map((item, index) => (
         <span
@@ -55,13 +55,13 @@ export default function Breadcrumbs({
           ) : null}
           {item.href ? (
             <Link
-              className="truncate hover:text-gray-950 hover:underline"
+              className="hover:text-foreground truncate hover:underline"
               href={item.href}
             >
               {item.title}
             </Link>
           ) : (
-            <span className="truncate font-medium text-gray-800">
+            <span className="text-foreground truncate font-medium">
               {item.title}
             </span>
           )}

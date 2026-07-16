@@ -38,7 +38,7 @@ export default function Tags({
                     field.onChange(newValue);
                   }}
                 >
-                  <X className="text-gray-800" />
+                  <X className="text-foreground" />
                 </button>
               </span>
             );

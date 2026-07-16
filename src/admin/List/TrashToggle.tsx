@@ -39,9 +39,9 @@ export default function TrashToggle() {
       }}
     >
       {inTrash ? (
-        <ArchiveRestore className="size-6 text-gray-800" />
+        <ArchiveRestore className="text-foreground size-6" />
       ) : (
-        <Recycle className="size-6 text-gray-800" />
+        <Recycle className="text-foreground size-6" />
       )}
     </Button>
   );

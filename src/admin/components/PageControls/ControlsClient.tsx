@@ -8,9 +8,9 @@ import { draftModePath } from "@kenstack/admin/lib/searchParams";
 import { useAdminUi } from "./useAdminUi";
 
 const buttonClassName =
-  "flex size-8 items-center justify-center rounded-full shadow ring-1 transition focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:outline-none";
+  "focus-visible:ring-ring flex size-8 items-center justify-center rounded-full shadow ring-1 transition focus-visible:ring-2 focus-visible:outline-none";
 const inactiveButtonClassName =
-  "bg-white/90 text-gray-700 ring-black/10 hover:bg-white hover:text-gray-950 dark:bg-gray-950/90 dark:text-gray-200 dark:ring-white/15 dark:hover:bg-gray-950";
+  "bg-card/90 text-card-foreground ring-border hover:bg-card hover:text-foreground";
 
 type PageControlsProps = {
   className?: string;

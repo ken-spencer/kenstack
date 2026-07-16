@@ -27,7 +27,7 @@ export default function PreviewButton() {
   return (
     <Button asChild size="icon" tooltip="View Content" variant="ghost">
       <a href={previewUrl} target="_blank" rel="noreferrer">
-        <Eye className="size-6 text-gray-800" />
+        <Eye className="text-foreground size-6" />
       </a>
     </Button>
   );

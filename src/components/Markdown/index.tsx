@@ -51,7 +51,10 @@ export async function Markdown({
   }
   if (placeholder) {
     return (
-      <div {...props} className={twMerge(className, "text-gray-500/50")}>
+      <div
+        {...props}
+        className={twMerge(className, "text-muted-foreground/50")}
+      >
         {placeholder}
       </div>
     );

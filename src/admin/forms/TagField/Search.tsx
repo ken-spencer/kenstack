@@ -126,7 +126,7 @@ export default function TagSearcht({ field }: { field: AnyField }) {
       }}
     >
       <div className="relative flex items-center">
-        <TagIcon className="pointer-events-none absolute left-0 z-10 size-6 text-gray-600" />
+        <TagIcon className="text-muted-foreground pointer-events-none absolute left-0 z-10 size-6" />
         <ComboboxInput
           className="w-full rounded-none border-0 border-b"
           inputClassName="pl-10"

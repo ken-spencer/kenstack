@@ -70,8 +70,8 @@ export function createAdminPage() {
 
       return (
         <div>
-          <div className="text-md mx-auto mb-2 flex items-center justify-center gap-4 text-gray-700 md:hidden">
-            {Icon && <Icon className="size-4 text-gray-800" />}
+          <div className="text-md text-muted-foreground mx-auto mb-2 flex items-center justify-center gap-4 md:hidden">
+            {Icon && <Icon className="text-foreground size-4" />}
             <span className="font-bold">{moduleConfig.title}</span>
           </div>
           <Suspense fallback={<AdminPageSkeleton />}>
@@ -112,7 +112,7 @@ export function createAdminPage() {
 function AdminPageSkeleton() {
   return (
     <div className="space-y-3 py-2">
-      <div className="flex items-center gap-2 border-b pb-2">
+      <div className="border-border/50 flex items-center gap-2 border-b pb-2">
         <Skeleton className="size-9" />
         <div className="ml-auto flex gap-2">
           <Skeleton className="size-9" />
@@ -121,7 +121,7 @@ function AdminPageSkeleton() {
           <Skeleton className="size-9" />
         </div>
       </div>
-      <div className="divide-y border-y">
+      <div className="divide-border/50 border-border/50 divide-y border-y">
         {Array.from({ length: 5 }, (_, index) => (
           <div
             key={index}

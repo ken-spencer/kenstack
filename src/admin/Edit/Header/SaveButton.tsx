@@ -22,7 +22,7 @@ export default function SaveButton() {
       tooltip="Save"
       variant="ghost"
     >
-      <Save className="size-6 text-gray-800" />
+      <Save className="text-foreground size-6" />
     </Button>
   );
 }

@@ -83,7 +83,7 @@ export default function FilterControl({
         type="button"
         variant="ghost"
         size={showLabel ? "default" : "icon"}
-        className={cn("relative text-gray-800", showLabel ? "gap-2" : "")}
+        className={cn("text-foreground relative", showLabel ? "gap-2" : "")}
         aria-label="Filters"
       >
         <ListFilter className={showLabel ? "size-4" : "size-6"} />
@@ -103,7 +103,7 @@ export default function FilterControl({
       <PopoverContent align="end" className="w-80 p-3">
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <div className="text-sm font-medium text-gray-800">Filters</div>
+            <div className="text-foreground text-sm font-medium">Filters</div>
             <Button
               type="button"
               variant="ghost"
@@ -131,7 +131,7 @@ export default function FilterControl({
               {selectedFilters.map((option) => (
                 <div
                   key={option.name}
-                  className="flex flex-col gap-2 rounded border border-gray-200 bg-gray-50 p-2"
+                  className="border-border bg-muted flex flex-col gap-2 rounded border p-2"
                 >
                   <FilterHeading
                     label={option.label}
@@ -154,12 +154,14 @@ export default function FilterControl({
               ))}
             </div>
           ) : (
-            <div className="text-sm text-gray-500">No active filters.</div>
+            <div className="text-muted-foreground text-sm">
+              No active filters.
+            </div>
           )}
 
           <Separator />
           <div className="flex flex-col gap-1">
-            <div className="text-xs font-medium text-gray-500 uppercase">
+            <div className="text-muted-foreground text-xs font-medium uppercase">
               Add Filter
             </div>
             <div className="grid grid-cols-2 gap-1">
@@ -267,7 +269,7 @@ function FilterEditor({
           return (
             <div
               key={item.value}
-              className="flex items-center gap-2 text-sm text-gray-800"
+              className="text-foreground flex items-center gap-2 text-sm"
             >
               <FilterOptionCheckbox
                 id={optionId}
@@ -288,7 +290,7 @@ function FilterEditor({
                   {item.label}
                 </span>
                 {item.description ? (
-                  <span className="block text-xs text-gray-500">
+                  <span className="text-muted-foreground block text-xs">
                     {item.description}
                   </span>
                 ) : null}
@@ -312,7 +314,7 @@ function FilterHeading({
 }) {
   return (
     <div className="flex items-center justify-between gap-2">
-      <div className="text-sm font-medium text-gray-800">{label}</div>
+      <div className="text-foreground text-sm font-medium">{label}</div>
       <Button
         type="button"
         variant="ghost"

@@ -65,8 +65,8 @@ export default function ImageDetailsModal({
         }
       }}
     >
-      <div className="my-auto grid max-h-[calc(100vh-2rem)] w-full max-w-5xl overflow-hidden rounded border border-gray-200 bg-white shadow-xl md:h-[min(44rem,calc(100vh-2rem))] md:grid-cols-[minmax(0,1fr)_22rem] dark:border-gray-800 dark:bg-gray-950">
-        <div className="flex min-h-0 items-center justify-center bg-gray-100 p-4 dark:bg-gray-900">
+      <div className="border-border bg-card my-auto grid max-h-[calc(100vh-2rem)] w-full max-w-5xl overflow-hidden rounded border shadow-xl md:h-[min(44rem,calc(100vh-2rem))] md:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="bg-muted flex min-h-0 items-center justify-center p-4">
           <img
             alt={image.alt ?? ""}
             className="max-h-full max-w-full object-contain"
@@ -79,7 +79,7 @@ export default function ImageDetailsModal({
             <div>
               <h3 className="text-lg font-medium">Image details</h3>
               {image.filename ? (
-                <p className="text-sm break-all text-gray-500">
+                <p className="text-muted-foreground text-sm break-all">
                   {image.filename}
                 </p>
               ) : null}
@@ -100,7 +100,7 @@ export default function ImageDetailsModal({
             <label className="grid gap-1 text-sm">
               <span className="font-medium">Alt text</span>
               <input
-                className="rounded border border-gray-300 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-950"
+                className="border-input bg-background rounded border px-3 py-2"
                 value={image.alt ?? ""}
                 onChange={(evt) => {
                   onChange({ ...image, alt: evt.target.value });
@@ -111,7 +111,7 @@ export default function ImageDetailsModal({
             <label className="grid gap-1 text-sm">
               <span className="font-medium">Title</span>
               <input
-                className="rounded border border-gray-300 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-950"
+                className="border-input bg-background rounded border px-3 py-2"
                 value={image.title ?? ""}
                 onChange={(evt) => {
                   onChange({ ...image, title: evt.target.value });
@@ -122,7 +122,7 @@ export default function ImageDetailsModal({
             <label className="grid gap-1 text-sm">
               <span className="font-medium">Caption</span>
               <textarea
-                className="min-h-24 rounded border border-gray-300 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-950"
+                className="border-input bg-background min-h-24 rounded border px-3 py-2"
                 value={image.caption ?? ""}
                 onChange={(evt) => {
                   onChange({ ...image, caption: evt.target.value });
@@ -131,28 +131,28 @@ export default function ImageDetailsModal({
             </label>
           </div>
 
-          <dl className="mt-auto grid gap-2 border-t border-gray-200 pt-4 text-sm dark:border-gray-800">
+          <dl className="border-border mt-auto grid gap-2 border-t pt-4 text-sm">
             {dimensions ? (
               <div className="grid grid-cols-[7rem_1fr] gap-2">
-                <dt className="text-gray-500">Dimensions</dt>
+                <dt className="text-muted-foreground">Dimensions</dt>
                 <dd>{dimensions}</dd>
               </div>
             ) : null}
             {image.sourceType ? (
               <div className="grid grid-cols-[7rem_1fr] gap-2">
-                <dt className="text-gray-500">Type</dt>
+                <dt className="text-muted-foreground">Type</dt>
                 <dd>{image.sourceType}</dd>
               </div>
             ) : null}
             {image.sourceSize ? (
               <div className="grid grid-cols-[7rem_1fr] gap-2">
-                <dt className="text-gray-500">Size</dt>
+                <dt className="text-muted-foreground">Size</dt>
                 <dd>{formatFileSize(image.sourceSize)}</dd>
               </div>
             ) : null}
             {previewUrl ? (
               <div className="grid grid-cols-[7rem_1fr] gap-2">
-                <dt className="text-gray-500">Original</dt>
+                <dt className="text-muted-foreground">Original</dt>
                 <dd className="min-w-0">
                   <a
                     className="break-all text-blue-700 hover:underline dark:text-blue-300"

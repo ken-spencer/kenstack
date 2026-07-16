@@ -20,7 +20,7 @@ export default function ListButton() {
       tooltip="Go To List"
       variant="ghost"
     >
-      <List className="size-6 text-gray-800" />
+      <List className="text-foreground size-6" />
     </FormNavButton>
   );
 }

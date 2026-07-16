@@ -71,10 +71,10 @@ export default function RadioButtonField({
               />
               <span
                 className={twMerge(
-                  "flex min-h-9 min-w-28 items-center justify-center gap-1 rounded border border-gray-200 px-2 text-center transition peer-checked:border-fuchsia-800 peer-checked:bg-fuchsia-800/85 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-fuchsia-800 peer-focus-visible:ring-offset-2",
+                  "border-border flex min-h-9 min-w-28 items-center justify-center gap-1 rounded border px-2 text-center transition peer-checked:border-fuchsia-800 peer-checked:bg-fuchsia-800/85 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-fuchsia-800 peer-focus-visible:ring-offset-2",
                   disabled
                     ? "opacity-60"
-                    : "hover:bg-gray-50 peer-checked:hover:bg-fuchsia-800",
+                    : "hover:bg-muted peer-checked:hover:bg-fuchsia-800",
                   buttonClassName,
                 )}
               >

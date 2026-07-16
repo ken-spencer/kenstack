@@ -55,7 +55,7 @@ export default function NeighborButtons() {
         targetId={data.previousId}
         tooltip="Previous Entry"
       >
-        <ChevronLeft className="size-5 text-gray-800" />
+        <ChevronLeft className="text-foreground size-5" />
       </NeighborButton>
       <NeighborButton
         listPath={listPath}
@@ -64,7 +64,7 @@ export default function NeighborButtons() {
         targetId={data.nextId}
         tooltip="Next Entry"
       >
-        <ChevronRight className="size-5 text-gray-800" />
+        <ChevronRight className="text-foreground size-5" />
       </NeighborButton>
     </div>
   );

@@ -18,18 +18,18 @@ const Alert: React.FC<AlertProps> = ({
   switch (status) {
     case "error":
       Icon = CircleAlert;
-      classes +=
-        "bg-red-100 dark:bg-red-900  border-red-400 text-red-700 dark:text-red-200";
+      classes += "border-destructive/35 bg-destructive/10 text-destructive";
       break;
     case "success":
       Icon = CircleCheck;
       classes +=
-        "bg-green-100  border-green-400 text-green-700 dark:bg-green-900 dark:text-green-300";
+        "border-green-500/35 bg-green-500/10 text-green-700 dark:text-green-300";
 
       break;
     case "information":
       Icon = CircleQuestionMark;
-      classes += "bg-blue-100  border-blue-400 text-blue-700 dark:bg-blue-900";
+      classes +=
+        "border-blue-500/35 bg-blue-500/10 text-blue-700 dark:text-blue-300";
       break;
     default:
       throw Error(`Unknown notice type ${status}`);

@@ -54,11 +54,11 @@ function AttachmentFilePreview({ media }: { media: AttachmentListItem }) {
       >
         <Icon className="size-8" />
       </span>
-      <span className="max-w-full truncate text-xs font-semibold tracking-normal text-gray-700 dark:text-gray-200">
+      <span className="text-foreground max-w-full truncate text-xs font-semibold tracking-normal">
         {label}
       </span>
       {media.filename ? (
-        <span className="max-w-full truncate text-[0.6875rem] leading-tight text-gray-500 dark:text-gray-400">
+        <span className="text-muted-foreground max-w-full truncate text-[0.6875rem] leading-tight">
           {media.filename}
         </span>
       ) : null}
@@ -85,7 +85,7 @@ export type MediaListFieldProps = FieldProps &
   MediaRenderProps;
 
 const buttonClass =
-  "inline-flex size-6 items-center justify-center rounded-full border bg-gray-200/80 hover:bg-gray-400";
+  "bg-muted hover:bg-secondary inline-flex size-6 items-center justify-center rounded-full border";
 
 export default function MediaListField({
   name,
@@ -413,21 +413,21 @@ const mediaRender = ({
       return (
         <div
           className={twMerge(
-            "space-y-2 rounded-md border border-gray-200 p-2 dark:border-gray-800",
+            "border-border space-y-2 rounded-md border p-2",
             className,
           )}
           {...dragEvents}
         >
           <label
             className={twMerge(
-              "flex min-h-12 items-center gap-3 rounded-md border border-dashed border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200",
+              "border-border bg-muted text-muted-foreground flex min-h-12 items-center gap-3 rounded-md border border-dashed px-3 py-2 text-sm",
               canUpload
-                ? "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                ? "hover:bg-secondary cursor-pointer"
                 : "cursor-not-allowed opacity-50",
               uploadClassName,
             )}
           >
-            <Paperclip className="size-4 shrink-0 text-gray-500" />
+            <Paperclip className="text-muted-foreground size-4 shrink-0" />
             <span className="min-w-0">
               {placeholder ?? (
                 <>

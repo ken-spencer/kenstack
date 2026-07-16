@@ -18,7 +18,7 @@ export default function UrlField({
   description,
   className,
   inputClass,
-  icon = <Globe className="text-gray-800" />,
+  icon = <Globe className="text-foreground" />,
   ...props
 }: InputProps) {
   const hasIcon = icon != null && icon !== false;

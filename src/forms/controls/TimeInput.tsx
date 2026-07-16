@@ -117,7 +117,7 @@ export function TimeInput({
     <div className="relative">
       <span className="pointer-events-none absolute top-1/2 left-2 z-10 flex size-5 -translate-y-1/2 items-center justify-center">
         <Clock
-          className={twMerge("text-gray-800", invalid && "text-red-600")}
+          className={twMerge("text-foreground", invalid && "text-red-600")}
         />
       </span>
       <Input

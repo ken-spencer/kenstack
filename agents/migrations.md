@@ -2,6 +2,29 @@
 
 Use this file to document breaking Kenstack API changes that downstream sites may need to apply.
 
+## Unreleased: Admin Theme Stylesheet
+
+Old behavior:
+
+- Sites supplied admin color tokens through their public global stylesheet.
+- Admin styling could therefore inherit site-specific palette changes unintentionally.
+
+New behavior:
+
+- Kenstack provides complete light and dark admin palettes in `@kenstack/admin/theme.css`.
+- The stylesheet is scoped to `body:has([data-admin-theme="light"])` and `body:has([data-admin-theme="dark"])`, including body-mounted admin portals without affecting public routes.
+
+Migration steps:
+
+- Import the stylesheet directly from the site admin layout:
+
+  ```ts
+  import "@kenstack/admin/theme.css";
+  ```
+
+- Keep `data-admin-theme="dark"` or `data-admin-theme="light"` on the admin layout wrapper.
+- Remove copied admin palette declarations from the site's public global stylesheet. The host application still owns its Tailwind dark-variant strategy and public-site palette.
+
 ## Unreleased: Flat Server Field Behavior
 
 Old APIs:

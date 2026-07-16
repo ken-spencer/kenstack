@@ -17,7 +17,7 @@ export default function AvatarPlaceholder() {
   }
 
   return (
-    <div className="flex size-full items-center justify-center rounded-full border border-gray-200 bg-gray-50 text-gray-500 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-400">
+    <div className="border-border bg-muted text-muted-foreground flex size-full items-center justify-center rounded-full border">
       <UserRound className="size-16" />
     </div>
   );

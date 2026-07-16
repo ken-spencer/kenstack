@@ -18,7 +18,7 @@ export default defineClient({
         (row) => row.email,
         {
           className:
-            "hidden self-center truncate text-sm text-gray-600 sm:block",
+            "text-muted-foreground hidden self-center truncate text-sm sm:block",
         },
       ],
     ],

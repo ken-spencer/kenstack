@@ -34,7 +34,7 @@ export type AttachmentListItem = {
 function AttachmentIcon({ media }: { media: AttachmentListItem }) {
   if (media.kind !== "file") {
     return (
-      <span className="block size-10 shrink-0 overflow-hidden rounded border border-gray-200 bg-gray-100 dark:border-gray-800 dark:bg-gray-900">
+      <span className="border-border bg-muted block size-10 shrink-0 overflow-hidden rounded border">
         {media.url ? (
           <img alt="" className="h-full w-full object-cover" src={media.url} />
         ) : null}
@@ -93,7 +93,7 @@ export default function AttachmentList({
             <>
               <AttachmentIcon media={attachment} />
               <span className="min-w-0 flex-1 text-left">
-                <span className="line-clamp-2 text-sm leading-snug font-medium break-all text-gray-800 dark:text-gray-100">
+                <span className="text-foreground line-clamp-2 text-sm leading-snug font-medium break-all">
                   {attachment.filename || attachment.title || kindLabel}
                 </span>
                 <span className="text-muted-foreground flex items-center gap-1 text-xs">
@@ -122,7 +122,7 @@ export default function AttachmentList({
           return (
             <li
               className={twMerge(
-                "flex items-center gap-2 rounded-md border border-gray-200 bg-white p-2 dark:border-gray-800 dark:bg-gray-950",
+                "border-border bg-card flex items-center gap-2 rounded-md border p-2",
                 attachment.uploadState === "error" && "opacity-60",
                 itemClassName,
               )}
@@ -164,7 +164,7 @@ export default function AttachmentList({
               {onRemove ? (
                 <button
                   aria-label="Remove attachment"
-                  className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 hover:text-gray-800 dark:hover:bg-gray-900 dark:hover:text-gray-100"
+                  className="text-muted-foreground hover:bg-muted hover:text-foreground inline-flex size-7 shrink-0 items-center justify-center rounded-full transition"
                   type="button"
                   onClick={() => {
                     onRemove(index);
@@ -187,7 +187,7 @@ export default function AttachmentList({
             }
           }}
         >
-          <DialogContent className="w-fit max-w-[calc(100vw-0.5rem)] gap-0 p-1 sm:max-w-[calc(100vw-0.5rem)] [&_[data-slot=dialog-close]]:top-2 [&_[data-slot=dialog-close]]:right-2 [&_[data-slot=dialog-close]]:rounded-full [&_[data-slot=dialog-close]]:bg-white/85 [&_[data-slot=dialog-close]]:p-1.5 [&_[data-slot=dialog-close]]:shadow-sm [&_[data-slot=dialog-close]]:backdrop-blur">
+          <DialogContent className="[&_[data-slot=dialog-close]]:bg-card/85 w-fit max-w-[calc(100vw-0.5rem)] gap-0 p-1 sm:max-w-[calc(100vw-0.5rem)] [&_[data-slot=dialog-close]]:top-2 [&_[data-slot=dialog-close]]:right-2 [&_[data-slot=dialog-close]]:rounded-full [&_[data-slot=dialog-close]]:p-1.5 [&_[data-slot=dialog-close]]:shadow-sm [&_[data-slot=dialog-close]]:backdrop-blur">
             <DialogTitle className="sr-only">
               {previewMedia.filename || previewMedia.title || "Attachment"}
             </DialogTitle>

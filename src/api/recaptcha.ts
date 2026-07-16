@@ -92,7 +92,7 @@ const recaptcha = ({
     ) {
       /** Sanitize the data before logging */
       const logData = typeof dataIn === "object" ? { ...dataIn } : {};
-      for (const f of ["password", "passwordHash", "confirmPassword"]) {
+      for (const f of [field, "password", "passwordHash", "confirmPassword"]) {
         if (f in logData) {
           logData[f] = "* * * * * * * *";
         }

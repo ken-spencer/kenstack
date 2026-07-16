@@ -142,7 +142,7 @@ export function MarkdownEditorToolbar({
   return (
     <div
       className={cn(
-        "border-input flex h-[45px] items-center rounded-t-[3px] border-b bg-[#f7f9fc] px-[25px]",
+        "border-input bg-muted flex h-[45px] items-center rounded-t-[3px] border-b px-[25px]",
         variant === "floating" && "absolute right-0 left-0 z-20",
         className,
       )}
@@ -306,17 +306,17 @@ function ToolbarButton({
       title={label}
       aria-label={label}
       className={
-        "mx-[5px] my-[7px] flex size-8 cursor-pointer items-center justify-center rounded-[3px] border border-[#f7f9fc] p-0 text-[#333] hover:border-[#e4e7ee] hover:bg-white disabled:cursor-default disabled:opacity-40 " +
+        "border-border text-foreground hover:bg-muted mx-[5px] my-[7px] flex size-8 cursor-pointer items-center justify-center rounded-[3px] border p-0 disabled:cursor-default disabled:opacity-40 " +
         (className ?? "")
       }
     >
-      <Icon className="size-5 text-[#555]" strokeWidth={2.2} />
+      <Icon className="text-muted-foreground size-5" strokeWidth={2.2} />
     </button>
   );
 }
 
 function ToolbarDivider() {
-  return <span className="mx-3 my-[14px] h-[18px] w-px bg-[#e1e3e9]" />;
+  return <span className="bg-border mx-3 my-[14px] h-[18px] w-px" />;
 }
 
 function HeadingOption({

@@ -70,7 +70,7 @@ function Select<TOption extends SelectOption = SelectOption>({
         {...props}
         ref={ref}
         className={twMerge(
-          "flex h-10 w-full items-center justify-between gap-2 rounded-md border border-gray-300 bg-white px-3 text-left text-sm shadow-sm transition outline-none hover:border-gray-400 focus-visible:border-fuchsia-800 focus-visible:ring-2 focus-visible:ring-fuchsia-800/30 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 disabled:opacity-70",
+          "border-input bg-background hover:border-ring disabled:bg-muted disabled:text-muted-foreground flex h-10 w-full items-center justify-between gap-2 rounded-md border px-3 text-left text-sm shadow-sm transition outline-none focus-visible:border-fuchsia-800 focus-visible:ring-2 focus-visible:ring-fuchsia-800/30 disabled:cursor-not-allowed disabled:opacity-70",
           className,
         )}
         disabled={disabled}
@@ -78,22 +78,22 @@ function Select<TOption extends SelectOption = SelectOption>({
       >
         {SelectedIcon
           ? React.createElement(SelectedIcon, {
-              className: "size-4 shrink-0 text-gray-500",
+              className: "text-muted-foreground size-4 shrink-0",
             })
           : null}
         <span
           className={twMerge(
             "min-w-0 truncate",
-            !selectedOption && "text-gray-500",
+            !selectedOption && "text-muted-foreground",
           )}
         >
           {selectedOption?.label ?? placeholder}
         </span>
-        <ChevronDown className="size-4 shrink-0 text-gray-500 transition" />
+        <ChevronDown className="text-muted-foreground size-4 shrink-0 transition" />
       </PickerTrigger>
       <PickerContent
         className={twMerge(
-          "rounded-md border border-gray-200 bg-white p-0 shadow-lg ring-0",
+          "border-border bg-popover text-popover-foreground rounded-md border p-0 shadow-lg ring-0",
           contentClassName,
         )}
       >
@@ -102,7 +102,7 @@ function Select<TOption extends SelectOption = SelectOption>({
             <PickerItem
               checkPosition="left"
               className={twMerge(
-                "aria-selected:bg-fuchsia-50 aria-selected:text-fuchsia-950",
+                "aria-selected:bg-accent aria-selected:text-accent-foreground",
                 itemClassName,
               )}
               key={option.value || option.label}
@@ -116,7 +116,7 @@ function Select<TOption extends SelectOption = SelectOption>({
               <span className="min-w-0">
                 <span className="block font-medium">{option.label}</span>
                 {option.description ? (
-                  <span className="mt-0.5 block text-xs text-gray-500">
+                  <span className="text-muted-foreground mt-0.5 block text-xs">
                     {option.description}
                   </span>
                 ) : null}

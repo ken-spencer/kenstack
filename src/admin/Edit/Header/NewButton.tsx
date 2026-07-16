@@ -20,7 +20,7 @@ export default function NewButton() {
       tooltip="New Entry"
       variant="ghost"
     >
-      <Plus className="size-6 text-gray-800" />
+      <Plus className="text-foreground size-6" />
     </FormNavButton>
   );
 }

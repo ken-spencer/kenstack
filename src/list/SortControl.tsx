@@ -72,7 +72,7 @@ export default function SortControl({
       <Button
         type="button"
         variant="ghost"
-        className="gap-2 px-2 text-gray-800"
+        className="text-foreground gap-2 px-2"
         aria-label={`Sort by ${currentSort.label}`}
       >
         <ArrowUpDown className="size-5" />
@@ -112,7 +112,7 @@ export default function SortControl({
               <button
                 type="button"
                 key={option.name}
-                className="flex items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-gray-800 transition hover:bg-gray-100"
+                className="text-foreground hover:bg-muted flex items-center gap-2 rounded px-2 py-1.5 text-left text-sm transition"
                 onClick={() => {
                   setFilters(
                     (prev) => ({

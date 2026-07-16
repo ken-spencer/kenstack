@@ -59,7 +59,7 @@ function AdminSidebarContent({
       {
         href: "/admin/" + name,
         headerIcon: module.icon ? (
-          <module.icon className="size-4 text-gray-800" />
+          <module.icon className="text-sidebar-foreground size-4" />
         ) : null,
         icon: module.icon ? <module.icon /> : <span className="w-3" />,
         name,

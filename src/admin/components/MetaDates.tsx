@@ -8,7 +8,7 @@ export default function MetaDates({
   updatedAt: string;
 }) {
   return (
-    <div className="flex flex-col gap-1 text-xs text-gray-700 sm:flex-row sm:flex-wrap sm:gap-2">
+    <div className="text-muted-foreground flex flex-col gap-1 text-xs sm:flex-row sm:flex-wrap sm:gap-2">
       <div className="whitespace-nowrap">
         C: <time dateTime={createdAt}>{dateFormat(createdAt)}</time>
       </div>

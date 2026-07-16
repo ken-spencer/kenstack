@@ -33,7 +33,7 @@ export default function KeywordSearch({
         className={"-ml-5" + (filters.keywords.length ? "" : " hidden")}
         onClick={() => setFilters((prev) => ({ ...prev, keywords: "" }))}
       >
-        <CircleX className="size-4 text-gray-800" />
+        <CircleX className="text-foreground size-4" />
       </button>
     </div>
   );

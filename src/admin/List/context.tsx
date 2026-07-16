@@ -142,6 +142,7 @@ export function AdminListProvider({
         page,
       }),
     queryKey,
+    refetchOnWindowFocus: "always",
     staleTime: 60 * 1000,
     placeholderData: (prev) => prev,
   });

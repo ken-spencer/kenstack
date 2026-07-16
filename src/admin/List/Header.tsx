@@ -29,7 +29,7 @@ export default function AdminListHeader() {
                 (searchParams.size ? "?" + searchParams : "")
               }
             >
-              <Plus className="size-6 text-gray-800" />
+              <Plus className="text-foreground size-6" />
             </Link>
           </Button>
         </div>
@@ -48,7 +48,7 @@ export default function AdminListHeader() {
               target="_blank"
               rel="noreferrer"
             >
-              <Eye className="size-6 text-gray-800" />
+              <Eye className="text-foreground size-6" />
             </a>
           </Button>
         ) : null}

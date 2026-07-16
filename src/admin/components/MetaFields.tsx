@@ -110,10 +110,10 @@ export default function MetaFields({
       {showAccordion ? (
         <Accordion type="single" collapsible>
           <AccordionItem value="meta">
-            <AccordionTrigger className="rounded border border-gray-200 bg-gray-50 px-4 py-2 hover:no-underline">
+            <AccordionTrigger className="border-border bg-muted rounded border px-4 py-2 hover:no-underline">
               <span className="flex min-w-0 flex-1 items-center justify-between gap-3">
                 <span className="text-sm font-medium">{accordionTitle}</span>
-                <span className="truncate text-xs font-normal text-gray-500">
+                <span className="text-muted-foreground truncate text-xs font-normal">
                   {publishSummary}
                 </span>
               </span>

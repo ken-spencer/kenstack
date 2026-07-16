@@ -56,7 +56,7 @@ export default function SwitchUserButton() {
       variant="ghost"
       onClick={() => mutate(id)}
     >
-      <UserRoundKey className="size-6 text-gray-800" />
+      <UserRoundKey className="text-foreground size-6" />
     </Button>
   );
 }

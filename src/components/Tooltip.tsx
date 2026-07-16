@@ -26,10 +26,10 @@ const onlyBelowClassNames = {
 } satisfies Record<TooltipBreakpoint, string>;
 
 const stemClassNames = {
-  top: "after:absolute after:top-full after:left-1/2 after:size-2 after:-translate-x-1/2 after:-translate-y-1/2 after:rotate-45 after:bg-foreground",
+  top: "after:bg-[var(--tooltip,var(--popover))] after:border-[var(--tooltip-border,var(--border))] after:absolute after:top-full after:left-1/2 after:size-2 after:-translate-x-1/2 after:-translate-y-1/2 after:rotate-45 after:border-r after:border-b",
   right:
-    "after:absolute after:top-1/2 after:right-full after:size-2 after:translate-x-1/2 after:-translate-y-1/2 after:rotate-45 after:bg-foreground",
-  left: "after:absolute after:top-1/2 after:left-full after:size-2 after:-translate-x-1/2 after:-translate-y-1/2 after:rotate-45 after:bg-foreground",
+    "after:bg-[var(--tooltip,var(--popover))] after:border-[var(--tooltip-border,var(--border))] after:absolute after:top-1/2 after:right-full after:size-2 after:translate-x-1/2 after:-translate-y-1/2 after:rotate-45 after:border-b after:border-l",
+  left: "after:bg-[var(--tooltip,var(--popover))] after:border-[var(--tooltip-border,var(--border))] after:absolute after:top-1/2 after:left-full after:size-2 after:-translate-x-1/2 after:-translate-y-1/2 after:rotate-45 after:border-t after:border-r",
 } satisfies Record<TooltipSide, string>;
 
 function getTooltipPosition(
@@ -98,7 +98,7 @@ export default function Tooltip({
         ? createPortal(
             <span
               className={twMerge(
-                "bg-foreground text-background pointer-events-none fixed z-50 w-max max-w-xs rounded-md px-3 py-1.5 text-xs shadow-sm",
+                "pointer-events-none fixed z-50 w-max max-w-xs rounded-md border border-[var(--tooltip-border,var(--border))] bg-[var(--tooltip,var(--popover))] px-3 py-1.5 text-xs text-[var(--tooltip-foreground,var(--popover-foreground))] shadow-lg shadow-black/20",
                 stemClassNames[side],
                 onlyBelow ? onlyBelowClassNames[onlyBelow] : undefined,
               )}

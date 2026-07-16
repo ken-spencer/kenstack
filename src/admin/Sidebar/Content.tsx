@@ -68,7 +68,7 @@ function HeaderModuleTitle({
   );
 
   return (
-    <div className="hidden items-center gap-2 justify-self-center text-gray-700 md:flex">
+    <div className="text-muted-foreground hidden items-center gap-2 justify-self-center md:flex">
       {activeModule ? (
         <>
           {activeModule.icon}

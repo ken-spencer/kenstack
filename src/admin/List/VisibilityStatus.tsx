@@ -5,9 +5,9 @@ import type { VisibilityValue } from "@kenstack/admin/lib/visibility";
 import { cn } from "@kenstack/lib/utils";
 
 const statusClassNames = {
-  draft: "border-gray-200 text-gray-600",
-  published: "border-fuchsia-800/30 text-fuchsia-900",
-  unlisted: "border-gray-200 text-gray-600",
+  draft: "border-border text-muted-foreground",
+  published: "border-primary/35 text-accent-foreground",
+  unlisted: "border-border text-muted-foreground",
 } satisfies Record<VisibilityValue, string>;
 
 type VisibilityStatusProps = {

@@ -16,8 +16,8 @@ export function AppSidebar({ content }: { content: React.ReactNode }) {
   const { toggleSidebar, isMobile } = useSidebar();
 
   return (
-    <Sidebar className="border-none">
-      <SidebarHeader className="bg-gray-100">
+    <Sidebar className="border-border/40 [&_[data-slot=sidebar-inner]]:bg-background [&_[data-active=true]]:bg-transparent">
+      <SidebarHeader className="bg-background">
         <div className="flex items-center justify-between px-2 pt-1">
           <div className="flex items-center gap-2">
             <SidebarTrigger className={isMobile ? "hidden" : ""} />
@@ -35,7 +35,7 @@ export function AppSidebar({ content }: { content: React.ReactNode }) {
           </Button>
         </div>
       </SidebarHeader>
-      <SidebarContent className="bg-gray-100">{content}</SidebarContent>
+      <SidebarContent className="bg-background">{content}</SidebarContent>
     </Sidebar>
   );
 }

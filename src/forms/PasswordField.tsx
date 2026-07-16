@@ -48,9 +48,9 @@ export default function InputField({
             onClick={() => setType(type === "text" ? "password" : "text")}
           >
             {type === "password" ? (
-              <Eye className="size-6 text-gray-700" />
+              <Eye className="text-muted-foreground size-6" />
             ) : (
-              <EyeOff className="size-6 text-gray-700" />
+              <EyeOff className="text-muted-foreground size-6" />
             )}
           </Button>
         </div>

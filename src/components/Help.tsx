@@ -26,7 +26,7 @@ export default function Help({ className, message }: HelpProps) {
           type="button"
           variant="ghost"
         >
-          <CircleHelp className="size-3.5 text-gray-500" />
+          <CircleHelp className="text-muted-foreground size-3.5" />
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="text-sm leading-6">

@@ -116,7 +116,7 @@ export default function RevisionHistoryButton() {
             type="button"
             variant="ghost"
             size="icon"
-            className="text-gray-800"
+            className="text-foreground"
           >
             <History className="size-6" />
           </Button>
@@ -125,7 +125,7 @@ export default function RevisionHistoryButton() {
       <PopoverContent align="end" className="w-96 p-0">
         <div className="flex items-center justify-between gap-3 border-b px-3 py-2">
           <div className="text-sm font-medium">History</div>
-          <div className="shrink-0 text-xs text-gray-500">
+          <div className="text-muted-foreground shrink-0 text-xs">
             {revisionsQuery.data?.status === "success"
               ? `${revisionsQuery.data.revisions.length} revisions`
               : "Revisions"}
@@ -142,7 +142,7 @@ export default function RevisionHistoryButton() {
         ) : revisionsQuery.data?.status === "error" ? (
           <Alert className="m-2" {...revisionsQuery.data} />
         ) : !revisionsQuery.data?.revisions.length ? (
-          <div className="p-3 text-sm text-gray-500">No revisions</div>
+          <div className="text-muted-foreground p-3 text-sm">No revisions</div>
         ) : (
           <div className="max-h-80 overflow-y-auto p-2">
             {revisionsQuery.data.revisions.map((revision, index) => {
@@ -155,8 +155,8 @@ export default function RevisionHistoryButton() {
                   key={revision.id}
                   type="button"
                   className={
-                    "group flex w-full items-start gap-3 rounded px-2 py-2 text-left transition hover:bg-gray-50" +
-                    (isSelected ? " bg-gray-100" : "")
+                    "hover:bg-muted group flex w-full items-start gap-3 rounded px-2 py-2 text-left transition" +
+                    (isSelected ? " bg-muted" : "")
                   }
                   onClick={() => {
                     revisionMutation.mutate(revision.id);
@@ -174,11 +174,11 @@ export default function RevisionHistoryButton() {
                   <span className="flex min-w-0 grow items-center justify-between gap-3">
                     <time
                       dateTime={revision.createdAt}
-                      className="truncate text-sm font-medium text-gray-900"
+                      className="text-foreground truncate text-sm font-medium"
                     >
                       {dateFormat(revision.createdAt)}
                     </time>
-                    <span className="shrink-0 truncate text-xs text-gray-500">
+                    <span className="text-muted-foreground shrink-0 truncate text-xs">
                       {revision.createdByName ?? "System"}
                     </span>
                   </span>

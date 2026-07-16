@@ -76,7 +76,7 @@ export default function SlugField({
               }}
               className={twMerge(
                 "-mr-8 pr-9",
-                locked && "bg-gray-300",
+                locked && "bg-muted",
                 inputClass,
               )}
               readOnly={locked}
@@ -92,9 +92,9 @@ export default function SlugField({
             }}
           >
             {locked ? (
-              <Lock className="text-gray-800" />
+              <Lock className="text-foreground" />
             ) : (
-              <LockOpen className="text-gray-800" />
+              <LockOpen className="text-foreground" />
             )}
           </Button>
         </div>

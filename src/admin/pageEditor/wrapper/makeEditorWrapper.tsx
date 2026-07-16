@@ -81,7 +81,7 @@ function Toggle({ name, children }: { name: Name; children: React.ReactNode }) {
           type="button"
           aria-label="Edit"
           className={
-            "size-6 cursor-pointer rounded-full bg-white/85 shadow ring-1 ring-black/10 sm:bg-transparent sm:shadow-none sm:ring-0 dark:bg-gray-950/85 sm:dark:bg-transparent " +
+            "bg-card/85 ring-border size-6 cursor-pointer rounded-full shadow ring-1 sm:bg-transparent sm:shadow-none sm:ring-0 " +
             (editing === name
               ? "!bg-fuchsia-800/85 text-white ring-fuchsia-800/60"
               : "")

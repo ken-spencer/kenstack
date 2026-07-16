@@ -18,7 +18,7 @@ function MarkdownFieldLoading() {
   return (
     <div className="space-y-2" aria-busy="true">
       <div className="border-input bg-background overflow-hidden rounded-md border">
-        <div className="border-input flex h-[45px] items-center gap-2 rounded-t-[3px] border-b bg-[#f7f9fc] px-[25px]">
+        <div className="border-input bg-muted flex h-[45px] items-center gap-2 rounded-t-[3px] border-b px-[25px]">
           <Skeleton className="h-8 w-8" />
           <Skeleton className="h-8 w-8" />
           <Skeleton className="h-8 w-8" />

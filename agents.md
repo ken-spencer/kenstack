@@ -127,6 +127,11 @@ For browser/UI verification, check whether a local dev server is already running
 ## Safety rules
 
 - Do not modify `.env*` files.
+- Treat `.env*` files, cloud credential files, private keys, connection strings, and values whose names contain `SECRET`, `TOKEN`, `PASSWORD`, or `KEY` as secret-bearing. Never print their contents in tool output, command arguments, logs, commentary, or final responses.
+- Do not include secret-bearing files in broad `rg`, `grep`, `find`, `cat`, `sed`, or configuration-dump commands. Inspect configuration with a narrowly scoped script that reports only variable names, presence, or redacted metadata such as a hostname or bucket name.
+- Commands that need credentials may load them silently from the existing environment or SDK credential chain. Never interpolate a credential value into a shell command, URL, generated file, or tool-call argument.
+- Before running a command that could echo environment variables, request headers, configuration objects, or error details from an authenticated service, constrain or redact its output at the source.
+- If a credential is exposed in any tool output, stop using it, tell the user which credential category was exposed without repeating its value, and recommend revocation or rotation. Do not continue an external write with the exposed credential unless the user explicitly directs you to.
 - Do not change auth, billing, or migration logic unless asked.
 - When moving or deleting tracked files, use git-aware commands such as `git mv` or `git rm` so renames and deletions merge cleanly. Use plain filesystem commands only for untracked files.
 - Do not add dependencies without asking.

@@ -5,7 +5,10 @@ export default function Progress({ className }: React.ComponentProps<"div">) {
   return (
     <div className="p- flex justify-center">
       <ProgressIcon
-        className={twMerge("size-24 animate-spin text-gray-600", className)}
+        className={twMerge(
+          "text-muted-foreground size-24 animate-spin",
+          className,
+        )}
       />
     </div>
   );

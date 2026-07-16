@@ -37,7 +37,7 @@ export default function NavLink({
   const [isHovered, setIsHovered] = useState(false);
   const textClassName =
     "underline-offset-4 " +
-    (isCurrent ? "text-blue-500 underline" : isHovered ? "underline" : "");
+    (isCurrent ? "text-blue-500" : isHovered ? "underline" : "");
   const closeMobileSidebar = () => {
     if (isMobile) {
       setOpenMobile(false);
@@ -79,7 +79,7 @@ export default function NavLink({
                     <span
                       className={
                         "underline-offset-4 " +
-                        (childIsActive ? "text-blue-500 underline" : "")
+                        (childIsActive ? "text-blue-500" : "")
                       }
                     >
                       {child.title}

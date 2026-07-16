@@ -90,7 +90,7 @@ export default function DeleteButton() {
           >
             {selected.length}
           </Badge>
-          <Trash className="size-6 text-gray-800" />
+          <Trash className="text-foreground size-6" />
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
@@ -194,7 +194,7 @@ export function RestoreButton() {
       >
         {selected.length}
       </Badge>
-      <Undo2 className="size-6 text-gray-800" />
+      <Undo2 className="text-foreground size-6" />
     </Button>
   );
 }

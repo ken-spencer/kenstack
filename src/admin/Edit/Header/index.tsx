@@ -9,7 +9,7 @@ import SwitchUserButton from "./SwitchUserButton";
 
 export default function AdminEditHeader() {
   return (
-    <div className="flex gap-4 border-b">
+    <div className="border-border/50 flex gap-4 border-b">
       <div className="flex grow gap-1">
         <NewButton />
         <ListButton />

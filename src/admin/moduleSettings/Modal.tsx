@@ -100,7 +100,7 @@ function ModuleSettingsModalContent({
 
         {query.isError ? (
           <div className="space-y-4">
-            <div className="text-sm text-red-700">
+            <div className="text-destructive text-sm">
               {query.error instanceof Error
                 ? query.error.message
                 : "Unable to load module settings."}

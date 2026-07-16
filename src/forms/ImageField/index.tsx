@@ -19,8 +19,7 @@ import ImageDetailsModal, {
   type ImageDetailsValue,
 } from "@kenstack/admin/forms/ImageDetailsModal";
 
-const buttonClass =
-  "size-6 bg-gray-200/60  hover:bg-gray-400 border rounded-full";
+const buttonClass = "bg-muted hover:bg-secondary size-6 rounded-full border";
 
 type ImageRenderProps = {
   square?: boolean;
@@ -84,14 +83,14 @@ const imageRender = ({
       className,
     );
     const imgClass = twMerge(
-      "border border-gray-200 rounded",
+      "border-border rounded border",
       square
         ? "object-cover object-center w-full h-full"
         : "object-scale-down object-center w-full h-full",
       imageClass,
     );
     const placeholderClass = twMerge(
-      "flex h-full w-full items-center justify-center rounded border border-dashed border-gray-300 bg-gray-50/80 shadow-inner",
+      "border-border bg-muted/80 flex h-full w-full items-center justify-center rounded border border-dashed shadow-inner",
       imageClass,
     );
     const disabledHelp = canUpload ? null : <UploadDisabledHelp />;
@@ -368,7 +367,7 @@ const imageRender = ({
           <div className="h-full w-full">
             {placeholder ?? (
               <div className={placeholderClass}>
-                <AddImageIcon className="h-16 w-16 text-gray-500" />
+                <AddImageIcon className="text-muted-foreground h-16 w-16" />
               </div>
             )}
           </div>
@@ -381,7 +380,7 @@ const imageRender = ({
       <label className={twMerge(contClass, "cursor-pointer")} {...dragEvents}>
         {placeholder ?? (
           <div className={placeholderClass}>
-            <AddImageIcon className="h-16 w-16 text-gray-500" />
+            <AddImageIcon className="text-muted-foreground h-16 w-16" />
           </div>
         )}
         {input}
@@ -392,7 +391,7 @@ const imageRender = ({
 
 function UploadDisabledHelp() {
   return (
-    <div className="absolute top-1 right-1 rounded-full bg-white/90 shadow-sm ring-1 ring-black/10">
+    <div className="bg-card/90 ring-border absolute top-1 right-1 rounded-full shadow-sm ring-1">
       <Help message="Image uploads require the following environment variables to be set: AWS_S3_BUCKET, AWS_ACCESS_KEY_ID, and AWS_SECRET_ACCESS_KEY." />
     </div>
   );

@@ -28,7 +28,7 @@ type ListItems = NonNullable<AdminClient["listItems"]>;
 
 export default function AdminListWrapper() {
   return (
-    <div className="border-t border-b">
+    <div className="border-border/50 border-t border-b">
       <AdminList />
     </div>
   );
@@ -251,7 +251,7 @@ function AdminList() {
                 reorderId={isReorderSort ? item.id : undefined}
               />
               {data.items.length > key + 1 ? (
-                <div className="col-span-full border-t" />
+                <div className="border-border/50 col-span-full border-t" />
               ) : (
                 <div className="col-span-full mt-2" />
               )}
@@ -291,7 +291,7 @@ function ReorderHandle({
       type="button"
       variant="ghost"
     >
-      <GripVertical className="size-4 text-gray-700" />
+      <GripVertical className="text-muted-foreground size-4" />
     </Button>
   );
 }
@@ -310,7 +310,7 @@ function getReorderTargetId(target: EventTarget | null) {
 
 function AdminListRowsSkeleton() {
   return (
-    <div className="divide-y">
+    <div className="divide-border/50 divide-y">
       {Array.from({ length: 5 }, (_, index) => (
         <div
           key={index}
@@ -399,7 +399,12 @@ function ImageCell({
   return (
     <div className="flex items-center">
       <Link
-        className="relative size-10 shrink-0 overflow-hidden rounded bg-gray-100 ring-1 ring-gray-200 dark:bg-gray-900 dark:ring-gray-800"
+        className={cn(
+          "relative size-10 shrink-0 overflow-hidden rounded ring-1",
+          media
+            ? "ring-border bg-transparent"
+            : "border-border border border-dashed bg-transparent ring-transparent",
+        )}
         href={path}
       >
         {media ? (

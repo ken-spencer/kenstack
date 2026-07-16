@@ -214,11 +214,11 @@ class MentionPluginView {
     private config: MarkdownMentionRuntimeConfig,
   ) {
     this.element = document.createElement("div");
-    this.element.style.background = "white";
-    this.element.style.border = "1px solid rgb(209 213 219)";
+    this.element.style.background = "var(--popover)";
+    this.element.style.border = "1px solid var(--border)";
     this.element.style.borderRadius = "6px";
     this.element.style.boxShadow = "0 10px 25px rgb(15 23 42 / 0.16)";
-    this.element.style.color = "rgb(17 24 39)";
+    this.element.style.color = "var(--popover-foreground)";
     this.element.style.fontSize = "13px";
     this.element.style.lineHeight = "18px";
     this.element.style.maxWidth = "min(18rem, calc(100vw - 2rem))";
@@ -603,7 +603,7 @@ class MentionPluginView {
     for (const [index, button] of this.optionButtons.entries()) {
       const selected = index === this.selectedIndex;
       button.setAttribute("aria-selected", selected ? "true" : "false");
-      button.style.background = selected ? "rgb(243 244 246)" : "transparent";
+      button.style.background = selected ? "var(--accent)" : "transparent";
     }
   }
 }
@@ -767,7 +767,7 @@ function createLabelElement(option: MarkdownMentionOption) {
 function createStatusElement(message: string) {
   const element = document.createElement("div");
   element.textContent = message;
-  element.style.color = "rgb(75 85 99)";
+  element.style.color = "var(--muted-foreground)";
   element.style.padding = "8px 10px";
   return element;
 }
