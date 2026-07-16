@@ -6,9 +6,7 @@ import { eq } from "drizzle-orm";
 import type { User } from "@kenstack/types";
 
 export type AuthAccess<TRole extends string> =
-  | "authenticated"
-  | TRole
-  | readonly TRole[];
+  "authenticated" | TRole | readonly TRole[];
 
 export function createAuth<
   TSchema extends Record<string, unknown>,

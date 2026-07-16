@@ -9,10 +9,7 @@ export type ImageMimeType = (typeof imageMimeTypes)[number];
 export type DocumentMimeType = (typeof documentMimeTypes)[number];
 
 export type GeneratedMimeType =
-  | "image/webp"
-  | "image/png"
-  | "image/jpeg"
-  | "image/avif";
+  "image/webp" | "image/png" | "image/jpeg" | "image/avif";
 
 export type Variant = {
   key: string;

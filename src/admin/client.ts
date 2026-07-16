@@ -31,13 +31,15 @@ type ListItem<TRow extends ListItemRow> = readonly [
 type ListItems<TFields extends DefinedFields = DefinedFields> =
   readonly ListItem<
     BaseListItem & {
-      -readonly [TKey in keyof TFields as TFields[TKey] extends {
-        list: infer TList;
-      }
-        ? TList extends false | undefined
-          ? never
-          : TKey
-        : never]: TFields[TKey]["kind"] extends "image"
+      -readonly [
+        TKey in keyof TFields as TFields[TKey] extends {
+          list: infer TList;
+        }
+          ? TList extends false | undefined
+            ? never
+            : TKey
+          : never
+      ]: TFields[TKey]["kind"] extends "image"
         ? SelectedMedia | null
         : TFields[TKey]["default"];
     } & { path: string }

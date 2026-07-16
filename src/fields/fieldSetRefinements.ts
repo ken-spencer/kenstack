@@ -9,8 +9,7 @@ export type FieldSetSuperRefine = (
   ctx: z.RefinementCtx,
 ) => void;
 export type FieldSetSuperRefineOption =
-  | FieldSetSuperRefine
-  | readonly FieldSetSuperRefine[];
+  FieldSetSuperRefine | readonly FieldSetSuperRefine[];
 type FieldSetRefinementSource =
   | { from: object; superRefine?: FieldSetSuperRefineOption }
   | { from?: object; superRefine: FieldSetSuperRefineOption };

@@ -17,7 +17,9 @@ export type BlockTag =
 type EditableTextFieldKind = "text" | "textarea" | "markdown";
 
 export type Name = {
-  [K in keyof typeof pageEditorFields]: (typeof pageEditorFields)[K]["kind"] extends EditableTextFieldKind
+  [
+    K in keyof typeof pageEditorFields
+  ]: (typeof pageEditorFields)[K]["kind"] extends EditableTextFieldKind
     ? K
     : never;
 }[keyof typeof pageEditorFields];

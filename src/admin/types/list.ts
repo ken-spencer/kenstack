@@ -55,11 +55,7 @@ export type AdminListReorderOptions =
     };
 
 export type AdminFilterKind =
-  | "date-range"
-  | "boolean"
-  | "enum"
-  | "includes"
-  | "text";
+  "date-range" | "boolean" | "enum" | "includes" | "text";
 
 export type AdminFilterOption = {
   description?: string;

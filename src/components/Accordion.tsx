@@ -30,8 +30,7 @@ function getHashValue() {
 
 function Accordion(
   props:
-    | ItemAccordionProps
-    | React.ComponentProps<typeof AccordionPrimitive.Root>,
+    ItemAccordionProps | React.ComponentProps<typeof AccordionPrimitive.Root>,
 ) {
   if ("items" in props) {
     return <ItemAccordion {...props} />;

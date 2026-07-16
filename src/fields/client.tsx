@@ -277,7 +277,7 @@ export function radioButtonField<
         Array.from(
           new Set([defaultValue, ...options.options.map(({ value }) => value)]),
         ),
-    ),
+      ),
     ...options,
   });
 }
