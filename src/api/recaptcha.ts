@@ -3,10 +3,13 @@ import { deps } from "@app/deps";
 type RecaptchaOptions = {
   /** name of the field in `data` that holds the token */
   field?: string;
+  /** action name passed to executeRecaptcha */
+  expectedAction?: string;
   threshold?: number;
 };
 
 type RecaptchaVerifyResponse = {
+  action?: string;
   success: boolean;
   score: number;
   [k: string]: unknown;
@@ -41,8 +44,9 @@ const getRecaptchaConfig = () => {
 };
 
 const recaptcha = ({
+  expectedAction,
   field = "recaptchaToken",
-  threshold = 0.3,
+  threshold = 0.5,
 }: RecaptchaOptions = {}) =>
   pipelineStage({}, async ({ dataIn, response }) => {
     if (await deps.auth.getCurrentUser()) {
@@ -81,7 +85,11 @@ const recaptcha = ({
     const verification =
       (await verificationRes.json()) as RecaptchaVerifyResponse;
 
-    if (!verification.success || (verification.score ?? 0) < threshold) {
+    if (
+      !verification.success ||
+      (verification.score ?? 0) < threshold ||
+      (expectedAction && verification.action !== expectedAction)
+    ) {
       /** Sanitize the data before logging */
       const logData = typeof dataIn === "object" ? { ...dataIn } : {};
       for (const f of ["password", "passwordHash", "confirmPassword"]) {

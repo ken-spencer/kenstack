@@ -6,6 +6,7 @@ Read this before database, Drizzle, table schema, Zod, validation, or pipeline s
 
 - Use Drizzle ORM.
 - Do not edit generated migrations casually.
+- Do not run Prettier against generated Drizzle `.sql` migration files.
 - Do not change schema names or column names without checking existing migrations.
 - Treat existing migration files and journal entries as durable and append-only by default. Do not infer that a database is disposable from its URL, environment name, current contents, repository deployment configuration, or the absence of another visible database.
 - If it is not explicit whether every affected database is disposable, stop and ask the user before rebasing history, resetting a database, changing its migration ledger, or using a one-off query that assumes development-only data.

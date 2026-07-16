@@ -15,6 +15,14 @@ Use evidence first:
 - Trace from the failing surface to the closest owning code.
 - Prefer existing Kenstack patterns, shared primitives, and local helpers.
 
+When a regression appears in a site that consumes an imported Kenstack
+feature, trace the behavior through the site configuration to the narrowest
+shared Kenstack owner before editing the consumer. If the behavior is an
+invariant for every instance, make it the default of the shared Kenstack
+primitive and remove consumer-level fixes or overrides. Change the site
+consumer only when it intentionally needs behavior that differs from the
+Kenstack default.
+
 Apply a fix only when it is narrow and behavior-preserving. A good fix usually makes one local value deterministic, corrects one stale condition, narrows one event/focus/cache path, or swaps one call to an existing project helper. Avoid broad rewrites, new abstractions, casts, optional fields, defensive branches, mirrored state, or compatibility shims when the cause is not proven.
 
 Before finalizing, verify with the narrowest useful check and review the final diff for churn: unrelated formatting, renamed locals, moved code, broad API changes, type machinery, temporary debug output, or behavior reductions.
