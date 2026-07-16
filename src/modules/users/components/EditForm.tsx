@@ -9,16 +9,16 @@ import roles from "@app/deps/roles";
 export default function EditForm() {
   return (
     <div>
-      <div className="flex flex-col gap-4 md:flex-row">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start">
         <div className="flex flex-col gap-4">
-          <div className="flex items-center gap-4">
+          <div className="flex items-start gap-4">
             <ImageField
               name="avatar"
               imageClass="rounded-full"
               placeholder={<AvatarPlaceholder />}
             />
             <div className="flex flex-grow flex-col gap-4">
-              <div className="flex gap-4">
+              <div className="flex items-start gap-4">
                 <InputField name="givenName" label="Given Name" />
                 <InputField name="familyName" label="Family Name" />
               </div>

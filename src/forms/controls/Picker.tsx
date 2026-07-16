@@ -515,6 +515,7 @@ function PickerList<T = AnyItem>({
 }: PickerListProps<T>) {
   const { dropdownSide, items, pickerListId } = usePickerContext("PickerList");
 
+  // PickerContent clips overflow; the list owns wheel and keyboard scrolling.
   return (
     <div
       data-slot="picker-list"

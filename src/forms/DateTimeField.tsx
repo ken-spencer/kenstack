@@ -5,17 +5,12 @@ import { useFormContext } from "react-hook-form";
 import { format } from "date-fns";
 import { parseDate } from "chrono-node";
 import { twMerge } from "tailwind-merge";
-import { Calendar as CalendarIcon } from "lucide-react";
 
 import Field, { FormControl, type FieldProps } from "@kenstack/forms/Field";
 import { Input } from "@kenstack/forms/controls/Input";
-import { Button } from "@kenstack/components/Button";
+import DatePickerTrigger from "@kenstack/forms/controls/DatePickerTrigger";
 import { Calendar } from "@kenstack/components/Calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@kenstack/components/Popover";
+import { Popover, PopoverContent } from "@kenstack/components/Popover";
 
 type InputProps = FieldProps &
   React.ComponentProps<"input"> & {
@@ -131,17 +126,7 @@ function DatePicker({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          disabled={disabled}
-          variant="ghost"
-          size="icon"
-          className="absolute"
-        >
-          <CalendarIcon />
-          <span className="sr-only">Pick a date</span>
-        </Button>
-      </PopoverTrigger>
+      <DatePickerTrigger className="absolute" disabled={disabled} />
       <PopoverContent className="w-auto p-0">
         <Calendar
           mode="single"

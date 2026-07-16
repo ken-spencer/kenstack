@@ -172,7 +172,7 @@ export default function AddressFields({
         label="Address 2"
         placeholder="Apartment, suite, unit, floor"
       />
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid items-start gap-4 md:grid-cols-3">
         <InputField name="locality" label={labels.locality} />
         {selectedCountry?.regions.length ? (
           <ComboboxField

@@ -4,15 +4,10 @@ import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { parse } from "chrono-node";
 import { twMerge } from "tailwind-merge";
-import { Calendar as CalendarIcon } from "lucide-react";
 
-import { Button } from "@kenstack/components/Button";
 import { Calendar } from "@kenstack/components/Calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@kenstack/components/Popover";
+import DatePickerTrigger from "@kenstack/forms/controls/DatePickerTrigger";
+import { Popover, PopoverContent } from "@kenstack/components/Popover";
 import { Input } from "@kenstack/forms/controls/Input";
 
 type DateInputProps = Omit<
@@ -186,18 +181,7 @@ function DatePicker({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          disabled={disabled}
-          variant="ghost"
-          size="icon"
-          className="absolute"
-        >
-          <CalendarIcon aria-hidden="true" />
-          <span className="sr-only">Pick a date</span>
-        </Button>
-      </PopoverTrigger>
+      <DatePickerTrigger className="absolute" disabled={disabled} />
       <PopoverContent className="w-auto p-0">
         <Calendar
           mode="single"

@@ -453,7 +453,7 @@ const mediaRender = ({
     return (
       <div
         className={twMerge(
-          "flex flex-wrap gap-3 rounded border border-gray-200 p-3 dark:border-gray-800",
+          "border-border flex flex-wrap gap-3 rounded border p-3",
           className,
         )}
         {...dragEvents}
@@ -470,7 +470,7 @@ const mediaRender = ({
               key={image.id ?? image.mediaId ?? image.url}
               draggable
               className={twMerge(
-                "relative size-28 cursor-grab overflow-hidden rounded border border-gray-200 bg-gray-100 active:cursor-grabbing dark:border-gray-800 dark:bg-gray-900",
+                "border-border bg-muted/50 relative size-28 cursor-grab overflow-hidden rounded border active:cursor-grabbing",
                 image.uploadState === "error" && "opacity-45 grayscale",
                 itemClassName,
               )}
@@ -558,9 +558,9 @@ const mediaRender = ({
 
         <label
           className={twMerge(
-            "flex size-28 items-center justify-center rounded border border-dashed border-gray-300 bg-gray-50 text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300",
+            "border-border bg-muted/50 text-muted-foreground flex size-28 items-center justify-center rounded border border-dashed",
             canUpload
-              ? "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+              ? "hover:bg-muted cursor-pointer"
               : "cursor-not-allowed opacity-50",
             uploadClassName,
           )}
@@ -568,9 +568,7 @@ const mediaRender = ({
           {value.length ? (
             <Upload className="size-8" />
           ) : (
-            (placeholder ?? (
-              <AddImageIcon className="h-16 w-16 text-gray-600" />
-            ))
+            (placeholder ?? <AddImageIcon className="size-16" />)
           )}
           {input}
         </label>

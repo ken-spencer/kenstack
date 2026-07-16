@@ -2,12 +2,13 @@
 
 import { format } from "date-fns";
 import { parseDate } from "chrono-node";
-import { CalendarIcon, ListFilter, RotateCcw, X } from "lucide-react";
+import { ListFilter, RotateCcw, X } from "lucide-react";
 import type { ComponentProps, Dispatch, SetStateAction } from "react";
 import { useMemo, useState } from "react";
 
 import { Button } from "@kenstack/components/Button";
 import { Calendar } from "@kenstack/components/Calendar";
+import DatePickerTrigger from "@kenstack/forms/controls/DatePickerTrigger";
 import { Input } from "@kenstack/forms/controls/Input";
 import {
   Popover,
@@ -383,17 +384,7 @@ function DateFilterInput({
   return (
     <div className="relative flex items-center">
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="absolute left-0 z-10 size-8"
-          >
-            <CalendarIcon className="size-4" />
-            <span className="sr-only">Pick a date</span>
-          </Button>
-        </PopoverTrigger>
+        <DatePickerTrigger className="absolute left-0 z-10 size-8" />
         <PopoverContent className="w-auto p-0">
           <Calendar
             mode="single"
