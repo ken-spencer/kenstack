@@ -35,7 +35,9 @@ type SelectDeletedAt<TTable extends SelectFieldsTable> = TTable extends {
 type SelectFieldValue<
   TField extends ServerDefinedFields[string],
   TColumn,
-> = TField["kind"] extends "image" ? SQL<SelectedMedia | null> : TColumn;
+> = TField["kind"] extends "file" | "image"
+  ? SQL<SelectedMedia | null>
+  : TColumn;
 
 /**
  * Used by record-loading actions to build a select query from field behavior.

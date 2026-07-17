@@ -11,6 +11,7 @@ export { default as CheckboxField } from "@kenstack/forms/CheckboxField";
 export { default as TextareaField } from "@kenstack/forms/TextareaField";
 export { default as DateTimeField } from "@kenstack/forms/DateTimeField";
 export { default as DateField } from "@kenstack/forms/DateField";
+export { default as FileField } from "./FileField";
 export { default as ImageField } from "./ImageField";
 export { default as ImageListField } from "./ImageListField";
 export { default as MediaListField } from "./MediaListField";

@@ -1,6 +1,5 @@
 "use client";
 
-import { format } from "date-fns";
 import { parseDate } from "chrono-node";
 import { ListFilter, RotateCcw, X } from "lucide-react";
 import type { ComponentProps, Dispatch, SetStateAction } from "react";
@@ -19,6 +18,7 @@ import { Checkbox } from "@kenstack/forms/controls/Checkbox";
 import { Separator } from "@kenstack/components/Separator";
 import type { AdminFilterMeta } from "@kenstack/admin/types/list";
 import Tooltip from "@kenstack/components/Tooltip";
+import { formatLongDate } from "@kenstack/lib/dateFormat";
 import { cn } from "@kenstack/lib/utils";
 import type { ListQueryStoreState } from "@kenstack/list/querySchema";
 import type { SetQueryStore } from "@kenstack/list/useQueryStore";
@@ -376,7 +376,7 @@ function DateFilterInput({
 
     if (parsedDate) {
       onChange(parsedDate.toISOString());
-      setTextValue(format(parsedDate, "MMMM d, yyyy"));
+      setTextValue(formatLongDate(parsedDate));
       return;
     }
 
@@ -592,5 +592,5 @@ function parseStoredDate(value: string) {
 
 function formatDateValue(value: string) {
   const date = parseStoredDate(value);
-  return date ? format(date, "MMMM d, yyyy") : value;
+  return date ? formatLongDate(date) : value;
 }

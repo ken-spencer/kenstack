@@ -14,6 +14,7 @@ export type FieldKind =
   | "select"
   | "radio-button"
   | "checkbox-list"
+  | "file"
   | "image"
   | "media-list"
   | "tags"
@@ -41,11 +42,13 @@ export type FieldInputOption = {
   value: string;
 };
 
-export type MediaListUploadOptions = {
+export type MediaUploadOptions = {
   accept?: readonly string[];
   uploadMaxSize?: number;
   uploadMaxSizeMessage?: string;
 };
+
+export type MediaListUploadOptions = MediaUploadOptions;
 
 export type FieldOption<
   TKind extends FieldKind = FieldKind,

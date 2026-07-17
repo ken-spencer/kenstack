@@ -65,6 +65,7 @@ Remove or inline a type when it:
 - Let function return types infer when the implementation already expresses the shape clearly.
 - Inline small private object parameter types at the function boundary.
 - Derive broad consumer types from the source value when a named type is truly needed, such as `ReturnType<typeof builder>`.
+- When a query or loader assembles its returned shape, let the implementation infer that shape. If consumers need a reusable item type, derive it from the loader's return type rather than hand-writing and applying a parallel type to the mapper. Keep an explicit independent contract only when it intentionally constrains multiple producers.
 - Prefer `satisfies` for validating configuration without forcing a return or variable annotation.
 - Avoid using `satisfies` in a way that makes callers acknowledge an internal construction shape such as `Partial<ResolvedThing>`. Prefer validation against the caller-facing contract or at the internal receiving boundary.
 - Inline typed configuration objects at the typed call site so contextual typing and excess property checks work there.

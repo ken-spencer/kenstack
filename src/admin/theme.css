@@ -15,6 +15,7 @@ body:has([data-admin-theme="light"]) {
   --accent-foreground: #005bb8;
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
+  --admin-divider: rgb(24 24 27 / 24%);
   --border: #d9dee7;
   --input: #cfd6e3;
   --input-border: #cfd6e3;
@@ -48,6 +49,7 @@ body:has([data-admin-theme="dark"]) {
   --accent-foreground: #ffffff;
   --destructive: #f04438;
   --destructive-foreground: #ffffff;
+  --admin-divider: rgb(255 255 255 / 38%);
   --border: rgb(255 255 255 / 12%);
   --input: #606060;
   --input-border: #606060;

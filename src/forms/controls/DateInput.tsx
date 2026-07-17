@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { format } from "date-fns";
 import { parse } from "chrono-node";
 import { twMerge } from "tailwind-merge";
 
@@ -9,6 +8,7 @@ import { Calendar } from "@kenstack/components/Calendar";
 import DatePickerTrigger from "@kenstack/forms/controls/DatePickerTrigger";
 import { Popover, PopoverContent } from "@kenstack/components/Popover";
 import { Input } from "@kenstack/forms/controls/Input";
+import { formatLongDate } from "@kenstack/lib/dateFormat";
 
 type DateInputProps = Omit<
   React.ComponentProps<"input">,
@@ -74,7 +74,7 @@ function parseDateValue(value: string | Date) {
 }
 
 function formatDate(value: string) {
-  return value ? format(toDateObject(value), "MMMM d, yyyy") : "";
+  return value ? formatLongDate(toDateObject(value)) : "";
 }
 
 function normalizeValue(value: unknown) {

@@ -303,7 +303,7 @@ function PopoverContent({
     <dialog
       {...props}
       className={cn(
-        "bg-popover text-popover-foreground fixed inset-auto z-50 m-0 max-h-[calc(100dvh-1rem)] w-72 scale-95 overflow-auto rounded-md border p-4 opacity-0 shadow-md outline-hidden transition-[opacity,transform] duration-150 ease-out backdrop:bg-transparent data-[state=open]:scale-100 data-[state=open]:opacity-100",
+        "border-border bg-popover text-popover-foreground fixed inset-auto z-50 m-0 max-h-[calc(100dvh-1rem)] w-72 scale-95 overflow-auto rounded-md border p-4 opacity-0 shadow-md outline-hidden transition-[opacity,transform] duration-150 ease-out backdrop:bg-transparent data-[state=open]:scale-100 data-[state=open]:opacity-100",
         className,
         "hidden open:block",
       )}

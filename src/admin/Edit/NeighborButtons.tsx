@@ -42,30 +42,30 @@ export default function NeighborButtons() {
     return null;
   }
 
-  if (data?.status !== "success") {
-    return null;
-  }
-
   return (
-    <div className="flex items-center gap-1">
-      <NeighborButton
-        listPath={listPath}
-        moduleName={name}
-        searchParams={searchParams}
-        targetId={data.previousId}
-        tooltip="Previous Entry"
-      >
-        <ChevronLeft className="text-foreground size-5" />
-      </NeighborButton>
-      <NeighborButton
-        listPath={listPath}
-        moduleName={name}
-        searchParams={searchParams}
-        targetId={data.nextId}
-        tooltip="Next Entry"
-      >
-        <ChevronRight className="text-foreground size-5" />
-      </NeighborButton>
+    <div className="flex min-h-8 min-w-[4.25rem] items-center gap-1">
+      {data?.status === "success" ? (
+        <>
+          <NeighborButton
+            listPath={listPath}
+            moduleName={name}
+            searchParams={searchParams}
+            targetId={data.previousId}
+            tooltip="Previous Entry"
+          >
+            <ChevronLeft className="text-foreground size-5" />
+          </NeighborButton>
+          <NeighborButton
+            listPath={listPath}
+            moduleName={name}
+            searchParams={searchParams}
+            targetId={data.nextId}
+            tooltip="Next Entry"
+          >
+            <ChevronRight className="text-foreground size-5" />
+          </NeighborButton>
+        </>
+      ) : null}
     </div>
   );
 }

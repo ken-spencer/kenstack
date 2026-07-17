@@ -1,6 +1,7 @@
 import * as z from "zod";
 
 import { email } from "@kenstack/zod/email";
+import { fileSchema } from "@kenstack/zod/file";
 import { imageSchema } from "@kenstack/zod/image";
 import { mediaListSchema } from "@kenstack/zod/mediaList";
 import { phone } from "@kenstack/zod/phone";
@@ -11,6 +12,7 @@ import type {
   FieldComponentLoader,
   FieldKind,
   FieldOption,
+  MediaUploadOptions,
   MediaListUploadOptions,
 } from "./types";
 
@@ -82,6 +84,12 @@ type SelectFieldOptions = Omit<
 type ImageFieldOptions = DisplayFieldOptions & {
   list?: boolean | "square" | "original";
 };
+
+type FileFieldOptions = DisplayFieldOptions &
+  MediaUploadOptions & {
+    list?: boolean;
+    zod?: z.ZodType;
+  };
 
 type TagFieldOptions = DisplayFieldOptions & {
   list?: boolean;
@@ -365,6 +373,21 @@ export function imageField<
     searchable: false,
     revisions: true,
     zod: imageSchema,
+    ...options,
+  });
+}
+
+export function fileField<
+  const TOptions extends FileFieldOptions = Record<never, never>,
+>(
+  options: TOptions = {} as TOptions,
+): FieldOptionOfKind<"file", null, TOptions> {
+  return field({
+    kind: "file",
+    default: null,
+    searchable: false,
+    revisions: true,
+    zod: fileSchema,
     ...options,
   });
 }

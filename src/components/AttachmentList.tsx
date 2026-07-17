@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Download, ExternalLink, X } from "lucide-react";
+import { X } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 
 import ProgressIcon from "@kenstack/icons/Progress";
@@ -47,7 +47,7 @@ function AttachmentIcon({ media }: { media: AttachmentListItem }) {
   return (
     <span
       className={twMerge(
-        "flex size-10 shrink-0 items-center justify-center rounded border",
+        "flex size-10 shrink-0 items-center justify-center rounded",
         className,
       )}
     >
@@ -93,7 +93,7 @@ export default function AttachmentList({
             <>
               <AttachmentIcon media={attachment} />
               <span className="min-w-0 flex-1 text-left">
-                <span className="text-foreground line-clamp-2 text-sm leading-snug font-medium break-all">
+                <span className="text-foreground line-clamp-1 text-sm leading-snug font-medium break-all">
                   {attachment.filename || attachment.title || kindLabel}
                 </span>
                 <span className="text-muted-foreground flex items-center gap-1 text-xs">
@@ -109,20 +109,13 @@ export default function AttachmentList({
                   )}
                 </span>
               </span>
-              {fileMedia && fileHref && !status ? (
-                isPdf ? (
-                  <ExternalLink className="text-muted-foreground size-4 shrink-0" />
-                ) : (
-                  <Download className="text-muted-foreground size-4 shrink-0" />
-                )
-              ) : null}
             </>
           );
 
           return (
             <li
               className={twMerge(
-                "border-border bg-card flex items-center gap-2 rounded-md border p-2",
+                "flex items-center gap-2 py-1",
                 attachment.uploadState === "error" && "opacity-60",
                 itemClassName,
               )}

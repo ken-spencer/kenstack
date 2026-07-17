@@ -1,12 +1,6 @@
 import { defineTable } from "@kenstack/admin/table";
 import { sql } from "drizzle-orm";
-import {
-  text,
-  varchar,
-  integer,
-  index,
-  uniqueIndex,
-} from "drizzle-orm/pg-core";
+import { text, varchar, integer, uniqueIndex } from "drizzle-orm/pg-core";
 import { type ExtraTable } from "@kenstack/admin/table";
 
 export const userColumns = {
@@ -29,9 +23,6 @@ export function userTableExtraConfig<
     uniqueIndex("users_email_unique_active")
       .on(sql`lower(${t.email})`)
       .where(sql`${t.deletedAt} IS NULL AND ${t.email} <> ''`),
-    index("users_org_deleted_at_idx")
-      .on(t.deletedAt)
-      .where(sql`${t.deletedAt} IS NOT NULL`),
   ];
 }
 

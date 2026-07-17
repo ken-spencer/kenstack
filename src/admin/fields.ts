@@ -3,6 +3,7 @@ import {
   type FieldSetSuperRefineOption,
 } from "../fields/fieldSetRefinements";
 import type { FieldOption, FieldOptions } from "../fields/types";
+import type * as z from "zod";
 import { metaFieldOptions } from "./metaFields";
 
 type DefinedFieldFromOption<TField extends FieldOption> = Omit<
@@ -17,6 +18,10 @@ type DefinedFieldFromOption<TField extends FieldOption> = Omit<
 
 type DefinedFieldsFromOptions<TFields extends FieldOptions> = {
   [K in keyof TFields]: DefinedFieldFromOption<TFields[K]>;
+};
+
+type FieldValuesFromOptions<TFields extends FieldOptions> = {
+  [K in keyof TFields]: z.output<TFields[K]["zod"]>;
 };
 
 type GeneratedAdminFieldOptions<
@@ -45,7 +50,9 @@ type DefineFieldsOptions<
   TSeo extends boolean | undefined,
 > = {
   publish?: TPublish;
-  superRefine?: FieldSetSuperRefineOption;
+  superRefine?: FieldSetSuperRefineOption<
+    FieldValuesFromOptions<TFields & GeneratedAdminFieldOptions<TPublish, TSeo>>
+  >;
   seo?: TSeo;
   fields: TFields & GeneratedFieldConflictGuard<TPublish, TSeo>;
 };

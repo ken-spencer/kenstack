@@ -27,6 +27,8 @@ Before reviewing the diff details, confirm the relevant `agents/*.md` guidance f
 
 During review, look for any newly duplicated source of truth, such as copied identifiers, labels, options, mappings, statuses, schemas, config, or metadata. Reuse or extend the existing owner instead of keeping a parallel version. Treat paired signals where one value is canonical and the other is only a request, prop, local, or descriptive copy as a sign to inspect the surrounding code path. If disagreement only causes an error, recommend deriving from the canonical owner and pruning the duplicate input, validation branch, helper argument, schema field, or API path.
 
+Before accepting a new helper, formatter, parser, normalizer, or utility, search the whole project and its shared submodules for existing behavior with the same input and output semantics. Reuse or narrowly extend the canonical helper instead of keeping local copies in separate modules, pages, or admin components. Similar names or implementation details alone do not make helpers equivalent; preserve separate owners when their contracts genuinely differ, such as calendar-only dates, timestamps, and timezone-aware values.
+
 ## Directness Review
 
 Apply the **Directness Gate** in `../AGENTS.md` as the first mandatory code-shape pass. Perform its mechanical audit over every changed TypeScript file, not only files that already look over-abstracted. Treat every unexplained candidate as a review finding; remove it during cleanup or record the concrete current reason it remains.

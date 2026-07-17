@@ -59,8 +59,6 @@ export const defineTags = ({
         t.tableId,
         t.tagId,
       ),
-
-      index(prefix + "_tags_" + prefix + "_id_idx").on(t.tableId),
       index(prefix + "_tags_tag_id_idx").on(t.tagId),
     ],
   );

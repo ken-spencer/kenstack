@@ -28,7 +28,7 @@ type ListItems = NonNullable<AdminClient["listItems"]>;
 
 export default function AdminListWrapper() {
   return (
-    <div className="border-border/50 border-t border-b">
+    <div className="border-t border-b border-y-[var(--admin-divider)]">
       <AdminList />
     </div>
   );
@@ -251,7 +251,7 @@ function AdminList() {
                 reorderId={isReorderSort ? item.id : undefined}
               />
               {data.items.length > key + 1 ? (
-                <div className="border-border/50 col-span-full border-t" />
+                <div className="col-span-full border-t border-t-[var(--admin-divider)]" />
               ) : (
                 <div className="col-span-full mt-2" />
               )}

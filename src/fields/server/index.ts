@@ -15,6 +15,7 @@ import { booleanField } from "./boolean";
 import { checkboxListField } from "./checkboxList";
 import { dateField } from "./date";
 import { dateTimeField } from "./dateTime";
+import { fileField } from "./file";
 import { imageField } from "./image";
 import { radioButtonField } from "./radioButton";
 import { textField } from "./text";
@@ -22,6 +23,7 @@ export { booleanField } from "./boolean";
 export { checkboxListField } from "./checkboxList";
 export { dateField } from "./date";
 export { dateTimeField } from "./dateTime";
+export { fileField } from "./file";
 export { imageField } from "./image";
 export { mediaListField } from "./mediaList";
 export { radioButtonField } from "./radioButton";
@@ -212,6 +214,10 @@ export function resolveServerFields(fields: DefinedFields) {
 }
 
 function getDefaultServerField(field: DefinedField) {
+  if (field.kind === "file") {
+    return fileField()(field);
+  }
+
   if (field.kind === "image") {
     return imageField()(field);
   }

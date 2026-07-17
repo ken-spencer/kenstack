@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import type * as z from "zod";
 import isEqual from "lodash-es/isEqual";
 
@@ -54,10 +54,6 @@ export async function prepareImageSave({
     return { status: "success", remove: true };
   }
 
-  if (typeof fieldData === "number") {
-    return { status: "success", remove: true };
-  }
-
   if (!column) {
     return {
       status: "error",
@@ -65,85 +61,153 @@ export async function prepareImageSave({
     };
   }
 
-  if (
-    id &&
-    (fieldData === null ||
-      ("action" in fieldData && fieldData.action === "remove"))
-  ) {
-    const [oldRow] = await db
-      .select({ removeId: column })
-      .from(table)
-      .where(eq(table.id, id))
-      .limit(1);
+  const [oldRow] = id
+    ? await db
+        .select({ mediaId: column })
+        .from(table)
+        .where(eq(table.id, id))
+        .limit(1)
+    : [];
+  const oldMediaId =
+    oldRow && typeof oldRow.mediaId === "number" ? oldRow.mediaId : null;
 
-    afterSave.push(async (tx) => {
-      if (oldRow && typeof oldRow.removeId === "number") {
-        return tx
+  if (
+    fieldData === null ||
+    (typeof fieldData === "object" &&
+      "action" in fieldData &&
+      fieldData.action === "remove")
+  ) {
+    if (oldMediaId) {
+      afterSave.push((tx) =>
+        tx
           .update(media)
           .set({ status: "removed" })
-          .where(eq(media.id, oldRow.removeId));
-      }
-    });
-    return { status: "success", value: null, afterSave };
-  } else if (fieldData === null) {
-    return { status: "success" };
-  } else if (!("action" in fieldData)) {
-    if (typeof fieldData.id === "number") {
-      const imageId = fieldData.id;
-      const metadata = imageMetadata(fieldData);
-      const [image] = await db
-        .select({
-          alt: media.alt,
-          title: media.title,
-          caption: media.caption,
-        })
-        .from(media)
-        .where(eq(media.id, imageId))
-        .limit(1);
+          .where(eq(media.id, oldMediaId)),
+      );
+    }
 
-      if (
-        !image ||
-        !isEqual(metadata, {
-          alt: image.alt,
-          title: image.title,
-          caption: image.caption,
-        })
-      ) {
+    return { status: "success", value: null, afterSave };
+  } else if (typeof fieldData === "number" || !("action" in fieldData)) {
+    const selectedImageId =
+      typeof fieldData === "number" ? fieldData : fieldData.id;
+
+    if (typeof selectedImageId !== "number") {
+      return {
+        status: "error",
+        message: "Could not find the selected image.",
+      };
+    }
+
+    const [selectedImage] = await db
+      .select({
+        id: media.id,
+        alt: media.alt,
+        title: media.title,
+        caption: media.caption,
+      })
+      .from(media)
+      .where(and(eq(media.id, selectedImageId), ne(media.kind, "file")))
+      .limit(1);
+
+    if (!selectedImage) {
+      return {
+        status: "error",
+        message: "Could not find the selected image.",
+      };
+    }
+
+    const metadata =
+      typeof fieldData === "number" ? undefined : imageMetadata(fieldData);
+    const metadataChanged =
+      metadata !== undefined &&
+      !isEqual(metadata, {
+        alt: selectedImage.alt,
+        title: selectedImage.title,
+        caption: selectedImage.caption,
+      });
+
+    if (selectedImage.id === oldMediaId) {
+      if (metadataChanged) {
         afterSave.push((tx) =>
-          tx.update(media).set(metadata).where(eq(media.id, imageId)),
+          tx.update(media).set(metadata).where(eq(media.id, selectedImage.id)),
         );
       }
+
+      return { status: "success", remove: true, afterSave };
     }
-    return { status: "success", remove: true, afterSave };
+
+    afterSave.push(async (tx) => {
+      await tx
+        .update(media)
+        .set({ status: "attached", ...metadata })
+        .where(eq(media.id, selectedImage.id));
+
+      if (oldMediaId) {
+        await tx
+          .update(media)
+          .set({ status: "removed" })
+          .where(eq(media.id, oldMediaId));
+      }
+    });
+
+    return {
+      status: "success",
+      value: selectedImage.id,
+      afterSave,
+    };
   } else if (fieldData.action === "upload") {
-    const imageIdQuery = db
-      .select({ id: media.id })
+    const [uploadedImage] = await db
+      .select({ id: media.id, status: media.status })
       .from(media)
       .where(
         and(
           eq(media.publicId, fieldData.imageId),
           eq(media.createdBy, user.id),
+          ne(media.kind, "file"),
         ),
       )
       .limit(1);
 
-    afterSave.push((tx) =>
-      tx
+    if (!uploadedImage) {
+      return {
+        status: "error",
+        message: "Could not find the uploaded image.",
+      };
+    }
+
+    if (
+      uploadedImage.id !== oldMediaId &&
+      uploadedImage.status !== "uploaded"
+    ) {
+      return {
+        status: "error",
+        message: "The selected image has not finished uploading.",
+      };
+    }
+
+    if (uploadedImage.id === oldMediaId) {
+      return { status: "success", remove: true };
+    }
+
+    afterSave.push(async (tx) => {
+      await tx
         .update(media)
         .set({
           status: "attached",
           ...imageMetadata(fieldData),
         })
-        .where(
-          and(
-            eq(media.publicId, fieldData.imageId),
-            eq(media.createdBy, user.id),
-          ),
-        ),
-    );
+        .where(eq(media.id, uploadedImage.id));
+
+      if (oldMediaId) {
+        await tx
+          .update(media)
+          .set({ status: "removed" })
+          .where(eq(media.id, oldMediaId));
+      }
+    });
     return {
       status: "success",
-      value: sql<number>`(${imageIdQuery})`,
+      value: uploadedImage.id,
       afterSave,
     };
   } else {

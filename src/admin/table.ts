@@ -237,6 +237,20 @@ export const defineTable = <
       index(`${name}_created_at_idx`)
         .on(t.createdAt)
         .where(sql`${t.deletedAt} IS NULL`),
+      ...(reorder
+        ? [
+            index(`${name}_sort_order_idx`)
+              .on(t.sortOrder)
+              .where(sql`${t.deletedAt} IS NULL`),
+          ]
+        : []),
+      ...(publish
+        ? [
+            index(`${name}_visibility_published_at_idx`)
+              .on(t.visibility, t.publishedAt)
+              .where(sql`${t.deletedAt} IS NULL`),
+          ]
+        : []),
       ...(extraConfig
         ? extraConfig(
             t as ExtraTable<TColumnsMap, TPublicId, TReorder, TPublish, TSeo>,

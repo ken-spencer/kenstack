@@ -15,7 +15,7 @@ import ProgressIcon from "@kenstack/icons/Progress";
 import AttachmentList, {
   type AttachmentListItem,
 } from "@kenstack/components/AttachmentList";
-import Field, { type FieldProps } from "@kenstack/forms/Field";
+import Field, { FormControl, type FieldProps } from "@kenstack/forms/Field";
 import AddImageIcon from "@kenstack/forms/ImageField/AddImageIcon";
 import { useForm } from "@kenstack/forms/context";
 import getUploadErrorMessage from "@kenstack/forms/getUploadErrorMessage";
@@ -73,11 +73,13 @@ type MediaRenderProps = {
   className?: string;
   itemClassName?: string;
   placeholder?: React.ReactNode;
+  replacementPlaceholder?: React.ReactNode;
   uploadClassName?: string;
   canUpload?: boolean;
   presignedUrlAction?: string;
   uploadCompleteAction?: string;
   variant?: "grid" | "attachments";
+  multiple?: boolean;
 };
 
 export type MediaListFieldProps = FieldProps &
@@ -110,11 +112,13 @@ const mediaRender = ({
   className,
   itemClassName,
   placeholder,
+  replacementPlaceholder,
   uploadClassName,
   canUpload = true,
   presignedUrlAction = "get-presigned-url",
   uploadCompleteAction = "upload-complete",
   variant = "grid",
+  multiple = true,
 }: MediaRenderProps) =>
   function MediaListFieldRender({
     field,
@@ -126,20 +130,29 @@ const mediaRender = ({
     const [dragIndex, setDragIndex] = useState<number | null>(null);
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
     const acceptStr = accept.join(", ");
-    const value = Array.isArray(field.value)
-      ? (field.value as MediaImage[])
-      : [];
-
+    const value = multiple
+      ? Array.isArray(field.value)
+        ? (field.value as MediaImage[])
+        : []
+      : field.value && typeof field.value === "object"
+        ? [field.value as MediaImage]
+        : [];
     const setImages = useCallback(
       (images: MediaImage[]) => {
-        field.onChange(images);
+        field.onChange(multiple ? images : (images[0] ?? null));
       },
       [field],
     );
 
     const getImages = () => {
       const current = form.getValues(field.name);
-      return Array.isArray(current) ? (current as MediaImage[]) : [];
+      if (multiple) {
+        return Array.isArray(current) ? (current as MediaImage[]) : [];
+      }
+
+      return current && typeof current === "object"
+        ? [current as MediaImage]
+        : [];
     };
 
     const updateLocalImage = (localId: string, image: Partial<MediaImage>) => {
@@ -277,9 +290,9 @@ const mediaRender = ({
         return;
       }
 
-      const acceptedFiles = [...files].filter((file) =>
-        accept.includes(file.type),
-      );
+      const acceptedFiles = [...files]
+        .filter((file) => accept.includes(file.type))
+        .slice(0, multiple ? undefined : 1);
 
       if (!acceptedFiles.length) {
         return;
@@ -305,7 +318,10 @@ const mediaRender = ({
         };
       });
 
-      setImages([...getImages(), ...pendingImages]);
+      const previousImages = getImages();
+      setImages(
+        multiple ? [...previousImages, ...pendingImages] : pendingImages,
+      );
       startUploading(field.name);
 
       const failedLocalIds = new Set<string>();
@@ -356,7 +372,11 @@ const mediaRender = ({
           }
         });
 
-        setImages(nextImages);
+        setImages(
+          !multiple && failedLocalIds.size && nextImages.length === 0
+            ? previousImages
+            : nextImages,
+        );
 
         if (failedLocalIds.size) {
           const [message] = failedMessages;
@@ -393,20 +413,22 @@ const mediaRender = ({
     };
 
     const input = (
-      <input
-        className="sr-only"
-        type="file"
-        multiple
-        accept={acceptStr}
-        disabled={!canUpload}
-        onChange={(evt: ChangeEvent<HTMLInputElement>) => {
-          const target = evt.currentTarget;
-          if (canUpload && target.files) {
-            uploadFiles(target.files);
-            target.value = "";
-          }
-        }}
-      />
+      <FormControl>
+        <input
+          className="sr-only"
+          type="file"
+          multiple={multiple}
+          accept={acceptStr}
+          disabled={!canUpload}
+          onChange={(evt: ChangeEvent<HTMLInputElement>) => {
+            const target = evt.currentTarget;
+            if (canUpload && target.files) {
+              uploadFiles(target.files);
+              target.value = "";
+            }
+          }}
+        />
+      </FormControl>
     );
 
     if (variant === "attachments") {
@@ -429,7 +451,9 @@ const mediaRender = ({
           >
             <Paperclip className="text-muted-foreground size-4 shrink-0" />
             <span className="min-w-0">
-              {placeholder ?? (
+              {(!multiple && value.length
+                ? (replacementPlaceholder ?? placeholder)
+                : placeholder) ?? (
                 <>
                   <span className="block font-medium">Attach files</span>
                   <span className="text-muted-foreground block text-xs">

@@ -26,6 +26,8 @@ Before any Next.js work, find and read the relevant doc in `node_modules/next/di
 
 When implementing a convenience feature or nice-to-have improvement, do not remove, weaken, or bypass existing production behavior to make the new feature easier to add.
 
+Kenstack is a shared submodule consumed by multiple host sites. Usage visible in one host repository is not proof that a Kenstack feature, export, helper, or extension point is unused. Do not remove, rename, narrow, or inline shared capabilities based only on a single site's call sites. Treat the public surface as potentially used by other consumers and require explicit cross-consumer evidence, deprecation and migration handling, or direct authorization before removing it.
+
 If there is a clear implementation path that preserves current behavior, use it. This includes preserving caching, configurability, query behavior, extension points, validation, publishing rules, permissions, and module boundaries.
 
 Treat existing behavior as intentional unless the user explicitly asks to remove it. If a change would trade away an existing capability for a minor simplification, stop and confirm before making that change.
