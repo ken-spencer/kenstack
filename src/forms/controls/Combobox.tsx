@@ -266,35 +266,6 @@ function ComboboxInput({
     [ref],
   );
 
-  function moveHighlight(direction: 1 | -1) {
-    const count = picker.items.length;
-
-    if (!count) {
-      picker.setHighlightedIndex(-1);
-      return;
-    }
-
-    let nextIndex = picker.highlightedIndex;
-    const indexOffset =
-      picker.dropdownSide === "top" && nextIndex !== -1
-        ? -direction
-        : direction;
-
-    for (let attempt = 0; attempt < count; attempt++) {
-      nextIndex =
-        nextIndex === -1
-          ? direction === 1
-            ? 0
-            : count - 1
-          : (nextIndex + indexOffset + count) % count;
-
-      if (!picker.isItemDisabled(picker.items[nextIndex])) {
-        picker.setHighlightedIndex(nextIndex);
-        return;
-      }
-    }
-  }
-
   return (
     <ComboboxInputShell className={cn("w-auto", className)}>
       <ComboboxInputControl
@@ -330,11 +301,11 @@ function ComboboxInput({
           if (event.key === "ArrowDown") {
             event.preventDefault();
             picker.setOpen(true);
-            moveHighlight(1);
+            picker.moveHighlight(1, 0);
           } else if (event.key === "ArrowUp") {
             event.preventDefault();
             picker.setOpen(true);
-            moveHighlight(-1);
+            picker.moveHighlight(-1, picker.items.length - 1);
           } else if (event.key === "Enter") {
             if (
               picker.isOpen &&

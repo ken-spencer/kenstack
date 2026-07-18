@@ -136,19 +136,9 @@ export async function prepareImageSave({
       return { status: "success", remove: true, afterSave };
     }
 
-    afterSave.push(async (tx) => {
-      await tx
-        .update(media)
-        .set({ status: "attached", ...metadata })
-        .where(eq(media.id, selectedImage.id));
-
-      if (oldMediaId) {
-        await tx
-          .update(media)
-          .set({ status: "removed" })
-          .where(eq(media.id, oldMediaId));
-      }
-    });
+    afterSave.push(
+      attachMediaAfterSave(selectedImage.id, oldMediaId, metadata),
+    );
 
     return {
       status: "success",
@@ -189,22 +179,13 @@ export async function prepareImageSave({
       return { status: "success", remove: true };
     }
 
-    afterSave.push(async (tx) => {
-      await tx
-        .update(media)
-        .set({
-          status: "attached",
-          ...imageMetadata(fieldData),
-        })
-        .where(eq(media.id, uploadedImage.id));
-
-      if (oldMediaId) {
-        await tx
-          .update(media)
-          .set({ status: "removed" })
-          .where(eq(media.id, oldMediaId));
-      }
-    });
+    afterSave.push(
+      attachMediaAfterSave(
+        uploadedImage.id,
+        oldMediaId,
+        imageMetadata(fieldData),
+      ),
+    );
     return {
       status: "success",
       value: uploadedImage.id,
@@ -216,6 +197,26 @@ export async function prepareImageSave({
       message: "invalid image data",
     };
   }
+}
+
+function attachMediaAfterSave(
+  mediaId: number,
+  oldMediaId: number | null,
+  metadata: ImageMetadataInput | undefined,
+): FieldAfterSave {
+  return async (tx) => {
+    await tx
+      .update(media)
+      .set({ status: "attached", ...metadata })
+      .where(eq(media.id, mediaId));
+
+    if (oldMediaId) {
+      await tx
+        .update(media)
+        .set({ status: "removed" })
+        .where(eq(media.id, oldMediaId));
+    }
+  };
 }
 
 type ImageMetadataInput = {

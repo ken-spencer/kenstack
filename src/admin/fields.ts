@@ -71,8 +71,8 @@ function assertGeneratedFieldAvailable(
 
 export function defineFields<
   const TFields extends FieldOptions,
-  const TPublish extends boolean | undefined = undefined,
-  const TSeo extends boolean | undefined = undefined,
+  const TPublish extends boolean | undefined = false,
+  const TSeo extends boolean | undefined = false,
 >({
   publish,
   superRefine,

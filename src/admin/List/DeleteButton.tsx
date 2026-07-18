@@ -17,27 +17,19 @@ import { type AdminListQueryData, useAdminList } from "./context";
 import fetcher from "@kenstack/api/fetcher";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-export default function DeleteButton() {
-  const {
-    name,
-    selected,
-    setSelected,
-    apiPath,
-    queryKey,
-    filters,
-    isReorderSort,
-  } = useAdminList();
+function useRemoveMutation(mode: "trash" | "permanent" | "restore") {
+  const { name, setSelected, apiPath, queryKey } = useAdminList();
   const queryClient = useQueryClient();
-  const inTrash = filters.trash;
-  const mutation = useMutation({
+
+  return useMutation({
     mutationFn: async (variables: number[]) =>
       fetcher(apiPath, {
         name,
         action: "remove",
-        mode: inTrash ? "permanent" : "trash",
+        mode,
         remove: variables,
       }),
-    onMutate: async () => {
+    onMutate: async (variables) => {
       await queryClient.cancelQueries({ queryKey });
 
       const previous = queryClient.getQueryData<AdminListQueryData>(queryKey);
@@ -45,7 +37,7 @@ export default function DeleteButton() {
       if (previous && "items" in previous) {
         queryClient.setQueryData(queryKey, {
           ...previous,
-          items: previous.items?.filter((item) => !selected.includes(item.id)),
+          items: previous.items?.filter((item) => !variables.includes(item.id)),
         });
       }
       setSelected([]);
@@ -70,6 +62,25 @@ export default function DeleteButton() {
       }
     },
   });
+}
+
+function SelectionCountBadge({ count }: { count: number }) {
+  return (
+    <Badge
+      className={
+        "pointer-events-none absolute -top-2 -right-2 flex h-[1.5rem] min-w-[1.5rem] items-center justify-center rounded-full px-1.5 text-center text-[10px] transition-opacity duration-200 " +
+        (count ? "pointer-events-auto opacity-80" : "opacity-0")
+      }
+    >
+      {count}
+    </Badge>
+  );
+}
+
+export default function DeleteButton() {
+  const { selected, filters, isReorderSort } = useAdminList();
+  const inTrash = filters.trash;
+  const mutation = useRemoveMutation(inTrash ? "permanent" : "trash");
 
   return (
     <AlertDialog>
@@ -82,14 +93,7 @@ export default function DeleteButton() {
           disabled={!selected.length || isReorderSort}
           variant="ghost"
         >
-          <Badge
-            className={
-              "pointer-events-none absolute -top-2 -right-2 flex h-[1.5rem] min-w-[1.5rem] items-center justify-center rounded-full px-1.5 text-center text-[10px] transition-opacity duration-200 " +
-              (selected.length ? "pointer-events-auto opacity-80" : "opacity-0")
-            }
-          >
-            {selected.length}
-          </Badge>
+          <SelectionCountBadge count={selected.length} />
           <Trash className="text-foreground size-6" />
         </Button>
       </AlertDialogTrigger>
@@ -118,58 +122,9 @@ export default function DeleteButton() {
 }
 
 export function RestoreButton() {
-  const {
-    name,
-    selected,
-    setSelected,
-    apiPath,
-    queryKey,
-    filters,
-    isReorderSort,
-  } = useAdminList();
-  const queryClient = useQueryClient();
+  const { selected, filters, isReorderSort } = useAdminList();
   const inTrash = filters.trash;
-  const mutation = useMutation({
-    mutationFn: async (variables: number[]) =>
-      fetcher(apiPath, {
-        name,
-        action: "remove",
-        mode: "restore",
-        remove: variables,
-      }),
-    onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey });
-
-      const previous = queryClient.getQueryData<AdminListQueryData>(queryKey);
-
-      if (previous && "items" in previous) {
-        queryClient.setQueryData(queryKey, {
-          ...previous,
-          items: previous.items?.filter((item) => !selected.includes(item.id)),
-        });
-      }
-      setSelected([]);
-
-      return { previous };
-    },
-    onError: (err, _variables, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(queryKey, context.previous);
-      }
-      // eslint-disable-next-line no-console
-      console.error(err);
-    },
-    onSuccess: (data, _v, context) => {
-      if (data.status === "error" && context?.previous) {
-        queryClient.setQueryData(queryKey, context.previous);
-      }
-      if ("success" === data.status) {
-        queryClient.invalidateQueries({
-          queryKey: ["admin-list"],
-        });
-      }
-    },
-  });
+  const mutation = useRemoveMutation("restore");
 
   if (!inTrash) {
     return null;
@@ -186,14 +141,7 @@ export function RestoreButton() {
       variant="ghost"
       onClick={() => mutation.mutate(selected)}
     >
-      <Badge
-        className={
-          "pointer-events-none absolute -top-2 -right-2 flex h-[1.5rem] min-w-[1.5rem] items-center justify-center rounded-full px-1.5 text-center text-[10px] transition-opacity duration-200 " +
-          (selected.length ? "pointer-events-auto opacity-80" : "opacity-0")
-        }
-      >
-        {selected.length}
-      </Badge>
+      <SelectionCountBadge count={selected.length} />
       <Undo2 className="text-foreground size-6" />
     </Button>
   );

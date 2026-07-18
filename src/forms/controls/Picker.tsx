@@ -17,6 +17,7 @@ type PickerContextValue = {
   isOpen: boolean;
   isSelected: (item: AnyItem) => boolean;
   items: readonly AnyItem[];
+  moveHighlight: (direction: 1 | -1, initialIndex: number) => void;
   pickerListId: string;
   optionId: (index: number) => string;
   portalTarget: HTMLElement | null;
@@ -177,6 +178,34 @@ function Picker<T>({
         ? items.findIndex((item) => !isItemDisabled(item))
         : -1;
 
+  const moveHighlight = React.useCallback(
+    (direction: 1 | -1, initialIndex: number) => {
+      const count = items.length;
+
+      if (!count) {
+        setHighlightedIndexState(-1);
+        return;
+      }
+
+      let nextIndex = highlightedIndex;
+      const indexOffset =
+        dropdownSide === "top" && nextIndex !== -1 ? -direction : direction;
+
+      for (let attempt = 0; attempt < count; attempt++) {
+        nextIndex =
+          nextIndex === -1
+            ? initialIndex
+            : (nextIndex + indexOffset + count) % count;
+
+        if (!isItemDisabled(items[nextIndex] as T)) {
+          setHighlightedIndexState(nextIndex);
+          return;
+        }
+      }
+    },
+    [dropdownSide, highlightedIndex, isItemDisabled, items],
+  );
+
   useOverlayStack({
     onClose: () => setOpen(false),
     open: isOpen,
@@ -231,6 +260,7 @@ function Picker<T>({
       isOpen,
       isSelected,
       items,
+      moveHighlight,
       pickerListId,
       optionId,
       portalTarget,
@@ -247,6 +277,7 @@ function Picker<T>({
       isOpen,
       isSelected,
       items,
+      moveHighlight,
       pickerListId,
       optionId,
       portalTarget,
@@ -299,33 +330,6 @@ function PickerTrigger({
     0,
   );
 
-  function moveHighlight(direction: 1 | -1) {
-    const count = context.items.length;
-
-    if (!count) {
-      context.setHighlightedIndex(-1);
-      return;
-    }
-
-    let nextIndex = context.highlightedIndex;
-    const indexOffset =
-      context.dropdownSide === "top" && nextIndex !== -1
-        ? -direction
-        : direction;
-
-    for (let attempt = 0; attempt < count; attempt++) {
-      nextIndex =
-        nextIndex === -1
-          ? selectedIndex
-          : (nextIndex + indexOffset + count) % count;
-
-      if (!context.isItemDisabled(context.items[nextIndex])) {
-        context.setHighlightedIndex(nextIndex);
-        return;
-      }
-    }
-  }
-
   return (
     <button
       {...props}
@@ -358,11 +362,11 @@ function PickerTrigger({
         if (event.key === "ArrowDown") {
           event.preventDefault();
           context.setOpen(true);
-          moveHighlight(1);
+          context.moveHighlight(1, selectedIndex);
         } else if (event.key === "ArrowUp") {
           event.preventDefault();
           context.setOpen(true);
-          moveHighlight(-1);
+          context.moveHighlight(-1, selectedIndex);
         } else if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
 

@@ -19,22 +19,20 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useForm } from "@kenstack/forms/context";
 
-export default function DeleteButton() {
+function useRemoveMutation(mode: "trash" | "permanent" | "restore") {
   const { setStatusMessage } = useForm();
   const router = useRouter();
-  const { isNew, id, name, userId, apiPath, listPath, single, item } =
-    useAdminEdit();
+  const { name, apiPath, listPath } = useAdminEdit();
   const queryClient = useQueryClient();
-  const isDeleted = !!item?.deletedAt;
-  const mutation = useMutation({
+
+  return useMutation({
     mutationFn: async (idToRemove: number) =>
       fetcher(apiPath, {
         name,
         action: "remove",
-        mode: isDeleted ? "permanent" : "trash",
+        mode,
         remove: [idToRemove],
       }),
-    onMutate: async () => {},
     onError: (err) => {
       setStatusMessage(err);
 
@@ -59,6 +57,12 @@ export default function DeleteButton() {
       }
     },
   });
+}
+
+export default function DeleteButton() {
+  const { isNew, id, name, userId, single, item } = useAdminEdit();
+  const isDeleted = !!item?.deletedAt;
+  const mutation = useRemoveMutation(isDeleted ? "permanent" : "trash");
 
   if (single) {
     return null;
@@ -105,43 +109,9 @@ export default function DeleteButton() {
 }
 
 export function RestoreButton() {
-  const { setStatusMessage } = useForm();
-  const router = useRouter();
-  const { isNew, id, name, apiPath, listPath, single, item } = useAdminEdit();
-  const queryClient = useQueryClient();
+  const { isNew, id, single, item } = useAdminEdit();
   const isDeleted = !!item?.deletedAt;
-  const mutation = useMutation({
-    mutationFn: async (idToRestore: number) =>
-      fetcher(apiPath, {
-        name,
-        action: "remove",
-        mode: "restore",
-        remove: [idToRestore],
-      }),
-    onError: (err) => {
-      setStatusMessage(err);
-
-      // eslint-disable-next-line no-console
-      console.error(err);
-    },
-    onSuccess: (data, idToRestore) => {
-      if (data.status === "error") {
-        setStatusMessage(data);
-      }
-
-      if ("success" === data.status) {
-        queryClient.removeQueries({
-          queryKey: ["admin-edit", name, idToRestore],
-          exact: true,
-        });
-        queryClient.invalidateQueries({
-          queryKey: ["admin-list"],
-        });
-
-        router.push(listPath);
-      }
-    },
-  });
+  const mutation = useRemoveMutation("restore");
 
   if (single || !isDeleted) {
     return null;

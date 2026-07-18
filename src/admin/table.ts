@@ -139,10 +139,10 @@ export const addressColumns = {
 
 export type ExtraTable<
   TColumnsMap extends Record<string, PgColumnBuilderBase>,
-  TPublicId extends boolean | undefined = undefined,
-  TReorder extends boolean | undefined = undefined,
-  TPublish extends boolean | undefined = undefined,
-  TSeo extends boolean | undefined = undefined,
+  TPublicId extends boolean | undefined = false,
+  TReorder extends boolean | undefined = false,
+  TPublish extends boolean | undefined = false,
+  TSeo extends boolean | undefined = false,
 > = {
   id: AnyPgColumn;
   createdBy: AnyPgColumn;
@@ -171,10 +171,10 @@ export type ExtraTable<
 export type BuildTableOptions<
   TName extends string,
   TColumnsMap extends Record<string, PgColumnBuilderBase>,
-  TPublicId extends boolean | undefined = undefined,
-  TReorder extends boolean | undefined = undefined,
-  TPublish extends boolean | undefined = undefined,
-  TSeo extends boolean | undefined = undefined,
+  TPublicId extends boolean | undefined = false,
+  TReorder extends boolean | undefined = false,
+  TPublish extends boolean | undefined = false,
+  TSeo extends boolean | undefined = false,
 > = {
   name: TName;
   publicId?: TPublicId;
@@ -198,10 +198,10 @@ export type BuildKeyTableOptions<
 export const defineTable = <
   TName extends string,
   const TColumnsMap extends Record<string, PgColumnBuilderBase>,
-  const TPublicId extends boolean | undefined = undefined,
-  const TReorder extends boolean | undefined = undefined,
-  const TPublish extends boolean | undefined = undefined,
-  const TSeo extends boolean | undefined = undefined,
+  const TPublicId extends boolean | undefined = false,
+  const TReorder extends boolean | undefined = false,
+  const TPublish extends boolean | undefined = false,
+  const TSeo extends boolean | undefined = false,
 >({
   name,
   publicId,
