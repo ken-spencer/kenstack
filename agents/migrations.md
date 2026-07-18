@@ -87,6 +87,7 @@ Old APIs:
 New APIs:
 
 - `defineTable(...)` accepts `publicId`, `reorder`, `publish`, and `seo` options.
+- `publicId: true` adds the generated `publicId` column. Omit `publicId` for tables that do not need opaque public IDs.
 - `reorder: true` adds the standard `sortOrder` column and active-record index.
 - `list.reorder: true` uses the standard `sortOrder` field. Use `{ field, label }` only for custom reorder columns or labels.
 - `publish: true` adds the standard `visibility` and `publishedAt` columns plus a `(visibility, publishedAt)` index where `deletedAt IS NULL`. This matches the standard `listWhere()` equality/range predicate; do not replace it with a `publishedAt`-only index.
@@ -95,7 +96,6 @@ New APIs:
 - `defineFields({ fields: { ... } })` defines plain field maps.
 - `defineFields({ publish: true, fields: { ... } })` adds the standard `visibility` and `publishedAt` field definitions.
 - `defineFields({ seo: true, fields: { ... } })` adds the standard `seoTitle`, `seoDescription`, and `ogImage` field definitions.
-- `publicId: false` opts a table out of the generated `publicId` column.
 - `AdminTable` represents the base defined-table contract. Use `AdminPublicIdTable`, `AdminPublishTable`, or `AdminSeoTable` when code requires those generated columns.
 
 Migration steps:
@@ -111,8 +111,9 @@ Migration steps:
 - Wrap plain field maps in the new object shape, changing `defineFields({ title: textField() })` to `defineFields({ fields: { title: textField() } })`.
 - For admin field maps with standard publishing fields, use `defineFields({ publish: true, fields: { ... } })` and remove the manual `metaFieldOptions` entries.
 - For admin field maps with standard SEO fields, use `defineFields({ seo: true, fields: { ... } })` and remove the manual `metaFieldOptions` entries.
+- For tables that relied on the old implicit `publicId` column, add `publicId: true` to `defineTable(...)` before upgrading.
+- Remove `publicId: false` from tables that only used it to opt out of the old default.
 - For table types or helpers that require `table.publicId`, use `AdminPublicIdTable`.
-- Omitted `publicId` currently preserves the legacy generated `publicId` column. Use `publicId: false` only after verifying the table does not need opaque public IDs.
 
 ## Unreleased: Admin Server/Client Module Split
 

@@ -49,6 +49,7 @@ function PaginationCont({
   const searchParams = useSearchParams();
   const params = omit(Object.fromEntries(searchParams.entries()), "page");
   const isFirst = page <= 1;
+  const isLast = totalPages < 1 || page >= totalPages;
   const firstPages = Array.from(
     { length: Math.min(totalPages, 5) },
     (_, i) => i + 1,
@@ -84,14 +85,16 @@ function PaginationCont({
           </>
         )}
         <PaginationItem
-          className={page >= totalPages ? "pointer-events-none opacity-50" : ""}
+          className={isLast ? "pointer-events-none opacity-50" : ""}
         >
           <PaginationNext
+            aria-disabled={isLast}
+            tabIndex={isLast ? -1 : undefined}
             href={{
               pathname,
               query: {
                 ...params,
-                page: page + 1,
+                ...(!isLast ? { page: page + 1 } : page > 1 ? { page } : {}),
               },
             }}
           />

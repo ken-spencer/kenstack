@@ -23,6 +23,7 @@ export async function uploadMedia({
   fieldname,
   file,
   presignedUrlAction,
+  signal,
   uploadCompleteAction,
 }: {
   apiPath: string;
@@ -30,8 +31,12 @@ export async function uploadMedia({
   fieldname: string;
   file: File;
   presignedUrlAction: string;
+  signal?: AbortSignal;
   uploadCompleteAction: string;
 }): Promise<
+  | {
+      status: "aborted";
+    }
   | {
       complete: UploadMediaCompletePayload;
       status: "success";
@@ -44,62 +49,91 @@ export async function uploadMedia({
       status: "error";
     }
 > {
-  const presigned = await fetcher<{
-    id: string;
-    uploadUrl: string;
-  }>(apiPath, {
-    ...extraData,
-    action: presignedUrlAction,
-    filename: file.name,
-    fieldname,
-    size: file.size,
-    type: file.type,
-  });
+  try {
+    const presigned = await fetcher<{
+      id: string;
+      uploadUrl: string;
+    }>(
+      apiPath,
+      {
+        ...extraData,
+        action: presignedUrlAction,
+        filename: file.name,
+        fieldname,
+        size: file.size,
+        type: file.type,
+      },
+      { signal },
+    );
 
-  if (presigned.status === "error") {
+    if (presigned.status === "error") {
+      return {
+        message: getUploadErrorMessage(presigned),
+        stage: "presign",
+        status: "error",
+      };
+    }
+
+    if (signal?.aborted) {
+      return { status: "aborted" };
+    }
+
+    const uploadResponse = await fetch(presigned.uploadUrl, {
+      method: "PUT",
+      headers: {
+        "Content-Length": file.size.toString(),
+        "Content-Type": file.type,
+      },
+      body: file,
+      signal,
+    });
+
+    if (!uploadResponse.ok) {
+      return {
+        message: "There was a problem uploading your file. Please try again.",
+        responseStatus: uploadResponse.status,
+        responseText: await uploadResponse.text(),
+        stage: "s3",
+        status: "error",
+      };
+    }
+
+    if (signal?.aborted) {
+      return { status: "aborted" };
+    }
+
+    const complete = await fetcher<UploadMediaCompletePayload>(
+      apiPath,
+      {
+        ...extraData,
+        action: uploadCompleteAction,
+        fieldname,
+        imageId: presigned.id,
+      },
+      { signal },
+    );
+
+    if (complete.status === "error") {
+      return {
+        message: getUploadErrorMessage(complete),
+        stage: "complete",
+        status: "error",
+      };
+    }
+
+    if (signal?.aborted) {
+      return { status: "aborted" };
+    }
+
     return {
-      message: getUploadErrorMessage(presigned),
-      stage: "presign",
-      status: "error",
+      complete,
+      status: "success",
     };
+  } catch (error) {
+    if (signal?.aborted) {
+      return { status: "aborted" };
+    }
+
+    throw error;
   }
-
-  const uploadResponse = await fetch(presigned.uploadUrl, {
-    method: "PUT",
-    headers: {
-      "Content-Length": file.size.toString(),
-      "Content-Type": file.type,
-    },
-    body: file,
-  });
-
-  if (!uploadResponse.ok) {
-    return {
-      message: "There was a problem uploading your file. Please try again.",
-      responseStatus: uploadResponse.status,
-      responseText: await uploadResponse.text(),
-      stage: "s3",
-      status: "error",
-    };
-  }
-
-  const complete = await fetcher<UploadMediaCompletePayload>(apiPath, {
-    ...extraData,
-    action: uploadCompleteAction,
-    fieldname,
-    imageId: presigned.id,
-  });
-
-  if (complete.status === "error") {
-    return {
-      message: getUploadErrorMessage(complete),
-      stage: "complete",
-      status: "error",
-    };
-  }
-
-  return {
-    complete,
-    status: "success",
-  };
 }

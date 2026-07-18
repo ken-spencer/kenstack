@@ -25,6 +25,7 @@ export const mediaStatusEnum = pgEnum("media_status", [
 
 export const media = defineTable({
   name: "media",
+  publicId: true,
   columns: {
     status: mediaStatusEnum("status").notNull(),
     kind: mediaKindEnum("kind").notNull(),

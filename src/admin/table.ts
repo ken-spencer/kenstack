@@ -74,9 +74,9 @@ type TableColumns<
   TPublish extends boolean | undefined,
   TSeo extends boolean | undefined,
 > = ReturnType<typeof baseTableColumns> &
-  ([TPublicId] extends [false]
-    ? Record<never, never>
-    : { publicId: ReturnType<typeof publicIdColumn> }) &
+  ([TPublicId] extends [true]
+    ? { publicId: ReturnType<typeof publicIdColumn> }
+    : Record<never, never>) &
   ([TReorder] extends [true]
     ? { sortOrder: ReturnType<typeof sortOrderColumn> }
     : Record<never, never>) &
@@ -149,9 +149,9 @@ export type ExtraTable<
   createdAt: AnyPgColumn;
   updatedAt: AnyPgColumn;
   deletedAt: AnyPgColumn;
-} & ([TPublicId] extends [false]
-  ? Record<never, never>
-  : { publicId: AnyPgColumn }) &
+} & ([TPublicId] extends [true]
+  ? { publicId: AnyPgColumn }
+  : Record<never, never>) &
   ([TReorder] extends [true]
     ? { sortOrder: AnyPgColumn }
     : Record<never, never>) &
@@ -220,7 +220,7 @@ export const defineTable = <
 >): DefinedPgTable<TName, TColumnsMap, TPublicId, TReorder, TPublish, TSeo> => {
   const tableColumns = {
     ...baseTableColumns(),
-    ...(publicId !== false ? { publicId: publicIdColumn() } : {}),
+    ...(publicId ? { publicId: publicIdColumn() } : {}),
     ...(reorder ? { sortOrder: sortOrderColumn() } : {}),
     ...(publish ? publishColumns() : {}),
     ...(seo ? seoColumns() : {}),

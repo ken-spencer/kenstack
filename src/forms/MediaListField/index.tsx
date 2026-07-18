@@ -177,6 +177,11 @@ const mediaRender = ({
         uploadCompleteAction,
       });
 
+      if (result.status === "aborted") {
+        updateLocalImage(localId, { uploadState: "error" });
+        return { status: "error", message: "Upload was canceled." } as const;
+      }
+
       if (result.status === "error") {
         if (result.stage === "s3") {
           setStatusMessage({

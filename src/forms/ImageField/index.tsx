@@ -1,4 +1,11 @@
-import { useCallback, useState, type ChangeEvent, type DragEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type DragEvent,
+} from "react";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 
 import AddImageIcon from "./AddImageIcon";
@@ -6,7 +13,7 @@ import ProgressIcon from "@kenstack/icons/Progress";
 import { Upload as UploadIcon, X as CancelIcon } from "lucide-react";
 
 import { twMerge } from "tailwind-merge";
-import Field, { type FieldProps } from "@kenstack/forms/Field";
+import Field, { FormControl, type FieldProps } from "@kenstack/forms/Field";
 import Button from "@kenstack/components/Button";
 import Help from "@kenstack/components/Help";
 import { useForm } from "@kenstack/forms/context";
@@ -95,28 +102,61 @@ const imageRender = ({
 
     const [uploading, setUploading] = useState(false);
     const [src, setSrc] = useState("");
+    const uploadControllerRef = useRef<AbortController | null>(null);
 
     const reset = useCallback(() => {
       setSrc("");
       setUploading(false);
     }, []);
 
+    const cancelUpload = useCallback(() => {
+      uploadControllerRef.current?.abort();
+      uploadControllerRef.current = null;
+      reset();
+    }, [reset]);
+
+    useEffect(
+      () => () => {
+        uploadControllerRef.current?.abort();
+      },
+      [],
+    );
+
     const uploadFile = async (file?: File) => {
       if (!file) {
         return;
       }
 
+      uploadControllerRef.current?.abort();
+      const uploadController = new AbortController();
+      uploadControllerRef.current = uploadController;
       setUploading(true);
       startUploading(field.name);
       form.clearErrors(field.name);
+      const reader = new FileReader();
+      const abortReader = () => {
+        if (reader.readyState === FileReader.LOADING) {
+          reader.abort();
+        }
+      };
+      uploadController.signal.addEventListener("abort", abortReader, {
+        once: true,
+      });
+
       try {
-        const reader = new FileReader();
         reader.onload = () => {
-          if (typeof reader.result === "string") {
+          if (
+            !uploadController.signal.aborted &&
+            typeof reader.result === "string"
+          ) {
             setSrc(reader.result);
           }
         };
         reader.onerror = () => {
+          if (uploadController.signal.aborted) {
+            return;
+          }
+
           setStatusMessage({
             status: "error",
             message: "Reader error:" + reader.error,
@@ -130,8 +170,13 @@ const imageRender = ({
           fieldname: field.name,
           file,
           presignedUrlAction,
+          signal: uploadController.signal,
           uploadCompleteAction,
         });
+
+        if (result.status === "aborted") {
+          return;
+        }
 
         if (result.status === "error") {
           if (result.stage === "s3") {
@@ -157,6 +202,10 @@ const imageRender = ({
         }
 
         const { complete } = result;
+        if (uploadController.signal.aborted) {
+          return;
+        }
+
         field.onChange({
           url: complete.url,
           width: complete.width,
@@ -172,10 +221,24 @@ const imageRender = ({
         });
         setUploading(false);
       } catch (e) {
+        if (uploadController.signal.aborted) {
+          return;
+        }
+
         setStatusMessage(e instanceof Error ? e : String(e));
         reset();
       } finally {
-        finishUploading(field.name);
+        uploadController.signal.removeEventListener("abort", abortReader);
+        const shouldFinishUploading =
+          uploadControllerRef.current === uploadController ||
+          uploadControllerRef.current === null;
+        if (uploadControllerRef.current === uploadController) {
+          uploadControllerRef.current = null;
+        }
+
+        if (shouldFinishUploading) {
+          finishUploading(field.name);
+        }
       }
     };
 
@@ -208,18 +271,20 @@ const imageRender = ({
     };
 
     const input = (
-      <input
-        className="sr-only"
-        type="file"
-        accept={acceptStr}
-        onChange={(evt: ChangeEvent<HTMLInputElement>) => {
-          const target = evt.currentTarget;
-          if (target?.files) {
-            uploadFile(target.files[0]);
-            target.value = "";
-          }
-        }}
-      />
+      <FormControl>
+        <input
+          className="sr-only"
+          type="file"
+          accept={acceptStr}
+          onChange={(evt: ChangeEvent<HTMLInputElement>) => {
+            const target = evt.currentTarget;
+            if (target?.files) {
+              uploadFile(target.files[0]);
+              target.value = "";
+            }
+          }}
+        />
+      </FormControl>
     );
 
     if (uploading) {
@@ -230,10 +295,10 @@ const imageRender = ({
             type="button"
             className={"absolute top-1 right-1 cursor-pointer " + buttonClass}
             size="icon"
-            tooltip="Cancel"
+            tooltip="Cancel upload"
             variant="ghost"
             onClick={() => {
-              reset();
+              cancelUpload();
             }}
           >
             <CancelIcon />
