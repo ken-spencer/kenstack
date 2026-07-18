@@ -10,15 +10,14 @@ import type { EditorView } from "@milkdown/prose/view";
 import type { MilkdownPlugin } from "@milkdown/kit/ctx";
 import { $nodeSchema, $prose, $remark } from "@milkdown/kit/utils";
 import type { QueryClient } from "@tanstack/react-query";
-import { createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 
 import fetcher, { type FetchResult } from "@kenstack/api/fetcher";
-import Avatar from "@kenstack/components/Avatar";
 import {
   formatUserMentionTarget,
   userMentionIdFromHref,
 } from "@kenstack/components/Markdown/plugins";
+import MentionMenu from "./MentionMenu";
 
 export type MarkdownMentionConfig = {
   apiPath: string;
@@ -188,14 +187,13 @@ class MentionPluginView {
   private fetchTimeout: ReturnType<typeof setTimeout> | null = null;
   private loading = false;
   private match: MentionMatch | null = null;
-  private optionButtons: HTMLButtonElement[] = [];
   private options: MarkdownMentionOption[] = [];
   private repositionFrame: number | null = null;
-  private roots: Root[] = [];
   private requestKey = "";
+  private root: Root;
   private selectedIndex = 0;
   private readonly handleViewportChange = () => {
-    if (!this.match || this.element.style.display === "none") {
+    if (!this.match || this.element.classList.contains("hidden")) {
       return;
     }
 
@@ -214,19 +212,9 @@ class MentionPluginView {
     private config: MarkdownMentionRuntimeConfig,
   ) {
     this.element = document.createElement("div");
-    this.element.style.background = "var(--popover)";
-    this.element.style.border = "1px solid var(--border)";
-    this.element.style.borderRadius = "6px";
-    this.element.style.boxShadow = "0 10px 25px rgb(15 23 42 / 0.16)";
-    this.element.style.color = "var(--popover-foreground)";
-    this.element.style.fontSize = "13px";
-    this.element.style.lineHeight = "18px";
-    this.element.style.maxWidth = "min(18rem, calc(100vw - 2rem))";
-    this.element.style.minWidth = "13rem";
-    this.element.style.padding = "4px";
-    this.element.style.position = "fixed";
-    this.element.style.zIndex = "60";
-    this.element.style.display = "none";
+    this.element.className =
+      "border-border bg-popover text-popover-foreground fixed z-[60] hidden min-w-52 max-w-[min(18rem,calc(100vw_-_2rem))] rounded-md border p-1 text-[13px] leading-[18px] shadow-[0_10px_25px_rgb(15_23_42_/_0.16)]";
+    this.root = createRoot(this.element);
 
     this.element.addEventListener("mousedown", (event) => {
       event.preventDefault();
@@ -312,13 +300,14 @@ class MentionPluginView {
       this.repositionFrame = null;
     }
     this.clearRequest();
-    this.clearPopover();
+    this.root.unmount();
     mentionPluginViews.delete(this.view);
     this.element.remove();
   }
 
   private hide() {
-    this.element.style.display = "none";
+    this.element.classList.add("hidden");
+    this.element.classList.remove("block");
   }
 
   private deactivate() {
@@ -340,7 +329,8 @@ class MentionPluginView {
     const rect = posToDOMRect(this.view, this.match.from, this.match.to);
     this.element.style.left = `${Math.max(8, rect.left)}px`;
     this.element.style.top = `${rect.bottom + 6}px`;
-    this.element.style.display = "block";
+    this.element.classList.remove("hidden");
+    this.element.classList.add("block");
   }
 
   private insertMention(option: MarkdownMentionOption) {
@@ -503,75 +493,35 @@ class MentionPluginView {
     const minQueryLength = this.config.minQueryLength ?? 0;
     const queryReady = this.match.query.length >= minQueryLength;
 
-    this.clearPopover();
-
     if (!queryReady) {
-      this.element.appendChild(
-        createStatusElement(`Type after ${this.match.trigger}`),
-      );
+      this.renderMenu({
+        message: `Type after ${this.match.trigger}`,
+        status: "prompt",
+      });
       return;
     }
 
     if (this.loading) {
-      this.element.appendChild(createStatusElement("Searching..."));
+      this.renderMenu({ message: "Searching...", status: "loading" });
       return;
     }
 
     if (this.error) {
-      this.element.appendChild(createStatusElement(this.error));
+      this.renderMenu({ message: this.error, status: "error" });
       return;
     }
 
     if (!this.options.length) {
-      this.element.appendChild(createStatusElement("No matching people."));
+      this.renderMenu({ message: "No matching people.", status: "empty" });
       return;
     }
 
     this.selectedIndex = Math.min(this.selectedIndex, this.options.length - 1);
-
-    for (const [index, option] of this.options.entries()) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.setAttribute("aria-selected", "false");
-      button.setAttribute("role", "option");
-      button.style.alignItems = "center";
-      button.style.background = "transparent";
-      button.style.border = "0";
-      button.style.borderRadius = "4px";
-      button.style.color = "inherit";
-      button.style.cursor = "pointer";
-      button.style.display = "flex";
-      button.style.gap = "8px";
-      button.style.padding = "6px";
-      button.style.textAlign = "left";
-      button.style.width = "100%";
-      button.addEventListener("mouseenter", () => {
-        this.selectOption(index);
-      });
-      button.addEventListener("click", () => {
-        this.insertMention(option);
-      });
-
-      const avatar = createAvatarElement(option);
-      this.roots.push(avatar.root);
-
-      button.appendChild(avatar.element);
-      button.appendChild(createLabelElement(option));
-      this.element.appendChild(button);
-      this.optionButtons.push(button);
-    }
-
-    this.updateOptionStyles();
+    this.renderMenu({ status: "options" });
   }
 
   private clearPopover() {
-    for (const root of this.roots) {
-      root.unmount();
-    }
-
-    this.roots = [];
-    this.optionButtons = [];
-    this.element.replaceChildren();
+    this.root.render(null);
   }
 
   private menuHasKeyboardFocus() {
@@ -580,7 +530,7 @@ class MentionPluginView {
     return (
       match !== null &&
       match.query.length >= (this.config.minQueryLength ?? 0) &&
-      this.element.style.display !== "none"
+      !this.element.classList.contains("hidden")
     );
   }
 
@@ -591,20 +541,35 @@ class MentionPluginView {
 
     this.selectedIndex =
       (this.selectedIndex + offset + this.options.length) % this.options.length;
-    this.updateOptionStyles();
+    this.render();
   }
 
   private selectOption(index: number) {
     this.selectedIndex = index;
-    this.updateOptionStyles();
+    this.render();
   }
 
-  private updateOptionStyles() {
-    for (const [index, button] of this.optionButtons.entries()) {
-      const selected = index === this.selectedIndex;
-      button.setAttribute("aria-selected", selected ? "true" : "false");
-      button.style.background = selected ? "var(--accent)" : "transparent";
-    }
+  private renderMenu({
+    message,
+    status,
+  }: {
+    message?: string;
+    status: "empty" | "error" | "loading" | "options" | "prompt";
+  }) {
+    this.root.render(
+      <MentionMenu
+        message={message}
+        onHighlight={(index) => {
+          this.selectOption(index);
+        }}
+        onSelect={(option) => {
+          this.insertMention(option);
+        }}
+        options={this.options}
+        selectedIndex={this.selectedIndex}
+        status={status}
+      />,
+    );
   }
 }
 
@@ -734,42 +699,6 @@ function formatMentionLabel(label: string) {
 
 function normalizeMentionLabel(label: string) {
   return label.trim().replace(/^@+/, "");
-}
-
-function createAvatarElement(option: MarkdownMentionOption) {
-  const element = document.createElement("span");
-  element.style.display = "inline-flex";
-  element.style.flexShrink = "0";
-  element.style.height = "24px";
-  element.style.width = "24px";
-
-  const root = createRoot(element);
-  root.render(
-    createElement(Avatar, {
-      className: "size-6 shrink-0 p-0 text-[10px]",
-      initials: option.initials ?? "?",
-      url: option.avatarUrl,
-    }),
-  );
-
-  return { element, root };
-}
-
-function createLabelElement(option: MarkdownMentionOption) {
-  const label = document.createElement("span");
-  label.textContent = option.label;
-  label.style.overflow = "hidden";
-  label.style.textOverflow = "ellipsis";
-  label.style.whiteSpace = "nowrap";
-  return label;
-}
-
-function createStatusElement(message: string) {
-  const element = document.createElement("div");
-  element.textContent = message;
-  element.style.color = "var(--muted-foreground)";
-  element.style.padding = "8px 10px";
-  return element;
 }
 
 function markdownMentionQueryKey(
