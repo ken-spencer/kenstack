@@ -1,4 +1,5 @@
 import type { Readable } from "node:stream";
+import { buffer } from "node:stream/consumers";
 
 import {
   DeleteObjectCommand,
@@ -216,18 +217,18 @@ export async function completeMediaUpload({
   }
 
   if (kind === "file") {
-    const sourceSize =
-      typeof originalObject.ContentLength === "number"
-        ? originalObject.ContentLength
-        : (await streamToBuffer(originalStream)).length;
-
+    let sourceSize: number;
     if (typeof originalObject.ContentLength === "number") {
+      sourceSize = originalObject.ContentLength;
       originalStream.destroy();
-    }
+    } else {
+      const originalBuffer = await buffer(originalStream);
+      if (originalBuffer.length > uploadConfig.maxSize) {
+        await removePendingImage(key, id, userId);
+        return mediaUploadError(uploadConfig.maxSizeMessage);
+      }
 
-    if (sourceSize > uploadConfig.maxSize) {
-      await removePendingImage(key, id, userId);
-      return mediaUploadError(uploadConfig.maxSizeMessage);
+      sourceSize = originalBuffer.length;
     }
 
     const [file] = await deps.db
@@ -263,7 +264,7 @@ export async function completeMediaUpload({
   }
 
   const { default: sharp } = await import("sharp");
-  const originalBuffer = await streamToBuffer(originalStream);
+  const originalBuffer = await buffer(originalStream);
 
   if (originalBuffer.length > uploadConfig.maxSize) {
     await removePendingImage(key, id, userId);
@@ -323,49 +324,41 @@ export async function completeMediaUpload({
   const originalWebpKey = `${prefix}/original/${baseName}.webp`;
   const squareWebpKey = `${prefix}/square/${baseName}.webp`;
 
-  const originalWebp = await sharp(originalBuffer)
-    .rotate()
-    .resize({
+  if (!metadata.width || !metadata.height) {
+    return mediaUploadError("Could not determine uploaded image dimensions");
+  }
+
+  const originalWebp = await createWebpVariant({
+    key: originalWebpKey,
+    missingDimensionsMessage: "Could not determine original variant dimensions",
+    resize: {
       width: maxOriginalWidth,
       height: maxOriginalHeight,
       fit: "inside",
       withoutEnlargement: true,
-    })
-    .webp(webpOptions)
-    .toBuffer();
+    },
+    source: originalBuffer,
+    webpOptions,
+  });
+  if (originalWebp.status === "error") {
+    return originalWebp;
+  }
 
-  const squareWebp = await sharp(originalBuffer)
-    .rotate()
-    .resize({
+  const squareWebp = await createWebpVariant({
+    key: squareWebpKey,
+    missingDimensionsMessage: "Could not determine square variant dimensions",
+    resize: {
       width: squareSize,
       height: squareSize,
       fit: "cover",
       position: "centre",
       withoutEnlargement: true,
-    })
-    .webp(webpOptions)
-    .toBuffer();
-
-  await Promise.all([
-    uploadWebpVariant(originalWebpKey, originalWebp),
-    uploadWebpVariant(squareWebpKey, squareWebp),
-  ]);
-
-  const originalWebpUrl = `https://${bucket}.s3.${region}.amazonaws.com/${originalWebpKey}`;
-  const squareWebpUrl = `https://${bucket}.s3.${region}.amazonaws.com/${squareWebpKey}`;
-  const originalWebpMetadata = await sharp(originalWebp).metadata();
-  const squareWebpMetadata = await sharp(squareWebp).metadata();
-
-  if (!metadata.width || !metadata.height) {
-    return mediaUploadError("Could not determine uploaded image dimensions");
-  }
-
-  if (!originalWebpMetadata.width || !originalWebpMetadata.height) {
-    return mediaUploadError("Could not determine original variant dimensions");
-  }
-
-  if (!squareWebpMetadata.width || !squareWebpMetadata.height) {
-    return mediaUploadError("Could not determine square variant dimensions");
+    },
+    source: originalBuffer,
+    webpOptions,
+  });
+  if (squareWebp.status === "error") {
+    return squareWebp;
   }
 
   const [image] = await deps.db
@@ -378,21 +371,9 @@ export async function completeMediaUpload({
       sourceWidth: metadata.width,
       sourceHeight: metadata.height,
       variants: {
-        original: {
-          key: originalWebpKey,
-          url: originalWebpUrl,
-          type: "image/webp",
-          size: originalWebp.length,
-          width: originalWebpMetadata.width,
-          height: originalWebpMetadata.height,
-        },
+        original: originalWebp.variant,
         square: {
-          key: squareWebpKey,
-          url: squareWebpUrl,
-          type: "image/webp",
-          size: squareWebp.length,
-          width: squareWebpMetadata.width,
-          height: squareWebpMetadata.height,
+          ...squareWebp.variant,
           square: true,
         },
       },
@@ -420,7 +401,7 @@ export async function completeMediaUpload({
     sourceSize: originalBuffer.length,
     sourceWidth: metadata.width,
     sourceHeight: metadata.height,
-    originalUrl: originalWebpUrl,
+    originalUrl: originalWebp.variant.url,
   });
 }
 
@@ -499,16 +480,6 @@ async function sanitizeSvg(buffer: Buffer) {
   throw new Error("Could not sanitize SVG");
 }
 
-async function streamToBuffer(stream: Readable) {
-  const chunks: Buffer[] = [];
-
-  for await (const chunk of stream) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-  }
-
-  return Buffer.concat(chunks);
-}
-
 function getWebpOptions(format?: string) {
   return format === "png" || format === "gif" || format === "webp"
     ? { lossless: true }
@@ -530,6 +501,65 @@ async function uploadWebpVariant(key: string, body: Buffer) {
       ContentType: "image/webp",
     }),
   );
+}
+
+async function createWebpVariant({
+  key,
+  missingDimensionsMessage,
+  resize,
+  source,
+  webpOptions,
+}: {
+  key: string;
+  missingDimensionsMessage: string;
+  resize:
+    | {
+        fit: "inside";
+        height: number;
+        width: number;
+        withoutEnlargement: boolean;
+      }
+    | {
+        fit: "cover";
+        height: number;
+        position: "centre";
+        width: number;
+        withoutEnlargement: boolean;
+      };
+  source: Buffer;
+  webpOptions:
+    | {
+        lossless: boolean;
+      }
+    | {
+        quality: number;
+      };
+}) {
+  const { default: sharp } = await import("sharp");
+  const body = await sharp(source)
+    .rotate()
+    .resize(resize)
+    .webp(webpOptions)
+    .toBuffer();
+
+  await uploadWebpVariant(key, body);
+
+  const metadata = await sharp(body).metadata();
+  if (!metadata.width || !metadata.height) {
+    return mediaUploadError(missingDimensionsMessage);
+  }
+
+  return {
+    status: "success" as const,
+    variant: {
+      key,
+      url: `https://${bucket}.s3.${region}.amazonaws.com/${key}`,
+      type: "image/webp" as const,
+      size: body.length,
+      width: metadata.width,
+      height: metadata.height,
+    },
+  };
 }
 
 async function removePendingImage(key: string, id: number, userId: number) {
