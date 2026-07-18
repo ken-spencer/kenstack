@@ -418,7 +418,7 @@ function mediaUploadError(message: string) {
   return { status: "error" as const, message };
 }
 
-function mediaUploadSuccess(payload: Record<string, unknown>) {
+function mediaUploadSuccess<T extends Record<string, unknown>>(payload: T) {
   return { status: "success" as const, payload };
 }
 

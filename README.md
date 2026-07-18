@@ -28,12 +28,6 @@ npm run prettier
 
 Checks lint and formatting.
 
-```bash
-npm run users:add-admin
-```
-
-Interactively creates an admin user. The script loads database settings from the host environment, `.env.local`, or `.env`.
-
 ## Conventions
 
 Agent-facing implementation guidance lives in `agents/`. Those files are the source of truth for Kenstack coding conventions, data rules, UI/admin boundaries, TypeScript policy, and migration notes.

@@ -285,10 +285,9 @@ export async function loadAdminListNeighbors({
     .limit(1);
 
   return {
-    status: "success",
     previousId: row?.previousId ?? null,
     nextId: row?.nextId ?? null,
-  } as const;
+  };
 }
 
 export async function listWhere<TTable extends AdminContentTable>(
