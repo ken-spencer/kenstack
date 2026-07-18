@@ -1,18 +1,16 @@
 import { useCallback, useState, type ChangeEvent, type DragEvent } from "react";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 
-import fetcher from "@kenstack/api/fetcher";
-
 import AddImageIcon from "./AddImageIcon";
 import ProgressIcon from "@kenstack/icons/Progress";
 import { Upload as UploadIcon, X as CancelIcon } from "lucide-react";
 
 import { twMerge } from "tailwind-merge";
 import Field, { type FieldProps } from "@kenstack/forms/Field";
-import getUploadErrorMessage from "@kenstack/forms/getUploadErrorMessage";
 import Button from "@kenstack/components/Button";
 import Help from "@kenstack/components/Help";
 import { useForm } from "@kenstack/forms/context";
+import { uploadMedia } from "@kenstack/forms/lib/uploadMedia";
 
 import { rasterMimeTypes as acceptDefault } from "@kenstack/db/tables/media/mimeTypes";
 import ImageDetailsModal, {
@@ -126,83 +124,39 @@ const imageRender = ({
         };
         reader.readAsDataURL(file);
 
-        const res = await fetcher<{
-          uploadUrl: string;
-          id: string;
-        }>(apiPath, {
-          ...(extraData ? extraData : {}),
-          action: presignedUrlAction,
-          filename: file.name,
-          type: file.type,
+        const result = await uploadMedia({
+          apiPath,
+          extraData,
           fieldname: field.name,
-          size: file.size,
+          file,
+          presignedUrlAction,
+          uploadCompleteAction,
         });
 
-        if ("error" === res.status) {
-          const message = getUploadErrorMessage(res);
-          form.setError(field.name, {
-            type: "validate",
-            message,
-          });
+        if (result.status === "error") {
+          if (result.stage === "s3") {
+            //eslint-disable-next-line no-console
+            console.error("S3 upload failed", {
+              status: result.responseStatus,
+              error: result.responseText,
+            });
+
+            setStatusMessage({
+              status: "error",
+              message:
+                "There was a problem uploading your image. Please try again.",
+            });
+          } else {
+            form.setError(field.name, {
+              type: "validate",
+              message: result.message,
+            });
+          }
           reset();
           return;
         }
 
-        const uploadRes = await fetch(res.uploadUrl, {
-          method: "PUT",
-          headers: {
-            "Content-Type": file.type,
-            "Content-Length": file.size.toString(),
-          },
-
-          body: file,
-        });
-
-        if (!uploadRes.ok) {
-          const errorText = await uploadRes.text();
-          //eslint-disable-next-line no-console
-          console.error("S3 upload failed", {
-            status: uploadRes.status,
-            error: errorText,
-          });
-
-          setStatusMessage({
-            status: "error",
-            message:
-              "There was a problem uploading your image. Please try again.",
-          });
-          reset();
-          return;
-        }
-
-        const complete = await fetcher<{
-          imageId: string;
-          url: string;
-          width?: number;
-          height?: number;
-          filename?: string;
-          sourceType?: string;
-          sourceSize?: number;
-          sourceWidth?: number;
-          sourceHeight?: number;
-          originalUrl?: string;
-        }>(apiPath, {
-          ...(extraData ? extraData : {}),
-          action: uploadCompleteAction,
-          fieldname: field.name,
-          imageId: res.id,
-        });
-
-        if (complete.status === "error") {
-          const message = getUploadErrorMessage(complete);
-          form.setError(field.name, {
-            type: "validate",
-            message,
-          });
-          reset();
-          return;
-        }
-
+        const { complete } = result;
         field.onChange({
           url: complete.url,
           width: complete.width,

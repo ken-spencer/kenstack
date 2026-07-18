@@ -18,8 +18,7 @@ import AttachmentList, {
 import Field, { FormControl, type FieldProps } from "@kenstack/forms/Field";
 import AddImageIcon from "@kenstack/forms/ImageField/AddImageIcon";
 import { useForm } from "@kenstack/forms/context";
-import getUploadErrorMessage from "@kenstack/forms/getUploadErrorMessage";
-import fetcher from "@kenstack/api/fetcher";
+import { uploadMedia } from "@kenstack/forms/lib/uploadMedia";
 import {
   attachmentUploadStatusLabels,
   getAttachmentDocumentMeta,
@@ -169,80 +168,29 @@ const mediaRender = ({
       }
 
       updateLocalImage(localId, { uploadState: "uploading" });
-      const res = await fetcher<{
-        uploadUrl: string;
-        id: string;
-      }>(apiPath, {
-        ...extraData,
-        action: presignedUrlAction,
-        filename: file.name,
-        type: file.type,
+      const result = await uploadMedia({
+        apiPath,
+        extraData,
         fieldname: field.name,
-        size: file.size,
+        file,
+        presignedUrlAction,
+        uploadCompleteAction,
       });
 
-      if (res.status === "error") {
-        const message = getUploadErrorMessage(res);
-        updateLocalImage(localId, { uploadState: "error" });
-        return { status: "error", message } as const;
-      }
-
-      try {
-        const uploadRes = await fetch(res.uploadUrl, {
-          method: "PUT",
-          headers: {
-            "Content-Type": file.type,
-            "Content-Length": file.size.toString(),
-          },
-          body: file,
-        });
-
-        if (!uploadRes.ok) {
+      if (result.status === "error") {
+        if (result.stage === "s3") {
           setStatusMessage({
             status: "error",
             message:
               "There was a problem uploading your file. Please try again.",
           });
-          updateLocalImage(localId, { uploadState: "error" });
-          return {
-            status: "error",
-            message:
-              "There was a problem uploading your file. Please try again.",
-          } as const;
         }
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        setStatusMessage(error instanceof Error ? error : message);
+
         updateLocalImage(localId, { uploadState: "error" });
-        return { status: "error", message } as const;
+        return { status: "error", message: result.message } as const;
       }
 
-      const complete = await fetcher<{
-        imageId: string;
-        mediaId?: string;
-        kind?: AttachmentListItem["kind"];
-        url: string;
-        width?: number | null;
-        height?: number | null;
-        filename?: string;
-        sourceType?: string;
-        sourceSize?: number;
-        sourceWidth?: number | null;
-        sourceHeight?: number | null;
-        originalUrl?: string;
-      }>(apiPath, {
-        ...extraData,
-        action: uploadCompleteAction,
-        fieldname: field.name,
-        imageId: res.id,
-      });
-
-      if (complete.status === "error") {
-        const message = getUploadErrorMessage(complete);
-        updateLocalImage(localId, { uploadState: "error" });
-        return { status: "error", message } as const;
-      }
-
+      const { complete } = result;
       updateLocalImage(localId, {
         kind: complete.kind,
         url: complete.url,
