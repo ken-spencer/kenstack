@@ -305,7 +305,7 @@ function getDateFilterDateSchema() {
   return z.string().max(maxDateFilterLength).optional().catch(undefined);
 }
 
-function hasFilterValue(value: unknown) {
+export function hasFilterValue(value: unknown) {
   if (typeof value === "boolean") {
     return true;
   }

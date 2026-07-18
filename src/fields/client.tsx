@@ -279,13 +279,7 @@ export function radioButtonField<
     default: defaultValue,
     searchable: false,
     revisions: true,
-    zod:
-      options.zod ??
-      z.enum(
-        Array.from(
-          new Set([defaultValue, ...options.options.map(({ value }) => value)]),
-        ),
-      ),
+    zod: options.zod ?? enumFromOptions(defaultValue, options.options),
     ...options,
   });
 }
@@ -300,13 +294,7 @@ export function selectField<const TOptions extends SelectFieldOptions>(
     default: defaultValue,
     searchable: false,
     revisions: true,
-    zod:
-      options.zod ??
-      z.enum(
-        Array.from(
-          new Set([defaultValue, ...options.options.map(({ value }) => value)]),
-        ),
-      ),
+    zod: options.zod ?? enumFromOptions(defaultValue, options.options),
     display({ value }) {
       if (typeof value !== "string") {
         return "";
@@ -318,6 +306,15 @@ export function selectField<const TOptions extends SelectFieldOptions>(
     },
     ...options,
   });
+}
+
+function enumFromOptions(
+  defaultValue: string,
+  options: readonly FieldInputOption[],
+) {
+  return z.enum(
+    Array.from(new Set([defaultValue, ...options.map(({ value }) => value)])),
+  );
 }
 
 export function dateTimeField(

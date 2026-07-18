@@ -20,7 +20,10 @@ import type { AdminFilterMeta } from "@kenstack/admin/types/list";
 import Tooltip from "@kenstack/components/Tooltip";
 import { formatLongDate } from "@kenstack/lib/dateFormat";
 import { cn } from "@kenstack/lib/utils";
-import type { ListQueryStoreState } from "@kenstack/list/querySchema";
+import {
+  hasFilterValue,
+  type ListQueryStoreState,
+} from "@kenstack/list/querySchema";
 import type { SetQueryStore } from "@kenstack/list/useQueryStore";
 
 type FilterValue =
@@ -55,7 +58,7 @@ export default function FilterControl({
   const activeFilters = useMemo(
     () =>
       filterOptions.filter((option) =>
-        isActiveFilterValue(filters.filters[option.name]),
+        hasFilterValue(filters.filters[option.name]),
       ),
     [filterOptions, filters.filters],
   );
@@ -453,7 +456,7 @@ function setFilterValue(
 ) {
   setFilters((prev) => {
     const nextFilters = { ...prev.filters };
-    if (isActiveFilterValue(value)) {
+    if (hasFilterValue(value)) {
       nextFilters[name] = value;
     } else {
       delete nextFilters[name];
@@ -481,7 +484,7 @@ function addFilter(
       ...prev,
       filters: {
         ...prev.filters,
-        [name]: getInitialValue(kind),
+        [name]: true,
       },
     }),
     false,
@@ -499,39 +502,6 @@ function removeFilter(
     delete nextFilters[name];
     return { ...prev, filters: nextFilters };
   }, false);
-}
-
-function isActiveFilterValue(value: unknown) {
-  if (typeof value === "boolean") {
-    return true;
-  }
-
-  if (typeof value === "string") {
-    return value.trim().length > 0;
-  }
-
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return false;
-  }
-
-  const range = value as { from?: unknown; to?: unknown };
-  if (range.from || range.to) {
-    return true;
-  }
-
-  return Object.values(value).some((item) => item === "+" || item === "-");
-}
-
-function getInitialValue(kind: string) {
-  if (kind === "boolean") {
-    return true;
-  }
-
-  if (kind === "date-range" || kind === "enum" || kind === "includes") {
-    return {};
-  }
-
-  return "";
 }
 
 function compactRange(range: { from?: string; to?: string }) {
