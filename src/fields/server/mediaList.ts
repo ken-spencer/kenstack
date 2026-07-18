@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import type * as z from "zod";
 import type { AnyPgColumn, AnyPgTable } from "drizzle-orm/pg-core";
 import isEqual from "lodash-es/isEqual";
@@ -99,19 +99,6 @@ async function loadMedia({
     .select({
       id: media.mediaId,
       media: selectMediaSubquery(media.mediaId, "square"),
-      filename: mediaTable.filename,
-      sourceType: mediaTable.sourceType,
-      sourceSize: mediaTable.sourceSize,
-      sourceWidth: mediaTable.sourceWidth,
-      sourceHeight: mediaTable.sourceHeight,
-      originalUrl: sql<string | null>`
-        case
-          when ${mediaTable.kind} in ('svg', 'file') then ${mediaTable.sourceUrl}
-          else ${mediaTable.variants}->'original'->>'url'
-        end
-      `,
-      title: mediaTable.title,
-      caption: mediaTable.caption,
     })
     .from(media.table)
     .innerJoin(mediaTable, eq(media.mediaId, mediaTable.id))
@@ -121,16 +108,8 @@ async function loadMedia({
   return rows
     .filter((row) => row.media)
     .map((row) => ({
-      id: row.id,
       ...row.media,
-      filename: row.filename,
-      sourceType: row.sourceType,
-      sourceSize: row.sourceSize,
-      sourceWidth: row.sourceWidth,
-      sourceHeight: row.sourceHeight,
-      originalUrl: row.originalUrl,
-      title: row.title,
-      caption: row.caption,
+      id: row.id,
     }));
 }
 
@@ -170,7 +149,7 @@ async function saveMedia({
 
   for (const item of selected) {
     if ("action" in item && item.action === "upload") {
-      const [media] = await db
+      const [mediaRow] = await db
         .select({ id: mediaTable.id })
         .from(mediaTable)
         .where(
@@ -181,9 +160,9 @@ async function saveMedia({
         )
         .limit(1);
 
-      if (media) {
-        mediaIds.push(media.id);
-        metadataByMediaId.set(media.id, imageMetadata(item));
+      if (mediaRow) {
+        mediaIds.push(mediaRow.id);
+        metadataByMediaId.set(mediaRow.id, imageMetadata(item));
       }
     } else if (typeof item.id === "number") {
       mediaIds.push(item.id);

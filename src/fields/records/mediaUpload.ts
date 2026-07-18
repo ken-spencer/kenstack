@@ -25,8 +25,9 @@ import kebabCase from "lodash-es/kebabCase";
 import path from "node:path";
 import * as z from "zod";
 
-const region = process.env.AWS_S3_REGION ?? process.env.AWS_REGION;
-const bucket = process.env.AWS_S3_BUCKET;
+const region =
+  process.env.AWS_S3_REGION?.trim() || process.env.AWS_REGION?.trim();
+const bucket = process.env.AWS_S3_BUCKET?.trim();
 
 const maxOriginalWidth = 1920;
 const maxOriginalHeight = 1920;
@@ -71,7 +72,9 @@ export async function createMediaUpload({
   type: string;
   userId: number;
 }) {
-  if (!canUpload()) {
+  const s3Config = getS3Config();
+
+  if (!canUpload() || !s3Config) {
     return mediaUploadError("Uploads are not configured.");
   }
 
@@ -107,14 +110,14 @@ export async function createMediaUpload({
   const uploadUrl = await getSignedUrl(
     s3,
     new PutObjectCommand({
-      Bucket: bucket,
+      Bucket: s3Config.bucket,
       Key: key,
       ContentType: type,
     }),
     { expiresIn: 60 },
   );
 
-  const publicUrl = `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
+  const publicUrl = `https://${s3Config.bucket}.s3.${s3Config.region}.amazonaws.com/${key}`;
 
   const [image] = await deps.db
     .insert(media)
@@ -147,7 +150,9 @@ export async function completeMediaUpload({
   table: AnyPgTable;
   userId: number;
 }) {
-  if (!canUpload()) {
+  const s3Config = getS3Config();
+
+  if (!canUpload() || !s3Config) {
     return mediaUploadError("Uploads are not configured.");
   }
 
@@ -185,19 +190,20 @@ export async function completeMediaUpload({
   }
 
   if (!uploadConfig.accept.includes(pendingImage.type)) {
-    await removePendingImage(pendingImage.key, pendingImage.id, userId);
+    await removePendingImage(
+      s3Config.bucket,
+      pendingImage.key,
+      pendingImage.id,
+      userId,
+    );
     return mediaUploadError("File type is not supported.");
-  }
-
-  if (!bucket) {
-    return mediaUploadError("Missing AWS_S3_BUCKET");
   }
 
   const { id, key, kind, type, baseName, prefix, filename } = pendingImage;
 
   const originalObject = await s3.send(
     new GetObjectCommand({
-      Bucket: bucket,
+      Bucket: s3Config.bucket,
       Key: key,
     }),
   );
@@ -213,7 +219,7 @@ export async function completeMediaUpload({
     originalObject.ContentLength > uploadConfig.maxSize
   ) {
     originalStream.destroy();
-    await removePendingImage(key, id, userId);
+    await removePendingImage(s3Config.bucket, key, id, userId);
     return mediaUploadError(uploadConfig.maxSizeMessage);
   }
 
@@ -225,7 +231,7 @@ export async function completeMediaUpload({
     } else {
       const originalBuffer = await buffer(originalStream);
       if (originalBuffer.length > uploadConfig.maxSize) {
-        await removePendingImage(key, id, userId);
+        await removePendingImage(s3Config.bucket, key, id, userId);
         return mediaUploadError(uploadConfig.maxSizeMessage);
       }
 
@@ -268,7 +274,7 @@ export async function completeMediaUpload({
   const originalBuffer = await buffer(originalStream);
 
   if (originalBuffer.length > uploadConfig.maxSize) {
-    await removePendingImage(key, id, userId);
+    await removePendingImage(s3Config.bucket, key, id, userId);
     return mediaUploadError(uploadConfig.maxSizeMessage);
   }
 
@@ -283,7 +289,7 @@ export async function completeMediaUpload({
 
     await s3.send(
       new PutObjectCommand({
-        Bucket: bucket,
+        Bucket: s3Config.bucket,
         Key: key,
         Body: sanitizedSvg,
         ContentType: type,
@@ -338,6 +344,7 @@ export async function completeMediaUpload({
       fit: "inside",
       withoutEnlargement: true,
     },
+    s3Config,
     source: originalBuffer,
     webpOptions,
   });
@@ -355,6 +362,7 @@ export async function completeMediaUpload({
       position: "centre",
       withoutEnlargement: true,
     },
+    s3Config,
     source: originalBuffer,
     webpOptions,
   });
@@ -412,6 +420,17 @@ function mediaUploadError(message: string) {
 
 function mediaUploadSuccess(payload: Record<string, unknown>) {
   return { status: "success" as const, payload };
+}
+
+function getS3Config() {
+  if (!bucket || !region) {
+    return null;
+  }
+
+  return {
+    bucket,
+    region,
+  };
 }
 
 function getUploadConfig(field: ServerDefinedFields[string]) {
@@ -489,11 +508,7 @@ function getWebpOptions(format?: string) {
       };
 }
 
-async function uploadWebpVariant(key: string, body: Buffer) {
-  if (!bucket) {
-    throw new Error("Missing AWS_S3_BUCKET");
-  }
-
+async function uploadWebpVariant(bucket: string, key: string, body: Buffer) {
   await s3.send(
     new PutObjectCommand({
       Bucket: bucket,
@@ -508,12 +523,14 @@ async function createWebpVariant({
   key,
   missingDimensionsMessage,
   resize,
+  s3Config,
   source,
   webpOptions,
 }: {
   key: string;
   missingDimensionsMessage: string;
   resize: ResizeOptions;
+  s3Config: { bucket: string; region: string };
   source: Buffer;
   webpOptions: WebpOptions;
 }) {
@@ -524,7 +541,7 @@ async function createWebpVariant({
     .webp(webpOptions)
     .toBuffer();
 
-  await uploadWebpVariant(key, body);
+  await uploadWebpVariant(s3Config.bucket, key, body);
 
   const metadata = await sharp(body).metadata();
   if (!metadata.width || !metadata.height) {
@@ -535,7 +552,7 @@ async function createWebpVariant({
     status: "success" as const,
     variant: {
       key,
-      url: `https://${bucket}.s3.${region}.amazonaws.com/${key}`,
+      url: `https://${s3Config.bucket}.s3.${s3Config.region}.amazonaws.com/${key}`,
       type: "image/webp" as const,
       size: body.length,
       width: metadata.width,
@@ -544,11 +561,12 @@ async function createWebpVariant({
   };
 }
 
-async function removePendingImage(key: string, id: number, userId: number) {
-  if (!bucket) {
-    throw new Error("Missing AWS_S3_BUCKET");
-  }
-
+async function removePendingImage(
+  bucket: string,
+  key: string,
+  id: number,
+  userId: number,
+) {
   await s3.send(
     new DeleteObjectCommand({
       Bucket: bucket,

@@ -1,16 +1,39 @@
-This is a [basic cms that uses the next.js framework
+# Kenstack
 
-## Getting Started
+Kenstack is a shared CMS/admin core for Next.js host sites. Host projects provide application-specific modules, tables, dependency wiring, and environment configuration through the documented Kenstack entry points.
 
-First, run the development server:
+## Host Expectations
+
+- Next.js App Router
+- React 19+
+- Node.js 24+
+- Drizzle/Postgres application tables
+- `@app/deps` configured by the host site
+- Kenstack modules defined with `defineModule`, `defineTable`, `defineFields`, and field helpers
+
+## Scripts
+
+Run scripts from this package directory unless your host site wraps them.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
+npm run trace
 ```
 
-Open [http://localhost:3000](http://localhost:3001) with your browser to see the result.
+Starts Next.js in development mode on port 3001 with deprecation tracing enabled.
 
+```bash
+npm run lint
+npm run prettier
+```
+
+Checks lint and formatting.
+
+```bash
+npm run users:add-admin
+```
+
+Interactively creates an admin user. The script loads database settings from the host environment, `.env.local`, or `.env`.
+
+## Conventions
+
+Agent-facing implementation guidance lives in `agents/`. Those files are the source of truth for Kenstack coding conventions, data rules, UI/admin boundaries, TypeScript policy, and migration notes.
