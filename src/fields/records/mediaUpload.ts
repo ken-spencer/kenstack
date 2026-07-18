@@ -8,6 +8,7 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import type { ResizeOptions, WebpOptions } from "sharp";
 import { deps } from "@app/deps";
 import { media } from "@kenstack/db/tables";
 import {
@@ -512,28 +513,9 @@ async function createWebpVariant({
 }: {
   key: string;
   missingDimensionsMessage: string;
-  resize:
-    | {
-        fit: "inside";
-        height: number;
-        width: number;
-        withoutEnlargement: boolean;
-      }
-    | {
-        fit: "cover";
-        height: number;
-        position: "centre";
-        width: number;
-        withoutEnlargement: boolean;
-      };
+  resize: ResizeOptions;
   source: Buffer;
-  webpOptions:
-    | {
-        lossless: boolean;
-      }
-    | {
-        quality: number;
-      };
+  webpOptions: WebpOptions;
 }) {
   const { default: sharp } = await import("sharp");
   const body = await sharp(source)

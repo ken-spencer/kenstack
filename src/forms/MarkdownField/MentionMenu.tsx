@@ -1,11 +1,27 @@
 import Avatar from "@kenstack/components/Avatar";
 import { cn } from "@kenstack/lib/utils";
 
-type MentionMenuOption = {
+export type MentionMenuOption = {
   avatarUrl?: string | null;
   id: number;
   initials?: string;
   label: string;
+};
+
+export type MentionMenuStatus =
+  | "empty"
+  | "error"
+  | "loading"
+  | "options"
+  | "prompt";
+
+export type MentionMenuProps = {
+  message?: string;
+  onHighlight: (index: number) => void;
+  onSelect: (option: MentionMenuOption) => void;
+  options: MentionMenuOption[];
+  selectedIndex: number;
+  status: MentionMenuStatus;
 };
 
 export default function MentionMenu({
@@ -15,14 +31,7 @@ export default function MentionMenu({
   options,
   selectedIndex,
   status,
-}: {
-  message?: string;
-  onHighlight: (index: number) => void;
-  onSelect: (option: MentionMenuOption) => void;
-  options: MentionMenuOption[];
-  selectedIndex: number;
-  status: "empty" | "error" | "loading" | "options" | "prompt";
-}) {
+}: MentionMenuProps) {
   if (status !== "options") {
     return <div className="text-muted-foreground px-2.5 py-2">{message}</div>;
   }

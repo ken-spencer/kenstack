@@ -202,7 +202,7 @@ export async function prepareImageSave({
 function attachMediaAfterSave(
   mediaId: number,
   oldMediaId: number | null,
-  metadata: ImageMetadataInput | undefined,
+  metadata: ReturnType<typeof imageMetadata> | undefined,
 ): FieldAfterSave {
   return async (tx) => {
     await tx
@@ -225,10 +225,10 @@ type ImageMetadataInput = {
   caption?: string | null;
 };
 
-const imageMetadataKeys = ["alt", "title", "caption"] as const;
-
 export function imageMetadata(input: ImageMetadataInput) {
-  return Object.fromEntries(
-    imageMetadataKeys.map((key) => [key, input[key] ?? null]),
-  );
+  return {
+    alt: input.alt ?? null,
+    title: input.title ?? null,
+    caption: input.caption ?? null,
+  };
 }

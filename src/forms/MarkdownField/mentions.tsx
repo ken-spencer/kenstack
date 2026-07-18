@@ -17,7 +17,10 @@ import {
   formatUserMentionTarget,
   userMentionIdFromHref,
 } from "@kenstack/components/Markdown/plugins";
-import MentionMenu from "./MentionMenu";
+import MentionMenu, {
+  type MentionMenuOption,
+  type MentionMenuProps,
+} from "./MentionMenu";
 
 export type MarkdownMentionConfig = {
   apiPath: string;
@@ -26,15 +29,8 @@ export type MarkdownMentionConfig = {
   trigger?: string;
 };
 
-type MarkdownMentionOption = {
-  avatarUrl?: string | null;
-  id: number;
-  initials?: string;
-  label: string;
-};
-
 type MarkdownMentionSearchResult = FetchResult<{
-  mentions: MarkdownMentionOption[];
+  mentions: MentionMenuOption[];
 }>;
 
 type MarkdownMentionRuntimeConfig = MarkdownMentionConfig & {
@@ -187,7 +183,7 @@ class MentionPluginView {
   private fetchTimeout: ReturnType<typeof setTimeout> | null = null;
   private loading = false;
   private match: MentionMatch | null = null;
-  private options: MarkdownMentionOption[] = [];
+  private options: MentionMenuOption[] = [];
   private repositionFrame: number | null = null;
   private requestKey = "";
   private root: Root;
@@ -333,7 +329,7 @@ class MentionPluginView {
     this.element.classList.add("block");
   }
 
-  private insertMention(option: MarkdownMentionOption) {
+  private insertMention(option: MentionMenuOption) {
     if (!this.match) {
       return;
     }
@@ -450,7 +446,7 @@ class MentionPluginView {
       return queryClient.fetchQuery({
         queryKey,
         queryFn: ({ signal }) =>
-          fetcher<{ mentions: MarkdownMentionOption[] }>(
+          fetcher<{ mentions: MentionMenuOption[] }>(
             this.config.apiPath,
             {
               action,
@@ -466,7 +462,7 @@ class MentionPluginView {
 
     this.abortController = new AbortController();
 
-    return fetcher<{ mentions: MarkdownMentionOption[] }>(
+    return fetcher<{ mentions: MentionMenuOption[] }>(
       this.config.apiPath,
       {
         action,
@@ -552,10 +548,7 @@ class MentionPluginView {
   private renderMenu({
     message,
     status,
-  }: {
-    message?: string;
-    status: "empty" | "error" | "loading" | "options" | "prompt";
-  }) {
+  }: Pick<MentionMenuProps, "message" | "status">) {
     this.root.render(
       <MentionMenu
         message={message}
