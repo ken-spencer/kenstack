@@ -7,11 +7,9 @@ import {
   isValidElement,
   useCallback,
   useContext,
-  useEffect,
   useId,
   useMemo,
   useRef,
-  useState,
   type ComponentProps,
   type MouseEvent,
   type ReactNode,
@@ -20,6 +18,8 @@ import { XIcon } from "lucide-react";
 
 import { Button } from "@kenstack/components/Button";
 import { cn } from "@kenstack/lib/utils";
+import { useControllableOpen, useDialogTransition } from "./overlay";
+import { useOverlayStack } from "./overlayStack";
 
 const transitionDurationMs = 200;
 
@@ -50,18 +50,11 @@ function Sheet({
 }) {
   const titleId = useId();
   const descriptionId = useId();
-  const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
-  const open = openProp ?? uncontrolledOpen;
-  const setOpen = useCallback(
-    (nextOpen: boolean) => {
-      if (openProp === undefined) {
-        setUncontrolledOpen(nextOpen);
-      }
-
-      onOpenChange?.(nextOpen);
-    },
-    [onOpenChange, openProp],
-  );
+  const [open, setOpen] = useControllableOpen({
+    defaultOpen,
+    onOpenChange,
+    open: openProp,
+  });
   const value = useMemo(
     () => ({ descriptionId, open, setOpen, titleId }),
     [descriptionId, open, setOpen, titleId],
@@ -209,95 +202,28 @@ function SheetContent({
   const { descriptionId, open, setOpen, titleId } =
     useSheetContext("SheetContent");
   const dialogRef = useRef<HTMLDialogElement | null>(null);
-  const closeTimerRef = useRef<number | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
-  const [visibleOpen, setVisibleOpen] = useState(false);
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-
-    if (!dialog) {
-      return;
-    }
-
-    if (!open) {
-      if (!dialog.open) {
-        setVisibleOpen(false);
-        return;
-      }
-
-      setVisibleOpen(false);
-
-      if (closeTimerRef.current) {
-        window.clearTimeout(closeTimerRef.current);
-      }
-
-      closeTimerRef.current = window.setTimeout(() => {
-        closeTimerRef.current = null;
-        dialog.close();
-      }, transitionDurationMs);
-      return;
-    }
-
-    if (closeTimerRef.current) {
-      window.clearTimeout(closeTimerRef.current);
-      closeTimerRef.current = null;
-    }
-
-    if (animationFrameRef.current) {
-      window.cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
-    }
-
-    if (!dialog.open) {
-      dialog.showModal();
-    }
-
-    animationFrameRef.current = window.requestAnimationFrame(() => {
-      animationFrameRef.current = null;
-      setVisibleOpen(true);
-    });
-  }, [open]);
-
-  useEffect(
-    () => () => {
-      if (closeTimerRef.current) {
-        window.clearTimeout(closeTimerRef.current);
-      }
-
-      if (animationFrameRef.current) {
-        window.cancelAnimationFrame(animationFrameRef.current);
-      }
-    },
-    [],
+  const visibleOpen = useDialogTransition(
+    dialogRef,
+    open,
+    transitionDurationMs,
   );
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
+  const { isTopOverlay } = useOverlayStack({
+    onClose: () => {
       const dialog = dialogRef.current;
-      if (event.key !== "Escape" || event.defaultPrevented || !dialog?.open) {
+
+      if (!dialog?.open) {
         return;
       }
 
       const cancelEvent = new Event("cancel", { cancelable: true });
       dialog.dispatchEvent(cancelEvent);
-      event.preventDefault();
 
       if (!cancelEvent.defaultPrevented) {
         setOpen(false);
       }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [open, setOpen]);
+    },
+    open,
+  });
 
   return (
     <dialog
@@ -331,7 +257,11 @@ function SheetContent({
       onClick={(event) => {
         onClick?.(event);
 
-        if (!event.defaultPrevented && event.target === event.currentTarget) {
+        if (
+          !event.defaultPrevented &&
+          event.target === event.currentTarget &&
+          isTopOverlay()
+        ) {
           setOpen(false);
         }
       }}

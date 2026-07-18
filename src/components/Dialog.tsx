@@ -23,6 +23,7 @@ import { createPortal } from "react-dom";
 import { XIcon } from "lucide-react";
 
 import { cn } from "@kenstack/lib/utils";
+import { useControllableOpen, useDialogTransition } from "./overlay";
 import { useOverlayStack } from "./overlayStack";
 
 const transitionDurationMs = 200;
@@ -54,18 +55,11 @@ function Dialog({
 }) {
   const titleId = useId();
   const descriptionId = useId();
-  const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
-  const open = openProp ?? uncontrolledOpen;
-  const setOpen = useCallback(
-    (nextOpen: boolean) => {
-      if (openProp === undefined) {
-        setUncontrolledOpen(nextOpen);
-      }
-
-      onOpenChange?.(nextOpen);
-    },
-    [onOpenChange, openProp],
-  );
+  const [open, setOpen] = useControllableOpen({
+    defaultOpen,
+    onOpenChange,
+    open: openProp,
+  });
   const value = useMemo(
     () => ({ descriptionId, open, setOpen, titleId }),
     [descriptionId, open, setOpen, titleId],
@@ -214,10 +208,12 @@ function DialogContent({
   const { descriptionId, open, setOpen, titleId } =
     useDialogContext("DialogContent");
   const dialogRef = useRef<HTMLDialogElement | null>(null);
-  const closeTimerRef = useRef<number | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
   const [mounted, setMounted] = useState(false);
-  const [visibleOpen, setVisibleOpen] = useState(false);
+  const visibleOpen = useDialogTransition(
+    dialogRef,
+    mounted && open,
+    transitionDurationMs,
+  );
   const { isTopOverlay } = useOverlayStack({
     onClose: () => setOpen(false),
     open,
@@ -227,69 +223,6 @@ function DialogContent({
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Portals require a browser document after hydration.
     setMounted(true);
   }, []);
-
-  useEffect(() => {
-    if (!mounted) {
-      return;
-    }
-
-    const dialog = dialogRef.current;
-
-    if (!dialog) {
-      return;
-    }
-
-    if (!open) {
-      if (!dialog.open) {
-        setVisibleOpen(false);
-        return;
-      }
-
-      setVisibleOpen(false);
-
-      if (closeTimerRef.current) {
-        window.clearTimeout(closeTimerRef.current);
-      }
-
-      closeTimerRef.current = window.setTimeout(() => {
-        closeTimerRef.current = null;
-        dialog.close();
-      }, transitionDurationMs);
-      return;
-    }
-
-    if (closeTimerRef.current) {
-      window.clearTimeout(closeTimerRef.current);
-      closeTimerRef.current = null;
-    }
-
-    if (animationFrameRef.current) {
-      window.cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
-    }
-
-    if (!dialog.open) {
-      dialog.showModal();
-    }
-
-    animationFrameRef.current = window.requestAnimationFrame(() => {
-      animationFrameRef.current = null;
-      setVisibleOpen(true);
-    });
-  }, [mounted, open]);
-
-  useEffect(
-    () => () => {
-      if (closeTimerRef.current) {
-        window.clearTimeout(closeTimerRef.current);
-      }
-
-      if (animationFrameRef.current) {
-        window.cancelAnimationFrame(animationFrameRef.current);
-      }
-    },
-    [],
-  );
 
   const portalTarget = mounted ? document.body : null;
 

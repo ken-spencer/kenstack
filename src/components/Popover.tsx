@@ -22,6 +22,7 @@ import {
 import { createPortal } from "react-dom";
 
 import { cn } from "@kenstack/lib/utils";
+import { useControllableOpen, useDialogTransition } from "./overlay";
 import { useOverlayStack } from "./overlayStack";
 
 const transitionDurationMs = 150;
@@ -48,18 +49,10 @@ function Popover({
   open?: boolean;
 }) {
   const contentId = useId();
-  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
-  const open = openProp ?? uncontrolledOpen;
-  const setOpen = useCallback(
-    (nextOpen: boolean) => {
-      if (openProp === undefined) {
-        setUncontrolledOpen(nextOpen);
-      }
-
-      onOpenChange?.(nextOpen);
-    },
-    [onOpenChange, openProp],
-  );
+  const [open, setOpen] = useControllableOpen({
+    onOpenChange,
+    open: openProp,
+  });
   const value = useMemo(
     () => ({ contentId, open, setOpen }),
     [contentId, open, setOpen],
@@ -151,10 +144,19 @@ function PopoverContent({
 }) {
   const { contentId, open, setOpen } = usePopoverContext("PopoverContent");
   const dialogRef = useRef<HTMLDialogElement | null>(null);
-  const closeTimerRef = useRef<number | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
   const [mounted, setMounted] = useState(false);
-  const [visibleOpen, setVisibleOpen] = useState(false);
+  const positionCurrentDialog = useCallback(
+    (dialog: HTMLDialogElement) => {
+      positionDialog(dialog, contentId, align, sideOffset);
+    },
+    [align, contentId, sideOffset],
+  );
+  const visibleOpen = useDialogTransition(
+    dialogRef,
+    mounted && open,
+    transitionDurationMs,
+    positionCurrentDialog,
+  );
   const { isTopOverlay } = useOverlayStack({
     onClose: () => {
       onEscape?.();
@@ -169,60 +171,11 @@ function PopoverContent({
   }, []);
 
   useEffect(() => {
-    if (!mounted) {
-      return;
-    }
-
     const dialog = dialogRef.current;
-
-    if (!dialog) {
-      return;
-    }
-
-    if (!open) {
-      if (!dialog.open) {
-        setVisibleOpen(false);
-        return;
-      }
-
-      setVisibleOpen(false);
-
-      if (closeTimerRef.current) {
-        window.clearTimeout(closeTimerRef.current);
-      }
-
-      closeTimerRef.current = window.setTimeout(() => {
-        closeTimerRef.current = null;
-        dialog.close();
-      }, transitionDurationMs);
-      return;
-    }
-
-    if (closeTimerRef.current) {
-      window.clearTimeout(closeTimerRef.current);
-      closeTimerRef.current = null;
-    }
-
-    if (animationFrameRef.current) {
-      window.cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
-    }
-
-    if (!dialog.open) {
-      dialog.showModal();
-    }
-
-    positionDialog(dialog, contentId, align, sideOffset);
-    animationFrameRef.current = window.requestAnimationFrame(() => {
-      animationFrameRef.current = null;
-      positionDialog(dialog, contentId, align, sideOffset);
-      setVisibleOpen(true);
-    });
-
-    if (autoFocus) {
+    if (mounted && open && autoFocus && dialog?.open) {
       dialog.focus({ preventScroll: true });
     }
-  }, [align, autoFocus, contentId, mounted, open, sideOffset]);
+  }, [autoFocus, mounted, open]);
 
   useEffect(() => {
     if (!open) {
@@ -279,19 +232,6 @@ function PopoverContent({
       document.removeEventListener("pointerdown", handlePointerDown, true);
     };
   }, [contentId, isTopOverlay, open, setOpen]);
-
-  useEffect(
-    () => () => {
-      if (closeTimerRef.current) {
-        window.clearTimeout(closeTimerRef.current);
-      }
-
-      if (animationFrameRef.current) {
-        window.cancelAnimationFrame(animationFrameRef.current);
-      }
-    },
-    [],
-  );
 
   const portalTarget = mounted ? document.body : null;
 
@@ -411,15 +351,9 @@ function positionDialog(
 }
 
 function getTriggerElement(contentId: string) {
-  for (const element of document.querySelectorAll<HTMLElement>(
-    "[aria-controls]",
-  )) {
-    if (element.getAttribute("aria-controls") === contentId) {
-      return element;
-    }
-  }
-
-  return null;
+  return document.querySelector<HTMLElement>(
+    `[aria-controls="${CSS.escape(contentId)}"]`,
+  );
 }
 
 export { Popover, PopoverTrigger, PopoverContent };
