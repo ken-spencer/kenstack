@@ -3,6 +3,10 @@ import { type FetchError } from "./fetcher";
 import { pipeline, type PipelineOptions } from ".";
 import isPlainObject from "lodash-es/isPlainObject";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return isPlainObject(value);
+}
+
 export default async function multiPipeline(
   options: PipelineOptions & Record<string, unknown>,
   actions: Record<
@@ -22,8 +26,20 @@ export default async function multiPipeline(
     );
   }
 
-  const rawJson = await request.json();
-  if (!isPlainObject(rawJson)) {
+  let rawJson: unknown;
+  try {
+    rawJson = await request.json();
+  } catch {
+    return NextResponse.json(
+      {
+        status: "error",
+        message: "Invalid request. There was a problem parsing the JSON.",
+      } satisfies FetchError,
+      { status: 400 },
+    );
+  }
+
+  if (!isRecord(rawJson)) {
     return NextResponse.json(
       {
         status: "error",

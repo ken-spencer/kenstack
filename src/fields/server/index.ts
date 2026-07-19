@@ -140,9 +140,10 @@ export type ServerField<TValue = unknown> =
       preSave?: never;
     });
 
-export type ServerFieldResolver<TField extends DefinedField = DefinedField> = (
-  field: TField,
-) => ServerField<z.output<TField["zod"]>>;
+export type ServerFieldResolver<
+  TField extends DefinedField = DefinedField,
+  TValue = z.output<TField["zod"]>,
+> = (field: TField) => ServerField<TValue>;
 
 type ResolvedServerField = DefinedField & FieldBehavior;
 

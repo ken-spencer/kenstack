@@ -49,7 +49,8 @@ export function mediaListField({
   sortOrderKey = "sortOrder",
   sortOrder = table.sortOrder,
 }: MediaHandlerConfig): ServerFieldResolver<
-  DefinedField<"media-list"> & MediaListUploadOptions
+  DefinedField<"media-list"> & MediaListUploadOptions,
+  z.output<typeof mediaListSchema>
 > {
   const media = {
     table,
@@ -79,7 +80,7 @@ export function mediaListField({
         db,
         tableId,
         media,
-        selected: value as z.output<typeof mediaListSchema>,
+        selected: value,
         user,
       });
     },

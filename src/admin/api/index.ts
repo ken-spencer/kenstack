@@ -30,6 +30,10 @@ import {
 
 import { type FetchError } from "@kenstack/api/fetcher";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return isPlainObject(value);
+}
+
 const runAdminGet = async (request: NextRequest) => {
   const action = request.nextUrl.searchParams.get("action");
 
@@ -65,8 +69,20 @@ const runAdminPipeline = async (request: NextRequest) => {
     );
   }
 
-  const rawJson = await request.json();
-  if (!isPlainObject(rawJson)) {
+  let rawJson: unknown;
+  try {
+    rawJson = await request.json();
+  } catch {
+    return NextResponse.json(
+      {
+        status: "error",
+        message: "Invalid request. There was a problem parsing the JSON.",
+      } satisfies FetchError,
+      { status: 400 },
+    );
+  }
+
+  if (!isRecord(rawJson)) {
     return NextResponse.json(
       {
         status: "error",

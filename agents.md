@@ -110,6 +110,7 @@ For bug fixes, proceed autonomously only when the cause is clear and the fix is 
 - Do not refactor unrelated code.
 - Follow existing naming and folder conventions.
 - Use the smallest direct fix that solves the actual problem. Do not introduce broad splits, new layers, or larger abstractions when a narrow import, type, or local logic change is sufficient.
+- Treat `no-console` as a guard against temporary debug output being committed. If output is a permanent part of a CLI, script, or runtime error-reporting path, keep the normal `console.*` call at the intentional output boundary and add a narrow inline lint exception explaining why it is permanent. Do not add wrapper helpers, broad config overrides, or file-level disables solely to satisfy the rule.
 
 ## Testing / checks
 
