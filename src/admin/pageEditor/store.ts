@@ -7,7 +7,6 @@ import type { Content } from "./loadContent";
 import type { Name } from "./types";
 
 export type PageEditorInit = {
-  scope: string;
   slug: string;
   tenant?: string;
   content: Content;
@@ -33,15 +32,15 @@ export function getPageEditorScope(slug: string, tenant?: string) {
 
 export function createPageEditorStore(input: PageEditorInit) {
   return createStore<PageEditorStore>((set) => ({
-    scope: input.scope,
+    scope: getPageEditorScope(input.slug, input.tenant),
     slug: input.slug,
     tenant: input.tenant,
     content: input.content,
     editing: null,
 
-    init: ({ scope, slug, tenant, content }) => {
+    init: ({ slug, tenant, content }) => {
       set({
-        scope,
+        scope: getPageEditorScope(slug, tenant),
         slug,
         tenant,
         content,

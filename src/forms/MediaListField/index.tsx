@@ -8,7 +8,7 @@ import {
   type DragEvent,
 } from "react";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
-import { Paperclip, Upload, X } from "lucide-react";
+import { Crop, Paperclip, Upload, X } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 
 import ProgressIcon from "@kenstack/icons/Progress";
@@ -24,9 +24,17 @@ import {
   getAttachmentDocumentMeta,
 } from "@kenstack/lib/attachments";
 import { rasterMimeTypes as acceptDefault } from "@kenstack/db/tables/media/mimeTypes";
-import ImageDetailsModal, {
-  type ImageDetailsValue,
-} from "@kenstack/admin/forms/ImageDetailsModal";
+import type {
+  ImageDetailsEditor,
+  ImageDetailsValue,
+} from "@kenstack/forms/ImageDetails";
+import Button from "@kenstack/components/Button";
+import SquareCropModal from "@kenstack/forms/SquareCrop/Modal";
+import SquareCropPreview from "@kenstack/forms/SquareCrop/Preview";
+import {
+  applySquareCropChange,
+  type SquareCropChangeValue,
+} from "@kenstack/forms/SquareCrop/change";
 
 type MediaImage = ImageDetailsValue &
   AttachmentListItem & {
@@ -34,7 +42,7 @@ type MediaImage = ImageDetailsValue &
     localId?: string;
     mediaId?: string;
     previewUrl?: string;
-  };
+  } & SquareCropChangeValue;
 
 function AttachmentFilePreview({ media }: { media: AttachmentListItem }) {
   const {
@@ -88,18 +96,29 @@ export type MediaListFieldProps = FieldProps &
 const buttonClass =
   "bg-muted hover:bg-secondary inline-flex size-6 items-center justify-center rounded-full border";
 
-export default function MediaListField({
+export default function MediaListField(props: MediaListFieldProps) {
+  return <MediaListFieldControl {...props} />;
+}
+
+export function MediaListFieldWithDetails(
+  props: MediaListFieldProps & { ImageDetails: ImageDetailsEditor },
+) {
+  return <MediaListFieldControl {...props} />;
+}
+
+function MediaListFieldControl({
   name,
   label,
   description,
+  ImageDetails,
   ...props
-}: MediaListFieldProps) {
+}: MediaListFieldProps & { ImageDetails?: ImageDetailsEditor }) {
   return (
     <Field
       name={name}
       label={label}
       description={description}
-      render={mediaRender(props)}
+      render={mediaRender({ ...props, ImageDetails })}
     />
   );
 }
@@ -118,7 +137,8 @@ const mediaRender = ({
   uploadCompleteAction = "upload-complete",
   variant = "grid",
   multiple = true,
-}: MediaRenderProps) =>
+  ImageDetails,
+}: MediaRenderProps & { ImageDetails?: ImageDetailsEditor }) =>
   function MediaListFieldRender({
     field,
   }: {
@@ -127,7 +147,10 @@ const mediaRender = ({
     const { form, finishUploading, setStatusMessage, startUploading } =
       useForm();
     const [dragIndex, setDragIndex] = useState<number | null>(null);
-    const [editingIndex, setEditingIndex] = useState<number | null>(null);
+    const [editing, setEditing] = useState<{
+      index: number;
+      mode: "crop" | "details";
+    } | null>(null);
     const acceptStr = accept.join(", ");
     const value = multiple
       ? Array.isArray(field.value)
@@ -136,6 +159,8 @@ const mediaRender = ({
       : field.value && typeof field.value === "object"
         ? [field.value as MediaImage]
         : [];
+    const editingImage = editing ? value[editing.index] : null;
+    const editingCropSource = editingImage?.original;
     const setImages = useCallback(
       (images: MediaImage[]) => {
         field.onChange(multiple ? images : (images[0] ?? null));
@@ -207,6 +232,8 @@ const mediaRender = ({
         sourceWidth: complete.sourceWidth,
         sourceHeight: complete.sourceHeight,
         originalUrl: complete.originalUrl,
+        original: complete.original,
+        squareCrop: complete.squareCrop,
         previewUrl: undefined,
         uploadState: "done",
         action: "upload" as const,
@@ -441,6 +468,23 @@ const mediaRender = ({
             image.uploadState && image.uploadState !== "done"
               ? attachmentUploadStatusLabels[image.uploadState]
               : null;
+          const cropSource = image.original;
+          const imagePreview = fileMedia ? (
+            <AttachmentFilePreview media={image} />
+          ) : cropSource && form.getFieldState(field.name).isDirty ? (
+            <SquareCropPreview
+              alt={image.alt ?? ""}
+              className="h-full w-full"
+              crop={image.squareCrop}
+              source={cropSource}
+            />
+          ) : (
+            <img
+              alt={image.alt ?? ""}
+              className="h-full w-full object-cover"
+              src={image.previewUrl ?? image.url}
+            />
+          );
 
           return (
             <div
@@ -490,25 +534,24 @@ const mediaRender = ({
               >
                 <X />
               </button>
-              <button
-                type="button"
-                className="block h-full w-full"
-                disabled={image.uploadState === "error" || fileMedia}
-                onClick={() => {
-                  if (!fileMedia) {
-                    setEditingIndex(index);
-                  }
-                }}
-              >
-                {fileMedia ? (
-                  <AttachmentFilePreview media={image} />
-                ) : (
-                  <img
-                    alt={image.alt ?? ""}
-                    className="h-full w-full object-cover"
-                    src={image.previewUrl ?? image.url}
-                  />
-                )}
+              {ImageDetails ? (
+                <button
+                  type="button"
+                  aria-label="Edit image details"
+                  className="block h-full w-full"
+                  disabled={image.uploadState === "error" || fileMedia}
+                  onClick={() => {
+                    if (!fileMedia) {
+                      setEditing({ index, mode: "details" });
+                    }
+                  }}
+                >
+                  {imagePreview}
+                </button>
+              ) : (
+                <div className="h-full w-full">{imagePreview}</div>
+              )}
+              <div className="pointer-events-none absolute inset-0">
                 {uploadStatus && image.uploadState !== "uploading" ? (
                   <div
                     className={twMerge(
@@ -528,7 +571,23 @@ const mediaRender = ({
                     />
                   </div>
                 ) : null}
-              </button>
+              </div>
+              {canUpload && cropSource && image.uploadState !== "error" ? (
+                <Button
+                  type="button"
+                  aria-label="Adjust crop"
+                  className="bg-background/90 absolute right-1 bottom-1 z-20"
+                  icon={Crop}
+                  size="icon-xs"
+                  tooltip="Adjust crop"
+                  variant="outline"
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setEditing({ index, mode: "crop" });
+                  }}
+                />
+              ) : null}
             </div>
           );
         })}
@@ -550,18 +609,30 @@ const mediaRender = ({
           {input}
         </label>
 
-        {editingIndex !== null && value[editingIndex] ? (
-          <ImageDetailsModal
-            image={value[editingIndex]}
+        {editing?.mode === "crop" && editingImage && editingCropSource ? (
+          <SquareCropModal
+            crop={editingImage.squareCrop}
+            source={editingCropSource}
+            onChange={(squareCrop) => {
+              updateImage(
+                editing.index,
+                applySquareCropChange(editingImage, squareCrop),
+              );
+            }}
+            onClose={() => setEditing(null)}
+          />
+        ) : null}
+
+        {ImageDetails && editing?.mode === "details" && editingImage ? (
+          <ImageDetails
+            image={editingImage}
             onChange={(image) => {
-              updateImage(editingIndex, {
-                ...value[editingIndex],
+              updateImage(editing.index, {
+                ...editingImage,
                 ...image,
               });
             }}
-            onClose={() => {
-              setEditingIndex(null);
-            }}
+            onClose={() => setEditing(null)}
           />
         ) : null}
       </div>

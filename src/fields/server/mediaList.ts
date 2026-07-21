@@ -13,6 +13,7 @@ import type {
   ServerFieldResolver,
 } from ".";
 import { imageMetadata } from "./image";
+import { prepareMediaCrop } from "@kenstack/fields/records/mediaCrop";
 
 type MediaConfig = {
   table: AnyPgTable;
@@ -75,14 +76,72 @@ export function mediaListField({
         media,
       });
     },
-    async save({ db, tableId, value, user }) {
+    async save({ admin = false, db, tableId, value, user }) {
       return saveMedia({
+        admin,
         db,
         tableId,
         media,
         selected: value,
         user,
       });
+    },
+    async prepareSave({ admin, db, id, value, user }) {
+      const selected = value;
+      if (!selected.some((item) => item.squareCropChanged)) {
+        return { status: "success" as const };
+      }
+
+      const currentRows = id
+        ? await db
+            .select({ mediaId: media.mediaId })
+            .from(media.table)
+            .where(eq(media.tableId, id))
+        : [];
+      const allowedMediaIds = new Set(
+        currentRows
+          .map((row) => row.mediaId)
+          .filter((mediaId): mediaId is number => typeof mediaId === "number"),
+      );
+      if (admin) {
+        selected.forEach((item) => {
+          if (item.id !== undefined) {
+            allowedMediaIds.add(item.id);
+          }
+        });
+      }
+      const next = [...selected];
+      const afterSave = [];
+      const afterCommit = [];
+      const afterFailure = [];
+
+      try {
+        for (const [index, item] of selected.entries()) {
+          const prepared = await prepareMediaCrop({
+            allowedMediaIds,
+            db,
+            item,
+            userId: user.id,
+          });
+          if (prepared) {
+            next[index] = prepared.item;
+            afterSave.push(prepared.afterSave);
+            afterCommit.push(prepared.afterCommit);
+            afterFailure.push(prepared.afterFailure);
+          }
+        }
+
+        return {
+          status: "success" as const,
+          value: next,
+          afterSave,
+          afterCommit,
+          afterFailure,
+        };
+      } catch (error) {
+        await Promise.allSettled(afterFailure.map((message) => message()));
+        throw error;
+      }
     },
   });
 }
@@ -115,12 +174,14 @@ async function loadMedia({
 }
 
 async function saveMedia({
+  admin,
   db,
   tableId,
   media,
   selected,
   user,
 }: {
+  admin: boolean;
   db: FieldSaveContext["db"];
   tableId: number;
   media: MediaConfig;
@@ -143,15 +204,25 @@ async function saveMedia({
     .map((row) => row.mediaId)
     .filter((mediaId): mediaId is number => typeof mediaId === "number");
   const mediaIds: number[] = [];
+  const savedMedia: z.output<typeof mediaListSchema> = [];
   const metadataByMediaId = new Map<
     number,
     { alt?: string | null; title?: string | null; caption?: string | null }
   >();
 
   for (const item of selected) {
+    const savedItem = { ...item };
+    delete savedItem.squareCropChanged;
+
     if ("action" in item && item.action === "upload") {
       const [mediaRow] = await db
-        .select({ id: mediaTable.id })
+        .select({
+          id: mediaTable.id,
+          alt: mediaTable.alt,
+          title: mediaTable.title,
+          caption: mediaTable.caption,
+          status: mediaTable.status,
+        })
         .from(mediaTable)
         .where(
           and(
@@ -161,13 +232,32 @@ async function saveMedia({
         )
         .limit(1);
 
-      if (mediaRow) {
+      if (
+        mediaRow &&
+        (mediaRow.status === "uploaded" || oldMediaIds.includes(mediaRow.id))
+      ) {
         mediaIds.push(mediaRow.id);
-        metadataByMediaId.set(mediaRow.id, imageMetadata(item));
+        savedMedia.push(
+          admin ? savedItem : { ...savedItem, ...imageMetadata(mediaRow) },
+        );
+        if (admin) {
+          metadataByMediaId.set(mediaRow.id, imageMetadata(item));
+        }
       }
-    } else if (typeof item.id === "number") {
+    } else if (
+      item.id !== undefined &&
+      (admin || oldMediaIds.includes(item.id))
+    ) {
       mediaIds.push(item.id);
-      metadataByMediaId.set(item.id, imageMetadata(item));
+      const oldRow = oldRows.find((row) => row.mediaId === item.id);
+      savedMedia.push(
+        !admin && oldRow
+          ? { ...savedItem, ...imageMetadata(oldRow) }
+          : savedItem,
+      );
+      if (admin) {
+        metadataByMediaId.set(item.id, imageMetadata(item));
+      }
     }
   }
 
@@ -237,5 +327,5 @@ async function saveMedia({
       .where(inArray(mediaTable.id, removedMediaIds));
   }
 
-  return selected;
+  return savedMedia;
 }

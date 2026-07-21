@@ -14,8 +14,8 @@ export default function EditForm() {
           <div className="flex items-start gap-4">
             <ImageField
               name="avatar"
-              imageClass="rounded-full"
               placeholder={<AvatarPlaceholder />}
+              shape="round"
             />
             <div className="flex flex-grow flex-col gap-4">
               <div className="flex items-start gap-4">

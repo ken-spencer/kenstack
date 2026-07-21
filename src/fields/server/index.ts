@@ -36,6 +36,7 @@ type TransactionDb = Parameters<Parameters<FieldDatabase["transaction"]>[0]>[0];
 type TableColumns = ReturnType<typeof getTableColumns<AnyPgTable>>;
 type SelectValue = TableColumns[string] | SQL;
 export type FieldAfterSave = (tx: TransactionDb) => Promise<unknown>;
+export type FieldSaveTask = () => Promise<unknown> | unknown;
 type FieldSaveTable = AnyPgTable & {
   id: AnyPgColumn<{ data: number; notNull: true }>;
 };
@@ -53,6 +54,7 @@ export type FieldLoadContext = {
 };
 
 export type FieldSaveContext<TValue = unknown> = {
+  admin?: boolean;
   db: TransactionDb;
   key: string;
   tableId: number;
@@ -76,6 +78,7 @@ export type FieldListSelectContext = {
 };
 
 export type FieldPreSaveContext<TValue = unknown> = {
+  admin: boolean;
   db: TransactionDb;
   key: string;
   column: TableColumns[string] | undefined;
@@ -86,6 +89,27 @@ export type FieldPreSaveContext<TValue = unknown> = {
   table: FieldSaveTable;
   shouldSaveField: (key: string) => boolean;
 };
+
+export type FieldPrepareSaveContext<TValue = unknown> = Omit<
+  FieldPreSaveContext<TValue>,
+  "db"
+> & {
+  db: FieldDatabase;
+};
+
+export type FieldPrepareSaveResult =
+  | {
+      status: "success";
+      value?: unknown;
+      savedValue?: unknown;
+      afterSave?: FieldAfterSave[];
+      afterCommit?: FieldSaveTask[];
+      afterFailure?: FieldSaveTask[];
+    }
+  | {
+      status: "error";
+      message: string;
+    };
 
 export type FieldPreSaveResult =
   | {
@@ -130,14 +154,18 @@ export type FieldBehavior<TValue = unknown> = {
   filterConfig?: FieldFilterConfig;
   display?: FieldDisplay;
   preSave?: (ctx: FieldPreSaveContext<TValue>) => Promise<FieldPreSaveResult>;
+  prepareSave?: (
+    ctx: FieldPrepareSaveContext<TValue>,
+  ) => Promise<FieldPrepareSaveResult>;
 };
 
 export type ServerField<TValue = unknown> =
   | (FieldBehavior<TValue> & { zod?: never })
-  | (Omit<FieldBehavior, "save" | "preSave"> & {
+  | (Omit<FieldBehavior, "save" | "preSave" | "prepareSave"> & {
       zod: z.ZodType;
       save?: never;
       preSave?: never;
+      prepareSave?: never;
     });
 
 export type ServerFieldResolver<

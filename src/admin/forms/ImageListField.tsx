@@ -3,18 +3,20 @@
 import type { ComponentProps } from "react";
 
 import FormsImageListField from "@kenstack/forms/ImageListField";
-import { useAdminEdit } from "@kenstack/admin/Edit/context";
+import { rasterMimeTypes } from "@kenstack/db/tables/media/mimeTypes";
+import MediaListField from "@kenstack/admin/forms/MediaListField";
 
 export default function ImageListField(
   props: Omit<ComponentProps<typeof FormsImageListField>, "apiPath" | "data">,
 ) {
-  const { apiPath, name: adminName } = useAdminEdit();
+  const { accept = rasterMimeTypes, label = "Images", ...fieldProps } = props;
 
   return (
-    <FormsImageListField
-      {...props}
-      apiPath={apiPath}
-      data={{ name: adminName }}
+    <MediaListField
+      {...fieldProps}
+      accept={accept}
+      label={label}
+      variant="grid"
     />
   );
 }

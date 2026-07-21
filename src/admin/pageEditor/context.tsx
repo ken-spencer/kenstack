@@ -24,7 +24,6 @@ import { pageEditorFields } from "./fields";
 import { type Name } from "./types";
 import {
   createPageEditorStore,
-  getPageEditorScope,
   type PageEditorStore,
   type PageEditorStoreApi,
 } from "./store";
@@ -60,14 +59,13 @@ export function PageEditorProvider({
   tenant,
 }: PageContentProviderProps) {
   useAdminControl();
-  const scope = getPageEditorScope(slug, tenant);
   const [store] = useState(() =>
-    createPageEditorStore({ scope, slug, tenant, content }),
+    createPageEditorStore({ slug, tenant, content }),
   );
 
   useEffect(() => {
-    store.getState().init({ scope, slug, tenant, content });
-  }, [store, scope, slug, tenant, content]);
+    store.getState().init({ slug, tenant, content });
+  }, [store, slug, tenant, content]);
 
   return (
     <PageEditorStoreContext.Provider value={store}>

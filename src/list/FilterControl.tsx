@@ -43,7 +43,7 @@ export default function FilterControl({
   filters,
   setFilters,
   showLabel = false,
-  tooltip = true,
+  tooltip = !showLabel,
 }: {
   filter: AdminFilterMeta[];
   filters: ListQueryStoreState;
@@ -405,6 +405,7 @@ function DateFilterInput({
         {...props}
         placeholder={placeholder}
         className="pl-8 text-sm"
+        suppressHydrationWarning
         value={textValue}
         onChange={(event) => setTextValue(event.target.value)}
         onKeyDown={(event) => {

@@ -72,7 +72,7 @@ export const saveAction = (moduleConfig: DefinedAdminModule) => {
       const result = await saveAdminRecord({
         changes,
         id,
-        moduleConfig,
+        module: moduleConfig,
         values,
       });
 

@@ -1,7 +1,11 @@
 "use client";
 
-import ImageField, { type ImageFieldProps } from "@kenstack/forms/ImageField";
+import {
+  ImageFieldWithDetails,
+  type ImageFieldProps,
+} from "@kenstack/forms/ImageField";
 import { useAdminEdit } from "@kenstack/admin/Edit/context";
+import ImageDetailsModal from "@kenstack/admin/forms/ImageDetailsModal";
 
 export default function AdminImageField(
   props: Omit<ImageFieldProps, "apiPath">,
@@ -11,8 +15,9 @@ export default function AdminImageField(
     name,
   };
   return (
-    <ImageField
+    <ImageFieldWithDetails
       {...props}
+      ImageDetails={ImageDetailsModal}
       apiPath={apiPath}
       canUpload={canUpload}
       data={data}

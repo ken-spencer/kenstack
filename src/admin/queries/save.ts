@@ -7,31 +7,44 @@ import type { ServerDefinedFields } from "@kenstack/fields/server";
 import { adminLoadCacheTag } from "./load";
 import { adminListCacheTag } from "./list";
 
-export async function saveAdminRecord({
-  actionPrefix = "admin",
-  changes,
-  fields,
-  id,
-  moduleConfig,
-  values,
-}: {
-  actionPrefix?: string;
+type ModuleRecordSave = {
   changes?: string[];
-  fields?: ServerDefinedFields;
   id?: number | null;
-  moduleConfig: DefinedAdminModule;
+  module: DefinedAdminModule;
   values: Record<string, unknown>;
-}) {
-  const { name, admin: adminConfig } = moduleConfig;
+};
 
-  const saveFields = fields ?? adminConfig.fields;
+export function saveModuleRecord(
+  options: ModuleRecordSave & { fields: ServerDefinedFields },
+) {
+  return saveModule(options, false);
+}
+
+export function saveAdminRecord(options: ModuleRecordSave) {
+  return saveModule({ ...options, fields: options.module.admin.fields }, true);
+}
+
+async function saveModule(
+  {
+    changes,
+    fields,
+    id,
+    module,
+    values,
+  }: ModuleRecordSave & { fields: ServerDefinedFields },
+  admin: boolean,
+) {
+  const { name, admin: adminConfig } = module;
+  const actionPrefix = admin ? "admin" : name;
+
   const appendToReorder =
     "list" in adminConfig && !id && adminConfig.list.reorder;
   const result = !("list" in adminConfig)
     ? await saveRecord({
         actionPrefix,
+        admin,
         table: adminConfig.table,
-        fields: saveFields,
+        fields,
         values,
         changes: id ? changes : undefined,
         id,
@@ -58,8 +71,9 @@ export async function saveAdminRecord({
       })
     : await saveRecord({
         actionPrefix,
+        admin,
         table: adminConfig.table,
-        fields: saveFields,
+        fields,
         values,
         changes: id ? changes : undefined,
         id,

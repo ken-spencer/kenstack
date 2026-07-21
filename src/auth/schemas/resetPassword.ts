@@ -3,6 +3,7 @@ import * as z from "zod";
 
 const schema = z
   .object({
+    currentPassword: z.string().optional(),
     password: password.min(8, "Password must be at least 8 characters"),
     confirmPassword: password,
     token: z.string().optional(),

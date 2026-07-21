@@ -1,4 +1,4 @@
-import type { ImageVariants, SquareCrop } from "./types";
+import type { CropSource, ImageVariants, SquareCrop } from "./types";
 import { defineTable, type AdminTable } from "@kenstack/admin/table";
 import {
   text,
@@ -167,6 +167,7 @@ export type SelectedMedia = {
   sourceWidth?: number | null;
   sourceHeight?: number | null;
   originalUrl?: string | null;
+  original?: CropSource | null;
   squareCrop?: SquareCrop | null;
 };
 
@@ -212,6 +213,14 @@ export function selectMediaSubquery(
     'originalUrl', case
       when ${media.kind} in ('svg', 'file') then ${media.sourceUrl}
       else ${media.variants}->'original'->>'url'
+    end,
+    'original', case
+      when ${media.kind} = 'raster' then jsonb_build_object(
+        'url', ${media.variants}->'original'->>'url',
+        'width', (${media.variants}->'original'->>'width')::int,
+        'height', (${media.variants}->'original'->>'height')::int
+      )
+      else null
     end,
     'squareCrop', ${media.variants}->'squareCrop'
   )

@@ -154,14 +154,15 @@ export function textField<
   });
 }
 
+export function numberField(): FieldOptionOfKind<"number", number>;
 export function numberField<
-  const TOptions extends CommonFieldOptions<number | null> = Record<
-    never,
-    never
-  >,
+  const TOptions extends CommonFieldOptions<number | null>,
 >(
-  options: TOptions = {} as TOptions,
-): FieldOptionOfKind<"number", DefaultFromOptions<TOptions, number>, TOptions> {
+  options: TOptions,
+): FieldOptionOfKind<"number", DefaultFromOptions<TOptions, number>, TOptions>;
+export function numberField(
+  options: CommonFieldOptions<number | null> = {},
+): FieldOption<"number", number | null> {
   return field({
     kind: "number",
     default: 0,
@@ -169,11 +170,7 @@ export function numberField<
     revisions: true,
     zod: z.coerce.number(),
     ...options,
-  }) as unknown as FieldOptionOfKind<
-    "number",
-    DefaultFromOptions<TOptions, number>,
-    TOptions
-  >;
+  });
 }
 
 export function emailField<
@@ -389,12 +386,12 @@ export function fileField<
   });
 }
 
-export function mediaListField(
-  options: MediaListFieldOptions = {},
-): FieldOptionOfKind<"media-list", [], MediaListFieldOptions> {
+export function mediaListField(options: MediaListFieldOptions = {}) {
+  const defaultValue: z.output<typeof mediaListSchema> = [];
+
   return field({
     kind: "media-list",
-    default: [],
+    default: defaultValue,
     searchable: false,
     revisions: true,
     zod: mediaListSchema,
@@ -415,12 +412,25 @@ export function tagField(
   });
 }
 
-export function relationshipField(
-  options: RelationshipFieldOptions = {},
-): FieldOptionOfKind<"relationship", z.output<typeof relationshipSchema>> {
+export function relationshipField(): FieldOptionOfKind<
+  "relationship",
+  z.output<typeof relationshipSchema>
+>;
+export function relationshipField<
+  const TOptions extends RelationshipFieldOptions,
+>(
+  options: TOptions,
+): FieldOptionOfKind<
+  "relationship",
+  z.output<typeof relationshipSchema>,
+  TOptions
+>;
+export function relationshipField(options: RelationshipFieldOptions = {}) {
+  const defaultValue: z.output<typeof relationshipSchema> = [];
+
   return field({
     kind: "relationship",
-    default: [],
+    default: defaultValue,
     searchable: false,
     revisions: true,
     zod: relationshipSchema,

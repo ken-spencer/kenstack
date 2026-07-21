@@ -31,6 +31,7 @@ export function fileField(): ServerFieldResolver<
 }
 
 async function prepareFileSave({
+  admin,
   db,
   key,
   column,
@@ -88,7 +89,11 @@ async function prepareFileSave({
     const selectedFileId =
       typeof fieldData === "number" ? fieldData : fieldData.id;
 
-    if (typeof selectedFileId !== "number") {
+    if (selectedFileId === undefined) {
+      return { status: "error", message: "Could not find the selected file." };
+    }
+
+    if (!admin && selectedFileId !== oldMediaId) {
       return { status: "error", message: "Could not find the selected file." };
     }
 

@@ -1,5 +1,9 @@
 import * as z from "zod";
-import { squareCropSchema } from "./image";
+import {
+  cropSourceSchema,
+  squareCropChangedSchema,
+  squareCropSchema,
+} from "./image";
 
 const mediaImageFields = z.object({
   id: z.number().optional(),
@@ -16,7 +20,9 @@ const mediaImageFields = z.object({
   sourceWidth: z.number().nullable().optional(),
   sourceHeight: z.number().nullable().optional(),
   originalUrl: z.string().nullish(),
+  original: cropSourceSchema.nullish(),
   squareCrop: squareCropSchema,
+  squareCropChanged: squareCropChangedSchema,
 });
 
 const upload = mediaImageFields.extend({

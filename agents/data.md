@@ -29,6 +29,10 @@ Read this before database, Drizzle, table schema, Zod, validation, or pipeline s
 - For stable identity inside a small, non-secret JSONB collection, prefer `unsecureId()` from `@kenstack/lib/unsecureId` over `crypto.randomUUID()`, array indexes, or a new ad hoc generator. Reuse an existing durable domain key instead when it already uniquely identifies the entry.
 - Do not use `unsecureId()` for authentication or reset tokens, access-control decisions, or identifiers that must be difficult to guess. Keep those on their secure-token path.
 
+## Record saves
+
+- When a form updates an existing record through `saveRecord`, submit its top-level dirty field names as `changes`, validate them against the action's values schema, and pass them through to `saveRecord`. Do not drop `changes` at a custom form or action boundary: omitting them means every submitted field is saved. Full-field saves are appropriate for inserts and deliberate upserts.
+
 ## Validation
 
 - Use Zod v4.

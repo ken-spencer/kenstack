@@ -5,7 +5,7 @@ export {
 } from "./pipeline";
 export { default as multiPipeline } from "./multiPipeline";
 export { default as recaptcha } from "./recaptcha";
-export { UserFacingError } from "./errors";
+export { ReturnedError } from "./errors";
 
 import { z } from "zod";
 

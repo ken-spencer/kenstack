@@ -21,7 +21,6 @@ export default function SubmitButton({
       {...props}
       disabled={
         disabled ||
-        isPending ||
         (disabledUntilDirty && (!isReady || !isDirty)) ||
         uploadingFields.size > 0
       }

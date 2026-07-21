@@ -8,6 +8,7 @@ Before any Next.js work, find and read the relevant doc in `node_modules/next/di
 - Prefer Server Components by default.
 - Add `"use client"` only when needed.
 - Do not pass non-serializable values from server to client components.
+- When a Client Component renders date or time text using the environment's local timezone or current-time-relative formatting during server rendering, add `suppressHydrationWarning` to the exact text-bearing element or input whose value can legitimately differ in the browser. Do not suppress a parent section or use suppression for structural mismatches. Dates formatted with an explicit timezone or otherwise guaranteed to be deterministic do not need suppression.
 - Keep data loading on the server unless the UI requires client-side updates.
 - For lazy/dynamic loaders that are meant to keep optional client code out of the initial bundle, make the loader itself a Client Component. A Next.js bug can cause a Server Component loader, even one with a conditional or dynamic import, to pull the loaded client module and its dependencies into the build/route bundle.
 - Admin/client registries that call `defineAdminClients` or export module `clients` maps MUST start with `"use client"`. This is a required boundary, even when the file is imported by a server module today. If the directive is removed, the registry's dynamic imports can be bundled like direct imports, causing every registered admin/client module to leak onto every public page and massively increasing browser download size. Do not remove the directive to satisfy import-boundary concerns, lint preferences, bundle analysis, or a desire to make the file look server-safe.
@@ -15,6 +16,14 @@ Before any Next.js work, find and read the relevant doc in `node_modules/next/di
 - Do not fix public bundle leakage by moving Client Component loaders into Server Components, `server-only` files, or server-safe helper files. That can trigger the same Next.js bundling bug and pull the dynamically imported Client Components and their dependencies into route bundles.
 - If a client registry appears in a public route graph, do not reinterpret that as evidence the registry should be server-safe. Either fix the importing route/module graph while keeping the registry as a Client Component, or explicitly accept the measured bundle trade-off. If a larger fix is justified, split server-only module definitions from admin client registries, or pass client-enabled modules only at the admin entry point.
 - Before changing any file with `"use client"` or any dynamic import of a Client Component, stop and explain why the boundary is safe. If the goal is bundle reduction, verify with a production build before and after.
+
+### Error containment and reporting
+
+- On a composite page, contain a failure at the section level only when that section is independently useful and independently queried. Use the canonical Kenstack section error boundary. If it does not exist, implement it in Kenstack before using it from a site; do not create a site-local boundary or a parallel reporting path.
+- Keep expected empty results distinct from unexpected failures. The public failure state accepts a module title and says, “There is an unexpected problem loading {module title}. Please check back later.” Never expose exception messages, stack traces, query details, or error digests in the page.
+- Keep route- or page-level error handling for failures that invalidate the whole route. Do not use a route-segment `error.tsx` to contain one sibling section when the rest of the page can remain useful.
+- Send unexpected runtime failures through `deps.error(...)` wherever application dependencies are available. Framework hooks and reporter-owned adapters may call `@kenstack/lib/errorReporter` directly. Expected invalid request data may use a narrow, sanitized `console.error` and must not be sent to the operational reporter merely for visibility. Do not add other bare `console.error` paths outside the reporter's intentional output and non-recursive failure safeguards.
+- Use awaited Next.js `headers()` as the canonical source of incoming headers in supported request contexts. Use context already supplied by Next.js hooks, and capture sanitized header values before scheduling Server Component `after()` work. Reporting must still work without request metadata when no incoming request exists.
 - Before adding `server-only`, a server-only import, or a server builder to an existing `index.ts` or barrel, search every importer of that entry point. If any importer belongs to a Client Component graph, keep the barrel client-safe or update those consumers to explicit client-safe subpaths in the same change. A barrel's runtime boundary is determined by its consumers, not only by its directives.
 - Use route handlers for API endpoints.
 - Do not enumerate private, account, auth, or unlisted page paths in `robots.txt` or `robots.ts`. Robots files are public and are not access control; use auth, redirects, and `noindex` metadata/headers for those pages instead. Keep robots disallow rules to broad technical buckets such as `/admin` and `/api/`, unless the user explicitly asks for a public crawl rule.
@@ -112,18 +121,17 @@ For bug fixes, proceed autonomously only when the cause is clear and the fix is 
 - Use the smallest direct fix that solves the actual problem. Do not introduce broad splits, new layers, or larger abstractions when a narrow import, type, or local logic change is sufficient.
 - Treat `no-console` as a guard against temporary debug output being committed. If output is a permanent part of a CLI, script, or runtime error-reporting path, keep the normal `console.*` call at the intentional output boundary and add a narrow inline lint exception explaining why it is permanent. Do not add wrapper helpers, broad config overrides, or file-level disables solely to satisfy the rule.
 
-## Testing / checks
+## Routine checks
 
-Before finishing a code change, run the narrowest relevant checks:
+Before finishing ordinary code work, run TypeScript for type-affecting changes and lint for code or style changes. These are automatic routine checks and may also be run during on-demand review.
 
-- TypeScript check for type changes
-- lint for style changes
+Do not run production builds or unit tests during ordinary work or on-demand review. Those checks belong only to explicit final review under `agents/final-review.md` unless the user specifically requests them earlier.
 
-Before finalizing code changes, read `agents/review.md` and compare the generated code against that checklist. Fix issues that are clearly local and low-risk. If the checklist points to something that would require a broader refactor or a tradeoff, call it out instead of forcing a messy cleanup.
+## Review
 
-Before finalizing any touched TypeScript file, read `agents/typescript.md` and explicitly audit every new or changed type alias, interface, overload, generic argument, explicit return annotation, and cast in that file. Remove it unless it has a current, concrete reason under those rules.
+After each focused edit, quickly inspect the touched hunk before moving on. Catch small local issues while the context is fresh, especially duplicated branches, unnecessary helpers, unclear type extraction, and effects that are not synchronizing with an external system.
 
-After each focused edit, quickly compare the touched hunk against `agents/review.md` before moving on. Catch small local issues while the context is fresh, especially duplicated branches, unnecessary helpers, unclear type extraction, and effects that are not synchronizing with an external system.
+For regular, on-demand review of code changes, read `agents/review.md`. Review may be requested repeatedly and checks whether the code meets Kenstack standards; it does not trigger final preflight checks.
 
 For browser/UI verification, check whether a local dev server is already running before asking to start one. Probe the obvious localhost port or inspect listening TCP ports first, since this workspace often already has `next dev` running.
 

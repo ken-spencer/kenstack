@@ -5,7 +5,7 @@ import Footer from "./Footer";
 import FormRender from "./FormRender";
 import Breadcrumbs from "@kenstack/admin/components/Breadcrumbs";
 import Button from "@kenstack/components/Button";
-import canUpload from "@kenstack/lib/canUpload";
+import { uploadsConfigured } from "@kenstack/lib/mediaStorage";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -54,7 +54,11 @@ export default async function AdminEdit({
     notFound();
   }
 
-  const resolvedParentId = parentId ?? item?.parentId;
+  if (item && parentId !== undefined && item.parentId !== parentId) {
+    notFound();
+  }
+
+  const resolvedParentId = item?.parentId ?? parentId;
   const parentRecord =
     resolvedParentId !== undefined && moduleParent
       ? await loadAdminParentRecord({
@@ -73,7 +77,7 @@ export default async function AdminEdit({
       isNew={isNew}
       single={!("list" in adminConfig)}
       userId={userId}
-      canUpload={canUpload()}
+      canUpload={uploadsConfigured}
       defaultValues={defaultValues ?? {}}
       item={item}
       parentId={resolvedParentId}

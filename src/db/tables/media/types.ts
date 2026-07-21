@@ -20,19 +20,18 @@ export type Variant = {
   height: number;
 };
 
+export type CropSource = Pick<Variant, "url" | "width" | "height">;
+
 export type SquareCrop = {
-  mode: "center" | "manual";
+  /** Normalized crop center in the EXIF-oriented processed original. */
   x: number;
   y: number;
-  zoom?: number;
-};
-
-type SquareVariant = Variant & {
-  square: true;
+  /** source short edge / crop-box size; 1 is centered cover fit. */
+  zoom: number;
 };
 
 export type ImageVariants = {
   squareCrop?: SquareCrop | null;
   original: Variant;
-  square: SquareVariant;
+  square: Variant & { square: true };
 };

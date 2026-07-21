@@ -71,6 +71,36 @@ export function createUser<
     return getUserBySessionToken(token.value);
   };
 
+  const getCurrentSession = cache(async () => {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("sessionId");
+
+    if (!token) {
+      return;
+    }
+
+    const tokenHash = hashToken(token.value);
+    const [session] = await db
+      .select({
+        createdAt: sessions.createdAt,
+        impersonatedBy: sessions.impersonatedBy,
+        provider: sessions.provider,
+        userId: sessions.userId,
+      })
+      .from(sessions)
+      .innerJoin(users, eq(users.id, sessions.userId))
+      .where(
+        and(
+          eq(sessions.tokenHash, tokenHash),
+          gt(sessions.expiresAt, new Date()),
+          isNull(users.deletedAt),
+        ),
+      )
+      .limit(1);
+
+    return session;
+  });
+
   const requireUser = cache(async function requireUser(
     access: AuthAccess<TRoles[number]> = "authenticated",
   ): Promise<User<TRoles>> {
@@ -95,5 +125,10 @@ export function createUser<
     return user;
   });
 
-  return { getUserBySessionToken, getCurrentUser, requireUser };
+  return {
+    getUserBySessionToken,
+    getCurrentSession,
+    getCurrentUser,
+    requireUser,
+  };
 }

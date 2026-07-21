@@ -5,7 +5,6 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   PutObjectCommand,
-  S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import type { ResizeOptions, WebpOptions } from "sharp";
@@ -15,8 +14,9 @@ import {
   imageMimeTypes,
   rasterMimeTypes,
 } from "@kenstack/db/tables/media/mimeTypes";
-import canUpload from "@kenstack/lib/canUpload";
+import { squareImageSize } from "@kenstack/forms/SquareCrop/geometry";
 import { formatFileSize } from "@kenstack/lib/fileSize";
+import { mediaStorage } from "@kenstack/lib/mediaStorage";
 import unsecureId from "@kenstack/lib/unsecureId";
 import type { ServerDefinedFields } from "@kenstack/fields/server";
 import { and, eq, getTableName } from "drizzle-orm";
@@ -25,21 +25,11 @@ import kebabCase from "lodash-es/kebabCase";
 import path from "node:path";
 import * as z from "zod";
 
-const region =
-  process.env.AWS_S3_REGION?.trim() || process.env.AWS_REGION?.trim();
-const bucket = process.env.AWS_S3_BUCKET?.trim();
-
 const maxOriginalWidth = 1920;
 const maxOriginalHeight = 1920;
-const squareSize = 800;
 const svgMimeType = "image/svg+xml";
 const supportedImageMimeTypes: readonly string[] = imageMimeTypes;
 const supportedRasterMimeTypes: readonly string[] = rasterMimeTypes;
-
-const s3 = new S3Client({
-  requestChecksumCalculation: "WHEN_REQUIRED",
-  region,
-});
 
 export const mediaUploadRequestSchema = z.object({
   fieldname: z.string("field name is required"),
@@ -72,9 +62,9 @@ export async function createMediaUpload({
   type: string;
   userId: number;
 }) {
-  const s3Config = getS3Config();
+  const storage = mediaStorage;
 
-  if (!canUpload() || !s3Config) {
+  if (!storage?.uploadsConfigured) {
     return mediaUploadError("Uploads are not configured.");
   }
 
@@ -108,16 +98,16 @@ export async function createMediaUpload({
   }${ext}`;
 
   const uploadUrl = await getSignedUrl(
-    s3,
+    storage.client,
     new PutObjectCommand({
-      Bucket: s3Config.bucket,
+      Bucket: storage.bucket,
       Key: key,
       ContentType: type,
     }),
     { expiresIn: 60 },
   );
 
-  const publicUrl = `https://${s3Config.bucket}.s3.${s3Config.region}.amazonaws.com/${key}`;
+  const publicUrl = storage.publicUrl(key);
 
   const [image] = await deps.db
     .insert(media)
@@ -150,9 +140,9 @@ export async function completeMediaUpload({
   table: AnyPgTable;
   userId: number;
 }) {
-  const s3Config = getS3Config();
+  const storage = mediaStorage;
 
-  if (!canUpload() || !s3Config) {
+  if (!storage?.uploadsConfigured) {
     return mediaUploadError("Uploads are not configured.");
   }
 
@@ -191,7 +181,7 @@ export async function completeMediaUpload({
 
   if (!uploadConfig.accept.includes(pendingImage.type)) {
     await removePendingImage(
-      s3Config.bucket,
+      storage,
       pendingImage.key,
       pendingImage.id,
       userId,
@@ -201,9 +191,9 @@ export async function completeMediaUpload({
 
   const { id, key, kind, type, baseName, prefix, filename } = pendingImage;
 
-  const originalObject = await s3.send(
+  const originalObject = await storage.client.send(
     new GetObjectCommand({
-      Bucket: s3Config.bucket,
+      Bucket: storage.bucket,
       Key: key,
     }),
   );
@@ -219,7 +209,7 @@ export async function completeMediaUpload({
     originalObject.ContentLength > uploadConfig.maxSize
   ) {
     originalStream.destroy();
-    await removePendingImage(s3Config.bucket, key, id, userId);
+    await removePendingImage(storage, key, id, userId);
     return mediaUploadError(uploadConfig.maxSizeMessage);
   }
 
@@ -231,7 +221,7 @@ export async function completeMediaUpload({
     } else {
       const originalBuffer = await buffer(originalStream);
       if (originalBuffer.length > uploadConfig.maxSize) {
-        await removePendingImage(s3Config.bucket, key, id, userId);
+        await removePendingImage(storage, key, id, userId);
         return mediaUploadError(uploadConfig.maxSizeMessage);
       }
 
@@ -274,7 +264,7 @@ export async function completeMediaUpload({
   const originalBuffer = await buffer(originalStream);
 
   if (originalBuffer.length > uploadConfig.maxSize) {
-    await removePendingImage(s3Config.bucket, key, id, userId);
+    await removePendingImage(storage, key, id, userId);
     return mediaUploadError(uploadConfig.maxSizeMessage);
   }
 
@@ -287,9 +277,9 @@ export async function completeMediaUpload({
   if (type === svgMimeType) {
     const sanitizedSvg = await sanitizeSvg(originalBuffer);
 
-    await s3.send(
+    await storage.client.send(
       new PutObjectCommand({
-        Bucket: s3Config.bucket,
+        Bucket: storage.bucket,
         Key: key,
         Body: sanitizedSvg,
         ContentType: type,
@@ -327,13 +317,19 @@ export async function completeMediaUpload({
     });
   }
 
-  const webpOptions = getWebpOptions(metadata.format);
   const originalWebpKey = `${prefix}/original/${baseName}.webp`;
   const squareWebpKey = `${prefix}/square/${baseName}.webp`;
 
   if (!metadata.width || !metadata.height) {
     return mediaUploadError("Could not determine uploaded image dimensions");
   }
+
+  const webp =
+    metadata.format === "png" ||
+    metadata.format === "gif" ||
+    metadata.format === "webp"
+      ? { lossless: true }
+      : { quality: 82 };
 
   const originalWebp = await createWebpVariant({
     key: originalWebpKey,
@@ -344,9 +340,9 @@ export async function completeMediaUpload({
       fit: "inside",
       withoutEnlargement: true,
     },
-    s3Config,
+    storage,
     source: originalBuffer,
-    webpOptions,
+    webp,
   });
   if (originalWebp.status === "error") {
     return originalWebp;
@@ -356,15 +352,14 @@ export async function completeMediaUpload({
     key: squareWebpKey,
     missingDimensionsMessage: "Could not determine square variant dimensions",
     resize: {
-      width: squareSize,
-      height: squareSize,
+      width: squareImageSize,
+      height: squareImageSize,
       fit: "cover",
       position: "centre",
-      withoutEnlargement: true,
     },
-    s3Config,
+    storage,
     source: originalBuffer,
-    webpOptions,
+    webp,
   });
   if (squareWebp.status === "error") {
     return squareWebp;
@@ -411,6 +406,12 @@ export async function completeMediaUpload({
     sourceWidth: metadata.width,
     sourceHeight: metadata.height,
     originalUrl: originalWebp.variant.url,
+    original: {
+      url: originalWebp.variant.url,
+      width: originalWebp.variant.width,
+      height: originalWebp.variant.height,
+    },
+    squareCrop: null,
   });
 }
 
@@ -420,17 +421,6 @@ function mediaUploadError(message: string) {
 
 function mediaUploadSuccess<T extends Record<string, unknown>>(payload: T) {
   return { status: "success" as const, payload };
-}
-
-function getS3Config() {
-  if (!bucket || !region) {
-    return null;
-  }
-
-  return {
-    bucket,
-    region,
-  };
 }
 
 function getUploadConfig(field: ServerDefinedFields[string]) {
@@ -500,48 +490,36 @@ async function sanitizeSvg(buffer: Buffer) {
   throw new Error("Could not sanitize SVG");
 }
 
-function getWebpOptions(format?: string) {
-  return format === "png" || format === "gif" || format === "webp"
-    ? { lossless: true }
-    : {
-        quality: 82,
-      };
-}
-
-async function uploadWebpVariant(bucket: string, key: string, body: Buffer) {
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: bucket,
-      Key: key,
-      Body: body,
-      ContentType: "image/webp",
-    }),
-  );
-}
-
 async function createWebpVariant({
   key,
   missingDimensionsMessage,
   resize,
-  s3Config,
+  storage,
   source,
-  webpOptions,
+  webp,
 }: {
   key: string;
   missingDimensionsMessage: string;
   resize: ResizeOptions;
-  s3Config: { bucket: string; region: string };
+  storage: NonNullable<typeof mediaStorage>;
   source: Buffer;
-  webpOptions: WebpOptions;
+  webp: WebpOptions;
 }) {
   const { default: sharp } = await import("sharp");
   const body = await sharp(source)
     .rotate()
     .resize(resize)
-    .webp(webpOptions)
+    .webp(webp)
     .toBuffer();
 
-  await uploadWebpVariant(s3Config.bucket, key, body);
+  await storage.client.send(
+    new PutObjectCommand({
+      Bucket: storage.bucket,
+      Key: key,
+      Body: body,
+      ContentType: "image/webp",
+    }),
+  );
 
   const metadata = await sharp(body).metadata();
   if (!metadata.width || !metadata.height) {
@@ -552,7 +530,7 @@ async function createWebpVariant({
     status: "success" as const,
     variant: {
       key,
-      url: `https://${s3Config.bucket}.s3.${s3Config.region}.amazonaws.com/${key}`,
+      url: storage.publicUrl(key),
       type: "image/webp" as const,
       size: body.length,
       width: metadata.width,
@@ -562,14 +540,14 @@ async function createWebpVariant({
 }
 
 async function removePendingImage(
-  bucket: string,
+  storage: NonNullable<typeof mediaStorage>,
   key: string,
   id: number,
   userId: number,
 ) {
-  await s3.send(
+  await storage.client.send(
     new DeleteObjectCommand({
-      Bucket: bucket,
+      Bucket: storage.bucket,
       Key: key,
     }),
   );

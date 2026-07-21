@@ -1,16 +1,16 @@
 import {
-  useCallback,
   useEffect,
   useRef,
   useState,
   type ChangeEvent,
   type DragEvent,
 } from "react";
+import Image from "next/image";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 
 import AddImageIcon from "./AddImageIcon";
 import ProgressIcon from "@kenstack/icons/Progress";
-import { Upload as UploadIcon, X as CancelIcon } from "lucide-react";
+import { Crop, Upload as UploadIcon, X as CancelIcon } from "lucide-react";
 
 import { twMerge } from "tailwind-merge";
 import Field, { FormControl, type FieldProps } from "@kenstack/forms/Field";
@@ -20,14 +20,21 @@ import { useForm } from "@kenstack/forms/context";
 import { uploadMedia } from "@kenstack/forms/lib/uploadMedia";
 
 import { rasterMimeTypes as acceptDefault } from "@kenstack/db/tables/media/mimeTypes";
-import ImageDetailsModal, {
-  type ImageDetailsValue,
-} from "@kenstack/admin/forms/ImageDetailsModal";
+import type {
+  ImageDetailsEditor,
+  ImageDetailsValue,
+} from "@kenstack/forms/ImageDetails";
+import SquareCropModal from "@kenstack/forms/SquareCrop/Modal";
+import SquareCropPreview from "@kenstack/forms/SquareCrop/Preview";
+import {
+  applySquareCropChange,
+  type SquareCropChangeValue,
+} from "@kenstack/forms/SquareCrop/change";
 
 const buttonClass = "bg-muted hover:bg-secondary size-6 rounded-full border";
 
 type ImageRenderProps = {
-  square?: boolean;
+  shape?: "original" | "round" | "square";
   apiPath: string;
   data?: Record<string, unknown>;
   placeholder?: React.ReactNode;
@@ -43,30 +50,37 @@ export type ImageFieldProps = FieldProps &
   React.ComponentProps<"div"> &
   ImageRenderProps;
 
-type ImageFieldRenderProps = {
-  field: ControllerRenderProps<FieldValues, string>;
-};
+export default function ImageField(props: ImageFieldProps) {
+  return <ImageFieldControl {...props} />;
+}
 
-export default function ImageField({
+export function ImageFieldWithDetails(
+  props: ImageFieldProps & { ImageDetails: ImageDetailsEditor },
+) {
+  return <ImageFieldControl {...props} />;
+}
+
+function ImageFieldControl({
   name,
   label,
   help,
   description,
+  ImageDetails,
   ...props
-}: ImageFieldProps) {
+}: ImageFieldProps & { ImageDetails?: ImageDetailsEditor }) {
   return (
     <Field
       name={name}
       label={label}
       help={help}
       description={description}
-      render={imageRender({ ...props })}
+      render={imageRender({ ...props, ImageDetails })}
     />
   );
 }
 
 const imageRender = ({
-  square = true,
+  shape = "square",
   apiPath,
   data: extraData,
   placeholder,
@@ -76,12 +90,21 @@ const imageRender = ({
   canUpload = true,
   presignedUrlAction = "get-presigned-url",
   uploadCompleteAction = "upload-complete",
-}: ImageRenderProps) =>
-  function ImageFieldRender({ field }: ImageFieldRenderProps) {
+  ImageDetails,
+}: ImageRenderProps & { ImageDetails?: ImageDetailsEditor }) =>
+  function ImageFieldRender({
+    field,
+  }: {
+    field: ControllerRenderProps<FieldValues, string>;
+  }) {
     const { finishUploading, form, setStatusMessage, startUploading } =
       useForm();
+    const value = field.value as
+      (ImageDetailsValue & SquareCropChangeValue) | null;
 
     const acceptStr = accept.join(", ");
+    const round = shape === "round";
+    const square = shape !== "original";
     const contClass = twMerge(
       "relative flex items-center justify-center",
       square ? "overflow-hidden w-32 h-32" : "w-max h-max w-32 max-h-32 ",
@@ -92,28 +115,25 @@ const imageRender = ({
       square
         ? "object-cover object-center w-full h-full"
         : "object-scale-down object-center w-full h-full",
+      round && "rounded-full border-0",
       imageClass,
     );
     const placeholderClass = twMerge(
       "border-border bg-muted/80 flex h-full w-full items-center justify-center rounded border border-dashed shadow-inner",
+      round && "rounded-full border-0",
       imageClass,
     );
     const disabledHelp = canUpload ? null : <UploadDisabledHelp />;
 
     const [uploading, setUploading] = useState(false);
-    const [src, setSrc] = useState("");
+    const [uploadPreviewUrl, setUploadPreviewUrl] = useState("");
+    const [editing, setEditing] = useState<"crop" | "details" | null>(null);
     const uploadControllerRef = useRef<AbortController | null>(null);
 
-    const reset = useCallback(() => {
-      setSrc("");
+    const reset = () => {
+      setUploadPreviewUrl("");
       setUploading(false);
-    }, []);
-
-    const cancelUpload = useCallback(() => {
-      uploadControllerRef.current?.abort();
-      uploadControllerRef.current = null;
-      reset();
-    }, [reset]);
+    };
 
     useEffect(
       () => () => {
@@ -149,7 +169,7 @@ const imageRender = ({
             !uploadController.signal.aborted &&
             typeof reader.result === "string"
           ) {
-            setSrc(reader.result);
+            setUploadPreviewUrl(reader.result);
           }
         };
         reader.onerror = () => {
@@ -207,6 +227,7 @@ const imageRender = ({
         }
 
         field.onChange({
+          kind: complete.kind,
           url: complete.url,
           width: complete.width,
           height: complete.height,
@@ -216,6 +237,8 @@ const imageRender = ({
           sourceWidth: complete.sourceWidth,
           sourceHeight: complete.sourceHeight,
           originalUrl: complete.originalUrl,
+          original: complete.original,
+          squareCrop: complete.squareCrop,
           action: "upload",
           imageId: complete.imageId,
         });
@@ -290,7 +313,9 @@ const imageRender = ({
     if (uploading) {
       return (
         <div className={contClass}>
-          {src && <img className={imgClass} src={src} alt="" />}
+          {uploadPreviewUrl ? (
+            <img className={imgClass} src={uploadPreviewUrl} alt="" />
+          ) : null}
           <Button
             type="button"
             className={"absolute top-1 right-1 cursor-pointer " + buttonClass}
@@ -298,7 +323,9 @@ const imageRender = ({
             tooltip="Cancel upload"
             variant="ghost"
             onClick={() => {
-              cancelUpload();
+              uploadControllerRef.current?.abort();
+              uploadControllerRef.current = null;
+              reset();
             }}
           >
             <CancelIcon />
@@ -313,20 +340,46 @@ const imageRender = ({
       );
     }
 
-    if (field.value) {
+    if (value) {
+      const savedImage = (
+        <Image
+          alt=""
+          className={imgClass}
+          height={128}
+          loading="eager"
+          src={value.url}
+          unoptimized={value.kind === "svg"}
+          width={128}
+        />
+      );
+
       if (!canUpload) {
         return (
           <div className={contClass}>
-            <img alt="" className={imgClass} src={field.value.url} />
+            {savedImage}
             {disabledHelp}
           </div>
         );
       }
 
+      const cropSource = square ? value.original : null;
+      const imagePreview =
+        cropSource && form.getFieldState(field.name).isDirty ? (
+          <SquareCropPreview
+            alt=""
+            className={imgClass}
+            crop={value.squareCrop}
+            source={cropSource}
+          />
+        ) : (
+          savedImage
+        );
+
       return (
         <div className={contClass} {...dragEvents}>
           <Button
             type="button"
+            aria-label="Delete image"
             className={"absolute top-1 right-1 " + buttonClass}
             size="icon"
             tooltip="Delete image"
@@ -352,28 +405,57 @@ const imageRender = ({
             {input}
             <UploadIcon />
           </label>
-          <button
-            type="button"
-            className="h-full w-full cursor-pointer"
-            onClick={(evt) => {
-              evt.stopPropagation();
-              setSrc("details");
-            }}
-          >
-            <img alt="" className={imgClass} src={field.value.url} />
-          </button>
-          {src === "details" ? (
-            <ImageDetailsModal
-              image={field.value as ImageDetailsValue}
+          {ImageDetails ? (
+            <button
+              type="button"
+              aria-label="Edit image details"
+              className="h-full w-full cursor-pointer"
+              onClick={(evt) => {
+                evt.stopPropagation();
+                setEditing("details");
+              }}
+            >
+              {imagePreview}
+            </button>
+          ) : (
+            <div className="h-full w-full">{imagePreview}</div>
+          )}
+          {cropSource ? (
+            <Button
+              type="button"
+              aria-label="Adjust crop"
+              className="bg-background/90 absolute right-1 bottom-1 z-10"
+              icon={Crop}
+              size="icon-xs"
+              tooltip="Adjust crop"
+              variant="outline"
+              onClick={(event) => {
+                event.stopPropagation();
+                setEditing("crop");
+              }}
+            />
+          ) : null}
+          {ImageDetails && editing === "details" ? (
+            <ImageDetails
+              image={value}
               onChange={(image) => {
                 field.onChange({
-                  ...(field.value as ImageDetailsValue),
+                  ...value,
                   ...image,
                 });
               }}
-              onClose={() => {
-                setSrc("");
+              onClose={() => setEditing(null)}
+            />
+          ) : null}
+          {editing === "crop" && cropSource ? (
+            <SquareCropModal
+              crop={value.squareCrop}
+              round={round}
+              source={cropSource}
+              onChange={(squareCrop) => {
+                field.onChange(applySquareCropChange(value, squareCrop));
               }}
+              onClose={() => setEditing(null)}
             />
           ) : null}
         </div>

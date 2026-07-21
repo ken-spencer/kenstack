@@ -6,7 +6,6 @@ import { createJSONStorage, persist } from "zustand/middleware";
 
 export interface AdminUiState {
   adminControlCount: number;
-  hasAdminControl: boolean;
   showAdminControls: boolean;
   pageSettingsAction: (() => void) | null;
   pageEditorError: string | null;
@@ -23,7 +22,6 @@ export const useAdminUi = create<AdminUiState>()(
   persist(
     (set) => ({
       adminControlCount: 0,
-      hasAdminControl: false,
       showAdminControls: false,
       pageSettingsAction: null,
       pageEditorError: null,
@@ -31,19 +29,13 @@ export const useAdminUi = create<AdminUiState>()(
       registerAdminControl: () => {
         set(({ adminControlCount }) => ({
           adminControlCount: adminControlCount + 1,
-          hasAdminControl: true,
         }));
       },
 
       unregisterAdminControl: () => {
-        set(({ adminControlCount }) => {
-          const nextCount = Math.max(0, adminControlCount - 1);
-
-          return {
-            adminControlCount: nextCount,
-            hasAdminControl: nextCount > 0,
-          };
-        });
+        set(({ adminControlCount }) => ({
+          adminControlCount: Math.max(0, adminControlCount - 1),
+        }));
       },
 
       setShowAdminControls: (showAdminControls) => {

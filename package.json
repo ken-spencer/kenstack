@@ -5,9 +5,11 @@
   "scripts": {
     "trace": "node --trace-deprecation node_modules/next/dist/bin/next dev -p 3001",
     "lint": "eslint .",
-    "prettier": "npx prettier src --check",
+    "prettier": "npx prettier src tests vitest.config.ts --check",
     "prettier:fix": "npm run prettier -- --write",
     "format": "npm run prettier:fix && npm run lint -- --fix",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
     "users:add-admin": "node ./src/modules/users/scripts/add-admin-user.mjs"
   },
   "dependencies": {
@@ -98,7 +100,8 @@
     "react-dom": "^19.2.0",
     "react-google-recaptcha-v3": "^1.11.0",
     "tailwindcss": "^4.0.14",
-    "typescript": ">=6.0.0"
+    "typescript": ">=6.0.0",
+    "vitest": "^4.1.10"
   },
   "overrides": {
     "dompurify": "3.4.3"

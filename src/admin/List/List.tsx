@@ -383,7 +383,7 @@ function DefaultTitleCell({
         <Link className="text-lg" href={row.path}>
           {title || `ID ${row.id}`}
         </Link>
-        <MetaDates createdAt={row.createdAt} updatedAt={row.updatedAt} />
+        <MetaDates record={row} />
       </div>
     </div>
   );

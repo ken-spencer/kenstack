@@ -27,6 +27,35 @@ import { useControllableOpen, useDialogTransition } from "./overlay";
 import { useOverlayStack } from "./overlayStack";
 
 const transitionDurationMs = 200;
+let documentScrollLockCount = 0;
+let lockedScrollingElement: HTMLElement | null = null;
+let previousScrollingElementOverflow = "";
+
+function lockDocumentScroll() {
+  if (documentScrollLockCount === 0) {
+    const scrollingElement = document.scrollingElement;
+
+    if (!(scrollingElement instanceof HTMLElement)) {
+      return null;
+    }
+
+    lockedScrollingElement = scrollingElement;
+    previousScrollingElementOverflow = scrollingElement.style.overflow;
+    scrollingElement.style.overflow = "hidden";
+  }
+
+  documentScrollLockCount += 1;
+
+  return () => {
+    documentScrollLockCount -= 1;
+
+    if (documentScrollLockCount === 0 && lockedScrollingElement) {
+      lockedScrollingElement.style.overflow = previousScrollingElementOverflow;
+      lockedScrollingElement = null;
+      previousScrollingElementOverflow = "";
+    }
+  };
+}
 
 const DialogContext = createContext<{
   descriptionId: string;
@@ -208,6 +237,7 @@ function DialogContent({
   const { descriptionId, open, setOpen, titleId } =
     useDialogContext("DialogContent");
   const dialogRef = useRef<HTMLDialogElement | null>(null);
+  const releaseScrollLockRef = useRef<(() => void) | null>(null);
   const [mounted, setMounted] = useState(false);
   const visibleOpen = useDialogTransition(
     dialogRef,
@@ -224,6 +254,22 @@ function DialogContent({
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    if (!mounted || !open || releaseScrollLockRef.current) {
+      return;
+    }
+
+    releaseScrollLockRef.current = lockDocumentScroll();
+  }, [mounted, open]);
+
+  useEffect(
+    () => () => {
+      releaseScrollLockRef.current?.();
+      releaseScrollLockRef.current = null;
+    },
+    [],
+  );
+
   const portalTarget = mounted ? document.body : null;
 
   if (!portalTarget) {
@@ -236,7 +282,7 @@ function DialogContent({
       aria-labelledby={ariaLabelledBy ?? titleId}
       {...props}
       className={cn(
-        "bg-background fixed top-[50%] left-[50%] z-50 m-0 w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] scale-95 gap-4 rounded-lg border p-6 opacity-0 shadow-lg transition-[opacity,transform] duration-200 ease-out backdrop:bg-black/50 data-[state=open]:scale-100 data-[state=open]:opacity-100 sm:max-w-lg",
+        "bg-background fixed top-[50%] left-[50%] z-50 m-0 max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] scale-95 gap-4 overflow-y-auto overscroll-contain rounded-lg border p-6 opacity-0 shadow-lg transition-[opacity,transform] duration-200 ease-out backdrop:bg-black/50 data-[state=open]:scale-100 data-[state=open]:opacity-100 sm:max-w-lg",
         className,
         "hidden open:grid",
       )}
@@ -266,6 +312,8 @@ function DialogContent({
           return;
         }
 
+        releaseScrollLockRef.current?.();
+        releaseScrollLockRef.current = null;
         onClose?.(event);
 
         if (open) {

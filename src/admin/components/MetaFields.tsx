@@ -113,7 +113,10 @@ export default function MetaFields({
             <AccordionTrigger className="border-border bg-muted rounded border px-4 py-2 hover:no-underline">
               <span className="flex min-w-0 flex-1 items-center justify-between gap-3">
                 <span className="text-sm font-medium">{accordionTitle}</span>
-                <span className="text-muted-foreground truncate text-xs font-normal">
+                <span
+                  className="text-muted-foreground truncate text-xs font-normal"
+                  suppressHydrationWarning
+                >
                   {publishSummary}
                 </span>
               </span>

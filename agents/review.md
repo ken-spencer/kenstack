@@ -1,6 +1,6 @@
 # Review Checklist
 
-Use this checklist before finalizing code changes. It is meant to catch project preferences that are easy to miss during implementation.
+Use this checklist for regular, on-demand review of code changes. It checks whether the code meets Kenstack standards; it does not trigger final preflight checks.
 
 Our primary review goal is to keep the code simple, direct, and easy to follow.
 
@@ -8,7 +8,7 @@ Evaluate all changes through that lens. Prefer clear, explicit code over unneces
 
 Confirm that the change threshold from `agents.md` was applied before editing. Every hunk must produce a concrete current improvement; runtime-equivalent, inference-neutral, readability-neutral, rename-only, and merely alternative implementations indicate that the change should not have been made. Review should catch violations, but the primary rule is to avoid creating them in the first place.
 
-Configured Prettier output is the exception. Treat formatting-only changes produced by Prettier in in-scope or touched files as deterministic mechanical work: stage them, and do not raise them as review findings.
+Configured Prettier output is the exception. Treat formatting-only changes produced by Prettier in in-scope or touched files as deterministic mechanical work and do not raise them as review findings.
 
 When reviewing, look for opportunities to reduce complexity, improve readability, and make the intent of the code obvious to the next developer.
 
@@ -27,11 +27,17 @@ Before reviewing the diff details, confirm the relevant `agents/*.md` guidance f
 
 During review, look for any newly duplicated source of truth, such as copied identifiers, labels, options, mappings, statuses, schemas, config, or metadata. Reuse or extend the existing owner instead of keeping a parallel version. Treat paired signals where one value is canonical and the other is only a request, prop, local, or descriptive copy as a sign to inspect the surrounding code path. If disagreement only causes an error, recommend deriving from the canonical owner and pruning the duplicate input, validation branch, helper argument, schema field, or API path.
 
+## API Signals And Ownership
+
+- Check function, component, and action APIs for multiple inputs that control one behavior. Prefer one semantic input owned by the API when callers must keep several flags, props, classes, callbacks, or options in agreement to produce a single result.
+- Check whether several inputs can be derived from one canonical value the caller already has. When an API operates on a module, field, record, or other domain object, accept that owner and derive its fields, handlers, cache rules, labels, or identifiers instead of requiring callers to unpack and repeat them.
+- Treat repeated site call-site options that suppress, restore, or coordinate shared Kenstack behavior as an ownership warning. Put the decision in the Kenstack field, admin action, persistence boundary, or other shared owner that has the necessary context. Keep a site-level option only when it represents a genuine site choice rather than compensation for shared behavior leaking through the wrong boundary.
+
 Before accepting a new helper, formatter, parser, normalizer, or utility, search the whole project and its shared submodules for existing behavior with the same input and output semantics. Reuse or narrowly extend the canonical helper instead of keeping local copies in separate modules, pages, or admin components. Similar names or implementation details alone do not make helpers equivalent; preserve separate owners when their contracts genuinely differ, such as calendar-only dates, timestamps, and timezone-aware values.
 
 ## Directness Review
 
-Apply the **Directness Gate** in `../AGENTS.md` as the first mandatory code-shape pass. Perform its mechanical audit over every changed TypeScript file, not only files that already look over-abstracted. Treat every unexplained candidate as a review finding; remove it during cleanup or record the concrete current reason it remains.
+Apply the **Directness Gate** in `../agents.md` as the first mandatory code-shape pass. Perform its mechanical audit over every changed TypeScript file, not only files that already look over-abstracted. Treat every unexplained candidate as a review finding; remove it during cleanup or record the concrete current reason it remains.
 
 ## Type Shape
 
@@ -143,9 +149,4 @@ If a check fails because the check scope does not match the code's intended runt
 - Review every Drizzle `.select()` with no projection. If the caller only reads a few fields, require an explicit projection instead. Treat select-star plus a result cast as a cleanup finding unless full-row behavior is required and documented.
 - Check for placeholders, dummy values, temporary review states, test-only copy, fake data, and scaffold comments. Remove them before finalizing unless the user explicitly asked to keep them.
 
-## Final Checks
-
-- Run the narrowest relevant checks: TypeScript for type changes, lint for style changes, and build only for runtime-sensitive Next.js changes unless instructed otherwise.
-- Review the diff for unrelated formatting, file moves, or broad refactors.
-- Do not flag staged-vs-unstaged split state as a review finding by itself. Treat it as normal WIP unless the actual code in the working tree is broken or the user explicitly asks for staging hygiene.
-- If a checklist item would make the code more complex for the same result, leave the code alone and mention the tradeoff.
+If a checklist item would make the code more complex for the same result, leave the code alone and mention the tradeoff.

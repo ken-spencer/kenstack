@@ -9,8 +9,18 @@ import { type Sessions } from "@kenstack/db/tables/sessions";
 import { type Attachment } from "@kenstack/lib/mailer";
 import { formatFileSize } from "@kenstack/lib/fileSize";
 import type { DefinedAdmin } from "@kenstack/admin/module";
+import {
+  reportError,
+  type ErrorReportContext,
+} from "@kenstack/lib/errorReporter";
 
 export type EmailFrom = string | { name: string; addr: string };
+
+type EmailConfig = {
+  EmailCont: EmailContainer;
+  attachments: Attachment[];
+  from: EmailFrom | undefined;
+};
 
 export type Tables = { sessions: Sessions } & Record<string, unknown>;
 
@@ -34,11 +44,7 @@ export const createDeps = <
   modules: TModules;
   tables: TSchema;
   siteUrl?: string;
-  email?: {
-    EmailCont?: EmailContainer;
-    attachments?: Attachment[];
-    from?: EmailFrom;
-  };
+  email?: Partial<EmailConfig>;
   uploadMaxImageSize?: number;
   uploadMaxImageSizeMessage?: string;
 }) => {
@@ -59,6 +65,13 @@ export const createDeps = <
 
   logger.bindAuth(auth);
 
+  const resolvedEmail: EmailConfig = {
+    EmailCont: Email,
+    attachments: [],
+    from: undefined,
+    ...email,
+  };
+
   return {
     multiTenant: false,
     uploadMaxImageSize,
@@ -69,12 +82,9 @@ export const createDeps = <
     db,
     modules,
     ...depsOptions,
-    email: {
-      EmailCont: Email,
-      attachments: [] as Attachment[],
-      from: undefined as EmailFrom | undefined,
-      ...email,
-    },
+    email: resolvedEmail,
+    error: (error: unknown, context: ErrorReportContext) =>
+      reportError(error, { ...context, emailFrom: resolvedEmail.from }),
   };
 };
 

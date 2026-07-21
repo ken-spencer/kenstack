@@ -1,5 +1,5 @@
 "use client";
-import mdToHtml, { type MarkdownOptions } from "./mdToHtml";
+import type { MarkdownOptions } from "./mdToHtml";
 
 import { twMerge } from "tailwind-merge";
 import { useEffect, useState } from "react";
@@ -26,12 +26,15 @@ export default function MarkdownClient({
   useEffect(() => {
     let active = true;
 
-    mdToHtml(content ?? "", {
-      remarkPlugins: [
-        [remarkKenStackMarkdown, { mentionTargets }],
-        ...(remarkPlugins ?? []),
-      ],
-    })
+    import("./mdToHtml")
+      .then(({ default: mdToHtml }) =>
+        mdToHtml(content ?? "", {
+          remarkPlugins: [
+            [remarkKenStackMarkdown, { mentionTargets }],
+            ...(remarkPlugins ?? []),
+          ],
+        }),
+      )
       .then((value) => {
         if (active) {
           setHtml(value);

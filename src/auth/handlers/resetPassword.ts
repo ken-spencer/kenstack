@@ -7,6 +7,11 @@ import { and, eq, gte, isNull } from "drizzle-orm";
 
 import crypto from "crypto";
 import { PipelineResponse } from "@kenstack/api/PipelineResponse";
+import { hasRecentPasswordAuthentication } from "@kenstack/auth/passwordChange";
+import {
+  enforcePasswordAttemptLimit,
+  recordPasswordFailure,
+} from "@kenstack/auth/handlers/login";
 
 class TransactionError extends Error {
   constructor(
@@ -22,11 +27,11 @@ export const resetPasswordPipeline = () => (options: PipelineOptions) =>
 
 const resetPasswordAction = pipelineStage(
   { schema },
-  async ({ data, response }) => {
+  async ({ data, request, response }) => {
     const { token } = data;
     const now = new Date();
 
-    const { passwordResetRequests: prr, users } = deps.tables;
+    const { passwordResetRequests: prr, sessions, users } = deps.tables;
 
     if (token) {
       if (!token.match(/^[A-Za-z0-9_-]{32}$/)) {
@@ -116,6 +121,8 @@ const resetPasswordAction = pipelineStage(
             );
           }
 
+          await tx.delete(sessions).where(eq(sessions.userId, user.id));
+
           return updatedUser;
         });
       } catch (err) {
@@ -141,28 +148,108 @@ const resetPasswordAction = pipelineStage(
         data: { method: "token", email: fp.email },
       });
     } else {
-      const user = await deps.auth.getCurrentUser();
+      const session = await deps.auth.getCurrentSession();
 
-      if (!user) {
+      if (!session) {
         return response.redirectToLogin();
       }
-      const passwordHash = await bcrypt.hash(data.password, 12);
-      const updated = await deps.db
-        .update(users)
-        .set({
-          passwordHash,
-          updatedAt: now,
-        })
-        .where(eq(users.id, user.id))
-        .returning({ id: users.id });
 
-      if (!updated.length) {
-        /** user is logged in, No reason to redirect. */
+      if (session.impersonatedBy !== null) {
+        return response.error(
+          "Password changes are unavailable while you are signed in as another user. Return to your own account first.",
+        );
+      }
+
+      if (!hasRecentPasswordAuthentication(session, now)) {
+        if (data.currentPassword === undefined) {
+          return response.error(
+            "Your recent login has expired. Refresh this page and enter your current password.",
+          );
+        }
+
+        if (!data.currentPassword) {
+          return response.error({
+            message:
+              "Please review the form and correct the highlighted fields.",
+            fieldErrors: {
+              currentPassword: "Enter your current password",
+            },
+          });
+        }
+
+        const [currentUser] = await deps.db
+          .select({
+            email: users.email,
+            passwordHash: users.passwordHash,
+          })
+          .from(users)
+          .where(eq(users.id, session.userId))
+          .limit(1);
+
+        if (!currentUser) {
+          return response.redirectToLogin();
+        }
+
+        const limited = await enforcePasswordAttemptLimit(
+          currentUser.email,
+          request,
+          response,
+        );
+        if (limited) {
+          return limited;
+        }
+
+        if (
+          !currentUser.passwordHash ||
+          !(await bcrypt.compare(
+            data.currentPassword,
+            currentUser.passwordHash,
+          ))
+        ) {
+          await recordPasswordFailure(currentUser.email, request);
+
+          return response.error({
+            message:
+              "Please review the form and correct the highlighted fields.",
+            fieldErrors: {
+              currentPassword: "The current password is incorrect",
+            },
+          });
+        }
+      }
+
+      const passwordHash = await bcrypt.hash(data.password, 12);
+      const updated = await deps.db.transaction(async (tx) => {
+        const rows = await tx
+          .update(users)
+          .set({
+            passwordHash,
+            updatedAt: now,
+          })
+          .where(eq(users.id, session.userId))
+          .returning({ id: users.id });
+
+        if (rows.length !== 1) {
+          return [];
+        }
+
+        await tx.delete(sessions).where(eq(sessions.userId, session.userId));
+
+        return rows;
+      });
+
+      if (updated.length !== 1) {
         return response.error(
           "We couldn't update your password. Please try again.",
         );
       }
-      await deps.logger.audit({ action: "reset-password", userId: user.id });
+
+      await deps.auth.login(session.userId);
+      await deps.logger.audit({
+        action: "reset-password",
+        userId: session.userId,
+        data: { method: "session" },
+      });
     }
 
     return response.success({

@@ -33,7 +33,7 @@ export function UserNameListItem({ row }: { row: UserListRow }) {
       <Link className="min-w-0 truncate text-lg" href={row.path}>
         {formatUserName(row, { fallback: `ID ${row.id}` })}
       </Link>
-      <MetaDates createdAt={row.createdAt} updatedAt={row.updatedAt} />
+      <MetaDates record={row} />
     </div>
   );
 }

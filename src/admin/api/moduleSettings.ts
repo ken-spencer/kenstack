@@ -50,6 +50,7 @@ export const saveModuleSettingsAction = (
     async ({ response, data }) => {
       const result = await saveRecord({
         actionPrefix: "module-settings",
+        admin: true,
         table: settings.table,
         fields: settings.fields,
         values: data.values,

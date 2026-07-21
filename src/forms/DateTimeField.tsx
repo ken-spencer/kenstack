@@ -88,6 +88,7 @@ export default function DateTimeField({
               {...props}
               disabled={disabled}
               className={twMerge("pl-9", inputClass)}
+              suppressHydrationWarning
               value={value}
               onChange={(event) => {
                 setValue(event.target.value);

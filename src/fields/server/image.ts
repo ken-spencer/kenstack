@@ -8,10 +8,12 @@ import { imageSchema } from "@kenstack/zod/image";
 import type { DefinedField } from "../types";
 import type {
   FieldAfterSave,
+  FieldPrepareSaveContext,
   FieldPreSaveContext,
   FieldPreSaveResult,
   ServerFieldResolver,
 } from ".";
+import { prepareMediaCrop } from "@kenstack/fields/records/mediaCrop";
 
 export type ImageVariant = "square" | "original";
 
@@ -34,10 +36,67 @@ export function imageField({
       return column ? selectMediaSubquery(column, variant) : undefined;
     },
     preSave: prepareImageSave,
+    prepareSave: prepareImageCrop,
   });
 }
 
+async function prepareImageCrop({
+  admin,
+  column,
+  db,
+  id,
+  table,
+  user,
+  value,
+}: FieldPrepareSaveContext) {
+  const fieldData = value as z.output<typeof imageSchema>;
+  if (
+    !column ||
+    !fieldData ||
+    typeof fieldData !== "object" ||
+    !("squareCropChanged" in fieldData) ||
+    !fieldData.squareCropChanged
+  ) {
+    return { status: "success" as const };
+  }
+
+  const [oldRow] = id
+    ? await db
+        .select({ mediaId: column })
+        .from(table)
+        .where(eq(table.id, id))
+        .limit(1)
+    : [];
+  const allowedMediaIds = new Set<number>();
+  if (oldRow && typeof oldRow.mediaId === "number") {
+    allowedMediaIds.add(oldRow.mediaId);
+  }
+  if (admin && "id" in fieldData && fieldData.id !== undefined) {
+    allowedMediaIds.add(fieldData.id);
+  }
+
+  const prepared = await prepareMediaCrop({
+    allowedMediaIds,
+    db,
+    item: fieldData,
+    userId: user.id,
+  });
+  if (!prepared) {
+    return { status: "success" as const };
+  }
+
+  return {
+    status: "success" as const,
+    value: prepared.item,
+    savedValue: prepared.item,
+    afterSave: [prepared.afterSave],
+    afterCommit: [prepared.afterCommit],
+    afterFailure: [prepared.afterFailure],
+  };
+}
+
 export async function prepareImageSave({
+  admin,
   db,
   key,
   column,
@@ -91,7 +150,7 @@ export async function prepareImageSave({
     const selectedImageId =
       typeof fieldData === "number" ? fieldData : fieldData.id;
 
-    if (typeof selectedImageId !== "number") {
+    if (selectedImageId === undefined) {
       return {
         status: "error",
         message: "Could not find the selected image.",
@@ -116,8 +175,17 @@ export async function prepareImageSave({
       };
     }
 
+    if (!admin && selectedImage.id !== oldMediaId) {
+      return {
+        status: "error",
+        message: "Could not find the selected image.",
+      };
+    }
+
     const metadata =
-      typeof fieldData === "number" ? undefined : imageMetadata(fieldData);
+      admin && typeof fieldData !== "number"
+        ? imageMetadata(fieldData)
+        : undefined;
     const metadataChanged =
       metadata !== undefined &&
       !isEqual(metadata, {
@@ -183,7 +251,7 @@ export async function prepareImageSave({
       attachMediaAfterSave(
         uploadedImage.id,
         oldMediaId,
-        imageMetadata(fieldData),
+        admin ? imageMetadata(fieldData) : undefined,
       ),
     );
     return {

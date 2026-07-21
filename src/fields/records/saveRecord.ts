@@ -4,6 +4,7 @@ import type { AdminKeyTable, AdminTable } from "@kenstack/admin/table";
 import { selectFields } from "@kenstack/fields/select";
 import type {
   FieldAfterSave,
+  FieldSaveTask,
   ServerDefinedFields,
 } from "@kenstack/fields/server";
 import { revisions } from "@kenstack/db/tables/revisions";
@@ -27,6 +28,7 @@ type SavedRow = { id: number } & Record<string, unknown>;
 
 type SaveRecordOptions<TTable extends SaveRecordTable> = {
   actionPrefix: string;
+  admin?: boolean;
   table: TTable;
   fields: ServerDefinedFields;
   values: Record<string, unknown>;
@@ -51,8 +53,16 @@ type SaveRecordOptions<TTable extends SaveRecordTable> = {
 export async function saveRecord<TTable extends SaveRecordTable>(
   options: SaveRecordOptions<TTable>,
 ) {
-  const { actionPrefix, table, fields, values, changes, id, revalidate } =
-    options;
+  const {
+    actionPrefix,
+    admin = false,
+    table,
+    fields,
+    values,
+    changes,
+    id,
+    revalidate,
+  } = options;
   const action = actionPrefix + "-" + (id ? "update" : "insert");
   const revisionChanges = changes ?? Object.keys(values);
   const user = await deps.auth.requireUser();
@@ -68,26 +78,47 @@ export async function saveRecord<TTable extends SaveRecordTable>(
   const changedFields = changes ? new Set(changes) : undefined;
   const shouldSaveField = (key: string) =>
     !changedFields || changedFields.has(key);
-  const data: Record<string, unknown> = {};
-  const handledValues: Record<string, unknown> = {};
-
-  for (const [key, value] of Object.entries(values)) {
-    if (!shouldSaveField(key)) {
-      continue;
-    }
-
-    if (fields[key]?.save) {
-      handledValues[key] = value;
-    } else {
-      data[key] = value;
-    }
-  }
-
   const tableName = getTableName(table);
+  let afterFailure: FieldSaveTask[] = [];
+  let committed = false;
 
   try {
+    const preparation = await prepareSaveFields({
+      admin,
+      fields,
+      columns: getTableColumns(table),
+      id,
+      shouldSaveField,
+      table,
+      user,
+      values,
+    });
+    afterFailure = preparation.afterFailure;
+
+    if (preparation.status === "error") {
+      await runSaveTasks(afterFailure);
+      return { status: "error" as const, error: preparation.message };
+    }
+
+    const preparedValues = preparation.values;
+    const data: Record<string, unknown> = {};
+    const handledValues: Record<string, unknown> = {};
+
+    for (const [key, value] of Object.entries(preparedValues)) {
+      if (!shouldSaveField(key)) {
+        continue;
+      }
+
+      if (fields[key]?.save) {
+        handledValues[key] = value;
+      } else {
+        data[key] = value;
+      }
+    }
+
     const result = await deps.db.transaction(async (tx) => {
       const preSave = await preSaveFields({
+        admin,
         fields,
         columns: getTableColumns(table),
         data,
@@ -96,7 +127,7 @@ export async function saveRecord<TTable extends SaveRecordTable>(
         user,
         table,
         tx,
-        values,
+        values: preparedValues,
         shouldSaveField,
       });
 
@@ -161,19 +192,28 @@ export async function saveRecord<TTable extends SaveRecordTable>(
         }
 
         savedValues[fieldKey] = await field.save({
+          admin,
           db: tx,
           key: fieldKey,
           tableId: savedRow.id,
           value,
-          values,
+          values: preparedValues,
           user,
         });
       }
 
+      if (preparation.afterSave.length) {
+        await Promise.all(
+          preparation.afterSave.map((afterSave) => afterSave(tx)),
+        );
+      }
+
+      Object.assign(savedValues, preparation.savedValues);
+
       await options.afterSaveRecord?.({
         tx,
         row: savedRow,
-        values,
+        values: preparedValues,
         savedValues,
         user,
       });
@@ -194,8 +234,12 @@ export async function saveRecord<TTable extends SaveRecordTable>(
     });
 
     if (result.status !== "success") {
+      await runSaveTasks(afterFailure);
       return result;
     }
+    committed = true;
+
+    await runSaveTasks(preparation.afterCommit);
 
     await deps.logger.audit({
       action,
@@ -211,6 +255,10 @@ export async function saveRecord<TTable extends SaveRecordTable>(
 
     return result;
   } catch (err) {
+    if (!committed) {
+      await runSaveTasks(afterFailure);
+    }
+
     const error = errorTranslator(err);
     if (error) {
       return {
@@ -225,7 +273,92 @@ export async function saveRecord<TTable extends SaveRecordTable>(
   }
 }
 
+async function prepareSaveFields<TTable extends SaveRecordTable>({
+  admin,
+  fields,
+  columns,
+  id,
+  shouldSaveField,
+  table,
+  user,
+  values,
+}: {
+  admin: boolean;
+  fields: ServerDefinedFields;
+  columns: ReturnType<typeof getTableColumns<TTable>>;
+  id?: number | null;
+  shouldSaveField: (key: string) => boolean;
+  table: TTable;
+  user: User;
+  values: Record<string, unknown>;
+}) {
+  const preparedValues = { ...values };
+  const afterSave: FieldAfterSave[] = [];
+  const afterCommit: FieldSaveTask[] = [];
+  const afterFailure: FieldSaveTask[] = [];
+  const savedValues: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(values)) {
+    const field = fields[key];
+    if (!shouldSaveField(key) || !field?.prepareSave) {
+      continue;
+    }
+
+    let result;
+    try {
+      result = await field.prepareSave({
+        admin,
+        db: deps.db,
+        key,
+        column: columns[key],
+        value,
+        values: preparedValues,
+        id,
+        user,
+        table,
+        shouldSaveField,
+      });
+    } catch (error) {
+      await runSaveTasks(afterFailure);
+      throw error;
+    }
+
+    if (result.status === "error") {
+      return {
+        status: "error" as const,
+        message: result.message,
+        afterFailure,
+      };
+    }
+
+    if ("value" in result) {
+      preparedValues[key] = result.value;
+    }
+    if ("savedValue" in result) {
+      savedValues[key] = result.savedValue;
+    }
+
+    afterSave.push(...(result.afterSave ?? []));
+    afterCommit.push(...(result.afterCommit ?? []));
+    afterFailure.push(...(result.afterFailure ?? []));
+  }
+
+  return {
+    status: "success" as const,
+    values: preparedValues,
+    afterSave,
+    afterCommit,
+    afterFailure,
+    savedValues,
+  };
+}
+
+async function runSaveTasks(tasks: FieldSaveTask[]) {
+  await Promise.allSettled(tasks.map((task) => task()));
+}
+
 async function preSaveFields<TTable extends SaveRecordTable>({
+  admin,
   fields,
   columns,
   data,
@@ -237,6 +370,7 @@ async function preSaveFields<TTable extends SaveRecordTable>({
   values,
   shouldSaveField,
 }: {
+  admin: boolean;
   fields: ServerDefinedFields;
   columns: ReturnType<typeof getTableColumns<TTable>>;
   data: Record<string, unknown>;
@@ -275,6 +409,7 @@ async function preSaveFields<TTable extends SaveRecordTable>({
     const hasFieldSave = Boolean(field.save);
     const value = hasFieldSave ? handledValues[key] : data[key];
     const result = await field.preSave({
+      admin,
       db: tx,
       key,
       column,

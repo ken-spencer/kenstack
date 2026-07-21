@@ -24,11 +24,12 @@ export default function PageControlsClient({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const {
-    hasAdminControl,
+    adminControlCount,
     pageSettingsAction,
     showAdminControls,
     setShowAdminControls,
   } = useAdminUi();
+  const hasAdminControl = adminControlCount > 0;
   const query = searchParams.toString();
   const currentPath = `${pathname}${query ? `?${query}` : ""}`;
   const adminControlsLabel = showAdminControls

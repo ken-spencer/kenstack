@@ -1,28 +1,18 @@
 "use client";
 
-import { useEffect } from "react";
 import { X } from "lucide-react";
 
 import Button from "@kenstack/components/Button";
-import type { SquareCrop } from "@kenstack/db/tables/media/types";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@kenstack/components/Dialog";
+import type { ImageDetailsValue } from "@kenstack/forms/ImageDetails";
 import { formatFileSize } from "@kenstack/lib/fileSize";
 
-export type ImageDetailsValue = {
-  id?: number;
-  url: string;
-  width?: number | null;
-  height?: number | null;
-  alt?: string | null;
-  title?: string | null;
-  caption?: string | null;
-  filename?: string | null;
-  sourceType?: string | null;
-  sourceSize?: number | null;
-  sourceWidth?: number | null;
-  sourceHeight?: number | null;
-  originalUrl?: string | null;
-  squareCrop?: SquareCrop | null;
-};
+export type { ImageDetailsValue } from "@kenstack/forms/ImageDetails";
 
 export default function ImageDetailsModal({
   image,
@@ -41,31 +31,24 @@ export default function ImageDetailsModal({
         : "";
   const previewUrl = image.originalUrl || image.url;
 
-  useEffect(() => {
-    const onKeyDown = (evt: KeyboardEvent) => {
-      if (evt.key === "Escape") {
-        onClose();
-      }
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [onClose]);
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 p-4"
-      role="dialog"
-      aria-modal="true"
-      onMouseDown={(evt) => {
-        if (evt.target === evt.currentTarget) {
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) {
           onClose();
         }
       }}
     >
-      <div className="border-border bg-card my-auto grid max-h-[calc(100vh-2rem)] w-full max-w-5xl overflow-hidden rounded border shadow-xl md:h-[min(44rem,calc(100vh-2rem))] md:grid-cols-[minmax(0,1fr)_22rem]">
+      <DialogContent
+        className="border-border bg-card grid max-h-[calc(100vh-2rem)] w-[calc(100%-2rem)] gap-0 overflow-hidden p-0 sm:max-w-5xl md:h-[min(44rem,calc(100vh-2rem))] md:grid-cols-[minmax(0,1fr)_22rem]"
+        showCloseButton={false}
+      >
+        <DialogTitle className="sr-only">Image details</DialogTitle>
+        <DialogDescription className="sr-only">
+          Edit image details and review file metadata.
+        </DialogDescription>
+
         <div className="bg-muted flex min-h-0 items-center justify-center p-4">
           <img
             alt={image.alt ?? ""}
@@ -86,6 +69,7 @@ export default function ImageDetailsModal({
             </div>
             <Button
               type="button"
+              aria-label="Close image details"
               className="size-8 rounded border"
               size="icon"
               tooltip="Close"
@@ -102,9 +86,9 @@ export default function ImageDetailsModal({
               <input
                 className="border-input bg-background rounded border px-3 py-2"
                 value={image.alt ?? ""}
-                onChange={(evt) => {
-                  onChange({ ...image, alt: evt.target.value });
-                }}
+                onChange={(event) =>
+                  onChange({ ...image, alt: event.target.value })
+                }
               />
             </label>
 
@@ -113,9 +97,9 @@ export default function ImageDetailsModal({
               <input
                 className="border-input bg-background rounded border px-3 py-2"
                 value={image.title ?? ""}
-                onChange={(evt) => {
-                  onChange({ ...image, title: evt.target.value });
-                }}
+                onChange={(event) =>
+                  onChange({ ...image, title: event.target.value })
+                }
               />
             </label>
 
@@ -124,49 +108,52 @@ export default function ImageDetailsModal({
               <textarea
                 className="border-input bg-background min-h-24 rounded border px-3 py-2"
                 value={image.caption ?? ""}
-                onChange={(evt) => {
-                  onChange({ ...image, caption: evt.target.value });
-                }}
+                onChange={(event) =>
+                  onChange({ ...image, caption: event.target.value })
+                }
               />
             </label>
           </div>
 
           <dl className="border-border mt-auto grid gap-2 border-t pt-4 text-sm">
             {dimensions ? (
-              <div className="grid grid-cols-[7rem_1fr] gap-2">
-                <dt className="text-muted-foreground">Dimensions</dt>
-                <dd>{dimensions}</dd>
-              </div>
+              <Detail label="Dimensions">{dimensions}</Detail>
             ) : null}
             {image.sourceType ? (
-              <div className="grid grid-cols-[7rem_1fr] gap-2">
-                <dt className="text-muted-foreground">Type</dt>
-                <dd>{image.sourceType}</dd>
-              </div>
+              <Detail label="Type">{image.sourceType}</Detail>
             ) : null}
             {image.sourceSize ? (
-              <div className="grid grid-cols-[7rem_1fr] gap-2">
-                <dt className="text-muted-foreground">Size</dt>
-                <dd>{formatFileSize(image.sourceSize)}</dd>
-              </div>
+              <Detail label="Size">{formatFileSize(image.sourceSize)}</Detail>
             ) : null}
             {previewUrl ? (
-              <div className="grid grid-cols-[7rem_1fr] gap-2">
-                <dt className="text-muted-foreground">Original</dt>
-                <dd className="min-w-0">
-                  <a
-                    className="break-all text-blue-700 hover:underline dark:text-blue-300"
-                    href={previewUrl}
-                    target="_blank"
-                  >
-                    {previewUrl}
-                  </a>
-                </dd>
-              </div>
+              <Detail label="Original">
+                <a
+                  className="break-all text-blue-700 hover:underline dark:text-blue-300"
+                  href={previewUrl}
+                  target="_blank"
+                >
+                  {previewUrl}
+                </a>
+              </Detail>
             ) : null}
           </dl>
         </div>
-      </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function Detail({
+  children,
+  label,
+}: {
+  children: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <div className="grid grid-cols-[7rem_1fr] gap-2">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="min-w-0">{children}</dd>
     </div>
   );
 }

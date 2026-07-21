@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import * as z from "zod";
 
@@ -23,6 +24,22 @@ const adminRouteSchema = z.array(z.string()).transform((segments, ctx) => {
 
   return route;
 });
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ admin: string[] }>;
+}): Promise<Metadata> {
+  const { admin } = await params;
+  const route = parseAdminRouteSegments(admin);
+  const moduleConfig = route ? deps.modules[route.name] : undefined;
+
+  return {
+    title: {
+      absolute: moduleConfig?.admin ? `${moduleConfig.title} · Admin` : "Admin",
+    },
+  };
+}
 
 export function createAdminPage() {
   return pageRoute(

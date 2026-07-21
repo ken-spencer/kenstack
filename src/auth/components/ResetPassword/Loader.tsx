@@ -3,6 +3,8 @@ import Form from "./Form";
 import { deps } from "@app/deps";
 import crypto from "crypto";
 import { eq } from "drizzle-orm";
+import Alert from "@kenstack/components/Alert";
+import { hasRecentPasswordAuthentication } from "@kenstack/auth/passwordChange";
 
 export default async function ForgottenPasswordFormLoader({
   token,
@@ -43,8 +45,8 @@ export default async function ForgottenPasswordFormLoader({
       );
     }
   } else {
-    const user = await deps.auth.getCurrentUser();
-    if (!user) {
+    const session = await deps.auth.getCurrentSession();
+    if (!session) {
       const params = new URLSearchParams({
         loginMessage:
           "That page needs you to be logged in. Please log in and try again.",
@@ -52,6 +54,21 @@ export default async function ForgottenPasswordFormLoader({
 
       return redirect(`/login?${params.toString()}`);
     }
+
+    if (session.impersonatedBy !== null) {
+      return (
+        <Alert>
+          Password changes are unavailable while you are signed in as another
+          user. Return to your own account first.
+        </Alert>
+      );
+    }
+
+    return (
+      <Form
+        requiresCurrentPassword={!hasRecentPasswordAuthentication(session)}
+      />
+    );
   }
 
   return <Form token={token} />;

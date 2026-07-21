@@ -22,6 +22,12 @@ Read this before Kenstack admin module, list, or edit-form work.
 
 - Treat React Hook Form `reset` and `resetField` as baseline-changing operations: they redefine the values considered saved and can clear dirty state. Reserve them for loading a different record, accepting a successful save response, or an explicit revert. When synchronizing browser or query state into a form without replacing the loaded record baseline, use `setValue` and choose `shouldDirty`, `shouldTouch`, and `shouldValidate` deliberately. Do not reset a field merely to add or update externally supplied options while the user may have unsaved edits.
 
+## Record Saving
+
+- Use `saveModuleRecord({ module, fields, id, changes, values })` for authenticated site actions that update a module record and need the module's persistence and cache revalidation with restricted field authority. Pass the action's restricted server field set so returned values cannot include admin-only fields.
+- Use `saveAdminRecord({ module, id, changes, values })` for the standard admin module save path after the pipeline has enforced `access: "admin"`. The function supplies admin-save authority to field handlers; it does not infer authority from the user's roles.
+- Use `saveRecord(...)` directly for custom persistence that is not represented by a module, such as settings or page-editor upserts. It is restricted by default. Set `admin: true` only in a backend admin action, never from request data or user roles.
+
 ## List Config
 
 - Prefer configuring list behavior on field definitions with field options such as `list`, `filter`, and `sort`.

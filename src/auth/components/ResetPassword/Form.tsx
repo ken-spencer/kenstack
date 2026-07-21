@@ -13,7 +13,13 @@ const defaultValues = {
   confirmPassword: "",
 };
 
-export default function ResetPasswordForm({ token }: { token?: string }) {
+export default function ResetPasswordForm({
+  requiresCurrentPassword = false,
+  token,
+}: {
+  requiresCurrentPassword?: boolean;
+  token?: string;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   return (
@@ -21,7 +27,11 @@ export default function ResetPasswordForm({ token }: { token?: string }) {
       className="w-full max-w-lg space-y-4"
       apiPath="/api/auth"
       schema={schema}
-      defaultValues={defaultValues}
+      defaultValues={
+        requiresCurrentPassword
+          ? { ...defaultValues, currentPassword: "" }
+          : defaultValues
+      }
       onSubmit={async ({ data, mutation, form }) => {
         return mutation
           .mutateAsync({ ...data, token, action: "reset-password" })
@@ -35,8 +45,11 @@ export default function ResetPasswordForm({ token }: { token?: string }) {
       }}
     >
       <Notice />
-      <PasswordField name="password" label="Password" />
-      <PasswordField name="confirmPassword" label="Confirm Password" />
+      {requiresCurrentPassword ? (
+        <PasswordField name="currentPassword" label="Current password" />
+      ) : null}
+      <PasswordField name="password" label="New password" />
+      <PasswordField name="confirmPassword" label="Confirm new password" />
       <Submit>Submit</Submit>
     </Form>
   );

@@ -24,6 +24,7 @@ export const pageEditAction = () =>
 
       const result = await saveRecord({
         actionPrefix: "page-editor",
+        admin: true,
         table: content,
         fields: pageEditorServerFields,
         values: data.values,

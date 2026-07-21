@@ -1,5 +1,6 @@
 import fetcher from "@kenstack/api/fetcher";
 import type { SelectedMedia } from "@kenstack/db/tables";
+import type { CropSource, SquareCrop } from "@kenstack/db/tables/media/types";
 import getUploadErrorMessage from "@kenstack/forms/getUploadErrorMessage";
 
 type UploadMediaCompletePayload = {
@@ -9,12 +10,14 @@ type UploadMediaCompletePayload = {
   kind?: SelectedMedia["kind"] | null;
   mediaId?: string;
   originalUrl?: string | null;
+  original?: CropSource | null;
   sourceHeight?: number | null;
   sourceSize?: number | null;
   sourceType?: string | null;
   sourceWidth?: number | null;
   url: string;
   width?: number | null;
+  squareCrop?: SquareCrop | null;
 };
 
 export async function uploadMedia({

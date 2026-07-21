@@ -19,28 +19,33 @@ type SubmitData<
   TResult extends Record<string, unknown>,
   TVariables extends Record<string, unknown>,
   TValues extends FieldValues,
+  TSubmitValues extends FieldValues,
 > = {
-  data: TValues;
+  data: TSubmitValues;
   event?: React.BaseSyntheticEvent;
   mutation: UseMutationResult<FetchResult<TResult>, Error, TVariables>;
   isDirty: boolean;
   changes: string[];
-  form: UseFormReturn<TValues>;
+  form: UseFormReturn<TValues, unknown, TSubmitValues>;
   setStatusMessage: SetStatusMessage;
 };
 
-type ChangeData<TValues extends FieldValues> = {
+type ChangeData<
+  TValues extends FieldValues,
+  TSubmitValues extends FieldValues,
+> = {
   event: React.FormEvent<HTMLFormElement>;
-  form: UseFormReturn<TValues>;
+  form: UseFormReturn<TValues, unknown, TSubmitValues>;
 };
 
 type BlurData<
   TResult extends Record<string, unknown>,
   TVariables extends Record<string, unknown>,
   TValues extends FieldValues,
+  TSubmitValues extends FieldValues,
 > = {
   event: React.FocusEvent<HTMLFormElement>;
-  form: UseFormReturn<TValues>;
+  form: UseFormReturn<TValues, unknown, TSubmitValues>;
   mutation: UseMutationResult<FetchResult<TResult>, Error, TVariables>;
   setStatusMessage: SetStatusMessage;
 };
@@ -49,18 +54,20 @@ type FormProps<
   TResult extends Record<string, unknown>,
   TVariables extends Record<string, unknown>,
   TSchema extends FormSchema,
-  TValues extends FieldValues = z.input<TSchema>,
 > = Omit<React.ComponentProps<"form">, "onSubmit" | "onChange" | "onBlur"> & {
-  onSubmit: (props: SubmitData<TResult, TVariables, TValues>) => void;
-  onChange?: (props: ChangeData<TValues>) => void;
-  onBlur?: (props: BlurData<TResult, TVariables, TValues>) => void;
+  onSubmit: (
+    props: SubmitData<TResult, TVariables, z.input<TSchema>, z.output<TSchema>>,
+  ) => void;
+  onChange?: (props: ChangeData<z.input<TSchema>, z.output<TSchema>>) => void;
+  onBlur?: (
+    props: BlurData<TResult, TVariables, z.input<TSchema>, z.output<TSchema>>,
+  ) => void;
 };
 
 export default function FormContainer<
   TResult extends Record<string, unknown>,
   TVariables extends Record<string, unknown>,
   TSchema extends FormSchema,
-  TValues extends FieldValues = z.input<TSchema>,
 >({
   defaultValues,
   onSubmit,
@@ -72,8 +79,8 @@ export default function FormContainer<
   onSuccess,
   schema,
   ...props
-}: FormProviderProps<TResult, TVariables, TSchema, TValues> &
-  FormProps<TResult, TVariables, TSchema, TValues>) {
+}: FormProviderProps<TResult, TVariables, TSchema> &
+  FormProps<TResult, TVariables, TSchema>) {
   return (
     <QueryBoundary>
       <FormProvider
@@ -99,17 +106,17 @@ export function Form<
   TResult extends Record<string, unknown>,
   TVariables extends Record<string, unknown>,
   TSchema extends FormSchema,
-  TValues extends FieldValues = z.input<TSchema>,
 >({
   onSubmit,
   onChange,
   onBlur,
   ...props
-}: FormProps<TResult, TVariables, TSchema, TValues>) {
+}: FormProps<TResult, TVariables, TSchema>) {
   const { form, mutation, setStatusMessage, uploadingFields } = useForm<
     TResult,
     TVariables,
-    TValues
+    z.input<TSchema>,
+    z.output<TSchema>
   >();
   const {
     formState: { isDirty },

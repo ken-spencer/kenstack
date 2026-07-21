@@ -1,6 +1,6 @@
 "use client";
 
-import { UserFacingError } from "./errors";
+import { ReturnedError } from "./errors";
 
 export type FetchSuccess<T extends Record<string, unknown>> = {
   status: "success";
@@ -46,7 +46,7 @@ export default async function fetcher<
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "";
-    throw UserFacingError(
+    throw ReturnedError(
       `There was an unexpected problem with your request. ${message}`,
     );
   }
@@ -54,9 +54,9 @@ export default async function fetcher<
   const ct = response.headers.get("content-type") ?? "";
   if (!ct.includes("application/json")) {
     if (response.status === 404) {
-      throw UserFacingError("We were unable to find the requested resource.");
+      throw ReturnedError("We were unable to find the requested resource.");
     }
-    throw UserFacingError(
+    throw ReturnedError(
       `There was an unexpected problem with your request. Server error: ${response.status} ${response.statusText}`,
     );
   }
@@ -66,7 +66,7 @@ export default async function fetcher<
     json = await response.json();
   } catch (err) {
     const message = err instanceof Error ? err.message : "";
-    throw UserFacingError(
+    throw ReturnedError(
       `There was an unexpected problem with the response from the server: ${message}`,
     );
   }
@@ -77,11 +77,11 @@ export default async function fetcher<
     (json.status !== "success" && json.status !== "error") ||
     (response.ok === false && json.status !== "error")
   ) {
-    throw UserFacingError("The response from the server was invalid");
+    throw ReturnedError("The response from the server was invalid");
   }
 
   if (json.status === "error" && response.status >= 500) {
-    throw UserFacingError(
+    throw ReturnedError(
       typeof json.message === "string"
         ? json.message
         : "There was an unexpected problem with your request.",

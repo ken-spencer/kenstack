@@ -22,10 +22,7 @@ import fetcher, {
   type FetchResult,
   type FetchSuccess,
 } from "@kenstack/api/fetcher";
-import {
-  UserFacingError,
-  getUserFacingErrorMessage,
-} from "@kenstack/api/errors";
+import { ReturnedError, getReturnedErrorMessage } from "@kenstack/api/errors";
 
 export type FormSchema = z.ZodType<Record<string, unknown>, FieldValues>;
 
@@ -64,14 +61,14 @@ function normalizeStatusMessage(
     return null;
   }
 
-  if (message instanceof UserFacingError) {
+  if (message instanceof ReturnedError) {
     return message.message
       ? { status: "error", message: message.message }
       : null;
   }
 
   if (message instanceof Error) {
-    const errorMessage = getUserFacingErrorMessage(message);
+    const errorMessage = getReturnedErrorMessage(message);
     return errorMessage ? { status: "error", message: errorMessage } : null;
   }
 
@@ -97,23 +94,24 @@ export type FormProviderProps<
   TResult extends Record<string, unknown>, // = Record<string, unknown>,
   TVariables extends Record<string, unknown>,
   TSchema extends FormSchema,
-  TValues extends FieldValues = z.input<TSchema>,
 > = {
   /** Also used internally by some fields */
   apiPath?: string;
   mutationFn?: MutationFn<TResult, TVariables>;
   schema: TSchema;
-  defaultValues: DefaultValues<TValues>;
+  defaultValues: DefaultValues<z.input<TSchema>>;
   onSuccess?: (
     data: FetchSuccess<TResult>,
     variables: TVariables,
-    context: { form: UseFormReturn<TValues> },
+    context: {
+      form: UseFormReturn<z.input<TSchema>, unknown, z.output<TSchema>>;
+    },
   ) => void;
   onError?: (
     error: Error,
     variables: TVariables,
     context: {
-      form: UseFormReturn<TValues>;
+      form: UseFormReturn<z.input<TSchema>, unknown, z.output<TSchema>>;
       setStatusMessage: SetStatusMessage;
     },
   ) => void;
@@ -124,9 +122,10 @@ export type UseFormResult<
   TResult extends Record<string, unknown>,
   TVariables extends Record<string, unknown>,
   TValues extends FieldValues,
+  TSubmitValues extends FieldValues = TValues,
 > = {
   apiPath?: string;
-  form: UseFormReturn<TValues>;
+  form: UseFormReturn<TValues, unknown, TSubmitValues>;
   statusMessage: StatusMessage | null;
   setStatusMessage: SetStatusMessage;
   uploadingFields: Set<string>;
@@ -139,7 +138,6 @@ function FormProvider<
   TResult extends Record<string, unknown>,
   TVariables extends Record<string, unknown>, // = Record<string, unknown>,
   TSchema extends FormSchema,
-  TValues extends FieldValues = z.input<TSchema>,
 >({
   apiPath,
   defaultValues,
@@ -148,7 +146,7 @@ function FormProvider<
   onError,
   onSuccess,
   children,
-}: FormProviderProps<TResult, TVariables, TSchema, TValues>) {
+}: FormProviderProps<TResult, TVariables, TSchema>) {
   const [statusMessage, setStatusMessageState] = useState<StatusMessage | null>(
     null,
   );
@@ -174,7 +172,7 @@ function FormProvider<
     });
   }, []);
 
-  const form = useReactHookForm<TValues>({
+  const form = useReactHookForm<z.input<TSchema>, unknown, z.output<TSchema>>({
     resolver: standardSchemaResolver(schema),
     defaultValues,
     mode: "onBlur", // validate fields on blur
@@ -225,7 +223,7 @@ function FormProvider<
           clearErrors();
           Object.entries(fieldErrors).forEach(([field, err], index) => {
             setError(
-              field as Path<TValues>,
+              field as Path<z.input<TSchema>>,
               { type: "server", message: Array.isArray(err) ? err[0] : err },
               { shouldFocus: true },
             );
@@ -259,7 +257,7 @@ function FormProvider<
         if (data.values) {
           // this will only update fields that are rendered
           Object.entries(data.values).forEach(([fieldName, value]) => {
-            resetField(fieldName as Path<TValues>, {
+            resetField(fieldName as Path<z.input<TSchema>>, {
               defaultValue: value,
               keepError: false,
               keepDirty: false,
@@ -274,7 +272,12 @@ function FormProvider<
     },
   });
 
-  const values: UseFormResult<TResult, TVariables, TValues> = {
+  const values: UseFormResult<
+    TResult,
+    TVariables,
+    z.input<TSchema>,
+    z.output<TSchema>
+  > = {
     apiPath,
     form,
     statusMessage,
@@ -296,12 +299,13 @@ function useForm<
   TResult extends Record<string, unknown>,
   TVariables extends Record<string, unknown>,
   TValues extends FieldValues,
+  TSubmitValues extends FieldValues = TValues,
 >() {
   const ctx = useContext(FormContext);
   if (!ctx) {
     throw new Error("useForm must be used within FormProvider");
   }
-  return ctx as UseFormResult<TResult, TVariables, TValues>;
+  return ctx as UseFormResult<TResult, TVariables, TValues, TSubmitValues>;
 }
 
 export { FormProvider, useForm };

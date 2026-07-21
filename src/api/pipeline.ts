@@ -1,5 +1,4 @@
-import errorLog from "@kenstack/lib/errorLog";
-import { UserFacingError } from "./errors";
+import { ReturnedError } from "./errors";
 import { NextRequest, NextResponse } from "next/server";
 import type { ObjectSchema } from ".";
 
@@ -9,7 +8,7 @@ import * as z from "zod";
 
 import isPlainObject from "lodash-es/isPlainObject";
 
-import { isRedirectError } from "next/dist/client/components/redirect-error";
+import { unstable_rethrow } from "next/navigation";
 import { PipelineResponse } from "./PipelineResponse";
 import { deps } from "@app/deps";
 import type { UserAccess } from "@kenstack/auth/types";
@@ -111,11 +110,9 @@ export default async function pipeline(
     try {
       result = await action(context);
     } catch (e) {
-      if (isRedirectError(e)) {
-        throw e;
-      }
+      unstable_rethrow(e);
 
-      if (e instanceof UserFacingError) {
+      if (e instanceof ReturnedError) {
         return response
           .error({
             message: e.message,
@@ -124,12 +121,11 @@ export default async function pipeline(
           .toNextResponse();
       }
 
-      if (e instanceof Error) {
-        errorLog(e, `Fatal error on pipeline key ${key}`);
-      } else {
-        // eslint-disable-next-line no-console
-        console.error("Unknown error", e);
-      }
+      await deps.error(e, {
+        source: "api.pipeline",
+        context: { stage: key },
+        request,
+      });
       return NextResponse.json(
         {
           status: "error",
@@ -184,7 +180,7 @@ export const pipelineStage =
         const metaSchema = z.object(metaShape);
         const parsedMeta = await metaSchema.safeParseAsync(ctx.dataIn);
         if (!parsedMeta.success) {
-          // eslint-disable-next-line no-console
+          // eslint-disable-next-line no-console -- Invalid submitted data is not an operational alert.
           console.error("Invalid form metadata", parsedMeta.error);
 
           return ctx.response.error(

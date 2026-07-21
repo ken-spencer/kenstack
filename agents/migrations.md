@@ -2,6 +2,149 @@
 
 Use this file to document breaking Kenstack API changes that downstream sites may need to apply.
 
+Migration notes describe the current implemented API; they do not define it. During review, verify each note against the implementation and current public contract. If a note has drifted, correct the note—do not rename, reshape, or otherwise change the current API merely to make it match migration documentation. Change the API only when the implementation requirements independently call for that change, then update the migration note to describe the result.
+
+## Unreleased: Upload Availability
+
+Old API:
+
+- `@kenstack/lib/canUpload` exported a function that returned whether media uploads were configured.
+
+New API:
+
+- `@kenstack/lib/mediaStorage` exports the `uploadsConfigured` boolean beside the storage configuration that owns it.
+
+Migration step:
+
+- Replace `import canUpload from "@kenstack/lib/canUpload"` and `canUpload()` with `import { uploadsConfigured } from "@kenstack/lib/mediaStorage"` and `uploadsConfigured`.
+
+## Unreleased: Operational Error Reporting
+
+Old API:
+
+- `@kenstack/lib/errorLog` accepted an `Error`, optional message, and optional context data through a default export.
+
+New API:
+
+- Unexpected errors are reported through `deps.error(error, { source, context?, request? })` when application dependencies are available.
+- Framework hooks and reporter-owned adapters may use `reportError(...)` from `@kenstack/lib/errorReporter` directly.
+
+Migration steps:
+
+- Replace `errorLog(error, message, data)` with `await deps.error(error, { source, context })`, using a stable source identifier instead of a prose message. Map only selected, non-sensitive diagnostic fields into `context`; do not pass the old `data` object through wholesale.
+- Pass the current `Request` when one is available so the reporter can include sanitized request metadata.
+
+## Unreleased: Returned API Errors
+
+Old API:
+
+- `UserFacingError` represented an expected error whose message and status were returned to the caller without operational reporting.
+- `getUserFacingErrorMessage(...)` returned its safe message or a generic fallback.
+
+New API:
+
+- `ReturnedError` names that behavior directly.
+- `getReturnedErrorMessage(...)` returns its message or the generic fallback.
+- Ordinary `Error` remains the correct choice for configuration, storage, database, processing, and programming failures that require operational reporting.
+
+Migration steps:
+
+- Replace `UserFacingError` imports, construction, and `instanceof` checks with `ReturnedError`.
+- Replace `getUserFacingErrorMessage(...)` with `getReturnedErrorMessage(...)`.
+
+## Unreleased: Image Field Shape
+
+Old API:
+
+- `ImageField` used `square?: boolean` to choose between a square frame and the image's original aspect ratio.
+
+New API:
+
+- `ImageField` uses `shape?: "square" | "round" | "original"`, with `"square"` as the default.
+- `"round"` owns the circular frame, image mask, placeholder styling, and crop guide as one behavior.
+
+Migration steps:
+
+- Remove `square` when the default square presentation is intended.
+- Replace `square={false}` with `shape="original"`.
+- Use `shape="round"` for circular images such as user avatars.
+
+## Unreleased: Square Crop Value
+
+Old API:
+
+- `SquareCrop` included `mode: "center" | "manual"` and made `zoom` optional.
+
+New API:
+
+- `SquareCrop` is the manual crop coordinates `{ x, y, zoom }`.
+- `null` represents the centered crop. An omitted `squareCrop` property means the crop was not submitted for change.
+
+Migration steps:
+
+- Replace centered crop objects with `null`.
+- Remove `mode: "manual"` from manual crop objects and supply `zoom`; use `1` when an older value omitted it.
+- If persisted media JSON contains crop objects, normalize those values before relying on the new type. No database column migration is required.
+
+## Unreleased: Admin Meta Dates Record Prop
+
+Old API:
+
+- `MetaDates` accepted separate `createdAt` and `updatedAt` props.
+
+New API:
+
+- `MetaDates` accepts one `record` containing `createdAt` and `updatedAt`.
+
+Migration step:
+
+- Replace `<MetaDates createdAt={record.createdAt} updatedAt={record.updatedAt} />` with `<MetaDates record={record} />`.
+
+## Unreleased: Module Record Save Helpers
+
+Old APIs:
+
+- `saveAdminRecord({ moduleConfig, actionPrefix?, fields?, id, changes, values })` was used by both admin actions and site-owned profile actions.
+- Site actions configured restricted media behavior separately on each server field.
+- `saveRecord(...)` did not tell field handlers whether the save came from an admin action.
+
+New APIs:
+
+- `saveModuleRecord({ module, fields, id, changes, values })` saves a module record from an authenticated site action with restricted field authority and module-owned cache revalidation. The explicit field set defines that action's writable and returned surface; it must not be replaced with the module's broader admin fields.
+- `saveAdminRecord({ module, id, changes, values })` saves through the standard admin path and supplies admin-save authority to field handlers.
+- `saveRecord(...)` remains the low-level helper for custom persistence. It is restricted by default and accepts `admin: true` for backend actions that have already enforced admin access.
+- Admin-save authority describes the backend action, not the current user's roles, and is never accepted from submitted data.
+
+Migration steps:
+
+- Rename the `saveAdminRecord` `moduleConfig` property to `module` and remove `actionPrefix` and `fields`; both are now derived by the admin save path.
+- Replace non-admin `saveAdminRecord(...)` calls with `saveModuleRecord(...)`.
+- Remove site-level server-field options that suppress admin metadata or media selection behavior. The save helper now supplies that context to field handlers.
+- Add `admin: true` to direct `saveRecord(...)` calls owned by backend admin actions, such as custom settings or page-editor persistence. Leave ordinary authenticated actions on the restricted default.
+
+## Unreleased: Admin Document Metadata
+
+Old behavior:
+
+- Catch-all admin pages exported only `createAdminPage()` and inherited the site's generic document title.
+
+New behavior:
+
+- Kenstack exports `generateMetadata()` from `@kenstack/admin/AdminPage`.
+- The function parses the catch-all route, resolves the configured module title, and returns an absolute title such as `People · Admin` without loading the record.
+
+Migration steps:
+
+- Re-export the shared function as Next.js `generateMetadata` from the site's catch-all admin page. Next.js discovers metadata from route files, so `createAdminPage()` cannot install this named export itself.
+
+  ```ts
+  import { createAdminPage } from "@kenstack/admin/AdminPage";
+
+  export { generateMetadata } from "@kenstack/admin/AdminPage";
+
+  export default createAdminPage();
+  ```
+
 ## Unreleased: Admin Theme Stylesheet
 
 Old behavior:
@@ -172,7 +315,7 @@ Migration steps:
   export const modules = defineAdmin([news, users], clients);
   ```
 
-- Use the old admin route syntax: `export default createAdminPage()`. `createAdminPage()` reads `deps.modules[name].client` internally.
+- Directly re-export `generateMetadata` from `@kenstack/admin/AdminPage` alongside `export default createAdminPage()`. `createAdminPage()` reads `deps.modules[name].client` internally, while Next.js discovers metadata through the route file's named export.
 - Do not import `client.ts`, form components, list item renderers, or other admin Client Components from server module files.
 - For module settings, move client-side settings field config into a module-owned `settings.ts` using `defineSettingsClient({ fields: settingsFields })`.
 - Render settings controls with a module entry from the `defineAdmin(...)` registry. Do not pass a separate `loadClient` prop:
