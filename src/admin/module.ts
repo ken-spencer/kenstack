@@ -287,6 +287,7 @@ function normalizeSort(table: AdminTable, options: AdminSortOptions) {
         fields: option.fields.map((field) => resolveSortField(table, field)),
         defaultDirection: option.defaultDirection ?? "asc",
         direction: true,
+        group: option.group,
       },
     ]),
   ) satisfies AdminSort;

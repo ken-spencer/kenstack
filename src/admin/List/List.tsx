@@ -17,7 +17,7 @@ import Alert from "@kenstack/components/Alert";
 import Button from "@kenstack/components/Button";
 import { Skeleton } from "@kenstack/components/Skeleton";
 import { Checkbox } from "@kenstack/forms/controls/Checkbox";
-import MetaDates from "@kenstack/admin/components/MetaDates";
+import Updated from "@kenstack/admin/components/Updated";
 import VisibilityStatus from "./VisibilityStatus";
 import type { AdminClient, BaseListItem } from "@kenstack/admin/client";
 import type { SelectedMedia } from "@kenstack/db/tables";
@@ -45,6 +45,8 @@ function AdminList() {
     canReorder,
     isReorderSort,
     name,
+    filters,
+    sort,
     client: { listItems },
   } = useAdminList();
   const [reorderError, setReorderError] = useState<string | null>(null);
@@ -140,6 +142,9 @@ function AdminList() {
     !isFetching &&
     !isPlaceholderData &&
     !reorderMutation.isPending;
+  const group = isPlaceholderData
+    ? undefined
+    : sort.find(({ name }) => name === filters.sort)?.group;
   const listStyle: CSSProperties & {
     "--list-item-columns": string;
     "--list-item-mobile-columns": string;
@@ -212,12 +217,22 @@ function AdminList() {
         style={listStyle}
       >
         {data.items.map((item, key) => {
+          const value = group ? groupValue(item, group.by) : null;
+          const previous =
+            group && key > 0 ? groupValue(data.items[key - 1], group.by) : null;
           const path =
             `/admin/${name}/${item.id}` +
             (searchParams.size ? "?" + searchParams : "");
 
           return (
             <Fragment key={item.id}>
+              {group && value !== null && (key === 0 || value !== previous) ? (
+                <GroupHeading
+                  id={value}
+                  label={groupValue(item, group.label) ?? value}
+                  link={group.link}
+                />
+              ) : null}
               <div
                 className="flex items-center justify-self-start px-1 py-2"
                 data-reorder-id={isReorderSort ? item.id : undefined}
@@ -249,6 +264,7 @@ function AdminList() {
                 item={{ ...item, path }}
                 listItems={resolvedListItems}
                 reorderId={isReorderSort ? item.id : undefined}
+                grouped={value !== null}
               />
               {data.items.length > key + 1 ? (
                 <div className="col-span-full border-t border-t-[var(--admin-divider)]" />
@@ -260,6 +276,40 @@ function AdminList() {
         })}
       </div>
     </>
+  );
+}
+
+function groupValue(row: Record<string, unknown>, property: string) {
+  const value = row[property];
+
+  return typeof value === "string" ||
+    (typeof value === "number" && Number.isFinite(value))
+    ? value
+    : null;
+}
+
+function GroupHeading({
+  id,
+  label,
+  link,
+}: {
+  id: number | string;
+  label: number | string;
+  link?: string;
+}) {
+  return (
+    <h2 className="col-span-full px-1 pt-4 pb-1 text-lg font-medium first:pt-2 md:px-2">
+      {link && typeof id === "number" && Number.isInteger(id) && id > 0 ? (
+        <Link
+          className="hover:text-muted-foreground transition-colors"
+          href={`/admin/${link}/${id}`}
+        >
+          {label}
+        </Link>
+      ) : (
+        label
+      )}
+    </h2>
   );
 }
 
@@ -345,10 +395,12 @@ function getDefaultListItems(
 }
 
 function ListItemCells({
+  grouped,
   item,
   listItems,
   reorderId,
 }: {
+  grouped: boolean;
   item: BaseListItem & Record<string, unknown> & { path: string };
   listItems: ListItems;
   reorderId?: number;
@@ -361,7 +413,7 @@ function ListItemCells({
         data-reorder-id={reorderId}
         style={{ gridColumn: key + 2 }}
       >
-        {render(item)}
+        {render(item, { grouped })}
       </div>
     );
   });
@@ -380,10 +432,13 @@ function DefaultTitleCell({
     <div className="flex min-w-0 items-center gap-2">
       {hasImageSlot ? <ImageCell media={media} path={row.path} /> : null}
       <div className="flex min-w-0 flex-col">
-        <Link className="text-lg" href={row.path}>
+        <Link
+          className="max-w-full self-start truncate text-lg"
+          href={row.path}
+        >
           {title || `ID ${row.id}`}
         </Link>
-        <MetaDates record={row} />
+        <Updated value={row.updatedAt} />
       </div>
     </div>
   );

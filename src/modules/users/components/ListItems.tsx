@@ -3,7 +3,7 @@
 import Link from "next/link";
 
 import Avatar from "@kenstack/components/Avatar";
-import MetaDates from "@kenstack/admin/components/MetaDates";
+import Updated from "@kenstack/admin/components/Updated";
 import type { ListItemRow } from "@kenstack/admin/client";
 import type { SelectedMedia } from "@kenstack/db/tables";
 import { formatUserInitials, formatUserName } from "@kenstack/lib/user";
@@ -30,10 +30,10 @@ export function UserAvatarListItem({ row }: { row: UserListRow }) {
 export function UserNameListItem({ row }: { row: UserListRow }) {
   return (
     <div className="flex min-w-0 flex-col">
-      <Link className="min-w-0 truncate text-lg" href={row.path}>
+      <Link className="max-w-full self-start truncate text-lg" href={row.path}>
         {formatUserName(row, { fallback: `ID ${row.id}` })}
       </Link>
-      <MetaDates record={row} />
+      <Updated value={row.updatedAt} />
     </div>
   );
 }

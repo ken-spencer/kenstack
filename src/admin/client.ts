@@ -16,7 +16,7 @@ export type ListItemRow<
 > = BaseListItem & TExtra & { path: string };
 
 type ListItemRender<TRow extends ListItemRow> = {
-  render(row: TRow): ReactNode;
+  render(row: TRow, context: { grouped: boolean }): ReactNode;
 }["render"];
 
 type ListItem<TRow extends ListItemRow> = readonly [

@@ -21,12 +21,19 @@ export type ResolvedAdminSortField =
       direction?: SortDirection;
     };
 
+export type ListGroup = {
+  by: string;
+  label: string;
+  link?: string;
+};
+
 export type AdminSortOptions = Record<
   string,
   {
     label?: string;
     fields: readonly AdminSortField[];
     defaultDirection?: SortDirection;
+    group?: ListGroup;
   }
 >;
 
@@ -37,6 +44,7 @@ export type AdminSort = Record<
     fields: readonly ResolvedAdminSortField[];
     defaultDirection: SortDirection;
     direction?: boolean;
+    group?: ListGroup;
   }
 >;
 
@@ -45,6 +53,7 @@ export type AdminSortMeta = {
   label: string;
   defaultDirection: SortDirection;
   direction?: boolean;
+  group?: ListGroup;
 };
 
 export type AdminListReorderOptions =
@@ -126,6 +135,7 @@ export function getSortMeta(sort: AdminSort): AdminSortMeta[] {
     label: option.label,
     defaultDirection: option.defaultDirection,
     direction: option.direction ?? true,
+    group: option.group,
   }));
 }
 
