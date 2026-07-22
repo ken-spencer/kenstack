@@ -1,108 +1,169 @@
 import { deps } from "@app/deps";
+import type { NextRequest } from "next/server";
+import * as z from "zod";
 
-type RecaptchaOptions = {
-  /** name of the field in `data` that holds the token */
-  field?: string;
-  /** action name passed to executeRecaptcha */
-  expectedAction?: string;
-  threshold?: number;
-};
+import type { PipelineResponse } from "./PipelineResponse";
 
-type RecaptchaVerifyResponse = {
+const schema = z.object({
+  action: z.string().optional(),
+  "error-codes": z.array(z.string().toLowerCase()).default([]),
+  hostname: z.string().optional(),
+  score: z.number().optional(),
+  success: z.boolean(),
+});
+
+export default async function recaptcha({
+  action,
+  request,
+  response,
+  threshold = 0.5,
+  token,
+}: {
   action?: string;
-  success: boolean;
-  score: number;
-  [k: string]: unknown;
-};
+  request: NextRequest;
+  response: PipelineResponse;
+  threshold?: number;
+  token?: string;
+}) {
+  if (await deps.auth.getCurrentUser()) {
+    /** Skip recaptcha if logged in */
+    return;
+  }
 
-import { pipelineStage } from "@kenstack/api";
-
-const isObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
-
-const getRecaptchaConfig = () => {
   const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY?.trim();
   const secretKey = process.env.RECAPTCHA_SECRET_KEY?.trim();
-
-  if (siteKey && secretKey) {
-    return secretKey;
-  }
 
   if (!siteKey && !secretKey) {
     return;
   }
 
-  if (!siteKey) {
-    return {
-      message: "NEXT_PUBLIC_RECAPTCHA_SITE_KEY is required for recaptcha",
-    };
+  if (!siteKey || !secretKey) {
+    await deps.error(
+      !siteKey
+        ? "NEXT_PUBLIC_RECAPTCHA_SITE_KEY is required for recaptcha"
+        : "RECAPTCHA_SECRET_KEY environment variable is not set",
+      { request },
+    );
+    return;
   }
 
-  return {
-    message: "RECAPTCHA_SECRET_KEY environment variable is not set",
-  };
-};
+  if (!token) {
+    return response.error(
+      "reCAPTCHA didn’t complete. Refresh the page and try again.",
+    );
+  }
 
-const recaptcha = ({
-  expectedAction,
-  field = "recaptchaToken",
-  threshold = 0.5,
-}: RecaptchaOptions = {}) =>
-  pipelineStage({}, async ({ dataIn, response }) => {
-    if (await deps.auth.getCurrentUser()) {
-      /** Skip recaptcha if logged in */
-      return;
-    }
+  let res;
+  try {
+    res = await fetch("https://www.google.com/recaptcha/api/siteverify", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: `secret=${encodeURIComponent(secretKey)}&response=${encodeURIComponent(token)}`,
+      signal: AbortSignal.timeout(5000),
+    });
+  } catch (error) {
+    await deps.error(
+      `Recaptcha verification request failed: ${String(error)}`,
+      { request },
+    );
+    return;
+  }
 
-    const config = getRecaptchaConfig();
+  if (!res.ok) {
+    await deps.error(`Recaptcha verification returned HTTP ${res.status}`, {
+      request,
+    });
+    return;
+  }
 
-    if (!config) {
-      return;
-    }
+  let json: unknown;
+  try {
+    json = await res.json();
+  } catch (error) {
+    await deps.error(
+      `Recaptcha verification returned invalid JSON: ${String(error)}`,
+      { request },
+    );
+    return;
+  }
 
-    if (typeof config !== "string") {
-      return response.error(config.message);
-    }
+  const parsed = schema.safeParse(json);
+  if (!parsed.success) {
+    await deps.error(
+      `Recaptcha returned an invalid response: ${parsed.error.message}`,
+      { request },
+    );
+    return;
+  }
 
-    const token = isObject(dataIn) && dataIn[field];
-    if (!token || typeof token !== "string") {
-      return response.error(`Recaptcha token field "${field}" is required`);
-    }
+  const { data } = parsed;
 
-    const verificationRes = await fetch(
-      "https://www.google.com/recaptcha/api/siteverify",
+  if (
+    data["error-codes"].some((code) => code.startsWith("over free quota")) ||
+    data["error-codes"].includes("missing-input-secret") ||
+    data["error-codes"].includes("invalid-input-secret") ||
+    data["error-codes"].includes("bad-request")
+  ) {
+    await deps.error(
+      `Recaptcha assessment unavailable: ${data["error-codes"].join(", ")}`,
+      { request },
+    );
+    return;
+  }
+
+  if (
+    (!data.success && data["error-codes"].length === 0) ||
+    data["error-codes"].some(
+      (code) =>
+        code !== "browser-error" &&
+        code !== "missing-input-response" &&
+        code !== "invalid-input-response" &&
+        code !== "timeout-or-duplicate",
+    )
+  ) {
+    await deps.error(
+      `Recaptcha returned an unrecognized assessment result: ${data["error-codes"].join(", ") || "no error code"}`,
+      { request },
+    );
+    return;
+  }
+
+  if (data["error-codes"].includes("browser-error")) {
+    return;
+  }
+
+  if (data.success && data.score === undefined) {
+    await deps.error(
+      "Recaptcha returned a successful response without a score",
+      { request },
+    );
+    return;
+  }
+
+  if (
+    !data.success ||
+    (data.score ?? 0) < threshold ||
+    (action && data.action !== action)
+  ) {
+    // eslint-disable-next-line no-console -- Expected reCAPTCHA rejection with sanitized diagnostics for integration support.
+    console.error(
+      `Recaptcha verification failed: ${data["error-codes"].join(", ") || "assessment rejected"}`,
       {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: `secret=${encodeURIComponent(config)}&response=${encodeURIComponent(token)}`,
+        action,
+        hostname: data.hostname,
+        receivedAction: data.action,
+        score: data.score,
+        success: data.success,
+        threshold,
       },
     );
 
-    if (!verificationRes.ok) {
-      return response.error("Problem connecting to Recaptcha");
+    if (data["error-codes"].includes("timeout-or-duplicate")) {
+      return response.error(
+        "This reCAPTCHA check expired or was already used. Try again.",
+      );
     }
 
-    const verification =
-      (await verificationRes.json()) as RecaptchaVerifyResponse;
-
-    if (
-      !verification.success ||
-      (verification.score ?? 0) < threshold ||
-      (expectedAction && verification.action !== expectedAction)
-    ) {
-      /** Sanitize the data before logging */
-      const logData = typeof dataIn === "object" ? { ...dataIn } : {};
-      for (const f of [field, "password", "passwordHash", "confirmPassword"]) {
-        if (f in logData) {
-          logData[f] = "* * * * * * * *";
-        }
-      }
-      // eslint-disable-next-line no-console
-      console.error("Recaptcha failed:", verification, logData);
-      return response.error("Couldn’t verify you’re human. Please try again.");
-    }
-
-    // on success, just fall through
-  });
-
-export default recaptcha;
+    return response.error("reCAPTCHA couldn’t verify your request. Try again.");
+  }
+}

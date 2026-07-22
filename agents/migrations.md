@@ -26,13 +26,42 @@ Old API:
 
 New API:
 
-- Unexpected errors are reported through `deps.error(error, { source, context?, request? })` when application dependencies are available.
+- Unexpected errors are reported through `deps.error(errorOrMessage, { context?, request?, source? })` when application dependencies are available. Strings are converted to `Error` internally with a caller stack; existing `Error` objects retain their original stack and cause.
 - Framework hooks and reporter-owned adapters may use `reportError(...)` from `@kenstack/lib/errorReporter` directly.
 
 Migration steps:
 
-- Replace `errorLog(error, message, data)` with `await deps.error(error, { source, context })`, using a stable source identifier instead of a prose message. Map only selected, non-sensitive diagnostic fields into `context`; do not pass the old `data` object through wholesale.
+- Replace `errorLog(error, message, data)` with `await deps.error(errorOrMessage, { context, request })`. Put details needed to understand the failure in the message. Keep `context` only for selected, non-sensitive structured values that are useful for filtering or correlation; do not repeat the message or pass the old `data` object through wholesale. Add `source` only when it distinguishes information that is not already clear from the message, stack, and request path.
 - Pass the current `Request` when one is available so the reporter can include sanitized request metadata.
+
+## Unreleased: reCAPTCHA Availability
+
+`recaptcha(...)` no longer returns a pipeline stage. Call it directly from the protected action after schema
+parsing and cheaper application-owned guards, but before the protected side effect:
+
+```ts
+const recaptchaRejection = await recaptcha({
+  action: "form_action",
+  request,
+  response,
+  token: data.recaptchaToken,
+});
+if (recaptchaRejection) {
+  return recaptchaRejection;
+}
+```
+
+Include the token in the protected action's pipeline schema so malformed values become missing tokens instead
+of form-field errors:
+
+```ts
+recaptchaToken: z.string().optional().catch(undefined),
+```
+
+Missing or invalid tokens, expired checks, low scores, wrong actions, and other documented assessment rejections
+still stop the request. Availability failures fail open. Operator-actionable failures, including incomplete
+configuration, transport failures, unusable responses, and over-quota assessments, are reported through
+`deps.error(...)`. `browser-error` also fails open but is not reported.
 
 ## Unreleased: Returned API Errors
 

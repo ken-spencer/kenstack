@@ -72,6 +72,24 @@ export const createDeps = <
     ...email,
   };
 
+  const error = (thrown: unknown, context: ErrorReportContext) => {
+    let normalized: Error;
+    if (thrown instanceof Error) {
+      normalized = thrown;
+    } else {
+      normalized = new Error(
+        typeof thrown === "string" ? thrown : String(thrown),
+        { cause: thrown },
+      );
+      Error.captureStackTrace?.(normalized, error);
+    }
+
+    return reportError(normalized, {
+      ...context,
+      emailFrom: resolvedEmail.from,
+    });
+  };
+
   return {
     multiTenant: false,
     uploadMaxImageSize,
@@ -83,8 +101,7 @@ export const createDeps = <
     modules,
     ...depsOptions,
     email: resolvedEmail,
-    error: (error: unknown, context: ErrorReportContext) =>
-      reportError(error, { ...context, emailFrom: resolvedEmail.from }),
+    error,
   };
 };
 

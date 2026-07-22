@@ -2,9 +2,9 @@ import { NextRequest } from "next/server";
 import bcrypt from "bcrypt";
 import { geolocation, ipAddress } from "@vercel/functions";
 import {
-  recaptcha,
   pipeline,
   pipelineStage,
+  recaptcha,
   type PipelineOptions,
 } from "@kenstack/api";
 import loginSchema from "@kenstack/auth/schemas/login";
@@ -15,12 +15,16 @@ import { sql } from "drizzle-orm";
 import { PipelineResponse } from "@kenstack/api/PipelineResponse";
 
 export const loginPipeline = () => (options: PipelineOptions) =>
-  pipeline(options, [recaptcha(), login()]);
+  pipeline(options, login());
 
 const login = () =>
   pipelineStage(
     { schema: loginSchema },
-    async ({ data: { email, password, returnTo }, request, response }) => {
+    async ({
+      data: { email, password, recaptchaToken, returnTo },
+      request,
+      response,
+    }) => {
       const limited = await enforcePasswordAttemptLimit(
         email,
         request,
@@ -28,6 +32,16 @@ const login = () =>
       );
       if (limited) {
         return limited;
+      }
+
+      const recaptchaRejection = await recaptcha({
+        action: "login",
+        request,
+        response,
+        token: recaptchaToken,
+      });
+      if (recaptchaRejection) {
+        return recaptchaRejection;
       }
 
       const user = await deps.db.query.users.findFirst({

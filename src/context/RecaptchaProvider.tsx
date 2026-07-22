@@ -23,7 +23,7 @@ export default function RecaptchaProvider({
   }
 
   return (
-    <GoogleReCaptchaProvider reCaptchaKey={siteKey}>
+    <GoogleReCaptchaProvider reCaptchaKey={siteKey} useRecaptchaNet>
       {children}
     </GoogleReCaptchaProvider>
   );

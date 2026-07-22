@@ -3,7 +3,7 @@ import type { Instrumentation } from "next";
 const alertTtlSeconds = 15 * 60;
 
 export type ErrorReportContext = {
-  source: string;
+  source?: string;
   context?: Record<string, unknown>;
   request?: Request;
 };
@@ -98,7 +98,7 @@ async function writeErrorReport(
     timestamp,
     project,
     environment,
-    source,
+    ...(source ? { source } : {}),
     fingerprint,
     request: request ? { ...request, path: pathname } : undefined,
     context: sanitizeContext(context),
@@ -176,7 +176,7 @@ async function writeErrorReport(
         `<p><strong>Project:</strong> ${escapeHtml(project)}</p>`,
         `<p><strong>Environment:</strong> ${escapeHtml(environment)}</p>`,
         `<p><strong>Time:</strong> ${escapeHtml(timestamp)}</p>`,
-        `<p><strong>Source:</strong> ${escapeHtml(source)}</p>`,
+        source ? `<p><strong>Source:</strong> ${escapeHtml(source)}</p>` : "",
         `<p><strong>Route:</strong> ${escapeHtml(route)}</p>`,
         `<p><strong>Method:</strong> ${escapeHtml(request?.method ?? "Unknown")}</p>`,
         `<p><strong>Error:</strong> ${escapeHtml([error.name, code, message].filter(Boolean).join(" · "))}</p>`,

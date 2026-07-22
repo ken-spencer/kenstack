@@ -31,14 +31,14 @@ export type ForgotPasswordProps = {
 
 export const forgotPasswordPipeline =
   (props: ForgotPasswordProps) => (options: PipelineOptions) =>
-    pipeline(options, [recaptcha(), forgottenPasswordAction(props)]);
+    pipeline(options, forgottenPasswordAction(props));
 
 export const forgottenPasswordAction = ({
   Email = DefaultEmail,
   attachments = defaultAttachments,
   from = deps.email.from,
 }: ForgotPasswordProps) =>
-  pipelineStage({ schema }, async ({ request, response, data }) => {
+  pipelineStage({ schema }, async ({ data, request, response }) => {
     if (!from) {
       return response.error("Password reset email sender is not configured.");
     }
@@ -46,7 +46,7 @@ export const forgottenPasswordAction = ({
     if (!data) {
       throw Error("data is required");
     }
-    const { email } = data;
+    const { email, recaptchaToken } = data;
 
     const MIN_RESPONSE_MS = 6000;
     const startedAt = Date.now();
@@ -103,6 +103,16 @@ export const forgottenPasswordAction = ({
           ? "We have received too many requests from your network to reset this password. Please try again later."
           : "We have received too many requests to reset this password. Please try again later.",
       );
+    }
+
+    const recaptchaRejection = await recaptcha({
+      action: "forgottenPassword",
+      request,
+      response,
+      token: recaptchaToken,
+    });
+    if (recaptchaRejection) {
+      return recaptchaRejection;
     }
 
     const [user] = await deps.db

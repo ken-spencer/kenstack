@@ -10,12 +10,7 @@ import mailer, { type Attachment } from "@kenstack/lib/mailer";
 import { formatUserName } from "@kenstack/lib/user";
 import { render } from "@react-email/render";
 
-import {
-  pipeline,
-  recaptcha,
-  type PipelineOptions,
-  pipelineStage,
-} from "@kenstack/api";
+import { pipeline, type PipelineOptions, pipelineStage } from "@kenstack/api";
 import { type ForgotPasswordEmailProps } from "@kenstack/auth/email/ForgotPassword";
 import type { EmailFrom } from "@kenstack/deps";
 
@@ -31,7 +26,7 @@ export type ForgotPasswordProps = {
 
 export const sendPasswordResetPipeline =
   (props: ForgotPasswordProps) => (options: PipelineOptions) =>
-    pipeline(options, [recaptcha(), sendPasswordResetAction(props)]);
+    pipeline(options, sendPasswordResetAction(props));
 
 export const sendPasswordResetAction = ({
   Email = DefaultEmail,
