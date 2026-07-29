@@ -9,11 +9,7 @@ export type MentionMenuOption = {
 };
 
 export type MentionMenuStatus =
-  | "empty"
-  | "error"
-  | "loading"
-  | "options"
-  | "prompt";
+  "empty" | "error" | "loading" | "options" | "prompt";
 
 export type MentionMenuProps = {
   message?: string;
