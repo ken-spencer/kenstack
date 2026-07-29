@@ -1,5 +1,12 @@
 # Kenstack Agent Instructions
 
+## Readability and Reviewability
+
+Human readability and reviewability are first-order requirements. Prefer
+locally visible ownership, control flow, and invariants over compact equivalent
+code. A reader should be able to identify required and optional behavior
+without tracing empty collections, fallback paths, or no-op iteration.
+
 ## Next.js
 
 Before any Next.js work, find and read the relevant doc in `node_modules/next/dist/docs/`. Training data can be stale; the local docs are the source of truth.
@@ -35,7 +42,11 @@ Before any Next.js work, find and read the relevant doc in `node_modules/next/di
 
 When implementing a convenience feature or nice-to-have improvement, do not remove, weaken, or bypass existing production behavior to make the new feature easier to add.
 
+Treat development-only flags, guards, labels, and components as intentional product boundaries. A development-only implementation is not evidence that the same interface belongs in production. Do not expose, rename, generalize, or promote it into customer- or staff-facing production behavior without explicit approval. When production needs related behavior, preserve the development tool unless the user asks to replace it, and build the approved production experience separately.
+
 Kenstack is a shared submodule consumed by multiple host sites. Usage visible in one host repository is not proof that a Kenstack feature, export, helper, or extension point is unused. Do not remove, rename, narrow, or inline shared capabilities based only on a single site's call sites. Treat the public surface as potentially used by other consumers and require explicit cross-consumer evidence, deprecation and migration handling, or direct authorization before removing it.
+
+This protection applies to existing committed public capabilities; it is not evidence for introducing or exporting a new uncommitted type, helper, or extension point.
 
 If there is a clear implementation path that preserves current behavior, use it. This includes preserving caching, configurability, query behavior, extension points, validation, publishing rules, permissions, and module boundaries.
 
@@ -58,6 +69,12 @@ Configured Prettier output is an explicit exception to this threshold. Treat for
 ## Directness Gate
 
 Apply this gate while writing TypeScript and again before finalizing it. Default to direct code. Every added or changed helper, wrapper, factory, adapter, alias, intermediate value, type, export, barrel, or forwarding file must have a concrete current purpose.
+
+Keep base behavior separate from optional-feature contributions. For optional
+behavior, complete shared work, return early when configuration is absent, then
+write the enabled path using required values. Do not use optional chaining into
+empty collections, fallback paths, or no-op iteration when an explicit branch
+would make applicability clearer.
 
 One current caller or consumer is presumptive evidence that a layer should be inlined. Keep it only when it provides meaningful repeated behavior, validation, normalization, parsing, nontrivial domain logic, stable callback identity, or a deliberate runtime or public boundary. A descriptive name, conventional organization, a shorter call site, possible future reuse, or anticipated compatibility is not sufficient.
 
@@ -99,14 +116,38 @@ For bug fixes, proceed autonomously only when the cause is clear and the fix is 
 - When delegating implementation work, instruct the agent to search for existing Kenstack primitives and local usage patterns before building custom UI behavior. Prefer `@kenstack/components/*` and established module patterns over local popover, menu, dialog, tooltip, button, skeleton, list-control, form-control, query-state, or error-state behavior. The agent should explicitly report any custom UI behavior it adds and why no existing primitive fit.
 - For TypeScript type aliases, interfaces, overloads, generic arguments, casts, explicit return annotations, or type-heavy helper APIs, read `agents/typescript.md` before coding.
 - For database, Drizzle, table schema, Zod, validation, or pipeline schema work, read `agents/data.md` before coding.
-- When a Kenstack API, export, helper, type, route, or behavior referenced by the site is missing, renamed, incompatible, or intentionally changed, read and update `agents/migrations.md` as applicable.
+- When a Kenstack API, export, helper, type, route, or behavior referenced by the site is missing, renamed, incompatible, or intentionally changed, read and update `agents/migrations.md` as applicable. Add a migration note only for a contract or stored shape that was available in an earlier committed version and could have an existing downstream consumer. Do not add migration notes for completely new features introduced by the current uncommitted change; document new usage in its owning API or feature documentation when guidance is needed.
 
 ## Code style
 
 - Use TypeScript.
 - Do not use `any`.
 - Use curly braces for all conditionals.
+- Add a brief comment immediately above every newly introduced outermost function.
+  Accuracy takes precedence over comment coverage. A misleading, speculative,
+  or overstated comment is a defect and is worse than no comment. Verify the
+  function's primary responsibility from its full body and call sites; never
+  invent intent merely to satisfy this rule. If the purpose cannot be stated
+  accurately, simplify or rename the function, or leave it uncommented and flag
+  it for review.
+  In no more than two sentences and 40 words, explain what the function does and
+  why it is needed. Use the fewest words that preserve useful intent; remove
+  filler, repetition, and emphasis such as “only,” “just,” or “simply” unless it
+  distinguishes real behavior. Lead with the function's primary responsibility
+  at the level visible to its caller or user. Do not inventory secondary
+  mechanics, safeguards, event handling, or implementation details unless one
+  explains why the function exists. Do not document parameters, props, return
+  values, types, or implementation details already apparent from the code. Wrap
+  the comment at column 100, counting the `// ` prefix, and begin each
+  continuation line with `// `. Do not apply this requirement to nested
+  functions or callbacks.
 - Prefer existing `lodash-es` utilities for common transformations and collection helpers instead of writing local one-off utility functions.
+- Name functions and variables for the operation, value, state, or domain concept
+  they represent, not for their current place of use. A qualifier such as
+  `ForInput`, `ForAdmin`, `ForDisplay`, or `ForPage` is justified only when it
+  distinguishes a different contract or representation from another live variant.
+  If the same operation remains valid when reused elsewhere, name the operation
+  directly.
 - Follow `agents/typescript.md` for type aliases, interfaces, overloads, generic arguments, casts, explicit return annotations, type-heavy helper APIs, and TypeScript inference decisions.
 - Name shared and exported types for the concept a caller passes, receives, or implements, not for an internal construction or merge step. Do not rename a type solely because its implementation changed; follow the call-site and rename-safety checks in `agents/typescript.md`.
 - Do not move complexity around to make an error disappear. If a change only shifts awkward typing, runtime guards, duplicated data shaping, or config translation to another file, stop and simplify the underlying shape instead.

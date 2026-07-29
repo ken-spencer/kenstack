@@ -1,36 +1,35 @@
 import "server-only";
 
 import { getTableColumns, type SQL } from "drizzle-orm";
-import type { AnyPgColumn, AnyPgTable } from "drizzle-orm/pg-core";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
 
 import type { SelectedMedia } from "@kenstack/db/tables";
+import type { NumericIdTable } from "@kenstack/db/types";
 import type { ServerDefinedFields } from "./server";
 
-type SelectFieldsTable = AnyPgTable & {
-  id: AnyPgColumn<{ data: number; notNull: true }>;
-  createdAt: AnyPgColumn<{ data: Date; notNull: true }>;
-  updatedAt: AnyPgColumn<{ data: Date; notNull: true }>;
-};
-
 type SelectFieldsResult<
-  TTable extends SelectFieldsTable,
+  TTable extends NumericIdTable,
   TSelection extends ServerDefinedFields,
 > = {
   id: TTable["id"];
-  createdAt: TTable["createdAt"];
-  updatedAt: TTable["updatedAt"];
-} & SelectDeletedAt<TTable> & {
+} & SelectMetaFields<TTable> & {
     [TKey in Extract<keyof TSelection, keyof TTable>]: SelectFieldValue<
       TSelection[TKey],
       TTable[TKey]
     >;
   };
 
-type SelectDeletedAt<TTable extends SelectFieldsTable> = TTable extends {
-  deletedAt: AnyPgColumn;
+type SelectMetaFields<TTable extends NumericIdTable> = (TTable extends {
+  createdAt: AnyPgColumn;
 }
-  ? { deletedAt: TTable["deletedAt"] }
-  : Record<never, never>;
+  ? { createdAt: TTable["createdAt"] }
+  : Record<never, never>) &
+  (TTable extends { updatedAt: AnyPgColumn }
+    ? { updatedAt: TTable["updatedAt"] }
+    : Record<never, never>) &
+  (TTable extends { deletedAt: AnyPgColumn }
+    ? { deletedAt: TTable["deletedAt"] }
+    : Record<never, never>);
 
 type SelectFieldValue<
   TField extends ServerDefinedFields[string],
@@ -39,18 +38,15 @@ type SelectFieldValue<
   ? SQL<SelectedMedia | null>
   : TColumn;
 
-/**
- * Used by record-loading actions to build a select query from field behavior.
- */
 export function selectFields<
-  TTable extends SelectFieldsTable,
+  TTable extends NumericIdTable,
   TSelection extends ServerDefinedFields,
 >(table: TTable, selection: TSelection) {
   const columns = getTableColumns(table);
   const baseResult = {
     id: table.id,
-    createdAt: table.createdAt,
-    updatedAt: table.updatedAt,
+    ...("createdAt" in table ? { createdAt: table.createdAt } : {}),
+    ...("updatedAt" in table ? { updatedAt: table.updatedAt } : {}),
     ...("deletedAt" in table ? { deletedAt: table.deletedAt } : {}),
   } as SelectFieldsResult<TTable, TSelection>;
 

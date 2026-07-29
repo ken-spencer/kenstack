@@ -1,5 +1,5 @@
 import { deps } from "@app/deps";
-import { and, eq, isNull, gte, sql } from "drizzle-orm";
+import { and, eq, isNull, gte } from "drizzle-orm";
 
 import { geolocation, ipAddress } from "@vercel/functions";
 import { nanoid } from "nanoid";
@@ -10,8 +10,8 @@ import { formatUserName } from "@kenstack/lib/user";
 import { render } from "@react-email/render";
 
 import {
+  guardPublicEmailRequest,
   pipeline,
-  recaptcha,
   type PipelineOptions,
   pipelineStage,
 } from "@kenstack/api";
@@ -59,61 +59,22 @@ export const forgottenPasswordAction = ({
       }
     };
 
-    const geo = geolocation(request);
-    const ip = ipAddress(request) || "unknown";
-
-    const { passwordResetRequests, users } = deps.tables;
-
-    const [{ emailCount }] = await deps.db
-      .select({
-        emailCount: sql<number>`count(*)::int`,
-      })
-      .from(passwordResetRequests)
-      .where(
-        sql`${passwordResetRequests.requestedAt} > now() - interval '15 minutes'
-        and ${passwordResetRequests.email} = ${email}`,
-      );
-
-    const ipCount =
-      ip === "unknown"
-        ? 0
-        : (
-            await deps.db
-              .select({
-                ipCount: sql<number>`count(*)::int`,
-              })
-              .from(passwordResetRequests)
-              .where(
-                sql`${passwordResetRequests.requestedAt} > now() - interval '15 minutes'
-              and ${passwordResetRequests.ip} = ${ip}`,
-              )
-          )[0].ipCount;
-
-    // let's avoid this feature being used to spam
-    if (emailCount >= 3 || ipCount > 10) {
-      await deps.logger.audit({
-        action: "password-reset-flood",
-        isSystem: true,
-        data: { email },
-      });
-
-      await sleepRemaining();
-      return response.error(
-        ipCount > 10
-          ? "We have received too many requests from your network to reset this password. Please try again later."
-          : "We have received too many requests to reset this password. Please try again later.",
-      );
-    }
-
-    const recaptchaRejection = await recaptcha({
-      action: "forgottenPassword",
+    const rejection = await guardPublicEmailRequest({
+      email,
+      name: "forgottenPassword",
+      onRateLimited: sleepRemaining,
       request,
       response,
       token: recaptchaToken,
     });
-    if (recaptchaRejection) {
-      return recaptchaRejection;
+    if (rejection) {
+      return rejection;
     }
+
+    const geo = geolocation(request);
+    const ip = ipAddress(request) || "unknown";
+
+    const { passwordResetRequests, users } = deps.tables;
 
     const [user] = await deps.db
       .select({

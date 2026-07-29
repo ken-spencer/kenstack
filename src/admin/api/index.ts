@@ -1,10 +1,10 @@
 import "server-only";
 
 import { NextRequest, NextResponse } from "next/server";
-import isPlainObject from "lodash-es/isPlainObject";
 
 import { deps } from "@app/deps";
 import { pipeline } from "@kenstack/api";
+import { isRecord } from "@kenstack/lib/isRecord";
 
 import {
   disableDraftModeAction,
@@ -18,6 +18,7 @@ import { reorderAction } from "@kenstack/admin/api/reorder";
 import { revisionsAction } from "@kenstack/admin/api/revisions";
 import { tagsAction } from "@kenstack/admin/api/tags";
 import { relationshipSearchAction } from "@kenstack/admin/api/relationshipSearch";
+import { loadOneToOneAction } from "@kenstack/admin/api/loadOneToOne";
 import { getPresignedUrlAction } from "./presignedUrl";
 import { uploadCompleteAction } from "./uploadComplete";
 import { impersonateAction } from "./impersonate";
@@ -29,10 +30,6 @@ import {
 } from "./moduleSettings";
 
 import { type FetchError } from "@kenstack/api/fetcher";
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return isPlainObject(value);
-}
 
 const runAdminGet = async (request: NextRequest) => {
   const action = request.nextUrl.searchParams.get("action");
@@ -163,6 +160,8 @@ const runAdminPipeline = async (request: NextRequest) => {
   const adminModuleConfig = { ...moduleConfig, admin: adminConfig };
 
   switch (action) {
+    case "load-one-to-one":
+      return pipeline({ request, json }, loadOneToOneAction(adminModuleConfig));
     case "list":
       return pipeline({ request, json }, listAction(adminModuleConfig));
     case "neighbors":

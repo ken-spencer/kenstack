@@ -43,7 +43,8 @@ export const errorTranslator = (err: unknown): FetchError | undefined => {
     } else {
       return {
         status: "error",
-        message: "We couldn't complete your request. " + cause.detail,
+        message:
+          "We couldn't complete your request because that value is already in use.",
       };
     }
   }

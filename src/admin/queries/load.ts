@@ -7,6 +7,7 @@ import type {
   ModuleParentOptions,
 } from "@kenstack/admin/module";
 import { loadRecord } from "@kenstack/fields/records";
+import { serializeValues } from "./serialize";
 
 type AdminLoadTarget = number | "single";
 
@@ -80,7 +81,10 @@ async function loadCachedAdminRecord(
       select: parentColumn ? { parentId: parentColumn } : undefined,
     });
 
-    return result.row ? serializeAdminEditItem(result.values) : null;
+    // loadRecord always selects identity and timestamps, which serializeValues preserves by key.
+    return result.row
+      ? (serializeValues(result.values) as AdminEditItem)
+      : null;
   }
 
   const result = await loadRecord({
@@ -90,29 +94,38 @@ async function loadCachedAdminRecord(
     where: eq(adminConfig.table.key, name),
   });
 
-  return result.row ? serializeAdminEditItem(result.values) : null;
+  // loadRecord always selects identity and timestamps, which serializeValues preserves by key.
+  return result.row ? (serializeValues(result.values) as AdminEditItem) : null;
 }
 
-function serializeAdminEditItem(values: Record<string, unknown>) {
-  return Object.fromEntries(
-    Object.entries(values).map(([key, value]) => [key, serializeValue(value)]),
-  ) as AdminEditItem;
-}
+// Loads one configured relation separately so relation panels do not expand the parent query.
+export async function loadOneToOne({
+  name,
+  parentId,
+  relationKey,
+}: {
+  name: string;
+  parentId: number;
+  relationKey: string;
+}) {
+  "use cache";
+  cacheLife("max");
+  cacheTag(name, adminLoadCacheTag(name, parentId));
 
-function serializeValue(value: unknown): unknown {
-  if (value instanceof Date) {
-    return value.toISOString();
+  const binding = deps.modules[name]?.admin?.oneToOne?.relations[relationKey];
+  if (!binding) {
+    return null;
+  }
+  const result = await loadRecord({
+    table: binding.table,
+    fields: binding.fields,
+    defaults: binding.defaultValues,
+    where: eq(binding.foreignKey, parentId),
+  });
+
+  if (!result.row) {
+    return null;
   }
 
-  if (Array.isArray(value)) {
-    return value.map(serializeValue);
-  }
-
-  if (typeof value === "object" && value !== null) {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, item]) => [key, serializeValue(item)]),
-    );
-  }
-
-  return value;
+  return serializeValues(result.values);
 }

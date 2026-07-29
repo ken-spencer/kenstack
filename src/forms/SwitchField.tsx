@@ -1,13 +1,14 @@
 "use client";
 
 import Field, { FormControl, type FieldProps } from "@kenstack/forms/Field";
+import Help from "@kenstack/components/Help";
 import { cn } from "@kenstack/lib/utils";
 
 type SwitchFieldProps = FieldProps & {
   className?: string;
 };
 
-function Switch({
+export function Switch({
   checked = false,
   className,
   onCheckedChange,
@@ -46,6 +47,7 @@ function Switch({
 export default function SwitchField({
   name,
   label,
+  help,
   description,
   className,
 }: SwitchFieldProps) {
@@ -60,6 +62,7 @@ export default function SwitchField({
             <Switch checked={field.value} onCheckedChange={field.onChange} />
           </FormControl>
           <label className="gap-3 text-lg select-text">{label}</label>
+          {help && <Help message={help} />}
         </div>
       )}
     />

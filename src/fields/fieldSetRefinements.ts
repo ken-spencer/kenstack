@@ -1,8 +1,6 @@
 import type * as z from "zod";
 
-const fieldSetRefinementsKey: unique symbol = Symbol(
-  "kenstack.fieldSetRefinements",
-);
+const fieldSetRefinementsKey = Symbol("kenstack.fieldSetRefinements");
 
 export type FieldSetSuperRefine<
   TValues extends Record<string, unknown> = Record<string, unknown>,
@@ -10,12 +8,6 @@ export type FieldSetSuperRefine<
 export type FieldSetSuperRefineOption<
   TValues extends Record<string, unknown> = Record<string, unknown>,
 > = FieldSetSuperRefine<TValues> | readonly FieldSetSuperRefine<TValues>[];
-type FieldSetRefinementSource<
-  TValues extends Record<string, unknown> = Record<string, unknown>,
-> =
-  | { from: object; superRefine?: FieldSetSuperRefineOption<TValues> }
-  | { from?: object; superRefine: FieldSetSuperRefineOption<TValues> };
-
 export function getFieldSetRefinements(fields: object) {
   return (
     (
@@ -26,41 +18,30 @@ export function getFieldSetRefinements(fields: object) {
   );
 }
 
-function eraseFieldSetSuperRefine<TValues extends Record<string, unknown>>(
-  refine: FieldSetSuperRefine<TValues>,
-): FieldSetSuperRefine {
-  return (values, ctx) => refine(values as TValues, ctx);
-}
-
 export function attachFieldSetRefinements<
   TFields extends object,
   TValues extends Record<string, unknown> = Record<string, unknown>,
 >(
   fields: TFields,
-  refinements:
-    | FieldSetSuperRefineOption<TValues>
-    | FieldSetRefinementSource<TValues>
-    | undefined,
+  {
+    from,
+    superRefine,
+  }: {
+    from?: object;
+    superRefine?: FieldSetSuperRefineOption<TValues>;
+  },
 ) {
-  if (!refinements) {
-    return fields;
-  }
-
-  const hasRefinementSource =
-    typeof refinements === "object" &&
-    !Array.isArray(refinements) &&
-    ("from" in refinements || "superRefine" in refinements);
-  const from = hasRefinementSource ? refinements.from : undefined;
-  const superRefine = hasRefinementSource
-    ? refinements.superRefine
-    : refinements;
   const ownRefinements =
     typeof superRefine === "function" ? [superRefine] : (superRefine ?? []);
 
   const nextRefinements = [
     ...getFieldSetRefinements(fields),
     ...(from ? getFieldSetRefinements(from) : []),
-    ...ownRefinements.map(eraseFieldSetSuperRefine),
+    ...ownRefinements.map(
+      (refine): FieldSetSuperRefine =>
+        (values, ctx) =>
+          refine(values as TValues, ctx),
+    ),
   ];
 
   if (!nextRefinements.length) {

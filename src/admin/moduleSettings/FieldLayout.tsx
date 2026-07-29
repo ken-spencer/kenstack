@@ -7,6 +7,7 @@ import CheckboxList from "@kenstack/forms/CheckboxList";
 import DateField from "@kenstack/forms/DateField";
 import DateTimeField from "@kenstack/forms/DateTimeField";
 import InputField from "@kenstack/forms/InputField";
+import MoneyField from "@kenstack/forms/MoneyField";
 import MarkdownField from "@kenstack/forms/MarkdownField";
 import RadioButtonField from "@kenstack/forms/RadioButtonField";
 import SelectField from "@kenstack/forms/SelectField";
@@ -49,6 +50,8 @@ function FieldLayoutItem({
       return <InputField {...props} />;
     case "number":
       return <InputField {...props} type="number" />;
+    case "money":
+      return <MoneyField {...props} />;
     case "email":
       return <InputField {...props} type="email" />;
     case "textarea":

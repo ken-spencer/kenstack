@@ -11,6 +11,7 @@ import {
   not,
   or,
   sql,
+  type AnyColumn,
   type SQL,
 } from "drizzle-orm";
 
@@ -19,38 +20,36 @@ import type {
   AdminFilterField,
   AdminFilters,
   AdminSort,
-  SortDirection,
 } from "@kenstack/admin/types/list";
-import type { ServerDefinedFields } from "@kenstack/fields/server";
 
 import { type ListQueryStoreState } from "./querySchema";
 
 export type ListConfig = {
   table: AdminTable;
-  fields: ServerDefinedFields;
   filters: AdminFilters;
   sort: AdminSort;
+  searchable: (AnyColumn | SQL)[];
 };
 
 export function resolveListWhere(
-  { fields, filters, table }: Pick<ListConfig, "fields" | "filters" | "table">,
+  {
+    filters,
+    searchable,
+    table,
+  }: Pick<ListConfig, "filters" | "searchable" | "table">,
   data: Pick<ListQueryStoreState, "filters" | "keywords" | "trash">,
 ) {
   const { keywords, trash } = data;
-  const searchableColumns = Object.entries(fields)
-    .filter(([, field]) => field.searchable)
-    .map(([key]) => key)
-    .filter((key): key is Extract<keyof typeof table, string> => key in table);
   const where = [
     trash ? isNotNull(table.deletedAt) : isNull(table.deletedAt),
     ...resolveFilters(filters, data.filters),
   ];
 
   const keywordTerms = keywords.trim().split(/\s+/).filter(Boolean);
-  if (keywordTerms.length && searchableColumns.length) {
+  if (keywordTerms.length && searchable.length) {
     for (const term of keywordTerms) {
-      const searchConditions = searchableColumns.map((key) =>
-        ilike(sql`${table[key]}`, `%${term}%`),
+      const searchConditions = searchable.map((field) =>
+        ilike(sql`${field}`, `%${term}%`),
       );
 
       if (searchConditions.length === 1) {
@@ -213,7 +212,7 @@ export function resolveListOrderBy(
   const sortName =
     requestedSort && sort[requestedSort] ? requestedSort : Object.keys(sort)[0];
   const option = sort[sortName];
-  const direction: SortDirection =
+  const direction =
     option.direction === false
       ? option.defaultDirection
       : (requestedDirection ?? option.defaultDirection);

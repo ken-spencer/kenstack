@@ -25,6 +25,17 @@ type AdminEditProps = {
   parentId?: number;
   preview?: PreviewPath;
   childModuleLinks?: React.ReactNode;
+  oneToOne?: OneToOneEdit;
+};
+
+export type OneToOneEdit = {
+  field: string;
+  relations: {
+    name: string;
+    title: string;
+    value: string;
+    defaultValues: Record<string, unknown>;
+  }[];
 };
 
 type AdminEditContext = {
@@ -43,6 +54,7 @@ type AdminEditContext = {
   schema: ZodObject;
   preview?: PreviewPath;
   childModuleLinks?: React.ReactNode;
+  oneToOne?: OneToOneEdit;
 };
 
 const AdminEditContext = createContext<AdminEditContext | null>(null);
@@ -60,6 +72,7 @@ export function AdminEditProvider({
   parentId,
   preview,
   childModuleLinks,
+  oneToOne,
   children,
 }: AdminEditProps) {
   const loadClientConfig = clients[name];
@@ -75,7 +88,6 @@ export function AdminEditProvider({
   }
 
   const pathname = usePathname();
-  const apiPath = "/api/admin";
   const listPath = useMemo(() => {
     if (parentId) {
       return `/admin/${parentId}/${name}`;
@@ -86,25 +98,26 @@ export function AdminEditProvider({
     return "/" + parts.join("/");
   }, [name, parentId, pathname]);
 
-  const values: AdminEditContext = {
+  const context: AdminEditContext = {
     name,
     client,
     id: item?.id ?? (typeof id === "number" ? id : undefined),
     isNew,
     single,
     canUpload,
-    apiPath,
+    apiPath: "/api/admin",
     listPath,
-    userId: userId,
+    userId,
     item,
     defaultValues: item ?? defaultValues,
     parentId,
     schema: client.schema,
     preview,
     childModuleLinks,
+    oneToOne,
   };
   return (
-    <AdminEditContext.Provider value={values}>
+    <AdminEditContext.Provider value={context}>
       <EditForm>{children}</EditForm>
     </AdminEditContext.Provider>
   );

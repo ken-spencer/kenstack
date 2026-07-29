@@ -231,15 +231,16 @@ function SheetContent({
       aria-labelledby={ariaLabelledBy ?? titleId}
       {...props}
       className={cn(
-        "bg-background fixed z-50 m-0 max-h-none flex-col gap-4 bg-clip-padding p-0 text-sm opacity-0 shadow-lg transition-[opacity,transform] duration-200 ease-in-out backdrop:bg-black/10 backdrop:backdrop-blur-xs data-[state=open]:opacity-100",
+        // Reset dialog user-agent color and inset styles.
+        "bg-background text-foreground fixed z-50 m-0 max-h-none flex-col gap-4 bg-clip-padding p-0 text-sm opacity-0 shadow-lg transition-[opacity,transform] duration-200 ease-in-out backdrop:bg-black/10 backdrop:backdrop-blur-xs data-[state=open]:opacity-100",
         side === "left" &&
-          "inset-y-0 left-0 h-full w-3/4 max-w-sm -translate-x-full border-r data-[state=open]:translate-x-0",
+          "inset-y-0 right-auto left-0 h-full w-3/4 max-w-sm -translate-x-full border-r data-[state=open]:translate-x-0",
         side === "right" &&
-          "inset-y-0 right-0 h-full w-3/4 max-w-sm translate-x-full border-l data-[state=open]:translate-x-0",
+          "inset-y-0 right-0 left-auto h-full w-3/4 max-w-sm translate-x-full border-l data-[state=open]:translate-x-0",
         side === "top" &&
-          "inset-x-0 top-0 h-auto w-full -translate-y-full border-b data-[state=open]:translate-y-0",
+          "inset-x-0 top-0 bottom-auto h-auto w-full -translate-y-full border-b data-[state=open]:translate-y-0",
         side === "bottom" &&
-          "inset-x-0 bottom-0 h-auto w-full translate-y-full border-t data-[state=open]:translate-y-0",
+          "inset-x-0 top-auto bottom-0 h-auto w-full translate-y-full border-t data-[state=open]:translate-y-0",
         className,
         "hidden open:flex",
       )}

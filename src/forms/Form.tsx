@@ -74,6 +74,7 @@ export default function FormContainer<
   onBlur,
   onChange,
   apiPath,
+  guardUnsaved,
   mutationFn,
   onError,
   onSuccess,
@@ -86,6 +87,7 @@ export default function FormContainer<
       <FormProvider
         mutationFn={mutationFn}
         apiPath={apiPath}
+        guardUnsaved={guardUnsaved}
         schema={schema}
         defaultValues={defaultValues}
         onError={onError}

@@ -26,12 +26,14 @@ Read this before adding or changing type aliases, interfaces, overloads, generic
 
 Keep an explicit type when it:
 
-- Defines an exported/public contract.
+- Defines a public contract whose need was established independently of the type's export.
 - Is reused in more than one meaningful place.
 - Documents a real domain concept.
 - Clarifies a noisy function boundary.
 - Protects an external, generic, schema, Drizzle, React Hook Form, or untyped API boundary.
 - Narrows an unsafe external value through validation or a real type guard.
+
+Exporting a type does not make it a public contract or justify its existence. Before adding a type export, identify a current consumer, an explicitly requested contract, or a deliberate extension point visible at the API boundary. Keep new and uncommitted types private by default. Compatibility protection for committed public APIs does not justify a new export.
 
 Remove or inline a type when it:
 
@@ -98,8 +100,8 @@ Remove or inline a type when it:
 
 Before finalizing a touched TypeScript file:
 
-- List every new or changed local type alias, interface, overload, generic argument, explicit return annotation, and cast.
-- Remove each one unless it has a current, concrete reason under this file.
+- List every new or changed type alias, interface, overload, explicit generic argument, return annotation, parameter or variable annotation, type predicate, cast, `satisfies`, `as const`, and exported type.
+- Remove each candidate and run TypeScript before deciding it is necessary. Restore only the smallest type syntax required by a demonstrated boundary. Compilation before the removal experiment is not evidence that the type earns its place.
 - Check whether each type preserves real information from a schema, table, form, helper, component, or external boundary. Remove types that only broaden to `unknown`, `Record<string, unknown>`, `object`, or other placeholders.
 - Check helper signatures that repeat common framework/API context fields. Prefer the exported handler/context type or a schema-aware shared wrapper; if the shared type is too broad, fix or wrap that API once instead of declaring local lookalike contracts.
 - Reject local aliases that merely rename a slice of a framework/API context. A `SelectDb`, `SaveContext`, `LoadArgs`, or `HandlerOptions` alias is still type ceremony when the function could accept the real lifecycle context or the API helper could be called directly.

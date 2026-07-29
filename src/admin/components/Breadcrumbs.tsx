@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 
 import type { AdminParentRecord } from "@kenstack/admin/queries/parent";
+import { GuardedLink } from "@kenstack/forms/NavigationBlocker";
 
 type BreadcrumbsProps = {
   currentTitle?: string;
@@ -54,12 +54,12 @@ export default function Breadcrumbs({
             <ChevronRight aria-hidden="true" className="size-3 shrink-0" />
           ) : null}
           {item.href ? (
-            <Link
+            <GuardedLink
               className="hover:text-foreground truncate hover:underline"
               href={item.href}
             >
               {item.title}
-            </Link>
+            </GuardedLink>
           ) : (
             <span className="text-foreground truncate font-medium">
               {item.title}

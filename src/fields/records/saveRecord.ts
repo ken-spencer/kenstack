@@ -1,6 +1,6 @@
 import { deps } from "@app/deps";
+import type { DbTransaction, NumericIdTable } from "@kenstack/db/types";
 import { filterRevisionSnapshot } from "./revisions";
-import type { AdminKeyTable, AdminTable } from "@kenstack/admin/table";
 import { selectFields } from "@kenstack/fields/select";
 import type {
   FieldAfterSave,
@@ -11,6 +11,7 @@ import { revisions } from "@kenstack/db/tables/revisions";
 import { errorTranslator } from "@kenstack/db/errorTranslator";
 import type { User } from "@kenstack/types";
 import { revalidator, type RevalidateTagRule } from "@kenstack/lib/revalidate";
+import type { FetchError } from "@kenstack/api/fetcher";
 import {
   eq,
   getTableColumns,
@@ -18,16 +19,14 @@ import {
   type InferInsertModel,
   type InferSelectModel,
 } from "drizzle-orm";
-
-type TransactionDb = Parameters<
-  Parameters<(typeof deps)["db"]["transaction"]>[0]
->[0];
-
-type SaveRecordTable = AdminTable | AdminKeyTable;
-type SavedRow = { id: number } & Record<string, unknown>;
-
-type SaveRecordOptions<TTable extends SaveRecordTable> = {
+export type SavedRow = { id: number } & Record<string, unknown>;
+export type RecordPreparation = Exclude<
+  Awaited<ReturnType<typeof prepareRecordFields>>,
+  { status: "error" }
+>;
+type SaveRecordOptions<TTable extends NumericIdTable> = {
   actionPrefix: string;
+  revisionChanges?: string[];
   admin?: boolean;
   table: TTable;
   fields: ServerDefinedFields;
@@ -36,21 +35,25 @@ type SaveRecordOptions<TTable extends SaveRecordTable> = {
   id?: number | null;
   revalidate?: RevalidateTagRule<InferSelectModel<TTable>>[];
   query?: (ctx: {
-    tx: TransactionDb;
+    tx: DbTransaction;
     data: Record<string, unknown>;
     select: ReturnType<typeof selectFields<TTable, ServerDefinedFields>>;
     user: User;
   }) => Promise<SavedRow | undefined>;
-  afterSaveRecord?: (ctx: {
-    tx: TransactionDb;
+  afterSave?: (ctx: {
+    tx: DbTransaction;
     row: SavedRow;
     values: Record<string, unknown>;
     savedValues: Record<string, unknown>;
     user: User;
-  }) => Promise<void>;
+  }) => Promise<{
+    revisionValues: Record<string, unknown>;
+  } | void>;
+  additionalPreparations?: RecordPreparation[];
+  translateError?: (error: unknown) => FetchError | undefined;
 };
 
-export async function saveRecord<TTable extends SaveRecordTable>(
+export async function saveRecord<TTable extends NumericIdTable>(
   options: SaveRecordOptions<TTable>,
 ) {
   const {
@@ -64,10 +67,10 @@ export async function saveRecord<TTable extends SaveRecordTable>(
     revalidate,
   } = options;
   const action = actionPrefix + "-" + (id ? "update" : "insert");
-  const revisionChanges = changes ?? Object.keys(values);
-  const user = await deps.auth.requireUser();
+  const revisionChanges =
+    options.revisionChanges ?? changes ?? Object.keys(values);
 
-  if (changes && changes.length === 0) {
+  if (changes && changes.length === 0 && revisionChanges.length === 0) {
     return {
       status: "success" as const,
       ...(id ? { row: { id } } : {}),
@@ -79,11 +82,17 @@ export async function saveRecord<TTable extends SaveRecordTable>(
   const shouldSaveField = (key: string) =>
     !changedFields || changedFields.has(key);
   const tableName = getTableName(table);
-  let afterFailure: FieldSaveTask[] = [];
+  const additionalPreparations = options.additionalPreparations ?? [];
+  let afterFailure = additionalPreparations.flatMap(
+    (preparation) => preparation.afterFailure,
+  );
   let committed = false;
 
   try {
-    const preparation = await prepareSaveFields({
+    // Inside the try so an authentication failure still runs the failure
+    // tasks of already-staged additional preparations.
+    const user = await deps.auth.requireUser();
+    const preparation = await prepareRecordFields({
       admin,
       fields,
       columns: getTableColumns(table),
@@ -93,145 +102,28 @@ export async function saveRecord<TTable extends SaveRecordTable>(
       user,
       values,
     });
-    afterFailure = preparation.afterFailure;
 
     if (preparation.status === "error") {
       await runSaveTasks(afterFailure);
       return { status: "error" as const, error: preparation.message };
     }
+    afterFailure = [...preparation.afterFailure, ...afterFailure];
 
-    const preparedValues = preparation.values;
-    const data: Record<string, unknown> = {};
-    const handledValues: Record<string, unknown> = {};
-
-    for (const [key, value] of Object.entries(preparedValues)) {
-      if (!shouldSaveField(key)) {
-        continue;
-      }
-
-      if (fields[key]?.save) {
-        handledValues[key] = value;
-      } else {
-        data[key] = value;
-      }
-    }
-
-    const result = await deps.db.transaction(async (tx) => {
-      const preSave = await preSaveFields({
+    const result = await deps.db.transaction((tx) =>
+      savePreparedRecord({
+        revisionChanges,
         admin,
         fields,
-        columns: getTableColumns(table),
-        data,
-        handledValues,
         id,
-        user,
+        preparation,
+        query: options.query,
+        shouldSaveField,
         table,
         tx,
-        values: preparedValues,
-        shouldSaveField,
-      });
-
-      if (preSave.status === "error") {
-        return {
-          status: "error" as const,
-          error: preSave.message,
-        };
-      }
-
-      const select = selectFields(table, fields);
-      let savedRow: SavedRow | undefined;
-
-      if (options.query) {
-        savedRow = await options.query({
-          tx,
-          data,
-          select,
-          user,
-        });
-      } else if (id) {
-        const updateData = {
-          ...data,
-          updatedAt: new Date(),
-        };
-
-        const [row] = (await tx
-          .update(table)
-          .set(updateData)
-          .where(eq(table.id, id))
-          .returning(select)) as SavedRow[];
-
-        savedRow = row;
-      } else {
-        const [row] = (await tx
-          .insert(table)
-          .values({
-            ...data,
-            createdBy: user.id,
-          } as InferInsertModel<TTable>)
-          .returning(select)) as SavedRow[];
-
-        savedRow = row;
-      }
-
-      if (!savedRow) {
-        return {
-          status: "error" as const,
-          error: "Unable to save this record.",
-        };
-      }
-      const savedValues: Record<string, unknown> = { ...savedRow };
-
-      if (preSave.afterSave.length) {
-        await Promise.all(preSave.afterSave.map((afterSave) => afterSave(tx)));
-      }
-
-      for (const [fieldKey, value] of Object.entries(handledValues)) {
-        const field = fields[fieldKey];
-        if (!field?.save) {
-          continue;
-        }
-
-        savedValues[fieldKey] = await field.save({
-          admin,
-          db: tx,
-          key: fieldKey,
-          tableId: savedRow.id,
-          value,
-          values: preparedValues,
-          user,
-        });
-      }
-
-      if (preparation.afterSave.length) {
-        await Promise.all(
-          preparation.afterSave.map((afterSave) => afterSave(tx)),
-        );
-      }
-
-      Object.assign(savedValues, preparation.savedValues);
-
-      await options.afterSaveRecord?.({
-        tx,
-        row: savedRow,
-        values: preparedValues,
-        savedValues,
         user,
-      });
-
-      await tx.insert(revisions).values({
-        table: tableName,
-        rowId: savedRow.id,
-        createdBy: user.id,
-        changes: revisionChanges,
-        snapshot: filterRevisionSnapshot(savedValues, fields),
-      });
-
-      return {
-        status: "success" as const,
-        row: savedRow,
-        values: savedValues,
-      };
-    });
+        afterSave: options.afterSave,
+      }),
+    );
 
     if (result.status !== "success") {
       await runSaveTasks(afterFailure);
@@ -239,7 +131,10 @@ export async function saveRecord<TTable extends SaveRecordTable>(
     }
     committed = true;
 
-    await runSaveTasks(preparation.afterCommit);
+    await runSaveTasks([
+      ...preparation.afterCommit,
+      ...additionalPreparations.flatMap((additional) => additional.afterCommit),
+    ]);
 
     await deps.logger.audit({
       action,
@@ -259,13 +154,14 @@ export async function saveRecord<TTable extends SaveRecordTable>(
       await runSaveTasks(afterFailure);
     }
 
-    const error = errorTranslator(err);
+    const error = options.translateError?.(err) ?? errorTranslator(err);
     if (error) {
       return {
         status: "error" as const,
         error: {
           message: error.message ?? "We couldn't complete your request.",
           ...(error.fieldErrors ? { fieldErrors: error.fieldErrors } : {}),
+          ...(error.redirect ? { redirect: error.redirect } : {}),
         },
       };
     }
@@ -273,7 +169,8 @@ export async function saveRecord<TTable extends SaveRecordTable>(
   }
 }
 
-async function prepareSaveFields<TTable extends SaveRecordTable>({
+// Prepares changed fields and collects work for the transaction, commit, and failure boundaries.
+export async function prepareRecordFields<TTable extends NumericIdTable>({
   admin,
   fields,
   columns,
@@ -324,10 +221,10 @@ async function prepareSaveFields<TTable extends SaveRecordTable>({
     }
 
     if (result.status === "error") {
+      await runSaveTasks(afterFailure);
       return {
         status: "error" as const,
         message: result.message,
-        afterFailure,
       };
     }
 
@@ -353,11 +250,166 @@ async function prepareSaveFields<TTable extends SaveRecordTable>({
   };
 }
 
+// Persists one prepared record inside an existing transaction and builds its revision snapshot.
+export async function savePreparedRecord<TTable extends NumericIdTable>({
+  revisionChanges,
+  admin,
+  fields,
+  id,
+  afterSave,
+  preparation,
+  query,
+  revision = true,
+  shouldSaveField = () => true,
+  table,
+  tx,
+  user,
+}: {
+  revisionChanges?: string[];
+  admin: boolean;
+  fields: ServerDefinedFields;
+  id?: number | null;
+  afterSave?: SaveRecordOptions<TTable>["afterSave"];
+  preparation: RecordPreparation;
+  query?: SaveRecordOptions<TTable>["query"];
+  revision?: boolean;
+  shouldSaveField?: (key: string) => boolean;
+  table: TTable;
+  tx: DbTransaction;
+  user: User;
+}) {
+  const data: Record<string, unknown> = {};
+  const handledValues: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(preparation.values)) {
+    if (!shouldSaveField(key)) {
+      continue;
+    }
+
+    if (fields[key]?.save) {
+      handledValues[key] = value;
+    } else {
+      data[key] = value;
+    }
+  }
+
+  const preSave = await preSaveFields({
+    admin,
+    fields,
+    columns: getTableColumns(table),
+    data,
+    handledValues,
+    id,
+    user,
+    table,
+    tx,
+    values: preparation.values,
+    shouldSaveField,
+  });
+
+  if (preSave.status === "error") {
+    return { status: "error" as const, error: preSave.message };
+  }
+
+  const select = selectFields(table, fields);
+  let savedRow: SavedRow | undefined;
+
+  if (query) {
+    savedRow = await query({ tx, data, select, user });
+  } else if (id) {
+    const columns = getTableColumns(table);
+    const [row] = await tx
+      .update(table)
+      .set({
+        ...data,
+        ...("updatedAt" in columns ? { updatedAt: new Date() } : {}),
+      })
+      .where(eq(table.id, id))
+      .returning(select);
+    savedRow = row;
+  } else {
+    const columns = getTableColumns(table);
+    const [row] = (await tx
+      .insert(table)
+      .values({
+        ...data,
+        ...("createdBy" in columns ? { createdBy: user.id } : {}),
+      } as InferInsertModel<TTable>)
+      .returning(select)) as SavedRow[];
+    savedRow = row;
+  }
+
+  if (!savedRow) {
+    return {
+      status: "error" as const,
+      error: "Unable to save this record.",
+    };
+  }
+
+  const savedValues: Record<string, unknown> = { ...savedRow };
+  await Promise.all(preSave.afterSave.map((afterSave) => afterSave(tx)));
+
+  for (const [fieldKey, value] of Object.entries(handledValues)) {
+    const field = fields[fieldKey];
+    if (field?.save) {
+      savedValues[fieldKey] = await field.save({
+        admin,
+        db: tx,
+        key: fieldKey,
+        tableId: savedRow.id,
+        value,
+        values: preparation.values,
+        user,
+      });
+    }
+  }
+
+  await Promise.all(preparation.afterSave.map((afterSave) => afterSave(tx)));
+  Object.assign(savedValues, preparation.savedValues);
+  const afterResult = await afterSave?.({
+    tx,
+    row: savedRow,
+    values: preparation.values,
+    savedValues,
+    user,
+  });
+  const revisionValues = {
+    ...savedValues,
+    ...afterResult?.revisionValues,
+  };
+
+  if (revision) {
+    const snapshotChanges = revisionChanges ?? Object.keys(preparation.values);
+
+    if (snapshotChanges.length === 0) {
+      return {
+        status: "success" as const,
+        row: savedRow,
+        values: savedValues,
+      };
+    }
+
+    await tx.insert(revisions).values({
+      table: getTableName(table),
+      rowId: savedRow.id,
+      createdBy: user.id,
+      changes: snapshotChanges,
+      snapshot: filterRevisionSnapshot(revisionValues, fields),
+    });
+  }
+
+  return {
+    status: "success" as const,
+    row: savedRow,
+    values: savedValues,
+  };
+}
+
 async function runSaveTasks(tasks: FieldSaveTask[]) {
   await Promise.allSettled(tasks.map((task) => task()));
 }
 
-async function preSaveFields<TTable extends SaveRecordTable>({
+async function preSaveFields<TTable extends NumericIdTable>({
   admin,
   fields,
   columns,
@@ -378,7 +430,7 @@ async function preSaveFields<TTable extends SaveRecordTable>({
   id?: number | null;
   user: User;
   table: TTable;
-  tx: TransactionDb;
+  tx: DbTransaction;
   values: Record<string, unknown>;
   shouldSaveField: (key: string) => boolean;
 }) {

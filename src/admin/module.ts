@@ -4,6 +4,7 @@ import type { ComponentType, SVGProps } from "react";
 import startCase from "lodash-es/startCase";
 import type { AnyColumn, InferSelectModel, SQL } from "drizzle-orm";
 import { getTableColumns } from "drizzle-orm";
+import type { AnyPgTable } from "drizzle-orm/pg-core";
 
 import type {
   AdminFilterFieldReference,
@@ -20,11 +21,22 @@ import { createDefaultValues } from "@kenstack/fields/createDefaultValues";
 import { createZodSchema } from "@kenstack/fields/createZodSchema";
 import {
   resolveServerFields,
+  serverFields,
+  type ServerBehaviors,
   type ServerDefinedFields,
 } from "@kenstack/fields/server";
+import type { DefinedFields } from "@kenstack/fields/types";
 import type { AdminKeyTable, AdminTable } from "@kenstack/admin/table";
 import type { AdminClientRegistry } from "@kenstack/admin/clientLoaders";
 import type { RevalidateTagRule } from "@kenstack/lib/revalidate";
+import type { FetchError } from "@kenstack/api/fetcher";
+import type { NumericIdTable } from "@kenstack/db/types";
+import {
+  getOneToOneFieldSets,
+  type OneToOneFieldSet,
+  type OneToOneFields,
+  type OneToOneFieldSetsFrom,
+} from "@kenstack/fields/oneToOneFieldSets";
 import { visibilityOptions } from "./lib/visibility";
 
 type SelectValue = AnyColumn | SQL | SQL.Aliased;
@@ -33,17 +45,62 @@ type AdminManagedTable = AdminTable | AdminKeyTable;
 
 export type PreviewPath = `/${string}`;
 
-type AdminConfigBase<TTable extends AdminManagedTable> = {
+type RelationConfig<TFields extends DefinedFields> = {
+  behaviors?: ServerBehaviors<TFields>;
+  table: AnyPgTable;
+  title?: string;
+  value?: string;
+};
+
+export type AdminOneToOneBinding = OneToOneFieldSet<ServerDefinedFields> & {
+  foreignKey: NumericIdTable["id"];
+  table: NumericIdTable;
+  title: string;
+  value: string;
+};
+
+type OneToOneRelations<TFields extends ServerDefinedFields> = {
+  [
+    TKey in Extract<keyof OneToOneFieldSetsFrom<TFields>, string>
+  ]: RelationConfig<OneToOneFields<TFields, TKey>>;
+};
+
+type OneToOneConfig<TFields extends ServerDefinedFields> = {
+  field: Extract<keyof TFields, string>;
+  relations: OneToOneRelations<TFields>;
+};
+
+type OneToOneConfigRuntime = {
+  field: string;
+  relations: Record<string, RelationConfig<DefinedFields>>;
+};
+
+type OneToOneOptions<TFields extends ServerDefinedFields> =
+  keyof OneToOneFieldSetsFrom<TFields> extends never
+    ? { oneToOne?: never }
+    : { oneToOne: OneToOneConfig<TFields> };
+
+type ResolvedOneToOne = {
+  field: string;
+  relations: Record<string, AdminOneToOneBinding>;
+};
+
+type AdminConfigBase<
+  TTable extends AdminManagedTable,
+  TFields extends ServerDefinedFields,
+> = {
   table: TTable;
   revalidate?: RevalidateTagRule<InferSelectModel<TTable>>[];
-  fields: ServerDefinedFields;
+  fields: TFields;
   preview?: PreviewPath;
-};
+  translateError?: (error: unknown) => FetchError | undefined;
+} & OneToOneOptions<TFields>;
 
 type AdminListConfig<
   TTable extends AdminTable,
+  TFields extends ServerDefinedFields,
   TListSelect extends SelectShape | undefined = undefined,
-> = AdminConfigBase<TTable> & {
+> = AdminConfigBase<TTable, TFields> & {
   list: {
     filters?: AdminFilterOptions;
     limit?: number;
@@ -54,9 +111,22 @@ type AdminListConfig<
 };
 
 export type AnyAdminConfig = NonNullable<ReturnType<typeof resolveAdmin>>;
-type AdminConfig =
-  | AdminListConfig<AdminTable, SelectShape | undefined>
-  | AdminConfigBase<AdminKeyTable>;
+type AdminConfig<
+  TTable extends AdminManagedTable,
+  TFields extends ServerDefinedFields,
+> = TTable extends AdminTable
+  ? AdminListConfig<TTable, TFields, SelectShape | undefined>
+  : AdminConfigBase<TTable, TFields>;
+
+type RuntimeAdminConfig<TConfig> = Omit<TConfig, "oneToOne"> & {
+  oneToOne?: OneToOneConfigRuntime;
+};
+
+type AdminConfigRuntime =
+  | RuntimeAdminConfig<
+      AdminListConfig<AdminTable, ServerDefinedFields, SelectShape | undefined>
+    >
+  | RuntimeAdminConfig<AdminConfigBase<AdminKeyTable, ServerDefinedFields>>;
 
 type ModuleSettingsConfig<
   TTable extends AdminKeyTable = AdminKeyTable,
@@ -87,14 +157,32 @@ export type ModuleParentOptions = {
   foreignKey: string;
 };
 
-type ModuleOptions = {
+type ModuleOptions<
+  TTable extends AdminManagedTable,
+  TFields extends ServerDefinedFields,
+> = {
   name: string;
   title?: string;
   basePath?: PreviewPath;
   icon?: ComponentType<SVGProps<SVGSVGElement>>;
-  admin?: AdminConfig;
+  admin?: AdminConfig<TTable, TFields>;
   settings?: ModuleSettingsConfig;
   parent?: ModuleParentOptions;
+};
+
+type ResolvedModule<
+  TModule extends { name: string },
+  TTable extends AdminManagedTable,
+> = {
+  name: TModule["name"];
+  title: string;
+  basePath: PreviewPath;
+  icon: TModule extends { icon: infer TIcon } ? TIcon : undefined;
+  admin: TModule extends { admin: infer TAdmin }
+    ? Omit<TAdmin, keyof AnyAdminConfig> & AnyAdminConfig & { table: TTable }
+    : undefined;
+  settings: ResolvedModuleSettings | undefined;
+  parent: ModuleParentOptions | undefined;
 };
 
 export type DefinedAdmin = Record<
@@ -116,19 +204,33 @@ export type DefinedAdminModule = DefinedAdmin[string] & {
   admin: AnyAdminConfig;
 };
 
-export function defineModule<const TModule extends ModuleOptions>(
-  options: TModule,
+export function defineModule<
+  const TTable extends AdminManagedTable,
+  const TFields extends ServerDefinedFields,
+  const TModule extends ModuleOptions<TTable, TFields>,
+>(
+  options: TModule & {
+    admin?: AdminConfig<TTable, TFields>;
+  },
 ) {
   const basePath = options.basePath ?? `/${options.name}`;
-
-  return {
-    title: options.title ?? startCase(options.name),
-    ...options,
+  const admin = resolveAdmin(
+    options.admin as AdminConfigRuntime | undefined,
     basePath,
-    admin: resolveAdmin(options.admin, basePath),
-    settings: resolveSettings(options.settings),
+  );
+  const settings = resolveSettings(options.settings);
+
+  const resolved = {
+    name: options.name,
+    title: options.title ?? startCase(options.name),
+    basePath,
+    icon: options.icon,
+    admin,
+    settings,
     parent: options.parent,
-  } satisfies DefinedAdmin[string];
+  };
+
+  return resolved as ResolvedModule<TModule, TTable>;
 }
 
 function resolveSettings(settings: ModuleSettingsConfig | undefined) {
@@ -146,26 +248,36 @@ function resolveSettings(settings: ModuleSettingsConfig | undefined) {
   };
 }
 
-function resolveAdmin(admin: AdminConfig | undefined, basePath: PreviewPath) {
+function resolveAdmin(
+  admin: AdminConfigRuntime | undefined,
+  basePath: PreviewPath,
+) {
   if (!admin) {
     return undefined;
   }
 
-  const resolveBase = <TTable extends AdminManagedTable>(
-    config: AdminConfigBase<TTable>,
+  const resolveBase = <
+    TTable extends AdminManagedTable,
+    TFields extends ServerDefinedFields,
+  >(
+    config: RuntimeAdminConfig<AdminConfigBase<TTable, TFields>>,
   ) => {
     const fields = resolveServerFields(config.fields);
-    const preview: PreviewPath | undefined =
+    // Erases module-specific field keys after validation so resolved modules share one registry type.
+    const flatFields = fields as ServerDefinedFields;
+    const preview =
       config.preview ??
       ("slug" in fields ? `${basePath}/${"${slug}"}` : undefined);
 
     return {
       table: config.table,
       revalidate: config.revalidate,
+      translateError: config.translateError,
       preview,
-      fields,
-      schema: createZodSchema(fields),
-      defaultValues: createDefaultValues(fields),
+      fields: flatFields,
+      schema: createZodSchema(flatFields),
+      defaultValues: createDefaultValues(flatFields),
+      oneToOne: resolveOneToOne(flatFields, config.oneToOne),
     };
   };
 
@@ -174,19 +286,122 @@ function resolveAdmin(admin: AdminConfig | undefined, basePath: PreviewPath) {
     const { sort, filters, reorder, ...listOptions } = list;
     const resolvedAdmin = resolveBase(admin);
     const resolvedReorder = defineReorder(table, reorder);
+    const listSort = defineSort(
+      table,
+      resolvedAdmin.fields,
+      sort,
+      resolvedReorder,
+    );
+    const listFilters = defineFilters(table, resolvedAdmin.fields, filters);
+    if (resolvedAdmin.oneToOne) {
+      const bindings = resolvedAdmin.oneToOne.relations;
+      assertDistinctListTables(bindings);
+      Object.assign(listSort, defineOneToOneSort(bindings));
+      Object.assign(listFilters, defineOneToOneFilters(bindings));
+    }
 
     return {
       ...resolvedAdmin,
       list: {
         ...listOptions,
         reorder: resolvedReorder,
-        sort: defineSort(table, resolvedAdmin.fields, sort, resolvedReorder),
-        filters: defineFilters(table, resolvedAdmin.fields, filters),
+        sort: listSort,
+        filters: listFilters,
       },
     };
   }
 
   return resolveBase(admin);
+}
+
+// Validates one-to-one declarations and builds the bindings used by admin loaders and forms.
+function resolveOneToOne(
+  fields: ServerDefinedFields,
+  config: OneToOneConfigRuntime | undefined,
+): ResolvedOneToOne | undefined {
+  if (!config) {
+    return undefined;
+  }
+
+  const fieldSets = getOneToOneFieldSets(fields);
+  const selectionField = fields[config.field];
+  if (!selectionField) {
+    throw new Error(
+      `One-to-one selection field "${config.field}" is not declared in the parent fields.`,
+    );
+  }
+
+  const values = new Set<string>();
+  const relations: Record<string, AdminOneToOneBinding> = {};
+  for (const [name, relation] of Object.entries(config.relations)) {
+    const fieldSet = fieldSets[name];
+    if (!fieldSet) {
+      throw new Error(
+        `One-to-one binding "${name}" has no matching field-set declaration.`,
+      );
+    }
+    if (!hasIdentityColumn(relation.table)) {
+      throw new Error(
+        `One-to-one binding "${name}" requires a numeric related identity column "id".`,
+      );
+    }
+
+    const value = relation.value ?? name;
+    if (values.has(value)) {
+      throw new Error(
+        `One-to-one relations must use distinct selection values; "${value}" is duplicated.`,
+      );
+    }
+    const parsedValue = selectionField.zod.safeParse(value);
+    if (!parsedValue.success) {
+      throw new Error(
+        `One-to-one relation "${name}" value "${value}" is not accepted by selection field "${config.field}".`,
+      );
+    }
+    if (typeof parsedValue.data !== "string" || parsedValue.data !== value) {
+      throw new Error(
+        `One-to-one relation "${name}" value "${value}" must remain the same string after selection-field parsing.`,
+      );
+    }
+
+    values.add(value);
+    relations[name] = {
+      fields: serverFields(fieldSet.fields, relation.behaviors),
+      defaultValues: fieldSet.defaultValues,
+      table: relation.table,
+      foreignKey: relation.table.id,
+      title: relation.title ?? startCase(name),
+      value,
+    };
+  }
+
+  const parsedDefault = selectionField.zod.safeParse(selectionField.default);
+  if (
+    !parsedDefault.success ||
+    typeof parsedDefault.data !== "string" ||
+    parsedDefault.data !== selectionField.default
+  ) {
+    throw new Error(
+      `One-to-one selection field "${config.field}" default must remain the same string after parsing.`,
+    );
+  }
+  if (!values.has(parsedDefault.data)) {
+    throw new Error(
+      `One-to-one selection field "${config.field}" default must match a declared relation value.`,
+    );
+  }
+
+  return {
+    field: config.field,
+    relations,
+  };
+}
+
+// Checks for a required numeric ID before a relation binding treats the table as an identity table.
+function hasIdentityColumn(table: AnyPgTable): table is NumericIdTable {
+  const id = getTableColumns(table).id;
+
+  return Boolean(id && id.dataType === "number" && id.notNull);
 }
 
 function defineSort<TTable extends AdminTable>(
@@ -398,6 +613,116 @@ function getFieldSortOptions(fields: ServerDefinedFields): AdminSortOptions {
         },
       ]),
   );
+}
+
+// Rejects list-active relations that share a table because unaliased joins cannot distinguish them.
+function assertDistinctListTables(
+  bindings: Record<string, AdminOneToOneBinding>,
+) {
+  const relatedTables = new Map<AnyPgTable, string>();
+
+  for (const [relationName, binding] of Object.entries(bindings)) {
+    const participatesInList = Object.values(binding.fields).some(
+      (field) =>
+        Boolean(field.list) ||
+        field.searchable ||
+        field.filter === true ||
+        Boolean(field.sort),
+    );
+    if (!participatesInList) {
+      continue;
+    }
+
+    const existingRelation = relatedTables.get(binding.table);
+    if (existingRelation) {
+      throw new Error(
+        `One-to-one list relations "${existingRelation}" and "${relationName}" use the same table; related list tables must be distinct.`,
+      );
+    }
+
+    relatedTables.set(binding.table, relationName);
+  }
+}
+
+// Builds related-field sort definitions so the generic admin list can order by one-to-one values.
+function defineOneToOneSort(bindings: Record<string, AdminOneToOneBinding>) {
+  const sort: AdminSort = {};
+
+  for (const [relationName, binding] of Object.entries(bindings)) {
+    const columns = getTableColumns(binding.table);
+
+    for (const [fieldName, field] of Object.entries(binding.fields)) {
+      if (!field.sort) {
+        continue;
+      }
+
+      const column = columns[fieldName];
+      if (!column) {
+        throw new Error(
+          `Unknown one-to-one field reference "${relationName}.${fieldName}".`,
+        );
+      }
+
+      sort[`${relationName}.${fieldName}`] = {
+        label: oneToOneLabel(binding.title, fieldName, field.label),
+        fields: [column],
+        defaultDirection:
+          typeof field.sort === "object"
+            ? (field.sort.defaultDirection ?? "asc")
+            : "asc",
+        direction: true,
+      };
+    }
+  }
+
+  return sort;
+}
+
+// Builds related-field filters so the generic admin list can filter by one-to-one values.
+function defineOneToOneFilters(bindings: Record<string, AdminOneToOneBinding>) {
+  const filters: AdminFilters = {};
+
+  for (const [relationName, binding] of Object.entries(bindings)) {
+    const columns = getTableColumns(binding.table);
+
+    for (const [fieldName, field] of Object.entries(binding.fields)) {
+      if (field.filter !== true) {
+        continue;
+      }
+
+      const filter = field.filterConfig;
+      if (!filter) {
+        throw new Error(
+          `Field "${relationName}.${fieldName}" is filterable but has no filter behavior.`,
+        );
+      }
+
+      const { field: filterField, ...filterOptions } = filter;
+      const column = filterField ?? columns[fieldName];
+      if (!column) {
+        throw new Error(
+          `Unknown one-to-one field reference "${relationName}.${fieldName}".`,
+        );
+      }
+
+      filters[`${relationName}.${fieldName}`] = {
+        field: column,
+        label: oneToOneLabel(binding.title, fieldName, field.label),
+        ...filterOptions,
+      };
+    }
+  }
+
+  return filters;
+}
+
+// Qualifies related-field labels with their section title so list controls remain unambiguous.
+function oneToOneLabel(
+  relationLabel: string,
+  fieldName: string,
+  fieldLabel: string | undefined,
+) {
+  return `${relationLabel}: ${fieldLabel ?? startCase(fieldName)}`;
 }
 
 function resolveSortField(

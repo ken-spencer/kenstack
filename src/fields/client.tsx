@@ -6,6 +6,7 @@ import { imageSchema } from "@kenstack/zod/image";
 import { mediaListSchema } from "@kenstack/zod/mediaList";
 import { phone } from "@kenstack/zod/phone";
 import { tagsSchema } from "@kenstack/zod/tags";
+import { formatMoney } from "@kenstack/lib/money";
 import { relationshipSchema } from "./relationshipSchema";
 import type {
   FieldInputOption,
@@ -169,6 +170,31 @@ export function numberField(
     searchable: false,
     revisions: true,
     zod: z.coerce.number(),
+    ...options,
+  });
+}
+
+// Defines a non-negative integer-cent field with the standard money input and display.
+export function moneyField(): FieldOptionOfKind<"money", number>;
+export function moneyField<
+  const TOptions extends CommonFieldOptions<number | null>,
+>(
+  options: TOptions,
+): FieldOptionOfKind<"money", DefaultFromOptions<TOptions, number>, TOptions>;
+export function moneyField(
+  options: CommonFieldOptions<number | null> = {},
+): FieldOption<"money", number | null> {
+  return field({
+    kind: "money",
+    default: 0,
+    searchable: false,
+    revisions: true,
+    zod: z.int().nonnegative("Amount cannot be negative"),
+    display({ value }) {
+      return typeof value === "number" && Number.isSafeInteger(value)
+        ? formatMoney(value)
+        : "";
+    },
     ...options,
   });
 }

@@ -26,13 +26,60 @@ Old API:
 
 New API:
 
+- `@kenstack/lib/errorLog` remains available for curated request and event
+  logging. It accepts `{ name, message?, context?, error? }`, adds sanitized
+  request and location context, and writes the event to the server error log.
+  This API is appropriate for expected operational events such as a rate-limit
+  rejection; it is not the unexpected-error reporting path.
 - Unexpected errors are reported through `deps.error(errorOrMessage, { context?, request?, source? })` when application dependencies are available. Strings are converted to `Error` internally with a caller stack; existing `Error` objects retain their original stack and cause.
 - Framework hooks and reporter-owned adapters may use `reportError(...)` from `@kenstack/lib/errorReporter` directly.
 
 Migration steps:
 
+- For a curated event that should remain in the server log, replace the old
+  positional call with `await errorLog({ name, message, context, error })`.
+  Choose a stable event name and keep structured context non-sensitive.
 - Replace `errorLog(error, message, data)` with `await deps.error(errorOrMessage, { context, request })`. Put details needed to understand the failure in the message. Keep `context` only for selected, non-sensitive structured values that are useful for filtering or correlation; do not repeat the message or pass the old `data` object through wholesale. Add `source` only when it distinguishes information that is not already clear from the message, stack, and request path.
 - Pass the current `Request` when one is available so the reporter can include sanitized request metadata.
+
+## Unreleased: Record Save Callback
+
+Old API:
+
+- `saveRecord(...)` accepted an `afterSaveRecord` callback for work performed
+  inside the record transaction after field persistence.
+
+New API:
+
+- The callback is named `afterSave`. It receives the same transaction, row,
+  prepared values, saved values, and user context.
+- The callback may return `{ revisionValues }`; Kenstack merges those values
+  into the parent revision snapshot before inserting the revision.
+
+Migration step:
+
+- Rename `afterSaveRecord` to `afterSave`. Return `revisionValues` only when
+  transaction-scoped related persistence contributes values to the parent
+  revision.
+
+## Unreleased: Shared Rate-Limit Storage
+
+Old API:
+
+- `createDeps(...)` did not require shared database storage for rate-limit
+  events.
+
+New API:
+
+- The tables passed to `createDeps(...)` include `rateLimitEvents` from
+  `@kenstack/db/tables/rateLimits`.
+
+Migration steps:
+
+- Export `rateLimitEvents` with the host application's table registry.
+- Generate and commit an append-only host migration that creates the
+  `rate_limit_events` table and its declared indexes. Do not copy another
+  host's generated migration or rewrite existing migration history.
 
 ## Unreleased: reCAPTCHA Availability
 

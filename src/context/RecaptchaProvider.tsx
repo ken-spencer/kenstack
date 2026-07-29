@@ -14,17 +14,18 @@ export default function RecaptchaProvider({
 }) {
   const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY?.trim();
 
-  if (!siteKey) {
-    return (
-      <GoogleReCaptchaContext.Provider value={{}}>
-        {children}
-      </GoogleReCaptchaContext.Provider>
-    );
-  }
-
   return (
-    <GoogleReCaptchaProvider reCaptchaKey={siteKey} useRecaptchaNet>
-      {children}
-    </GoogleReCaptchaProvider>
+    <>
+      <style>{".grecaptcha-badge { visibility: hidden !important; }"}</style>
+      {siteKey ? (
+        <GoogleReCaptchaProvider reCaptchaKey={siteKey} useRecaptchaNet>
+          {children}
+        </GoogleReCaptchaProvider>
+      ) : (
+        <GoogleReCaptchaContext.Provider value={{}}>
+          {children}
+        </GoogleReCaptchaContext.Provider>
+      )}
+    </>
   );
 }

@@ -243,11 +243,10 @@ function PopoverContent({
     <dialog
       {...props}
       className={cn(
-        "border-border bg-popover text-popover-foreground fixed inset-auto z-50 m-0 max-h-[calc(100dvh-1rem)] w-72 scale-95 overflow-auto rounded-md border p-4 opacity-0 shadow-md outline-hidden transition-[opacity,transform] duration-150 ease-out backdrop:bg-transparent data-[state=open]:scale-100 data-[state=open]:opacity-100",
+        "bg-popover text-popover-foreground fixed inset-auto z-50 m-0 max-h-[calc(100dvh-1rem)] w-72 scale-95 overflow-auto rounded-md border border-[var(--admin-divider,var(--border))] p-4 opacity-0 shadow-md outline-hidden transition-[opacity,transform] duration-150 ease-out backdrop:bg-transparent data-[state=open]:scale-100 data-[state=open]:opacity-100",
         className,
         "hidden open:block",
       )}
-      data-side="bottom"
       data-slot="popover-content"
       data-state={visibleOpen ? "open" : "closed"}
       id={contentId}
@@ -315,6 +314,7 @@ function positionDialog(
   const triggerRect = trigger.getBoundingClientRect();
   const dialogRect = dialog.getBoundingClientRect();
   const viewportPadding = 8;
+  const viewportHeight = document.documentElement.clientHeight;
   const viewportWidth = document.documentElement.clientWidth;
   const left =
     align === "end"
@@ -333,8 +333,22 @@ function positionDialog(
       Math.max(viewportPadding, left),
       viewportWidth - dialogRect.width - viewportPadding,
     ) + "px";
+  const dialogHeight = dialog.offsetHeight;
+  const belowTop = triggerRect.bottom + sideOffset;
+  const aboveTop = triggerRect.top - sideOffset - dialogHeight;
+  const spaceBelow = viewportHeight - viewportPadding - belowTop;
+  const spaceAbove = triggerRect.top - sideOffset - viewportPadding;
+  const side =
+    dialogHeight > spaceBelow && spaceAbove > spaceBelow ? "top" : "bottom";
+  const preferredTop = side === "top" ? aboveTop : belowTop;
+  const maximumTop = Math.max(
+    viewportPadding,
+    viewportHeight - dialogHeight - viewportPadding,
+  );
+
+  dialog.dataset.side = side;
   dialog.style.top =
-    Math.max(viewportPadding, triggerRect.bottom + sideOffset) + "px";
+    Math.min(Math.max(viewportPadding, preferredTop), maximumTop) + "px";
   dialog.style.setProperty("--popover-trigger-width", triggerRect.width + "px");
   dialog.style.setProperty(
     "--popover-trigger-height",

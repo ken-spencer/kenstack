@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   SidebarMenuButton,
@@ -11,6 +10,7 @@ import {
   SidebarMenuSubItem,
   useSidebar,
 } from "@kenstack/components/Sidebar";
+import { GuardedLink } from "@kenstack/forms/NavigationBlocker";
 
 export default function NavLink({
   href,
@@ -47,7 +47,7 @@ export default function NavLink({
   return (
     <SidebarMenuItem>
       <SidebarMenuButton asChild isActive={isActive}>
-        <Link
+        <GuardedLink
           href={href}
           aria-current={isCurrent ? "page" : undefined}
           onMouseEnter={() => {
@@ -60,7 +60,7 @@ export default function NavLink({
         >
           {icon}
           <span className={textClassName}>{title}</span>
-        </Link>
+        </GuardedLink>
       </SidebarMenuButton>
       {isActive && navChildren?.length ? (
         <SidebarMenuSub>
@@ -70,7 +70,7 @@ export default function NavLink({
             return (
               <SidebarMenuSubItem key={child.href}>
                 <SidebarMenuSubButton asChild isActive={childIsActive}>
-                  <Link
+                  <GuardedLink
                     href={child.href}
                     aria-current={childIsActive ? "page" : undefined}
                     onClick={closeMobileSidebar}
@@ -84,7 +84,7 @@ export default function NavLink({
                     >
                       {child.title}
                     </span>
-                  </Link>
+                  </GuardedLink>
                 </SidebarMenuSubButton>
               </SidebarMenuSubItem>
             );

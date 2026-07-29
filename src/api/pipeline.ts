@@ -13,6 +13,7 @@ import { PipelineResponse } from "./PipelineResponse";
 import { deps } from "@app/deps";
 import type { UserAccess } from "@kenstack/auth/types";
 import type { User } from "@kenstack/types";
+import { isRecord } from "@kenstack/lib/isRecord";
 
 export type PipelineOptions = {
   request: NextRequest;
@@ -61,10 +62,6 @@ type PipelineStageOptions<TSchema extends ObjectSchema | undefined, TAccess> = {
   access?: TAccess;
   fieldsKey?: string;
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return isPlainObject(value);
-}
 
 export default async function pipeline(
   options: PipelineOptions,

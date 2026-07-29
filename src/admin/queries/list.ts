@@ -21,10 +21,11 @@ import type {
   AnyAdminConfig,
   ModuleParentOptions,
 } from "@kenstack/admin/module";
-import type { BaseListItem } from "@kenstack/admin/client";
 import type { AdminContentTable } from "@kenstack/admin/table";
 import { getSortMeta } from "@kenstack/admin/types/list";
 import { resolveListOrderBy, resolveListWhere } from "@kenstack/list/server";
+import { applyListJoins, resolveOneToOneList } from "./listRelations";
+import { serializeValues } from "./serialize";
 
 export type AdminListQuery = ListQuery;
 
@@ -58,9 +59,9 @@ export async function loadAdminList({
     };
   }
 
-  if (isDefaultAdminListQuery(adminConfig, query)) {
+  if (isDefaultListQuery(adminConfig, query)) {
     return {
-      data: await loadCachedBaseAdminList(name),
+      data: await loadCachedList(name),
     };
   }
 
@@ -69,7 +70,7 @@ export async function loadAdminList({
   };
 }
 
-async function loadCachedBaseAdminList(name: string) {
+async function loadCachedList(name: string) {
   "use cache";
   cacheLife("max");
   cacheTag("admin", adminListCacheTag(name));
@@ -92,10 +93,7 @@ async function loadCachedBaseAdminList(name: string) {
   return queryAdminList({ adminConfig, query: baseListQuery });
 }
 
-function isDefaultAdminListQuery(
-  adminConfig: AdminListConfig,
-  query: ListQuery,
-) {
+function isDefaultListQuery(adminConfig: AdminListConfig, query: ListQuery) {
   const defaults = createDefaultListQueryState(
     getSortMeta(adminConfig.list.sort),
   );
@@ -143,7 +141,15 @@ export async function queryAdminList({
     } as const;
   }
 
-  const listSelect = getListSelect(table, fields);
+  const related = resolveOneToOneList(adminConfig);
+  const listSelect = {
+    ...getListSelect(table, fields),
+    ...related.select,
+  };
+  const searchable = [
+    ...getListSearchable(table, fields),
+    ...related.searchable,
+  ];
   if (!Object.keys(listSelect).length) {
     return {
       status: "error",
@@ -154,8 +160,8 @@ export async function queryAdminList({
   const whereClause = and(
     ...resolveListWhere(
       {
-        fields,
         filters: adminConfig.list.filters,
+        searchable,
         table,
       },
       data,
@@ -164,15 +170,19 @@ export async function queryAdminList({
       ? eq(parentColumn, parentId)
       : undefined,
   );
-  const query = db
-    .select({
-      id: table.id,
-      createdAt: table.createdAt,
-      updatedAt: table.updatedAt,
-      ...listSelect,
-      ...(adminConfig.list.select ?? {}),
-    })
-    .from(table)
+  const query = applyListJoins(
+    db
+      .select({
+        id: table.id,
+        createdAt: table.createdAt,
+        updatedAt: table.updatedAt,
+        ...listSelect,
+        ...(adminConfig.list.select ?? {}),
+      })
+      .from(table)
+      .$dynamic(),
+    related.joins,
+  )
     .where(whereClause)
     .orderBy(
       ...resolveListOrderBy(
@@ -185,15 +195,18 @@ export async function queryAdminList({
     );
   const [rows, [{ count }]] = await Promise.all([
     isReorderSort ? query : query.limit(limit).offset((data.page - 1) * limit),
-    db
-      .select({ count: sql`count(*)`.mapWith(Number) })
-      .from(table)
-      .where(whereClause),
+    applyListJoins(
+      db
+        .select({ count: sql`count(*)`.mapWith(Number) })
+        .from(table)
+        .$dynamic(),
+      related.joins,
+    ).where(whereClause),
   ]);
 
   return {
     status: "success",
-    items: rows.map(serializeAdminListItem),
+    items: rows.map((row) => serializeValues(row)),
     total: count,
   } as const;
 }
@@ -224,7 +237,12 @@ export async function loadAdminListNeighbors({
     sort: adminConfig.list.sort,
   });
   const { db } = deps;
-  const { table } = adminConfig;
+  const { table, fields } = adminConfig;
+  const related = resolveOneToOneList(adminConfig);
+  const searchable = [
+    ...getListSearchable(table, fields),
+    ...related.searchable,
+  ];
   const parentColumn = moduleParent
     ? getTableColumns(table)[moduleParent.foreignKey]
     : undefined;
@@ -243,36 +261,39 @@ export async function loadAdminListNeighbors({
     data,
   );
   const ordered = db.$with("admin_list_neighbors").as(
-    db
-      .select({
-        id: table.id,
-        previousId: sql<
-          number | null
-        >`lag(${table.id}) over (order by ${sql.join(orderBy, sql`, `)})`.as(
-          "previous_id",
-        ),
-        nextId: sql<
-          number | null
-        >`lead(${table.id}) over (order by ${sql.join(orderBy, sql`, `)})`.as(
-          "next_id",
-        ),
-      })
-      .from(table)
-      .where(
-        and(
-          ...resolveListWhere(
-            {
-              fields: adminConfig.fields,
-              filters: adminConfig.list.filters,
-              table,
-            },
-            data,
+    applyListJoins(
+      db
+        .select({
+          id: table.id,
+          previousId: sql<
+            number | null
+          >`lag(${table.id}) over (order by ${sql.join(orderBy, sql`, `)})`.as(
+            "previous_id",
           ),
-          moduleParent && parentId && parentColumn
-            ? eq(parentColumn, parentId)
-            : undefined,
+          nextId: sql<
+            number | null
+          >`lead(${table.id}) over (order by ${sql.join(orderBy, sql`, `)})`.as(
+            "next_id",
+          ),
+        })
+        .from(table)
+        .$dynamic(),
+      related.joins,
+    ).where(
+      and(
+        ...resolveListWhere(
+          {
+            filters: adminConfig.list.filters,
+            searchable,
+            table,
+          },
+          data,
         ),
+        moduleParent && parentId && parentColumn
+          ? eq(parentColumn, parentId)
+          : undefined,
       ),
+    ),
   );
   const [row] = await db
     .with(ordered)
@@ -349,26 +370,17 @@ function getListSelect(
   return select;
 }
 
-function serializeAdminListItem(values: Record<string, unknown>) {
-  return Object.fromEntries(
-    Object.entries(values).map(([key, value]) => [key, serializeValue(value)]),
-  ) as BaseListItem & Record<string, unknown>;
-}
+// Collects searchable parent columns so list queries can combine them with related fields.
+function getListSearchable(
+  table: AnyAdminConfig["table"],
+  fields: AnyAdminConfig["fields"],
+) {
+  const columns = getTableColumns(table);
 
-function serializeValue(value: unknown): unknown {
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-
-  if (Array.isArray(value)) {
-    return value.map(serializeValue);
-  }
-
-  if (typeof value === "object" && value !== null) {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, item]) => [key, serializeValue(item)]),
-    );
-  }
-
-  return value;
+  return Object.entries(fields)
+    .filter(([, field]) => field.searchable)
+    .flatMap(([name]) => {
+      const column = columns[name];
+      return column ? [column] : [];
+    });
 }

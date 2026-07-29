@@ -8,6 +8,7 @@ import {
   SidebarMenu,
 } from "@kenstack/components/Sidebar";
 import { Skeleton } from "@kenstack/components/Skeleton";
+import { NavigationBlockerProvider } from "@kenstack/forms/NavigationBlocker";
 import { AppSidebar } from "./app-sidebar";
 import AccountMenu from "@kenstack/components/AccountMenu";
 import NavLink from "./NavLink";
@@ -116,22 +117,24 @@ function AdminSidebarContent({
 
   return (
     <SidebarProvider className="flex" defaultOpen={defaultOpen}>
-      <AppSidebar content={sidebarNav} />
-      <Content
-        logo={logo}
-        moduleLinks={moduleLinks.map(({ headerIcon, name, title }) => ({
-          icon: headerIcon,
-          name,
-          title,
-        }))}
-        accountMenu={
-          <Suspense fallback={accountMenuFallback}>
-            {accountMenu ?? <AccountMenu fallback={accountMenuFallback} />}
-          </Suspense>
-        }
-      >
-        {children}
-      </Content>
+      <NavigationBlockerProvider>
+        <AppSidebar content={sidebarNav} />
+        <Content
+          logo={logo}
+          moduleLinks={moduleLinks.map(({ headerIcon, name, title }) => ({
+            icon: headerIcon,
+            name,
+            title,
+          }))}
+          accountMenu={
+            <Suspense fallback={accountMenuFallback}>
+              {accountMenu ?? <AccountMenu fallback={accountMenuFallback} />}
+            </Suspense>
+          }
+        >
+          {children}
+        </Content>
+      </NavigationBlockerProvider>
     </SidebarProvider>
   );
 }

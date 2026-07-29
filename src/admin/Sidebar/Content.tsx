@@ -4,9 +4,9 @@ import { type ReactNode } from "react";
 import { useSidebar, SidebarTrigger } from "@kenstack/components/Sidebar";
 
 import { Menu } from "lucide-react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { getAdminPathModuleName } from "@kenstack/admin/lib/route";
+import { GuardedLink } from "@kenstack/forms/NavigationBlocker";
 
 type SidebarContentProps = {
   logo?: ReactNode;
@@ -42,9 +42,12 @@ export default function SidebarContent({
           >
             <Menu />
           </button>
-          <Link href="/" className="justify-self-center md:justify-self-start">
+          <GuardedLink
+            href="/"
+            className="justify-self-center md:justify-self-start"
+          >
             {logo}
-          </Link>
+          </GuardedLink>
           <HeaderModuleTitle moduleLinks={moduleLinks} />
           <div className="flex min-h-10 min-w-10 items-center justify-end justify-self-end">
             {accountMenu}

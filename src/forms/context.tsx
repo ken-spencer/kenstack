@@ -4,8 +4,9 @@ import React, {
   createContext,
   useCallback,
   useContext,
-  useState,
   useEffect,
+  useLayoutEffect,
+  useState,
 } from "react";
 import {
   FormProvider as ReactHookFormProvider,
@@ -23,6 +24,7 @@ import fetcher, {
   type FetchSuccess,
 } from "@kenstack/api/fetcher";
 import { ReturnedError, getReturnedErrorMessage } from "@kenstack/api/errors";
+import { useNavigationBlocker } from "./NavigationBlocker";
 
 export type FormSchema = z.ZodType<Record<string, unknown>, FieldValues>;
 
@@ -91,7 +93,7 @@ export type MutationFn<TResult extends Record<string, unknown>, TVariables> = (
 ) => Promise<FetchResult<TResult>>;
 
 export type FormProviderProps<
-  TResult extends Record<string, unknown>, // = Record<string, unknown>,
+  TResult extends Record<string, unknown>,
   TVariables extends Record<string, unknown>,
   TSchema extends FormSchema,
 > = {
@@ -100,6 +102,7 @@ export type FormProviderProps<
   mutationFn?: MutationFn<TResult, TVariables>;
   schema: TSchema;
   defaultValues: DefaultValues<z.input<TSchema>>;
+  guardUnsaved?: boolean;
   onSuccess?: (
     data: FetchSuccess<TResult>,
     variables: TVariables,
@@ -136,11 +139,12 @@ export type UseFormResult<
 
 function FormProvider<
   TResult extends Record<string, unknown>,
-  TVariables extends Record<string, unknown>, // = Record<string, unknown>,
+  TVariables extends Record<string, unknown>,
   TSchema extends FormSchema,
 >({
   apiPath,
   defaultValues,
+  guardUnsaved = false,
   schema,
   mutationFn,
   onError,
@@ -180,8 +184,9 @@ function FormProvider<
   });
 
   const { reset, resetField, setError, clearErrors } = form;
+  useUnsavedGuard(guardUnsaved, form.formState.isDirty);
 
-  useEffect(
+  useLayoutEffect(
     () => () => {
       // Fixes a problem in Next where form state can persist navigation.
       reset();
@@ -272,7 +277,7 @@ function FormProvider<
     },
   });
 
-  const values: UseFormResult<
+  const context: UseFormResult<
     TResult,
     TVariables,
     z.input<TSchema>,
@@ -290,7 +295,7 @@ function FormProvider<
 
   return (
     <ReactHookFormProvider {...form}>
-      <FormContext.Provider value={values}>{children}</FormContext.Provider>
+      <FormContext.Provider value={context}>{children}</FormContext.Provider>
     </ReactHookFormProvider>
   );
 }
@@ -309,3 +314,36 @@ function useForm<
 }
 
 export { FormProvider, useForm };
+
+// Synchronizes form dirtiness with guarded links and full-document exit warnings.
+function useUnsavedGuard(enabled: boolean, isDirty: boolean) {
+  const { setBlocked } = useNavigationBlocker();
+
+  useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
+    setBlocked(isDirty);
+
+    return () => {
+      setBlocked(false);
+    };
+  }, [enabled, isDirty, setBlocked]);
+
+  useEffect(() => {
+    if (!enabled || !isDirty) {
+      return;
+    }
+
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", beforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", beforeUnload);
+    };
+  }, [enabled, isDirty]);
+}

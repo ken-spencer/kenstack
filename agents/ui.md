@@ -24,3 +24,7 @@ Read this before UI, styling, Tailwind, or shared component work.
 ## React APIs
 
 - Before adding or changing React API patterns in shared controls or client UI primitives, check the installed React version and current React docs when the API may have changed. Do not introduce deprecated React API patterns when the current docs recommend a simpler project-compatible syntax, such as passing `ref` as a prop instead of using `React.forwardRef`.
+
+## State Ownership
+
+- Before adding local state, refs, maps, or context to preserve form or query data, inspect the owning library's default, reset, unregister, retention, and cache APIs. Do not mirror React Hook Form defaults or React Query server state; if the owner seems insufficient, remove the proposed store and demonstrate the missing capability first.

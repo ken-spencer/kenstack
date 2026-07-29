@@ -118,6 +118,6 @@ export function defineAddressFields({
         ...postalCode,
       }),
     },
-    validatePostalCode,
+    { superRefine: validatePostalCode },
   );
 }

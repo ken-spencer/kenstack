@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { History } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 
@@ -17,7 +17,9 @@ import {
 import { dateFormat } from "@kenstack/lib/dateFormat";
 import fetcher from "@kenstack/api/fetcher";
 import { useForm } from "@kenstack/forms/context";
+import { isRecord } from "@kenstack/lib/isRecord";
 import { useAdminEdit } from "../context";
+import { getOneToOneQueryKey } from "../queryKey";
 
 type RevisionSummary = {
   id: number;
@@ -35,6 +37,7 @@ type RevisionDetail = {
 };
 
 export default function RevisionHistoryButton() {
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [selectedRevision, setSelectedRevision] = useState<{
     id: number;
@@ -42,9 +45,9 @@ export default function RevisionHistoryButton() {
   } | null>(null);
   const { reset, setValue } = useFormContext<Record<string, unknown>>();
   const { mutation, setStatusMessage } = useForm();
-  const { apiPath, defaultValues, id, isNew, name, schema, single } =
+  const { apiPath, defaultValues, id, isNew, name, oneToOne, schema, single } =
     useAdminEdit();
-  const revisionsLoadTarget = single ? name : id;
+  const revisionTarget = single ? name : id;
   const selectedRevisionId =
     selectedRevision && selectedRevision.selectedAt > mutation.submittedAt
       ? selectedRevision.id
@@ -57,7 +60,7 @@ export default function RevisionHistoryButton() {
         name,
         id,
       }),
-    queryKey: ["admin-edit", name, revisionsLoadTarget, "revisions"],
+    queryKey: ["admin-edit", name, revisionTarget, "revisions"],
     enabled: open && typeof id === "number",
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
@@ -86,11 +89,58 @@ export default function RevisionHistoryButton() {
       }
 
       reset(defaultValues);
-      Object.entries(data.revision.snapshot).forEach(([fieldName, value]) => {
-        if (fieldName in schema.shape) {
-          setValue(fieldName, value, { shouldDirty: true });
+      if (!oneToOne) {
+        for (const [fieldName, value] of Object.entries(
+          data.revision.snapshot,
+        )) {
+          if (fieldName in schema.shape) {
+            setValue(fieldName, value, { shouldDirty: true });
+          }
         }
-      });
+      } else {
+        const selectedRelation = oneToOne.relations.find(
+          ({ value }) => value === data.revision.snapshot[oneToOne.field],
+        );
+        for (const [fieldName, value] of Object.entries(
+          data.revision.snapshot,
+        )) {
+          if (!(fieldName in schema.shape)) {
+            continue;
+          }
+
+          const relation = oneToOne.relations.find(
+            ({ name }) => name === fieldName,
+          );
+          if (relation && relation !== selectedRelation) {
+            continue;
+          }
+
+          if (relation && isRecord(value)) {
+            const cachedValues =
+              typeof id === "number"
+                ? queryClient.getQueryData(
+                    getOneToOneQueryKey({
+                      name,
+                      parentId: id,
+                      relationKey: relation.name,
+                    }),
+                  )
+                : undefined;
+            setValue(
+              fieldName,
+              {
+                ...(isRecord(cachedValues)
+                  ? cachedValues
+                  : relation.defaultValues),
+                ...value,
+              },
+              { shouldDirty: true },
+            );
+          } else {
+            setValue(fieldName, value, { shouldDirty: true });
+          }
+        }
+      }
       setSelectedRevision({ id: data.revision.id, selectedAt: Date.now() });
       setOpen(false);
     },

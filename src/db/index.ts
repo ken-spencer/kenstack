@@ -14,7 +14,7 @@ const makeClient = () =>
   postgres(connectionString, {
     prepare: false,
     debug: false,
-    max: 1,
+    max: 2,
     idle_timeout: 20,
     max_lifetime: 60 * 30,
   });

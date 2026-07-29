@@ -1,8 +1,4 @@
-import type { DefinedFields } from "./types";
-
-type DefaultValuesFromFields<TFields extends DefinedFields> = {
-  [K in keyof TFields]: TFields[K]["default"];
-};
+import type { DefaultValuesFromFields, DefinedFields } from "./types";
 
 export function createDefaultValues<const T extends DefinedFields>(fields: T) {
   return Object.fromEntries(

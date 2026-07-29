@@ -66,7 +66,41 @@ export const removeAction = ({
       }
 
       if (data.mode === "permanent") {
+        const relatedRowsByBinding = [];
+        if (adminConfig.oneToOne) {
+          const rowIds = rows.map((row) => row.id);
+          for (const binding of Object.values(adminConfig.oneToOne.relations)) {
+            const relatedColumns = getTableColumns(binding.table);
+            // Related field delete hooks may inspect any column, so this
+            // boundary loads the full rows.
+            const relatedRows = await db
+              .select(relatedColumns)
+              .from(binding.table)
+              .where(inArray(binding.foreignKey, rowIds));
+            const relatedById = new Map(
+              relatedRows.map((relatedRow) => [relatedRow.id, relatedRow]),
+            );
+
+            relatedRowsByBinding.push({ binding, relatedById });
+          }
+        }
+
         for (const row of rows) {
+          for (const { binding, relatedById } of relatedRowsByBinding) {
+            const relatedRow = relatedById.get(row.id);
+
+            if (relatedRow) {
+              for (const [fieldKey, field] of Object.entries(binding.fields)) {
+                await field.delete?.({
+                  db,
+                  key: fieldKey,
+                  tableId: row.id,
+                  row: relatedRow,
+                });
+              }
+            }
+          }
+
           for (const [fieldKey, field] of Object.entries(adminConfig.fields)) {
             await field.delete?.({
               db,

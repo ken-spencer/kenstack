@@ -5,12 +5,11 @@ import fetcher from "@kenstack/api/fetcher";
 
 import { useAdminEdit } from "./context";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { getOneToOneQueryKey } from "./queryKey";
+import { isRecord } from "@kenstack/lib/isRecord";
 
-export default function AdminEditForm({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+// Renders the admin edit form and connects saving to admin routing and cached state.
+export default function EditForm({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -25,17 +24,17 @@ export default function AdminEditForm({
     name,
     parentId,
     userId,
+    oneToOne,
   } = useAdminEdit();
-  const loadTarget = single ? name : id;
+  const revisionTarget = single ? name : id;
   const basePathname = useMemo(() => {
     const parts = pathname.split("/").filter(Boolean);
     parts.pop();
     return "/" + parts.join("/");
   }, [pathname]);
-
   return (
     <Form
-      key={`${name}:${single ? "single" : isNew ? "new" : id}`}
+      guardUnsaved
       schema={schema}
       defaultValues={defaultValues}
       apiPath={apiPath}
@@ -56,11 +55,29 @@ export default function AdminEditForm({
       onSuccess={(data, variables, { form }) => {
         queryClient.invalidateQueries({ queryKey: ["admin-list"] });
         queryClient.removeQueries({
-          queryKey: ["admin-edit", name, loadTarget, "revisions"],
+          queryKey: ["admin-edit", name, revisionTarget, "revisions"],
           exact: true,
         });
+        const recordId = data.id ?? id;
+        const savedValues = data.values ?? defaultValues;
+        if (recordId && oneToOne) {
+          const savedRelation = oneToOne.relations.find(({ name }) =>
+            Object.hasOwn(savedValues, name),
+          );
+          if (savedRelation) {
+            const relationValues = savedValues[savedRelation.name];
+            queryClient.setQueryData(
+              getOneToOneQueryKey({
+                name,
+                parentId: recordId,
+                relationKey: savedRelation.name,
+              }),
+              relationValues,
+            );
+          }
+        }
 
-        if (name === "users" && (data.id ?? id) === userId) {
+        if (name === "users" && recordId === userId) {
           router.refresh();
         }
 
@@ -72,7 +89,27 @@ export default function AdminEditForm({
             pathname + (searchParams.size ? "?" + searchParams : "");
 
           if (variables.submitter === currentPath) {
-            form.reset(data.values ?? defaultValues);
+            let resetValues = savedValues;
+            if (oneToOne) {
+              const selection =
+                savedValues[oneToOne.field] ?? form.getValues(oneToOne.field);
+              const activeRelation = oneToOne.relations.find(
+                ({ value }) => value === selection,
+              );
+              if (
+                activeRelation &&
+                !Object.hasOwn(savedValues, activeRelation.name)
+              ) {
+                const relationValues = form.getValues(activeRelation.name);
+                if (isRecord(relationValues)) {
+                  resetValues = {
+                    ...savedValues,
+                    [activeRelation.name]: relationValues,
+                  };
+                }
+              }
+            }
+            form.reset(resetValues);
           } else {
             router.push(variables.submitter);
           }
@@ -86,12 +123,25 @@ export default function AdminEditForm({
         }
       }}
       onSubmit={({ data, mutation, event, changes }) => {
-        const button = (event?.nativeEvent as SubmitEvent)
-          ?.submitter as HTMLButtonElement;
+        const submitter =
+          event?.nativeEvent instanceof SubmitEvent
+            ? event.nativeEvent.submitter
+            : null;
+        const button =
+          submitter instanceof HTMLButtonElement ? submitter : null;
+        const values = { ...data };
+        if (oneToOne) {
+          for (const relation of oneToOne.relations) {
+            if (!changes.includes(relation.name)) {
+              delete values[relation.name];
+            }
+          }
+        }
+
         return mutation.mutateAsync({
           changes,
           submitter: button?.name === "action" ? button.value : undefined,
-          values: data,
+          values,
         });
       }}
     >

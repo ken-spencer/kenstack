@@ -1,14 +1,23 @@
 import "server-only";
 
-import type { tables } from "@app/deps";
-import type { createDb } from "@kenstack/db";
 import type { User } from "@kenstack/types";
 import type * as z from "zod";
 import { type SQL, type getTableColumns } from "drizzle-orm";
-import type { AnyPgColumn, AnyPgTable } from "drizzle-orm/pg-core";
+import type { AnyPgTable } from "drizzle-orm/pg-core";
+import type {
+  Database,
+  DbTransaction,
+  NumericIdTable,
+} from "@kenstack/db/types";
 
 import type { DefinedField, DefinedFields, FieldDisplay } from "../types";
 import { attachFieldSetRefinements } from "../fieldSetRefinements";
+import {
+  attachOneToOneFieldSets,
+  getOneToOneFieldSets,
+  type FieldsWithOneToOne,
+  type OneToOneFieldSetsFrom,
+} from "../oneToOneFieldSets";
 import type { TagsTable } from "@kenstack/db/tables/tags";
 import type { Relationship } from "../relationships";
 import { booleanField } from "./boolean";
@@ -31,15 +40,10 @@ export { relationshipField, isRelationshipField } from "./relationship";
 export { tagField, isTagField } from "./tags";
 export { textField } from "./text";
 
-type FieldDatabase = ReturnType<typeof createDb<typeof tables>>;
-type TransactionDb = Parameters<Parameters<FieldDatabase["transaction"]>[0]>[0];
 type TableColumns = ReturnType<typeof getTableColumns<AnyPgTable>>;
 type SelectValue = TableColumns[string] | SQL;
-export type FieldAfterSave = (tx: TransactionDb) => Promise<unknown>;
+export type FieldAfterSave = (tx: DbTransaction) => Promise<unknown>;
 export type FieldSaveTask = () => Promise<unknown> | unknown;
-type FieldSaveTable = AnyPgTable & {
-  id: AnyPgColumn<{ data: number; notNull: true }>;
-};
 
 type FieldFilterOption = {
   description?: string;
@@ -48,14 +52,14 @@ type FieldFilterOption = {
 };
 
 export type FieldLoadContext = {
-  db: Pick<FieldDatabase, "select">;
+  db: Pick<Database, "select">;
   key: string;
   tableId: number;
 };
 
 export type FieldSaveContext<TValue = unknown> = {
   admin?: boolean;
-  db: TransactionDb;
+  db: DbTransaction;
   key: string;
   tableId: number;
   value: TValue;
@@ -64,7 +68,7 @@ export type FieldSaveContext<TValue = unknown> = {
 };
 
 export type FieldDeleteContext = {
-  db: FieldDatabase;
+  db: Database;
   key: string;
   tableId: number;
   row: Record<string, unknown>;
@@ -79,14 +83,14 @@ export type FieldListSelectContext = {
 
 export type FieldPreSaveContext<TValue = unknown> = {
   admin: boolean;
-  db: TransactionDb;
+  db: DbTransaction;
   key: string;
   column: TableColumns[string] | undefined;
   value: TValue;
   values: Record<string, unknown>;
   id?: number | null;
   user: User;
-  table: FieldSaveTable;
+  table: NumericIdTable;
   shouldSaveField: (key: string) => boolean;
 };
 
@@ -94,7 +98,7 @@ export type FieldPrepareSaveContext<TValue = unknown> = Omit<
   FieldPreSaveContext<TValue>,
   "db"
 > & {
-  db: FieldDatabase;
+  db: Database;
 };
 
 export type FieldPrepareSaveResult =
@@ -176,40 +180,46 @@ export type ServerFieldResolver<
 type ResolvedServerField = DefinedField & FieldBehavior;
 
 export type ServerDefinedFields = Record<string, ResolvedServerField>;
-export type ServerDefinedFieldsFrom<TFields extends DefinedFields> = {
-  [TKey in keyof TFields]: ResolvedServerField & TFields[TKey];
+export type ServerDefinedFieldsFrom<TFields extends DefinedFields> =
+  FieldsWithOneToOne<
+    {
+      [TKey in keyof TFields]: ResolvedServerField & TFields[TKey];
+    },
+    OneToOneFieldSetsFrom<TFields>
+  >;
+
+export type ServerBehaviors<TFields extends DefinedFields> = {
+  [TKey in keyof TFields]?:
+    | ServerField<z.output<TFields[TKey]["zod"]>>
+    | ServerFieldResolver<TFields[TKey]>;
 };
 
 const resolvedServerFieldSets = new WeakSet<object>();
 
 export function serverFields<const TFields extends DefinedFields>(
   fields: TFields,
-  patches: {
-    [TKey in keyof TFields]?:
-      | ServerField<z.output<TFields[TKey]["zod"]>>
-      | ServerFieldResolver<TFields[TKey]>;
-  } = {},
+  behaviors: ServerBehaviors<TFields> = {},
 ) {
   const next = resolveServerFields(fields) as ServerDefinedFields;
 
-  Object.entries(patches).forEach(([key, patch]) => {
-    if (!patch) {
+  Object.entries(behaviors).forEach(([key, behavior]) => {
+    if (!behavior) {
       return;
     }
 
     if (!(key in fields)) {
-      throw new Error(`Cannot patch unknown field "${key}".`);
+      throw new Error(`Cannot configure unknown field "${key}".`);
     }
 
     const field = next[key];
 
     const serverField =
-      typeof patch === "function" ? patch(fields[key]) : patch;
-    const { zod, ...serverPatch } = serverField;
+      typeof behavior === "function" ? behavior(fields[key]) : behavior;
+    const { zod, ...serverBehavior } = serverField;
 
     next[key] = {
       ...field,
-      ...serverPatch,
+      ...serverBehavior,
       ...(zod ? { zod } : {}),
     };
   });
@@ -237,7 +247,10 @@ export function resolveServerFields(fields: DefinedFields) {
     }),
   );
 
-  const resolved = attachFieldSetRefinements(resolvedFields, { from: fields });
+  const resolved = attachOneToOneFieldSets(
+    attachFieldSetRefinements(resolvedFields, { from: fields }),
+    getOneToOneFieldSets(fields),
+  );
   resolvedServerFieldSets.add(resolved);
   return resolved;
 }

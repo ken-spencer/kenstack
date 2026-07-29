@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server";
 import { type FetchError } from "./fetcher";
 import { pipeline, type PipelineOptions } from ".";
-import isPlainObject from "lodash-es/isPlainObject";
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return isPlainObject(value);
-}
+import { isRecord } from "@kenstack/lib/isRecord";
 
 export default async function multiPipeline(
   options: PipelineOptions & Record<string, unknown>,

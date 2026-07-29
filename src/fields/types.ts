@@ -4,6 +4,7 @@ import type * as z from "zod";
 export type FieldKind =
   | "text"
   | "number"
+  | "money"
   | "email"
   | "textarea"
   | "markdown"
@@ -116,3 +117,9 @@ export type DefinedField<
 > = TKind extends FieldKind ? DefinedFieldBase<TKind, TDefault> : never;
 
 export type DefinedFields = Record<string, DefinedField>;
+
+export type DefaultValuesFromFields<TFields> = {
+  [K in keyof TFields]: TFields[K] extends { default: infer TDefault }
+    ? TDefault
+    : never;
+};

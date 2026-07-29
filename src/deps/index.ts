@@ -5,7 +5,8 @@ import type { AuthUsersTable } from "@kenstack/auth/server/types";
 import Email from "./components/Email";
 import type { EmailContainer } from "./components/Email";
 
-import { type Sessions } from "@kenstack/db/tables/sessions";
+import type { Sessions } from "@kenstack/db/tables/sessions";
+import type { rateLimitEvents } from "@kenstack/db/tables/rateLimits";
 import { type Attachment } from "@kenstack/lib/mailer";
 import { formatFileSize } from "@kenstack/lib/fileSize";
 import type { DefinedAdmin } from "@kenstack/admin/module";
@@ -22,7 +23,10 @@ type EmailConfig = {
   from: EmailFrom | undefined;
 };
 
-export type Tables = { sessions: Sessions } & Record<string, unknown>;
+export type Tables = {
+  rateLimitEvents: typeof rateLimitEvents;
+  sessions: Sessions;
+} & Record<string, unknown>;
 
 type ModulesWithUsers = DefinedAdmin & {
   users: DefinedAdmin[string] & {
@@ -32,7 +36,7 @@ type ModulesWithUsers = DefinedAdmin & {
   };
 };
 
-export const defaultRoles = ["admin", "member"] as const;
+export const defaultRoles = ["admin"] as const;
 
 export const createDeps = <
   TSchema extends Tables,
@@ -65,7 +69,7 @@ export const createDeps = <
 
   logger.bindAuth(auth);
 
-  const resolvedEmail: EmailConfig = {
+  const resolvedEmail = {
     EmailCont: Email,
     attachments: [],
     from: undefined,

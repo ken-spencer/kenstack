@@ -1,7 +1,6 @@
 import type { AnyPgTable } from "drizzle-orm/pg-core";
 
 import { pipelineStage } from "@kenstack/api";
-import { deps } from "@app/deps";
 import {
   completeMediaUpload,
   mediaUploadCompleteSchema,
@@ -13,9 +12,11 @@ export const uploadCompleteAction = (adminConfig: {
   fields: ServerDefinedFields;
 }) =>
   pipelineStage(
-    { schema: mediaUploadCompleteSchema },
-    async ({ data, response }) => {
-      const user = await deps.auth.requireUser();
+    {
+      access: "admin",
+      schema: mediaUploadCompleteSchema,
+    },
+    async ({ data, response, user }) => {
       const result = await completeMediaUpload({
         ...adminConfig,
         ...data,

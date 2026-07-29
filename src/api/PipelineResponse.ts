@@ -73,6 +73,7 @@ export class PipelineResponse implements PipelineResponseShape {
           status?: number;
           formErrors?: string[];
           fieldErrors?: Record<string, string | string[]>;
+          redirect?: string;
         },
   ) {
     const { status = 422, ...payload } =

@@ -46,7 +46,7 @@ export const saveAction = (moduleConfig: DefinedAdminModule) => {
       schema: z.object({
         id: z.number().nullish(),
         changes: z.array(z.string()),
-        parentId: z.number().int().positive().optional(),
+        parentId: z.int().positive().optional(),
         values: adminConfig.schema,
       }),
       fieldsKey: "values",

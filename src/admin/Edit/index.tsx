@@ -2,12 +2,16 @@ import { AdminEditProvider } from "./context";
 import Header from "./Header";
 import Alerts from "./Alerts";
 import Footer from "./Footer";
-import FormRender from "./FormRender";
+import OneToOneTabs from "./OneToOneTabs";
 import Breadcrumbs from "@kenstack/admin/components/Breadcrumbs";
 import Button from "@kenstack/components/Button";
 import { uploadsConfigured } from "@kenstack/lib/mediaStorage";
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import {
+  dehydrate,
+  HydrationBoundary,
+  QueryClient,
+} from "@tanstack/react-query";
 
 import type {
   AnyAdminConfig,
@@ -15,10 +19,12 @@ import type {
   ModuleParentOptions,
 } from "@kenstack/admin/module";
 import type { AdminClientRegistry } from "@kenstack/admin/clientLoaders";
-import { loadAdminEdit } from "@kenstack/admin/queries/load";
+import { loadAdminEdit, loadOneToOne } from "@kenstack/admin/queries/load";
 import { loadAdminParentRecord } from "@kenstack/admin/queries/parent";
 import { getAdminRecordTitle } from "@kenstack/admin/lib/recordTitle";
+import { getOneToOneQueryKey } from "./queryKey";
 import { deps } from "@app/deps";
+import { GuardedLink } from "@kenstack/forms/NavigationBlocker";
 
 export default async function AdminEdit({
   name,
@@ -70,38 +76,82 @@ export default async function AdminEdit({
     notFound();
   }
 
-  return (
-    <AdminEditProvider
-      name={name}
-      id={id}
-      isNew={isNew}
-      single={!("list" in adminConfig)}
-      userId={userId}
-      canUpload={uploadsConfigured}
-      defaultValues={defaultValues ?? {}}
-      item={item}
-      parentId={resolvedParentId}
-      preview={preview}
-      childModuleLinks={
-        !isNew && item
-          ? renderChildModuleLinks(deps.modules, name, item.id)
-          : null
+  const queryClient = new QueryClient();
+  const oneToOneConfig = adminConfig.oneToOne;
+  const relationEntries = oneToOneConfig
+    ? Object.entries(oneToOneConfig.relations)
+    : [];
+  const activeRelation =
+    oneToOneConfig && item
+      ? relationEntries.find(
+          ([, binding]) => binding.value === item[oneToOneConfig.field],
+        )
+      : undefined;
+  const oneToOne = oneToOneConfig
+    ? {
+        field: oneToOneConfig.field,
+        relations: relationEntries.map(([relationName, binding]) => ({
+          name: relationName,
+          title: binding.title,
+          value: binding.value,
+          defaultValues: binding.defaultValues,
+        })),
       }
-      clients={clients}
-    >
-      <div className="flex flex-col gap-2">
-        <Breadcrumbs
-          currentTitle={isNew ? "New Entry" : getAdminRecordTitle(item)}
-          moduleName={name}
-          moduleTitle={moduleTitle}
-          parent={parentRecord}
-        />
-        <Header />
-        <Alerts />
-        <FormRender />
-        <Footer />
-      </div>
-    </AdminEditProvider>
+    : undefined;
+
+  if (!isNew && item && activeRelation) {
+    const [relationName] = activeRelation;
+    const relatedItem = await loadOneToOne({
+      name,
+      parentId: item.id,
+      relationKey: relationName,
+    });
+    queryClient.setQueryData(
+      getOneToOneQueryKey({
+        name,
+        parentId: item.id,
+        relationKey: relationName,
+      }),
+      relatedItem,
+    );
+  }
+
+  return (
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <AdminEditProvider
+        key={`${name}:${isNew ? "new" : (item?.id ?? id ?? "single")}`}
+        name={name}
+        id={id}
+        isNew={isNew}
+        single={!("list" in adminConfig)}
+        userId={userId}
+        canUpload={uploadsConfigured}
+        defaultValues={defaultValues ?? {}}
+        item={item}
+        parentId={resolvedParentId}
+        preview={preview}
+        childModuleLinks={
+          !isNew && item
+            ? renderChildModuleLinks(deps.modules, name, item.id)
+            : null
+        }
+        oneToOne={oneToOne}
+        clients={clients}
+      >
+        <div className="flex flex-col gap-2">
+          <Breadcrumbs
+            currentTitle={isNew ? "New Entry" : getAdminRecordTitle(item)}
+            moduleName={name}
+            moduleTitle={moduleTitle}
+            parent={parentRecord}
+          />
+          <Header />
+          <Alerts />
+          <OneToOneTabs />
+          <Footer />
+        </div>
+      </AdminEditProvider>
+    </HydrationBoundary>
   );
 }
 
@@ -134,10 +184,10 @@ function renderChildModuleLinks(
               className="w-full justify-start"
               variant="outline"
             >
-              <Link href={href}>
+              <GuardedLink href={href}>
                 {Icon ? <Icon className="size-4" /> : null}
                 {moduleConfig.title}
-              </Link>
+              </GuardedLink>
             </Button>
           );
         })}
