@@ -1,3 +1,9 @@
+/*
+ * Public entry point: the dependency-factory API for host applications.
+ * Export only supported host-facing APIs. Kenstack code imports non-public
+ * implementation from its canonical files, not through this entry point.
+ */
+
 import { createDb } from "@kenstack/db";
 import { Logger } from "@kenstack/logger";
 import { createAuth } from "@kenstack/auth/server";

@@ -51,6 +51,9 @@ function AdminList() {
   } = useAdminList();
   const [reorderError, setReorderError] = useState<string | null>(null);
   const draggedId = useRef<number | null>(null);
+  const draggedScope = useRef<{ by: string; value: number | string } | null>(
+    null,
+  );
   const dragStartOrder = useRef<number[]>([]);
   const queryClient = useQueryClient();
 
@@ -83,10 +86,14 @@ function AdminList() {
       queryClient.invalidateQueries({ queryKey: ["admin-list", name] });
     },
   });
-  const getQueryOrder = () => {
+  const getQueryOrder = (
+    scope: { by: string; value: number | string } | null,
+  ) => {
     const current = queryClient.getQueryData<AdminListQueryData>(queryKey);
     return current?.status === "success"
-      ? current.items.map((row) => row.id)
+      ? current.items
+          .filter((row) => !scope || groupValue(row, scope.by) === scope.value)
+          .map((row) => row.id)
       : [];
   };
   const reorderToTarget = (targetId: number) => {
@@ -104,6 +111,14 @@ function AdminList() {
     const targetIndex = current.items.findIndex((row) => row.id === targetId);
 
     if (sourceIndex === -1 || targetIndex === -1) {
+      return;
+    }
+    const scope = draggedScope.current;
+    if (
+      scope &&
+      (groupValue(current.items[sourceIndex], scope.by) !== scope.value ||
+        groupValue(current.items[targetIndex], scope.by) !== scope.value)
+    ) {
       return;
     }
 
@@ -161,8 +176,9 @@ function AdminList() {
   };
   const finishReorderDrag = () => {
     const startedWith = dragStartOrder.current;
-    const currentIds = getQueryOrder();
+    const currentIds = getQueryOrder(draggedScope.current);
     draggedId.current = null;
+    draggedScope.current = null;
     dragStartOrder.current = [];
 
     if (
@@ -243,7 +259,13 @@ function AdminList() {
                     itemId={item.id}
                     onDragStart={() => {
                       draggedId.current = item.id;
-                      dragStartOrder.current = getQueryOrder();
+                      draggedScope.current =
+                        group && value !== null
+                          ? { by: group.by, value }
+                          : null;
+                      dragStartOrder.current = getQueryOrder(
+                        draggedScope.current,
+                      );
                     }}
                     onDragEnd={finishReorderDrag}
                   />

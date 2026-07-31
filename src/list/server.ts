@@ -20,6 +20,7 @@ import type {
   AdminFilterField,
   AdminFilters,
   AdminSort,
+  SortDirection,
 } from "@kenstack/admin/types/list";
 
 import { type ListQueryStoreState } from "./querySchema";
@@ -216,21 +217,34 @@ export function resolveListOrderBy(
     option.direction === false
       ? option.defaultDirection
       : (requestedDirection ?? option.defaultDirection);
-  const orderBy = option.fields.map((field) => {
+  return resolveListSortFields(table, option, direction).map(
+    ({ field, direction }) => (direction === "asc" ? asc(field) : desc(field)),
+  );
+}
+
+// Exposes the canonical ID tie-break policy to server features that compose list ordering.
+export function resolveListSortFields(
+  table: AdminTable,
+  option: AdminSort[string],
+  direction: SortDirection,
+): { field: AnyColumn | SQL; direction: SortDirection }[] {
+  const fields = option.fields.map((field) => {
     const column = "field" in field ? field.field : field;
     const fieldDirection =
       "field" in field && field.direction ? field.direction : direction;
 
-    return fieldDirection === "asc" ? asc(column) : desc(column);
+    return { field: column, direction: fieldDirection };
   });
 
-  if (
-    !option.fields.some(
-      (field) => ("field" in field ? field.field : field) === table.id,
-    )
-  ) {
-    orderBy.push(option.direction === false ? asc(table.id) : desc(table.id));
+  if (fields.some(({ field }) => field === table.id)) {
+    return fields;
   }
 
-  return orderBy;
+  return [
+    ...fields,
+    {
+      field: table.id,
+      direction: option.direction === false ? "asc" : "desc",
+    },
+  ];
 }

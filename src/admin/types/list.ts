@@ -61,6 +61,7 @@ export type AdminListReorderOptions =
   | {
       field?: AdminFieldReference;
       label?: string;
+      scope?: AdminFieldReference;
     };
 
 export type AdminFilterKind =

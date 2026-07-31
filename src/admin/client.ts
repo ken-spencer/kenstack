@@ -1,5 +1,11 @@
 "use client";
 
+/*
+ * Public entry point: the admin client-configuration API for host applications.
+ * Export only supported host-facing APIs. Kenstack code imports non-public
+ * implementation from its canonical files, not through this entry point.
+ */
+
 import type { FC, PropsWithChildren, ReactNode } from "react";
 import type { SelectedMedia } from "@kenstack/db/tables";
 import { createZodSchema } from "@kenstack/fields/createZodSchema";

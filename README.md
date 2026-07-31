@@ -54,4 +54,5 @@ Email alerting is enabled when the host provides:
 
 ## Conventions
 
-Agent-facing implementation guidance lives in `agents/`. Those files are the source of truth for Kenstack coding conventions, data rules, UI/admin boundaries, TypeScript policy, and migration notes.
+Standing agent rules live in `AGENTS.md`; stable technical references and downstream migration notes live
+in `docs/`.

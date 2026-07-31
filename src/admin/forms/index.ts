@@ -1,3 +1,9 @@
+/*
+ * Public entry point: the admin form-component API for host applications.
+ * Export only supported host-facing APIs. Kenstack code imports non-public
+ * implementation from its canonical files, not through this entry point.
+ */
+
 export { default as AddressFields } from "@kenstack/forms/AddressFields";
 export { default as ComboboxField } from "@kenstack/forms/ComboboxField";
 export { default as InputField } from "@kenstack/forms/InputField";

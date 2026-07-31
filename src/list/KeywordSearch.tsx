@@ -1,6 +1,6 @@
 import { Input } from "@kenstack/forms/controls/Input";
 import { cn } from "@kenstack/lib/utils";
-import { Search, CircleX } from "lucide-react";
+import { Search, X } from "lucide-react";
 import type { ListQueryStoreState } from "@kenstack/list/querySchema";
 import type { SetQueryStore } from "@kenstack/list/useQueryStore";
 
@@ -29,11 +29,15 @@ export default function KeywordSearch({
         }}
       />
       <button
+        aria-label="Clear search"
         type="button"
-        className={"-ml-5" + (filters.keywords.length ? "" : " hidden")}
+        className={cn(
+          "bg-foreground text-background -ml-5 size-4 shrink-0 items-center justify-center rounded-full",
+          filters.keywords.length ? "flex" : "hidden",
+        )}
         onClick={() => setFilters((prev) => ({ ...prev, keywords: "" }))}
       >
-        <CircleX className="text-foreground size-4" />
+        <X className="size-3" />
       </button>
     </div>
   );

@@ -1,3 +1,9 @@
+/*
+ * Public entry point: the admin table-definition API for host applications.
+ * Export only supported host-facing APIs. Kenstack code imports non-public
+ * implementation from its canonical files, not through this entry point.
+ */
+
 import "server-only";
 
 import { sql } from "drizzle-orm";

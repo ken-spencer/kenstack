@@ -1,5 +1,11 @@
 "use client";
 
+/*
+ * Public entry point: the admin client-registry API for host applications.
+ * Export only supported host-facing APIs. Kenstack code imports non-public
+ * implementation from its canonical files, not through this entry point.
+ */
+
 import type { ClientConfig } from "./client";
 
 type ClientConfigModule = { client: ClientConfig } | { default: ClientConfig };

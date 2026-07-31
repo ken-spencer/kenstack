@@ -1,3 +1,5 @@
+/* Kenstack-only @app/deps compilation boundary. Do not add exports unrelated to this boundary. */
+
 import { createDeps } from "@kenstack/deps";
 import { defineAdmin } from "@kenstack/admin/server";
 import usersModule from "@kenstack/modules/users";

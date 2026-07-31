@@ -1,3 +1,9 @@
+/*
+ * Public entry point: the admin server API for host applications.
+ * Export only supported host-facing APIs. Kenstack code imports non-public
+ * implementation from its canonical files, not through this entry point.
+ */
+
 import "server-only";
 
 import { getTableColumns } from "drizzle-orm";
@@ -17,15 +23,17 @@ export * from "./module";
 import { getOneToOneFieldSets } from "@kenstack/fields/oneToOneFieldSets";
 import type { DefinedAdmin } from "./module";
 import type { AdminClientRegistry } from "./clientLoaders";
+import { resolveScopedReorders } from "./lib/scopedReorder";
 
 export type { DefinedAdmin };
 
 type AdminModule = DefinedAdmin[string];
-type AdminRecordChild = {
-  module: AdminModule;
-  foreignKey: string;
-};
-type AdminChild = AdminModule | AdminRecordChild;
+type AdminChild =
+  | AdminModule
+  | {
+      module: AdminModule;
+      foreignKey: string;
+    };
 type AdminEntry =
   | AdminModule
   | {
@@ -78,9 +86,11 @@ export function defineAdmin<const TEntries extends readonly AdminEntry[]>(
     }
   }
 
+  const resolvedModules = resolveScopedReorders(modules);
+
   return Object.fromEntries(
-    modules.map((moduleConfig) => {
-      validateOneToOne(moduleConfig, modules);
+    resolvedModules.map((moduleConfig) => {
+      validateOneToOne(moduleConfig, resolvedModules);
 
       return [
         moduleConfig.name,

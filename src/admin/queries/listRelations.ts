@@ -3,7 +3,7 @@ import type { AnyPgColumn, AnyPgTable } from "drizzle-orm/pg-core";
 
 import type { AnyAdminConfig } from "@kenstack/admin/module";
 
-type ListJoin = {
+export type ListJoin = {
   on: SQL;
   table: AnyPgTable;
 };

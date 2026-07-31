@@ -330,30 +330,75 @@ async function saveModule(
       },
     });
   } else {
-    const appendToReorder = !id && adminConfig.list.reorder;
-    if (!appendToReorder) {
+    const reorder = adminConfig.list.reorder;
+    const scopeMayChange = Boolean(
+      reorder?.scope &&
+      (changes?.includes(reorder.scope.fieldKey) ||
+        (changes === undefined &&
+          Object.hasOwn(values, reorder.scope.fieldKey))),
+    );
+    if (!reorder || (id && !scopeMayChange)) {
       result = await saveRecord(saveOptions);
     } else {
       result = await saveRecord({
         ...saveOptions,
         query: async ({ tx, data, select, user }) => {
-          const [position] = await tx
-            .select({
-              sortOrder:
-                sql<number>`coalesce(max(${appendToReorder.field}), 0) + 10`.mapWith(
-                  Number,
+          const scopeValue = reorder.scope
+            ? data[reorder.scope.fieldKey]
+            : undefined;
+          if (reorder.scope && scopeValue === undefined) {
+            throw new Error(
+              `Scoped reorder for module "${name}" requires a prepared value for scope field "${reorder.scope.fieldKey}", but it was undefined.`,
+            );
+          }
+          let appendToReorder = !id;
+          if (id && reorder.scope) {
+            const [stored] = await tx
+              .select({ scope: reorder.scope.field })
+              .from(adminConfig.table)
+              .where(eq(adminConfig.table.id, id));
+            appendToReorder = stored?.scope !== scopeValue;
+          }
+
+          let orderedData = data;
+          if (appendToReorder) {
+            const [position] = await tx
+              .select({
+                sortOrder:
+                  sql<number>`coalesce(max(${reorder.field}), 0) + 10`.mapWith(
+                    Number,
+                  ),
+              })
+              .from(adminConfig.table)
+              .where(
+                and(
+                  isNull(adminConfig.table.deletedAt),
+                  reorder.scope
+                    ? eq(reorder.scope.field, scopeValue)
+                    : undefined,
                 ),
-            })
-            .from(adminConfig.table)
-            .where(isNull(adminConfig.table.deletedAt));
-          const [row] = await tx
-            .insert(adminConfig.table)
-            .values({
+              );
+            orderedData = {
               ...data,
-              [appendToReorder.fieldKey]: position?.sortOrder ?? 10,
-              createdBy: user.id,
-            })
-            .returning(select);
+              [reorder.fieldKey]: position?.sortOrder ?? 10,
+            };
+          }
+          const [row] = id
+            ? await tx
+                .update(adminConfig.table)
+                .set({
+                  ...orderedData,
+                  updatedAt: new Date(),
+                })
+                .where(eq(adminConfig.table.id, id))
+                .returning(select)
+            : await tx
+                .insert(adminConfig.table)
+                .values({
+                  ...orderedData,
+                  createdBy: user.id,
+                })
+                .returning(select);
 
           return row;
         },

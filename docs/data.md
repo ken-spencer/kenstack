@@ -1,6 +1,7 @@
-# Data Instructions
+# Data Reference
 
-Read this before database, Drizzle, table schema, Zod, validation, or pipeline schema work.
+Consult this reference for databases, Drizzle, table schemas, Zod, validation, record persistence, or
+pipeline schema work.
 
 ## Database
 
@@ -20,7 +21,12 @@ Read this before database, Drizzle, table schema, Zod, validation, or pipeline s
 - Use isomorphic `defineFields({ publish: true, seo: true, fields: { ... } })` from `@kenstack/admin/fields` for field maps. Keep field-set options on that wrapper instead of creating alternate plain field-definition paths.
 - Do not hand-write field helper internals such as `__kenstackField` in site modules. That marker is owned by Kenstack field factories; use `field(...)` for custom field values or an existing convenience helper such as `textField(...)`, `dateField(...)`, or `tagField(...)` for standard inputs.
 - In field definitions, omit default-valued options unless they are changing behavior or clarifying a non-obvious exception. For example, do not restate `searchable: false` or `revisions: true` on `field(...)` calls.
-- Avoid Drizzle `.select()` with no field projection unless the code truly consumes the full row as the domain object. Prefer `.select({ ... })` with the exact columns or expressions the caller reads, so query cost and TypeScript inference stay obvious. If a full-row select is necessary for an extension point such as field lifecycle hooks or revalidation callbacks, add a short nearby comment naming that boundary.
+- Derive schema-aware and table-aware types from the actual schema or table. Avoid Drizzle `.select()` with
+  no field projection unless the code truly consumes the full row as the domain object. Prefer
+  `.select({ ... })` with the exact columns or expressions the caller reads, so query cost and TypeScript
+  inference stay obvious instead of relying on a select-star result followed by a cast. If a full-row
+  select is necessary for an extension point such as field lifecycle hooks or revalidation callbacks, add
+  a short nearby comment naming that boundary.
 - For child-collection persistence, do not delete and recreate all rows on save. Load current rows, preserve stable IDs, insert only records explicitly marked as new, update only rows whose values changed, and remove only rows explicitly marked for removal. Preserve durable row IDs, especially for records that may be referenced by sales, tickets, audit rows, schedules, or future integrations.
 - Prefer explicit client markers such as `isNew` and `isRemoved` for editable collection rows. Do not infer removal from an omitted row when the UI can keep the row in form state and hide it after marking it removed.
 
@@ -36,6 +42,13 @@ Read this before database, Drizzle, table schema, Zod, validation, or pipeline s
 ## Validation
 
 - Use Zod v4.
+- Check the installed Zod version and current documentation before using version-sensitive APIs. Prefer
+  Zod 4 top-level string formats such as `z.url()`, `z.email()`, and `z.iso.date()` over deprecated
+  chained forms.
+- Keep schemas direct. Use `.pipe()` only when a transform's output needs validation by another schema or
+  no simpler chain expresses the same behavior.
+- Normalize accepted input at its owning schema with transforms such as `.trim()`, `.toLowerCase()`, or
+  `.toUpperCase()` when downstream code should receive the normalized value.
 - Prefer Zod's direct string message syntax when it is supported, for example `.refine(check, "Message")` and `.min(1, "Message")`, instead of wrapping simple messages in `{ message: "Message" }`.
 - Keep client and server schemas aligned.
 - Use server-specific coercion only where needed.
@@ -49,6 +62,10 @@ Read this before database, Drizzle, table schema, Zod, validation, or pipeline s
 - Manual parsing inside a pipeline action is only acceptable for data that is not the submitted request payload, a truly external/untyped boundary, or a dynamic schema that cannot be known until the action loads additional context. Keep that exception narrow and make the reason clear in the surrounding code.
 - Before adding a hand-written validator, type guard, or `typeof` shape check for submitted data, check for an existing Zod schema that already owns that shape. Reuse the schema at the boundary instead of duplicating validation logic.
 - Do not re-parse field values inside field save/load/display behavior when the enclosing action has already parsed the payload through its pipeline schema. Treat field behavior as receiving validated values, and keep any necessary cast narrow at that untyped lifecycle boundary.
+- Preserve the fetcher's existing discriminated result union and narrow it through its status field.
+  Do not define parallel success or error shapes at consumers.
+- Keep required lower-level values required. Validate optional runtime configuration where it enters
+  instead of weakening the lower-level type and throwing later.
 - In field maps, keep short Zod schemas at the field that owns them. Do not extract a local schema constant only to reuse a short preprocess, coerce, or format chain a couple of times; extract only when the helper owns a canonical field pattern, meaningful per-call options, or enough repeated complexity that the field definitions become easier to audit.
 - Do not create a second enhanced schema when the original can be defined correctly at the point of use. Move the schema closer to the needed runtime context instead of layering `baseSchema` plus `schemaWithConfig`, unless the base schema is reused independently.
 - Be cautious with `z.unknown().transform(...)`. Use it only at a real untyped boundary. If the transform is mostly interpreting application grammar or query behavior, keep Zod focused on request shape/coercion and do that interpretation near the code that uses the result.

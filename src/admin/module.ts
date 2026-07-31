@@ -1,12 +1,19 @@
+/*
+ * Public surface: the admin module-definition API exposed through admin/server.
+ * Export only supported host-facing APIs. Kenstack code imports non-public
+ * implementation from its canonical files, not through this entry point.
+ */
+
 import "server-only";
 
 import type { ComponentType, SVGProps } from "react";
 import startCase from "lodash-es/startCase";
 import type { AnyColumn, InferSelectModel, SQL } from "drizzle-orm";
-import { getTableColumns } from "drizzle-orm";
+import { getTableColumns, getTableName } from "drizzle-orm";
 import type { AnyPgTable } from "drizzle-orm/pg-core";
 
 import type {
+  AdminFieldReference,
   AdminFilterFieldReference,
   AdminFilterOptions,
   AdminFilters,
@@ -204,6 +211,17 @@ export type DefinedAdminModule = DefinedAdmin[string] & {
   admin: AnyAdminConfig;
 };
 
+export type DefinedAdminListModule = DefinedAdmin[string] & {
+  admin: Extract<AnyAdminConfig, { list: unknown }>;
+};
+
+// Public API: narrows defined modules to modules with admin lists.
+export function isAdminListModule(
+  moduleConfig: DefinedAdmin[string],
+): moduleConfig is DefinedAdminListModule {
+  return Boolean(moduleConfig.admin && "list" in moduleConfig.admin);
+}
+
 export function defineModule<
   const TTable extends AdminManagedTable,
   const TFields extends ServerDefinedFields,
@@ -218,6 +236,20 @@ export function defineModule<
     options.admin as AdminConfigRuntime | undefined,
     basePath,
   );
+  if (admin && "list" in admin && admin.list.reorder?.scope) {
+    const scope = admin.list.reorder.scope;
+    const scopeField = admin.fields[scope.fieldKey];
+    if (!scopeField) {
+      throw new Error(
+        `Admin reorder scope field "${options.name}.${scope.fieldKey}" is not declared in the module fields.`,
+      );
+    }
+    if (scopeField.save) {
+      throw new Error(
+        `Admin reorder scope field "${options.name}.${scope.fieldKey}" has custom save behavior; scoped reorder requires direct table-column persistence.`,
+      );
+    }
+  }
   const settings = resolveSettings(options.settings);
 
   const resolved = {
@@ -304,6 +336,14 @@ function resolveAdmin(
       ...resolvedAdmin,
       list: {
         ...listOptions,
+        ...(resolvedReorder?.scope
+          ? {
+              select: {
+                ...(listOptions.select ?? {}),
+                [resolvedReorder.scope.fieldKey]: resolvedReorder.scope.field,
+              },
+            }
+          : {}),
         reorder: resolvedReorder,
         sort: listSort,
         filters: listFilters,
@@ -420,7 +460,9 @@ function defineSort<TTable extends AdminTable>(
     ? {
         reorder: {
           label: reorder.label,
-          fields: [reorder.field],
+          fields: reorder.scope
+            ? [reorder.scope.field, reorder.field]
+            : [reorder.field],
           defaultDirection: "asc",
           direction: false,
         },
@@ -465,32 +507,55 @@ function defineReorder(
     return undefined;
   }
 
-  const columns = getTableColumns(table);
-  let fieldKey: string | undefined;
-  let field: (typeof columns)[string] | undefined;
-  const fieldOption =
-    options === true ? "sortOrder" : (options.field ?? "sortOrder");
-
-  if (typeof fieldOption === "string") {
-    fieldKey = fieldOption;
-    field = columns[fieldKey];
-  } else {
-    const column = Object.entries(columns).find(
-      ([, tableColumn]) => tableColumn === fieldOption,
+  const { field, fieldKey } = resolveReorderColumn(
+    table,
+    options === true ? "sortOrder" : (options.field ?? "sortOrder"),
+  );
+  const scope =
+    options !== true && options.scope
+      ? resolveReorderColumn(table, options.scope)
+      : undefined;
+  if (scope && !scope.field.notNull) {
+    throw new Error(
+      `Admin reorder scope column "${scope.fieldKey}" is nullable; scoped reorder requires a non-nullable column.`,
     );
-    fieldKey = column?.[0];
-    field = column?.[1];
   }
-
-  if (!field || !fieldKey) {
-    throw new Error("Unknown admin table field reference.");
+  if (scope && scope.field.dataType !== "number") {
+    throw new Error(
+      `Admin reorder scope column "${scope.fieldKey}" has data type "${scope.field.dataType}"; scoped reorder requires a number-valued column.`,
+    );
   }
 
   return {
     field,
     fieldKey,
     label: options === true ? "Reorder" : (options.label ?? "Reorder"),
+    scope,
   };
+}
+
+function resolveReorderColumn(
+  table: AdminTable,
+  fieldOption: AdminFieldReference,
+) {
+  const columns = getTableColumns(table);
+  const [fieldKey, field] =
+    (typeof fieldOption === "string"
+      ? ([fieldOption, columns[fieldOption]] as const)
+      : Object.entries(columns).find(([, column]) => column === fieldOption)) ??
+    [];
+
+  if (!field || !fieldKey) {
+    const reference =
+      typeof fieldOption === "string"
+        ? fieldOption
+        : `${getTableName(fieldOption.table)}.${fieldOption.name}`;
+    throw new Error(
+      `Admin reorder column "${reference}" does not belong to table "${getTableName(table)}".`,
+    );
+  }
+
+  return { field, fieldKey };
 }
 
 function normalizeSort(table: AdminTable, options: AdminSortOptions) {
