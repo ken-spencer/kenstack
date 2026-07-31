@@ -8,6 +8,32 @@ Before renaming a committed shared or exported type, inspect every consumer and 
 materially misleading about the public contract. Compile Kenstack and a representative host, and document
 the downstream migration when the rename proceeds.
 
+## Unreleased: Admin Module Field Behaviors
+
+Old API:
+
+- Modules attached server behavior by wrapping the field map at the config boundary:
+  `admin.fields = serverFields(fields, { title: { preSave } })`.
+
+New API:
+
+- `admin.fields` accepts the `defineFields(...)` field map directly; `defineModule(...)` resolves
+  server defaults itself.
+- `admin.behaviors` carries the per-field server behavior that was previously the second argument of
+  `serverFields(...)`. Entries are the same `ServerField` contributions or `ServerFieldResolver`
+  helpers, including server field factories such as `tagField({ table })`.
+- One-to-one relation config is unchanged; `relations[name].behaviors` already used this shape.
+- `serverFields(...)` remains exported and already-resolved field maps are still accepted by
+  `admin.fields`, so existing modules keep working. New and migrated modules should use
+  `fields` + `behaviors`.
+
+Migration steps:
+
+- Replace `fields: serverFields(fields, behaviors)` with `fields` and `behaviors` config properties.
+- Replace `fields: serverFields(fields)` with `fields`.
+- Remove `serverFields` imports that are no longer used; keep server field factory imports for
+  `behaviors` entries.
+
 ## Unreleased: Operational Error Reporting
 
 Old API:

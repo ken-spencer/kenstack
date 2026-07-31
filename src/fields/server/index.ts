@@ -200,9 +200,20 @@ export function serverFields<const TFields extends DefinedFields>(
   fields: TFields,
   behaviors: ServerBehaviors<TFields> = {},
 ) {
-  const next = resolveServerFields(fields) as ServerDefinedFields;
+  const resolved = resolveServerFields(fields) as ServerDefinedFields;
+  const behaviorEntries = Object.entries(behaviors);
 
-  Object.entries(behaviors).forEach(([key, behavior]) => {
+  // An already-resolved input map may be shared with other modules; apply
+  // behaviors to a copy. The refinements symbol is enumerable and survives the
+  // spread; the one-to-one symbol is not and must be re-attached.
+  const next = behaviorEntries.length
+    ? attachOneToOneFieldSets({ ...resolved }, getOneToOneFieldSets(resolved))
+    : resolved;
+  if (behaviorEntries.length) {
+    resolvedServerFieldSets.add(next);
+  }
+
+  behaviorEntries.forEach(([key, behavior]) => {
     if (!behavior) {
       return;
     }

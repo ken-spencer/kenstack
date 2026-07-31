@@ -99,6 +99,7 @@ type AdminConfigBase<
   table: TTable;
   revalidate?: RevalidateTagRule<InferSelectModel<TTable>>[];
   fields: TFields;
+  behaviors?: ServerBehaviors<TFields>;
   preview?: PreviewPath;
   translateError?: (error: unknown) => FetchError | undefined;
 } & OneToOneOptions<TFields>;
@@ -186,7 +187,9 @@ type ResolvedModule<
   basePath: PreviewPath;
   icon: TModule extends { icon: infer TIcon } ? TIcon : undefined;
   admin: TModule extends { admin: infer TAdmin }
-    ? Omit<TAdmin, keyof AnyAdminConfig> & AnyAdminConfig & { table: TTable }
+    ? // "behaviors" is config input only; resolveAdmin does not carry it to runtime.
+      Omit<TAdmin, keyof AnyAdminConfig | "behaviors"> &
+        AnyAdminConfig & { table: TTable }
     : undefined;
   settings: ResolvedModuleSettings | undefined;
   parent: ModuleParentOptions | undefined;
@@ -294,7 +297,7 @@ function resolveAdmin(
   >(
     config: RuntimeAdminConfig<AdminConfigBase<TTable, TFields>>,
   ) => {
-    const fields = resolveServerFields(config.fields);
+    const fields = serverFields(config.fields, config.behaviors);
     // Erases module-specific field keys after validation so resolved modules share one registry type.
     const flatFields = fields as ServerDefinedFields;
     const preview =
@@ -581,7 +584,7 @@ function defineFilters<TTable extends AdminTable>(
   const custom = normalizeFilters(table, options ?? {});
   const fieldFilters = defineFieldFilters(table, fields);
   const visibilityFilter: AdminFilters =
-    "visibility" in table && !custom.visibility
+    "visibility" in table && !custom.visibility && !fieldFilters.visibility
       ? {
           visibility: {
             label: "Status",

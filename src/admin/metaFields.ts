@@ -13,6 +13,8 @@ export { visibilityOptions, visibilityValues } from "./lib/visibility";
 export const metaFieldOptions = {
   visibility: radioButtonField({
     default: "draft",
+    filter: true,
+    label: "Status",
     options: visibilityStatusOptions,
   }),
   publishedAt: dateTimeField({
