@@ -119,4 +119,14 @@ describe("scoped reorder saves", () => {
       expect.objectContaining({ query: expect.any(Function) }),
     );
   });
+
+  it("preserves order when changes and the scope value are unavailable", async () => {
+    await saveAdminRecord({
+      id: 1,
+      module: moduleConfig,
+      values: { name: "Popcorn" },
+    });
+
+    expect(mocks.saveRecord.mock.calls[0]?.[0]).not.toHaveProperty("query");
+  });
 });
