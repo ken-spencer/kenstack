@@ -1,4 +1,4 @@
-import { password } from "@kenstack/zod/password";
+import { password } from "./password";
 import * as z from "zod";
 
 const schema = z

@@ -22,7 +22,7 @@ type ComboboxInputContextValue = {
   setInputValue: (value: string) => void;
 };
 
-type ComboboxProps<T extends SelectOption = SelectOption> = Omit<
+type ComboboxRootProps<T extends SelectOption = SelectOption> = Omit<
   React.ComponentProps<"div">,
   "onChange"
 > & {
@@ -74,8 +74,8 @@ function useComboboxInputContext(component: string) {
   return context;
 }
 
-function Combobox<T extends SelectOption>({
-  autoHighlight = false,
+function ComboboxRoot<T extends SelectOption>({
+  autoHighlight = true,
   children,
   filter,
   inputValue: inputValueProp,
@@ -86,7 +86,7 @@ function Combobox<T extends SelectOption>({
   open: openProp,
   value = "",
   ...props
-}: ComboboxProps<T>) {
+}: ComboboxRootProps<T>) {
   const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false);
   const [uncontrolledInputValue, setUncontrolledInputValue] =
     React.useState("");
@@ -355,11 +355,147 @@ function ComboboxInput({
   );
 }
 
+export type ComboboxOption = SelectOption & {
+  disabled?: boolean;
+};
+
+type ComboboxProps<TOption extends ComboboxOption> = {
+  className?: string;
+  commitOnBlur?: boolean;
+  emptyMessage?: React.ReactNode;
+  filter?: ((item: TOption, inputValue: string) => boolean) | null;
+  inputValue?: string;
+  inputProps?: React.ComponentProps<typeof ComboboxInput>;
+  onInputValueChange?: (value: string) => void;
+  onOpenChange?: (open: boolean) => void;
+  options: readonly TOption[];
+  open?: boolean;
+  renderOption?: (option: TOption) => React.ReactNode;
+  value?: string;
+  onValueChange?: (value: string, option: TOption | null) => void;
+};
+
+function normalizeSearchValue(value: string) {
+  return value.trim().toLocaleLowerCase();
+}
+
+function findTypedOption<TOption extends ComboboxOption>(
+  inputValue: string,
+  options: readonly TOption[],
+) {
+  const searchValue = normalizeSearchValue(inputValue);
+
+  if (!searchValue) {
+    return null;
+  }
+
+  const enabledOptions = options.filter((option) => !option.disabled);
+  const exactMatch = enabledOptions.find(
+    (option) =>
+      normalizeSearchValue(option.label) === searchValue ||
+      normalizeSearchValue(option.value) === searchValue,
+  );
+
+  if (exactMatch) {
+    return exactMatch;
+  }
+
+  const possibleMatches = enabledOptions.filter((option) =>
+    optionMatchesInput(option, searchValue),
+  );
+
+  return possibleMatches.length === 1 ? possibleMatches[0] : null;
+}
+
+function Combobox<TOption extends ComboboxOption>({
+  className,
+  commitOnBlur = true,
+  emptyMessage = "No matches found.",
+  filter,
+  inputValue,
+  inputProps,
+  onInputValueChange,
+  onOpenChange,
+  options,
+  open,
+  renderOption = (option) => option.label,
+  value = "",
+  onValueChange,
+}: ComboboxProps<TOption>) {
+  const latestInputValue = React.useRef<string | null>(null);
+  const { onBlur, onKeyDown, ...restInputProps } = inputProps ?? {};
+
+  function commitTypedValue(inputValue: string) {
+    if (!normalizeSearchValue(inputValue)) {
+      onValueChange?.("", null);
+      return;
+    }
+
+    const option = findTypedOption(inputValue, options);
+
+    if (option) {
+      onValueChange?.(option.value, option);
+    }
+  }
+
+  return (
+    <ComboboxRoot
+      className={className}
+      filter={filter}
+      inputValue={inputValue}
+      items={options}
+      open={open}
+      value={value}
+      onInputValueChange={(inputValue) => {
+        latestInputValue.current = inputValue;
+        onInputValueChange?.(inputValue);
+      }}
+      onOpenChange={onOpenChange}
+      onValueChange={(nextValue, option) => {
+        latestInputValue.current = null;
+        onValueChange?.(nextValue, option);
+      }}
+    >
+      <ComboboxInput
+        {...restInputProps}
+        onKeyDown={(event) => {
+          onKeyDown?.(event);
+
+          if (event.key === "Escape" && !event.defaultPrevented) {
+            latestInputValue.current = null;
+          }
+        }}
+        onBlur={(event) => {
+          if (commitOnBlur && latestInputValue.current !== null) {
+            commitTypedValue(latestInputValue.current);
+          }
+
+          latestInputValue.current = null;
+          onBlur?.(event);
+        }}
+      />
+      <PickerContent>
+        <PickerEmpty>{emptyMessage}</PickerEmpty>
+        <PickerList<TOption>>
+          {(option) => (
+            <PickerItem key={option.value || option.label} value={option}>
+              {renderOption(option)}
+            </PickerItem>
+          )}
+        </PickerList>
+      </PickerContent>
+    </ComboboxRoot>
+  );
+}
+
 export {
   Combobox,
+  ComboboxRoot,
   ComboboxInput,
   PickerContent as ComboboxContent,
   PickerList as ComboboxList,
   PickerItem as ComboboxItem,
   PickerEmpty as ComboboxEmpty,
 };
+
+export default Combobox;

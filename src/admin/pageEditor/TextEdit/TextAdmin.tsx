@@ -3,7 +3,7 @@ import { useCommit } from "../context";
 import { twMerge } from "tailwind-merge";
 
 import { makeEditorWrapper } from "../wrapper/makeEditorWrapper";
-import { type PageEditorAdminProps } from "../types";
+import type { PageEditorAdminProps } from "../wrapper/makeEditorWrapper";
 import { type ControllerRenderProps } from "react-hook-form";
 
 import Field from "@kenstack/forms/Field";

@@ -4,7 +4,7 @@ import type React from "react";
 import { createStore, type StoreApi } from "zustand/vanilla";
 
 import type { Content } from "./loadContent";
-import type { Name } from "./types";
+import type { PageEditorFieldName } from "./fields";
 
 export type PageEditorInit = {
   slug: string;
@@ -17,11 +17,11 @@ export type PageEditorStore = {
   slug: string | null;
   tenant?: string;
   content: Content | null;
-  editing: Name | null;
+  editing: PageEditorFieldName | null;
   init: (input: PageEditorInit) => void;
   reset: (scope: string) => void;
   setContent: React.Dispatch<React.SetStateAction<Content>>;
-  setEditing: React.Dispatch<React.SetStateAction<Name | null>>;
+  setEditing: React.Dispatch<React.SetStateAction<PageEditorFieldName | null>>;
 };
 
 export type PageEditorStoreApi = StoreApi<PageEditorStore>;
@@ -69,20 +69,14 @@ export function createPageEditorStore(input: PageEditorInit) {
         }
 
         return {
-          content:
-            typeof value === "function"
-              ? (value as (content: Content) => Content)(state.content)
-              : value,
+          content: typeof value === "function" ? value(state.content) : value,
         };
       });
     },
 
     setEditing: (value) => {
       set((state) => ({
-        editing:
-          typeof value === "function"
-            ? (value as (editing: Name | null) => Name | null)(state.editing)
-            : value,
+        editing: typeof value === "function" ? value(state.editing) : value,
       }));
     },
   }));

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { text } from "drizzle-orm/pg-core";
+import { boolean, text } from "drizzle-orm/pg-core";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@app/deps", () => ({ deps: {}, tables: {} }));
@@ -7,13 +7,15 @@ vi.mock("@app/deps", () => ({ deps: {}, tables: {} }));
 import { defineFields } from "@kenstack/admin/fields";
 import { defineModule } from "@kenstack/admin/module";
 import { defineTable } from "@kenstack/admin/table";
-import { textField } from "@kenstack/fields/client";
+import { checkboxField, textField, toggleField } from "@kenstack/fields";
 
 const products = defineTable({
   name: "filter_config_products",
   publish: true,
   columns: {
     name: text("name").notNull(),
+    kind: text("kind").notNull(),
+    pos: boolean("pos").notNull(),
   },
 });
 
@@ -53,6 +55,70 @@ describe("admin filter configuration", () => {
           kind: "enum",
           field: products.visibility,
           options: visibilityOptions,
+        },
+      },
+    });
+  });
+
+  it("derives checked field filter choices from the two declared values", () => {
+    const moduleConfig = defineModule({
+      name: "checked-filter-config-products",
+      admin: {
+        fields: defineFields({
+          publish: true,
+          fields: {
+            name: textField(),
+            kind: toggleField({
+              checked: "combo",
+              unchecked: "item",
+              filter: true,
+            }),
+          },
+        }),
+        table: products,
+        list: {},
+      },
+    });
+
+    expect(moduleConfig.admin.list).toMatchObject({
+      filters: {
+        kind: {
+          kind: "enum",
+          field: products.kind,
+          options: [
+            { label: "Item", value: "item" },
+            { label: "Combo", value: "combo" },
+          ],
+        },
+      },
+    });
+  });
+
+  it("filters boolean checked pairs as boolean filters", () => {
+    const moduleConfig = defineModule({
+      name: "boolean-filter-config-products",
+      admin: {
+        fields: defineFields({
+          publish: true,
+          fields: {
+            name: textField(),
+            pos: checkboxField({
+              checked: true,
+              unchecked: false,
+              filter: true,
+            }),
+          },
+        }),
+        table: products,
+        list: {},
+      },
+    });
+
+    expect(moduleConfig.admin.list).toMatchObject({
+      filters: {
+        pos: {
+          kind: "boolean",
+          field: products.pos,
         },
       },
     });

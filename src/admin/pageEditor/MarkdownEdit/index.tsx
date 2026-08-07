@@ -7,16 +7,16 @@ import React from "react";
 
 import type {
   BlockTag,
-  ComponentProps,
-} from "@kenstack/admin/pageEditor/types";
+  PageEditorContentProps,
+} from "@kenstack/admin/pageEditor/wrapper";
 function Markdown<T extends BlockTag = "div">({
   tag,
   content,
   className,
   placeholder,
   ...props
-}: ComponentProps<T>) {
-  return React.createElement(tag ?? ("div" as T), {
+}: PageEditorContentProps<T>) {
+  return React.createElement(tag ?? "div", {
     ...props,
     className: twMerge(
       className,

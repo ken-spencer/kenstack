@@ -5,16 +5,22 @@ import {
   markdownField,
   textField,
   textareaField,
-} from "@kenstack/fields/client";
+} from "@kenstack/fields";
 import * as z from "zod";
+
+export const pageEditorInlineFields = {
+  title: textField({ zod: z.string().trim() }),
+  description: textareaField({ zod: z.string() }),
+  content: markdownField({ zod: z.string() }),
+};
+
+export type PageEditorFieldName = keyof typeof pageEditorInlineFields;
 
 export const pageEditorFields = defineFields({
   seo: true,
   fields: {
-    title: textField({ zod: z.string().trim() }),
-    description: textareaField({ zod: z.string() }),
-    content: markdownField({ zod: z.string() }),
-    image: imageField(),
+    ...pageEditorInlineFields,
+    image: imageField({ selectVariant: "original" }),
   },
 });
 

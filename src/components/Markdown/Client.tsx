@@ -4,10 +4,10 @@ import type { MarkdownOptions } from "./mdToHtml";
 import { twMerge } from "tailwind-merge";
 import { useEffect, useState } from "react";
 
-import { type ComponentProps } from "@kenstack/admin/pageEditor/types";
+import type { PageEditorContentProps } from "@kenstack/admin/pageEditor/wrapper";
 import { remarkKenStackMarkdown, type MarkdownMentionTargets } from "./plugins";
 
-export type MarkdownClientProps = ComponentProps<"div"> &
+export type MarkdownClientProps = PageEditorContentProps<"div"> &
   MarkdownOptions & {
     mentionTargets?: MarkdownMentionTargets;
   };

@@ -18,7 +18,10 @@ import AttachmentList, {
 import Field, { FormControl, type FieldProps } from "@kenstack/forms/Field";
 import AddImageIcon from "@kenstack/forms/ImageField/AddImageIcon";
 import { useForm } from "@kenstack/forms/context";
-import { uploadMedia } from "@kenstack/forms/lib/uploadMedia";
+import {
+  mediaValueFromUpload,
+  uploadMedia,
+} from "@kenstack/forms/lib/uploadMedia";
 import {
   attachmentUploadStatusLabels,
   getAttachmentDocumentMeta,
@@ -222,18 +225,7 @@ const mediaRender = ({
 
       const { complete } = result;
       updateLocalImage(localId, {
-        kind: complete.kind,
-        url: complete.url,
-        width: complete.width,
-        height: complete.height,
-        filename: complete.filename ?? file.name,
-        sourceType: complete.sourceType ?? file.type,
-        sourceSize: complete.sourceSize ?? file.size,
-        sourceWidth: complete.sourceWidth,
-        sourceHeight: complete.sourceHeight,
-        originalUrl: complete.originalUrl,
-        original: complete.original,
-        squareCrop: complete.squareCrop,
+        ...mediaValueFromUpload(complete, file),
         previewUrl: undefined,
         uploadState: "done",
         action: "upload" as const,

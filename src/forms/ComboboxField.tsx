@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type ComponentProps } from "react";
+import type { ComponentProps } from "react";
 import {
   useFormContext,
   type ControllerRenderProps,
@@ -9,20 +9,10 @@ import {
 } from "react-hook-form";
 import { twMerge } from "tailwind-merge";
 
-import {
-  Combobox,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
+import Combobox, {
+  type ComboboxOption,
 } from "@kenstack/forms/controls/Combobox";
-import type { SelectOption } from "@kenstack/forms/controls/Select";
 import Field, { type FieldProps } from "@kenstack/forms/Field";
-
-type ComboboxFieldOption = SelectOption & {
-  disabled?: boolean;
-};
 
 type ComboboxFieldProps = FieldProps &
   Omit<ComponentProps<"div">, "onChange"> & {
@@ -30,49 +20,11 @@ type ComboboxFieldProps = FieldProps &
     emptyMessage?: string;
     inputAutoComplete?: string;
     inputClass?: string;
-    options: ComboboxFieldOption[];
+    options: readonly ComboboxOption[];
     placeholder?: string;
     showClear?: boolean;
-    onChange?: (value: string, option: ComboboxFieldOption | null) => void;
+    onChange?: (value: string, option: ComboboxOption | null) => void;
   };
-
-function normalizeSearchValue(value: string) {
-  return value.trim().toLocaleLowerCase();
-}
-
-function findTypedOption(inputValue: string, options: ComboboxFieldOption[]) {
-  const searchValue = normalizeSearchValue(inputValue);
-
-  if (!searchValue) {
-    return null;
-  }
-
-  const enabledOptions = options.filter((option) => !option.disabled);
-  const exactMatch = enabledOptions.find(
-    (option) =>
-      normalizeSearchValue(option.label) === searchValue ||
-      normalizeSearchValue(option.value) === searchValue,
-  );
-
-  if (exactMatch) {
-    return exactMatch;
-  }
-
-  const possibleMatches = enabledOptions.filter((option) =>
-    optionMatchesInput(option, searchValue),
-  );
-
-  return possibleMatches.length === 1 ? possibleMatches[0] : null;
-}
-
-function optionMatchesInput(
-  option: ComboboxFieldOption,
-  normalizedInputValue: string,
-) {
-  return [option.label, option.value, ...(option.keywords ?? [])].some(
-    (value) => normalizeSearchValue(value).includes(normalizedInputValue),
-  );
-}
 
 function ComboboxFieldControl({
   disabled,
@@ -90,13 +42,12 @@ function ComboboxFieldControl({
   field: ControllerRenderProps<FieldValues, Path<FieldValues>>;
   inputAutoComplete?: string;
   inputClass?: string;
-  options: ComboboxFieldOption[];
+  options: readonly ComboboxOption[];
   placeholder: string;
   showClear: boolean;
-  onChange?: (value: string, option: ComboboxFieldOption | null) => void;
+  onChange?: (value: string, option: ComboboxOption | null) => void;
 }) {
   const { setValue } = useFormContext();
-  const latestInputValue = useRef<string | null>(null);
   const value = typeof field.value === "string" ? field.value : "";
   const selected =
     options.find((option) => option.value === value) ??
@@ -106,7 +57,7 @@ function ComboboxFieldControl({
       ? [selected, ...options]
       : options;
 
-  function commitOption(option: ComboboxFieldOption | null) {
+  function commitOption(option: ComboboxOption | null) {
     const nextValue = option?.value ?? "";
 
     if (option) {
@@ -118,65 +69,29 @@ function ComboboxFieldControl({
     } else if (nextValue !== value) {
       field.onChange(nextValue);
     } else {
-      latestInputValue.current = null;
       return;
     }
 
     onChange?.(nextValue, option);
-    latestInputValue.current = null;
-  }
-
-  function commitTypedValue(inputValue: string) {
-    if (!normalizeSearchValue(inputValue)) {
-      commitOption(null);
-      return;
-    }
-
-    const option = findTypedOption(inputValue, options);
-
-    if (option) {
-      commitOption(option);
-    }
   }
 
   return (
     <Combobox
-      items={comboboxOptions}
+      options={comboboxOptions}
       value={value}
-      autoHighlight
+      emptyMessage={emptyMessage}
+      inputProps={{
+        autoComplete: inputAutoComplete,
+        className: twMerge("w-full", inputClass),
+        disabled,
+        placeholder,
+        showClear,
+        onBlur: field.onBlur,
+      }}
       onValueChange={(_nextValue, option) => {
         commitOption(option);
       }}
-      onInputValueChange={(nextInputValue) => {
-        latestInputValue.current = nextInputValue;
-      }}
-    >
-      <ComboboxInput
-        autoComplete={inputAutoComplete}
-        disabled={disabled}
-        placeholder={placeholder}
-        showClear={showClear}
-        className={twMerge("w-full", inputClass)}
-        onBlur={() => {
-          if (latestInputValue.current !== null) {
-            commitTypedValue(latestInputValue.current);
-          }
-
-          latestInputValue.current = null;
-          field.onBlur();
-        }}
-      />
-      <ComboboxContent>
-        <ComboboxEmpty>{emptyMessage}</ComboboxEmpty>
-        <ComboboxList>
-          {(option: ComboboxFieldOption) => (
-            <ComboboxItem key={option.value} value={option}>
-              {option.label}
-            </ComboboxItem>
-          )}
-        </ComboboxList>
-      </ComboboxContent>
-    </Combobox>
+    />
   );
 }
 

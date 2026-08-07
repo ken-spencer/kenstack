@@ -2,7 +2,6 @@
 
 import Form from "@kenstack/forms/Form";
 import schema from "@kenstack/auth/schemas/resetPassword";
-import Notice from "@kenstack/forms/Notice";
 import PasswordField from "@kenstack/forms/PasswordField";
 import { useRouter, usePathname } from "next/navigation";
 
@@ -44,7 +43,6 @@ export default function ResetPasswordForm({
           });
       }}
     >
-      <Notice />
       {requiresCurrentPassword ? (
         <PasswordField name="currentPassword" label="Current password" />
       ) : null}

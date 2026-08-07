@@ -17,7 +17,10 @@ import Field, { FormControl, type FieldProps } from "@kenstack/forms/Field";
 import Button from "@kenstack/components/Button";
 import Help from "@kenstack/components/Help";
 import { useForm } from "@kenstack/forms/context";
-import { uploadMedia } from "@kenstack/forms/lib/uploadMedia";
+import {
+  mediaValueFromUpload,
+  uploadMedia,
+} from "@kenstack/forms/lib/uploadMedia";
 
 import { rasterMimeTypes as acceptDefault } from "@kenstack/db/tables/media/mimeTypes";
 import type {
@@ -227,18 +230,7 @@ const imageRender = ({
         }
 
         field.onChange({
-          kind: complete.kind,
-          url: complete.url,
-          width: complete.width,
-          height: complete.height,
-          filename: complete.filename ?? file.name,
-          sourceType: complete.sourceType ?? file.type,
-          sourceSize: complete.sourceSize ?? file.size,
-          sourceWidth: complete.sourceWidth,
-          sourceHeight: complete.sourceHeight,
-          originalUrl: complete.originalUrl,
-          original: complete.original,
-          squareCrop: complete.squareCrop,
+          ...mediaValueFromUpload(complete, file),
           action: "upload",
           imageId: complete.imageId,
         });

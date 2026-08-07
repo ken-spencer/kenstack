@@ -110,6 +110,7 @@ export function AdminListProvider({
 
   const searchParams = useSearchParams();
   const isReorderSort =
+    !filters.trash &&
     sort.find((option) => option.name === filters.sort)?.direction === false;
   const page = isReorderSort ? 1 : parseListPage(searchParams.get("page"));
   const canReorder =

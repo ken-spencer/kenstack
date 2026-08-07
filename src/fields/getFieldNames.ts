@@ -1,7 +1,7 @@
-import type { DefinedFields } from "./types";
+import type { FieldDefinition } from "./field";
 
-export function getFieldNames<const TFields extends DefinedFields>(
-  fields: TFields,
-) {
+export function getFieldNames<
+  const TFields extends Record<string, FieldDefinition>,
+>(fields: TFields & (keyof TFields extends string ? unknown : never)) {
   return Object.keys(fields) as Extract<keyof TFields, string>[];
 }

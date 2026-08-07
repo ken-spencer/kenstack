@@ -1,39 +1,25 @@
 import { describe, expect, it, vi } from "vitest";
-import * as z from "zod";
 import { integer, pgTable, text } from "drizzle-orm/pg-core";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@app/deps", () => ({ deps: {}, tables: {} }));
 
 import { defineFields } from "@kenstack/admin/fields";
-import { defineModule } from "@kenstack/admin/module";
+import { defineModule, defineOneToOne } from "@kenstack/admin/module";
 import { saveAdminRecord } from "@kenstack/admin/queries/save";
 import { defineTable } from "@kenstack/admin/table";
-import { textField } from "@kenstack/fields/client";
-import { serverFields } from "@kenstack/fields/server";
+import { textField } from "@kenstack/fields";
 
 const fields = defineFields({
   fields: {
-    kind: textField({
-      default: "movie",
-      zod: z.enum(["movie", "tvSeries"]),
-    }),
     title: textField(),
   },
-  oneToOne: {
-    movie: {
-      fields: {
-        overview: textField(),
-      },
-    },
-    tvSeries: {
-      fields: {
-        overview: textField(),
-      },
-    },
+});
+const relationFields = defineFields({
+  fields: {
+    overview: textField(),
   },
 });
-
 const parents = defineTable({
   name: "one_to_one_save_parents",
   columns: {
@@ -57,28 +43,37 @@ const moduleConfig = defineModule({
   name: "oneToOneSaveParents",
   admin: {
     table: parents,
-    fields: serverFields(fields),
+    fields,
     oneToOne: {
-      field: "kind",
-      relations: {
-        movie: { table: movies },
-        tvSeries: { table: tvSeries },
-      },
+      movie: defineOneToOne({ fields: relationFields, table: movies }),
+      tv_series: defineOneToOne({
+        fields: relationFields,
+        table: tvSeries,
+        title: "TV Series",
+      }),
     },
     list: {},
   },
 });
 
 describe("one-to-one save validation", () => {
+  it("uses module relation titles for the generated admin filter", () => {
+    const { kind } = moduleConfig.admin.fields;
+    expect("options" in kind ? kind.options : undefined).toEqual([
+      { label: "Movie", value: "movie" },
+      { label: "TV Series", value: "tv_series" },
+    ]);
+  });
+
   it("rejects more than one submitted relation namespace", async () => {
     const result = await saveAdminRecord({
-      changes: ["movie", "tvSeries"],
+      changes: ["movie", "tv_series"],
       id: 1,
       module: moduleConfig,
       values: {
         kind: "movie",
         movie: { overview: "Movie" },
-        tvSeries: { overview: "Series" },
+        tv_series: { overview: "Series" },
       },
     });
 
@@ -90,12 +85,12 @@ describe("one-to-one save validation", () => {
 
   it("rejects a namespace that does not match the discriminator", async () => {
     const result = await saveAdminRecord({
-      changes: ["tvSeries"],
+      changes: ["tv_series"],
       id: 1,
       module: moduleConfig,
       values: {
         kind: "movie",
-        tvSeries: { overview: "Series" },
+        tv_series: { overview: "Series" },
       },
     });
 
@@ -103,7 +98,7 @@ describe("one-to-one save validation", () => {
       status: "error",
       error: {
         fieldErrors: {
-          tvSeries: expect.any(String),
+          tv_series: expect.any(String),
         },
       },
     });

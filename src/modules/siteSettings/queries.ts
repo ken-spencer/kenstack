@@ -1,3 +1,5 @@
+import "server-only";
+
 import type { Metadata } from "next";
 import { cacheLife, cacheTag } from "next/cache";
 import { eq } from "drizzle-orm";

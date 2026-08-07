@@ -11,7 +11,6 @@ import { eq } from "drizzle-orm";
 import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { integer, pgTable, text } from "drizzle-orm/pg-core";
 import postgres from "postgres";
-import * as z from "zod";
 
 const mocks = vi.hoisted(() => {
   const audit = vi.fn(async () => {});
@@ -32,29 +31,28 @@ vi.mock("next/cache", () => ({ revalidateTag: vi.fn() }));
 vi.mock("@app/deps", () => ({ deps: mocks.deps, tables: {} }));
 
 import { defineFields } from "@kenstack/admin/fields";
-import { defineModule } from "@kenstack/admin/module";
+import { defineModule, defineOneToOne } from "@kenstack/admin/module";
 import { saveAdminRecord } from "@kenstack/admin/queries/save";
 import { defineTable } from "@kenstack/admin/table";
 import { revisions } from "@kenstack/db/tables/revisions";
-import { textField } from "@kenstack/fields/client";
-import { serverFields } from "@kenstack/fields/server";
+import { field, textField } from "@kenstack/fields";
+import { serverField } from "@kenstack/fields/server";
 import { isRecord } from "@kenstack/lib/isRecord";
 import { startTestPostgres } from "../postgres";
 
+const overviewField = field({
+  ...textField(),
+  kind: "test-movie-overview",
+});
+
 const fields = defineFields({
   fields: {
-    kind: textField({
-      default: "movie",
-      zod: z.enum(["movie"]),
-    }),
     title: textField(),
   },
-  oneToOne: {
-    movie: {
-      fields: {
-        overview: textField(),
-      },
-    },
+});
+const movieFields = defineFields({
+  fields: {
+    overview: overviewField,
   },
 });
 const parents = defineTable({
@@ -76,22 +74,20 @@ const moduleConfig = defineModule({
   name: "integrationOneToOneParents",
   admin: {
     table: parents,
-    fields: serverFields(fields),
+    fields,
     oneToOne: {
-      field: "kind",
-      relations: {
-        movie: {
-          table: movies,
-          behaviors: {
-            overview: {
-              async prepareSave({ value }) {
-                await preparationBarrier?.();
-                return { status: "success" as const, value };
-              },
+      movie: defineOneToOne({
+        fields: movieFields,
+        table: movies,
+        fieldServers: {
+          overview: serverField(overviewField, () => ({
+            async prepareSave({ value }) {
+              await preparationBarrier?.();
+              return { status: "success" as const, value };
             },
-          },
+          })),
         },
-      },
+      }),
     },
     list: {},
   },

@@ -14,6 +14,7 @@ import {
   type UseFormReturn,
   type DefaultValues,
   type FieldValues,
+  type FieldErrors,
   type Path,
 } from "react-hook-form";
 
@@ -24,6 +25,7 @@ import fetcher, {
   type FetchSuccess,
 } from "@kenstack/api/fetcher";
 import { ReturnedError, getReturnedErrorMessage } from "@kenstack/api/errors";
+import { formErrorName, moveRootFormError } from "./internal/fieldErrors";
 import { useNavigationBlocker } from "./NavigationBlocker";
 
 export type FormSchema = z.ZodType<Record<string, unknown>, FieldValues>;
@@ -176,9 +178,23 @@ function FormProvider<
     });
   }, []);
 
+  const schemaResolver = standardSchemaResolver(schema);
   const form = useReactHookForm<z.input<TSchema>, unknown, z.output<TSchema>>({
-    resolver: standardSchemaResolver(schema),
+    resolver: async (...arguments_) => {
+      const result = await schemaResolver(...arguments_);
+      if (!result.errors.root) {
+        return result;
+      }
+
+      return {
+        values: {},
+        errors: moveRootFormError(result.errors) as FieldErrors<
+          z.input<TSchema>
+        >,
+      };
+    },
     defaultValues,
+    criteriaMode: "all",
     mode: "onBlur", // validate fields on blur
     shouldFocusError: true,
   });
@@ -222,39 +238,42 @@ function FormProvider<
     },
     onSuccess: (data, variables) => {
       if (data.status === "error") {
-        const extraErrors: React.ReactNode[] = [];
-        const { fieldErrors } = data;
-        if (fieldErrors) {
+        const { fieldErrors, formErrors = [] } = data;
+        if (fieldErrors || formErrors.length) {
           clearErrors();
-          Object.entries(fieldErrors).forEach(([field, err], index) => {
+          formErrors.forEach((message, index) => {
+            setError(
+              `${formErrorName}.server.${index}` as Path<z.input<TSchema>>,
+              { type: "server", message },
+              { shouldFocus: false },
+            );
+          });
+        }
+        if (fieldErrors) {
+          Object.entries(fieldErrors).forEach(([field, err]) => {
+            const messages = Array.isArray(err) ? err : [err];
             setError(
               field as Path<z.input<TSchema>>,
-              { type: "server", message: Array.isArray(err) ? err[0] : err },
+              {
+                type: "server",
+                message: messages[0],
+                ...(messages.length > 1
+                  ? {
+                      types: Object.fromEntries(
+                        messages.map((message, index) => [
+                          `server.${index}`,
+                          message,
+                        ]),
+                      ),
+                    }
+                  : {}),
+              },
               { shouldFocus: true },
             );
-            if (!form.control._fields[field]) {
-              extraErrors.push(
-                <li
-                  key={index}
-                >{`Error on field ${field}: ${err}. Please contact us if you are unable to proceed.`}</li>,
-              );
-            }
           });
         }
 
-        if (typeof data.message === "string" || extraErrors.length) {
-          setStatusMessage({
-            status: "error",
-            message: (
-              <div>
-                {data.message && <div>{data.message}</div>}
-                {!!extraErrors.length && <ul>{extraErrors}</ul>}
-              </div>
-            ),
-          });
-        } else {
-          setStatusMessage(data);
-        }
+        setStatusMessage(data);
         return;
       }
 

@@ -22,13 +22,10 @@ vi.mock("@app/deps", () => ({
   },
 }));
 
-import { textField } from "@kenstack/fields/client";
+import { field, textField } from "@kenstack/fields";
 import { defineFields } from "@kenstack/admin/fields";
-import {
-  prepareRecordFields,
-  saveRecord,
-} from "@kenstack/fields/records/saveRecord";
-import { serverFields } from "@kenstack/fields/server";
+import { prepareRecordFields, saveRecord } from "@kenstack/records/save";
+import { resolveServerFields, serverField } from "@kenstack/fields/server";
 
 const records = pgTable("save_record_lifecycle_records", {
   id: integer().primaryKey(),
@@ -36,7 +33,6 @@ const records = pgTable("save_record_lifecycle_records", {
   second: text(),
   title: text(),
 });
-
 describe("record preparation lifecycle", () => {
   beforeEach(() => {
     mocks.audit.mockReset();
@@ -45,32 +41,34 @@ describe("record preparation lifecycle", () => {
 
   it("cleans up earlier preparation when a later field rejects", async () => {
     const afterFailure = vi.fn(async () => {});
-    const fields = serverFields(
-      defineFields({
-        fields: {
-          first: textField(),
-          second: textField(),
-        },
-      }),
-      {
-        first: {
+    const firstField = field({ ...textField(), kind: "test-first" });
+    const secondField = field({ ...textField(), kind: "test-second" });
+    const configuredFields = defineFields({
+      fields: {
+        first: firstField,
+        second: secondField,
+      },
+    });
+    const fields = resolveServerFields(configuredFields, {
+      fieldKinds: [
+        serverField(firstField, () => ({
           async prepareSave() {
             return {
               status: "success" as const,
               afterFailure: [afterFailure],
             };
           },
-        },
-        second: {
+        })),
+        serverField(secondField, () => ({
           async prepareSave() {
             return {
               status: "error" as const,
               message: "Second field rejected",
             };
           },
-        },
-      },
-    );
+        })),
+      ],
+    });
 
     const result = await prepareRecordFields({
       admin: true,
@@ -100,17 +98,16 @@ describe("record preparation lifecycle", () => {
       });
       return { status: "success" as const };
     });
-    const fields = serverFields(
-      defineFields({
-        fields: {
-          first: textField(),
-          second: textField(),
-        },
-      }),
-      {
-        first: { prepareSave },
+    const firstField = field({ ...textField(), kind: "test-first" });
+    const configuredFields = defineFields({
+      fields: {
+        first: firstField,
+        second: textField(),
       },
-    );
+    });
+    const fields = resolveServerFields(configuredFields, {
+      fieldKinds: [serverField(firstField, () => ({ prepareSave }))],
+    });
 
     await prepareRecordFields({
       admin: true,
@@ -130,23 +127,24 @@ describe("record preparation lifecycle", () => {
 
   it("cleans up related preparation when parent preparation rejects", async () => {
     const afterFailure = vi.fn(async () => {});
-    const relatedFields = serverFields(
-      defineFields({
-        fields: {
-          first: textField(),
-        },
-      }),
-      {
-        first: {
+    const firstField = field({ ...textField(), kind: "test-first" });
+    const configuredRelatedFields = defineFields({
+      fields: {
+        first: firstField,
+      },
+    });
+    const relatedFields = resolveServerFields(configuredRelatedFields, {
+      fieldKinds: [
+        serverField(firstField, () => ({
           async prepareSave() {
             return {
               status: "success" as const,
               afterFailure: [afterFailure],
             };
           },
-        },
-      },
-    );
+        })),
+      ],
+    });
     const related = await prepareRecordFields({
       admin: true,
       columns: getTableColumns(records),
@@ -159,23 +157,24 @@ describe("record preparation lifecycle", () => {
     if (related.status === "error") {
       throw new Error(related.message);
     }
-    const parentFields = serverFields(
-      defineFields({
-        fields: {
-          title: textField(),
-        },
-      }),
-      {
-        title: {
+    const titleField = field({ ...textField(), kind: "test-title" });
+    const configuredParentFields = defineFields({
+      fields: {
+        title: titleField,
+      },
+    });
+    const parentFields = resolveServerFields(configuredParentFields, {
+      fieldKinds: [
+        serverField(titleField, () => ({
           async prepareSave() {
             return {
               status: "error" as const,
               message: "Parent field rejected",
             };
           },
-        },
-      },
-    );
+        })),
+      ],
+    });
 
     const result = await saveRecord({
       actionPrefix: "admin",
@@ -195,23 +194,24 @@ describe("record preparation lifecycle", () => {
 
   it("cleans up related preparation when authentication fails", async () => {
     const afterFailure = vi.fn(async () => {});
-    const fields = serverFields(
-      defineFields({
-        fields: {
-          first: textField(),
-        },
-      }),
-      {
-        first: {
+    const firstField = field({ ...textField(), kind: "test-first" });
+    const configuredFields = defineFields({
+      fields: {
+        first: firstField,
+      },
+    });
+    const fields = resolveServerFields(configuredFields, {
+      fieldKinds: [
+        serverField(firstField, () => ({
           async prepareSave() {
             return {
               status: "success" as const,
               afterFailure: [afterFailure],
             };
           },
-        },
-      },
-    );
+        })),
+      ],
+    });
     const related = await prepareRecordFields({
       admin: true,
       columns: getTableColumns(records),
@@ -247,14 +247,15 @@ describe("record preparation lifecycle", () => {
   it("commits related preparation before a later audit failure", async () => {
     const afterCommit = vi.fn(async () => {});
     const afterFailure = vi.fn(async () => {});
-    const fields = serverFields(
-      defineFields({
-        fields: {
-          first: textField(),
-        },
-      }),
-      {
-        first: {
+    const firstField = field({ ...textField(), kind: "test-first" });
+    const configuredFields = defineFields({
+      fields: {
+        first: firstField,
+      },
+    });
+    const fields = resolveServerFields(configuredFields, {
+      fieldKinds: [
+        serverField(firstField, () => ({
           async prepareSave() {
             return {
               status: "success" as const,
@@ -262,9 +263,9 @@ describe("record preparation lifecycle", () => {
               afterFailure: [afterFailure],
             };
           },
-        },
-      },
-    );
+        })),
+      ],
+    });
     const related = await prepareRecordFields({
       admin: true,
       columns: getTableColumns(records),

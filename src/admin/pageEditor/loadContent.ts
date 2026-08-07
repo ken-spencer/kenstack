@@ -1,26 +1,29 @@
 import type { Metadata } from "next";
 import { deps } from "@app/deps";
-import { eq } from "drizzle-orm";
+import { eq, type SQL } from "drizzle-orm";
 import { type Prettify } from "@kenstack/types";
 
 import { cache } from "react";
 import { cacheLife, cacheTag } from "next/cache";
-import { selectMediaSubquery, type SelectedMedia } from "@kenstack/db/tables";
-import { getDisplayValues } from "@kenstack/fields/display";
+import { selectImageSubquery } from "@kenstack/db/tables";
 import { createDefaultValues } from "@kenstack/fields/createDefaultValues";
-import { loadRecord } from "@kenstack/fields/records";
-import type { DefinedField } from "@kenstack/fields/types";
+import { loadRecord } from "@kenstack/records";
 import { pageEditorFieldNames, pageEditorFields } from "./fields";
+import { getDisplayValues } from "./display";
 import { pageEditorServerFields } from "./serverFields";
 
-type ContentValue<TField extends DefinedField> = TField["kind"] extends "image"
-  ? SelectedMedia | null
+type ContentValue<TField extends { default: unknown }> = TField extends {
+  select: (...args: never[]) => infer TSelection;
+}
+  ? Exclude<TSelection, undefined> extends SQL<infer TValue>
+    ? TValue
+    : TField["default"]
   : TField["default"];
 
 export type ContentData = Prettify<
   {
-    [Key in keyof typeof pageEditorFields]: ContentValue<
-      (typeof pageEditorFields)[Key]
+    [Key in keyof typeof pageEditorServerFields]: ContentValue<
+      (typeof pageEditorServerFields)[Key]
     >;
   } & Record<string, unknown>
 >;
@@ -94,7 +97,7 @@ export const loadMeta = async (
     .select({
       title: content.title,
       description: content.description,
-      ogImage: selectMediaSubquery(content.ogImage, "original"),
+      ogImage: selectImageSubquery(content.ogImage, "original"),
       seoTitle: content.seoTitle,
       seoDescription: content.seoDescription,
     })

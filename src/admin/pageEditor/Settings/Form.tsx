@@ -3,7 +3,6 @@ import fetcher from "@kenstack/api/fetcher";
 import Form from "@kenstack/forms/Form";
 import ImageField from "@kenstack/forms/ImageField";
 import InputField from "@kenstack/forms/InputField";
-import Notice from "@kenstack/forms/Notice";
 import Submit from "@kenstack/forms/Submit";
 import TextareaField from "@kenstack/forms/TextareaField";
 import { pageEditorSettingsSchema } from "../schema";
@@ -41,7 +40,6 @@ export default function PageEditorSidebarForm() {
         router.refresh();
       }}
     >
-      <Notice />
       <InputField
         label="Title"
         name="seoTitle"

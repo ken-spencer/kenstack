@@ -13,6 +13,7 @@ import {
 } from "react-hook-form";
 
 import { cn } from "@kenstack/lib/utils";
+import { getFormFieldErrors } from "./internal/fieldErrors";
 
 type RenderProps = {
   field: ControllerRenderProps<FieldValues, Path<FieldValues>>;
@@ -164,55 +165,30 @@ function FieldErrorMessage({
   error,
   ...props
 }: React.ComponentProps<"p"> & { error: unknown }) {
-  const errorMessage = findFirstMessage(error);
-  const body = errorMessage
-    ? Array.isArray(errorMessage)
-      ? errorMessage.at(0)
-      : errorMessage
-    : props.children;
-  if (!body) {
+  const messages: React.ReactNode[] = getFormFieldErrors(error).map(
+    ({ message }) => message,
+  );
+  if (!messages.length && props.children) {
+    messages.push(props.children);
+  }
+  if (!messages.length) {
     return null;
   }
 
   return (
     <p
       data-slot="form-message"
-      className={cn(
-        "text-destructive flex items-center gap-2 text-sm",
-        className,
-      )}
+      className={cn("text-destructive grid gap-1 text-sm", className)}
       {...props}
     >
-      <CircleAlert className="size-4" />
-      {body}
+      {messages.map((message, index) => (
+        <span className="flex items-center gap-2" key={index}>
+          <CircleAlert className="size-4" />
+          {message}
+        </span>
+      ))}
     </p>
   );
-}
-
-function findFirstMessage(value: unknown): string | string[] | undefined {
-  if (!value || typeof value !== "object") {
-    return;
-  }
-
-  if ("message" in value) {
-    if (typeof value.message === "string") {
-      return value.message;
-    }
-
-    if (
-      Array.isArray(value.message) &&
-      value.message.every((message) => typeof message === "string")
-    ) {
-      return value.message;
-    }
-  }
-
-  for (const item of Object.values(value)) {
-    const message = findFirstMessage(item);
-    if (message) {
-      return message;
-    }
-  }
 }
 
 export { FieldErrorMessage, FormControl, FormItem, FormLabel, useFormField };

@@ -11,15 +11,15 @@ import {
   loadRecord,
   type RecordPreparation,
   type SavedRow,
-} from "@kenstack/fields/records";
-import { selectFields } from "@kenstack/fields/select";
+} from "@kenstack/records";
+import { selectFields } from "@kenstack/records/select";
 import { errorTranslator } from "@kenstack/db/errorTranslator";
 import type { User } from "@kenstack/types";
 import type { FetchError } from "@kenstack/api/fetcher";
 import type { AdminOneToOneBinding } from "@kenstack/admin/module";
 import type { DbTransaction } from "@kenstack/db/types";
 import { isRecord } from "@kenstack/lib/isRecord";
-import type { ServerDefinedFields } from "@kenstack/fields/server";
+import type { ServerDefinedFields } from "@kenstack/fields/internal/serverResolution";
 import { adminLoadCacheTag } from "./load";
 import { adminListCacheTag } from "./list";
 
@@ -140,7 +140,9 @@ export async function saveAdminRecord({
         expectedId: relatedSave.expectedId,
         parentId: row.id,
         preparation: relatedSave.preparation,
-        translateError: adminConfig.translateError,
+        translateError: (error) =>
+          relatedSave.binding.translateError?.(error) ??
+          adminConfig.translateError?.(error),
         relationName: relatedSave.name,
         tx,
         user,
@@ -288,6 +290,7 @@ async function saveModule(
     | "additionalPreparations"
     | "afterSave"
     | "revisionChanges"
+    | "revisionRelations"
     | "translateError"
   > = {},
 ) {
@@ -302,6 +305,7 @@ async function saveModule(
     changes: id ? changes : undefined,
     id,
     revalidate: adminConfig.revalidate,
+    revisionRelations: adminConfig.oneToOne?.relations,
     translateError: admin ? adminConfig.translateError : undefined,
     ...extensions,
   };

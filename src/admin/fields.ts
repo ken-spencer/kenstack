@@ -6,58 +6,48 @@
 
 import {
   attachFieldSetRefinements,
-  type FieldSetSuperRefineOption,
-} from "../fields/fieldSetRefinements";
+  type FieldSetSuperRefine,
+} from "../fields/internal/fieldSetRefinements";
 import {
-  attachOneToOneFieldSets,
-  type FieldsWithOneToOne,
-} from "../fields/oneToOneFieldSets";
-import { createDefaultValues } from "../fields/createDefaultValues";
-import type {
-  DefaultValuesFromFields,
-  FieldOption,
-  FieldOptions,
-} from "../fields/types";
-import type * as z from "zod";
+  type FieldDefinition,
+  type FieldKind,
+  type FieldOptions,
+} from "../fields/field";
+import * as z from "zod";
 import { metaFieldOptions } from "./metaFields";
 
-type DefinedFieldFromOption<TField extends FieldOption> = Omit<
-  TField,
-  "__kenstackField" | "searchable" | "revisions"
-> & {
-  kind: TField["kind"];
-  default: TField["default"];
+export type { FieldSetSuperRefine };
+
+export type FieldSetSuperRefineOption<
+  TValues extends Record<string, unknown> = Record<string, unknown>,
+> = FieldSetSuperRefine<TValues> | readonly FieldSetSuperRefine<TValues>[];
+
+export type DefinedField<
+  TKind extends FieldKind = FieldKind,
+  TDefault = unknown,
+> = Omit<FieldDefinition<TKind, TDefault>, "searchable" | "revisions"> & {
   searchable: boolean;
   revisions: boolean;
 };
 
-type DefinedFieldsFromOptions<TFields extends FieldOptions> = {
-  [K in keyof TFields]: DefinedFieldFromOption<TFields[K]>;
+export type DefinedFields = Record<string, DefinedField>;
+
+export type DefinedFieldsFromOptions<TFields extends FieldOptions> = {
+  [K in keyof TFields]: Omit<
+    TFields[K],
+    "__kenstackField" | "kind" | "searchable" | "revisions"
+  > & {
+    kind: TFields[K] extends { kind: infer TKind extends FieldKind }
+      ? TKind
+      : Extract<K, string>;
+    searchable: boolean;
+    revisions: boolean;
+  };
 };
 
 type FieldValuesFromOptions<TFields extends FieldOptions> = {
   [K in keyof TFields]: z.output<TFields[K]["zod"]>;
 };
-
-type OneToOneOptions = Record<
-  string,
-  {
-    fields: FieldOptions;
-    superRefine?: FieldSetSuperRefineOption;
-  }
->;
-
-type DefinedOneToOne<TOneToOne extends OneToOneOptions | undefined> =
-  TOneToOne extends OneToOneOptions
-    ? {
-        [K in keyof TOneToOne]: {
-          fields: DefinedFieldsFromOptions<TOneToOne[K]["fields"]>;
-          defaultValues: DefaultValuesFromFields<
-            DefinedFieldsFromOptions<TOneToOne[K]["fields"]>
-          >;
-        };
-      }
-    : Record<never, never>;
 
 type GeneratedAdminFieldOptions<
   TPublish extends boolean | undefined,
@@ -81,7 +71,6 @@ type GeneratedFieldConflictGuard<
 
 type DefineFieldsOptions<
   TFields extends FieldOptions,
-  TOneToOne extends OneToOneOptions | undefined,
   TPublish extends boolean | undefined,
   TSeo extends boolean | undefined,
 > = {
@@ -91,7 +80,6 @@ type DefineFieldsOptions<
   >;
   seo?: TSeo;
   fields: TFields & GeneratedFieldConflictGuard<TPublish, TSeo>;
-  oneToOne?: TOneToOne;
 };
 
 function assertGeneratedFieldAvailable(
@@ -108,7 +96,6 @@ function assertGeneratedFieldAvailable(
 
 export function defineFields<
   const TFields extends FieldOptions,
-  const TOneToOne extends OneToOneOptions | undefined = undefined,
   const TPublish extends boolean | undefined = false,
   const TSeo extends boolean | undefined = false,
 >({
@@ -116,12 +103,8 @@ export function defineFields<
   superRefine,
   seo,
   fields,
-  oneToOne,
-}: DefineFieldsOptions<TFields, TOneToOne, TPublish, TSeo>): FieldsWithOneToOne<
-  DefinedFieldsFromOptions<
-    TFields & GeneratedAdminFieldOptions<TPublish, TSeo>
-  >,
-  DefinedOneToOne<TOneToOne>
+}: DefineFieldsOptions<TFields, TPublish, TSeo>): DefinedFieldsFromOptions<
+  TFields & GeneratedAdminFieldOptions<TPublish, TSeo>
 > {
   if (publish) {
     assertGeneratedFieldAvailable(fields, "visibility", "publish: true");
@@ -151,28 +134,15 @@ export function defineFields<
       : {}),
   } as TFields & GeneratedAdminFieldOptions<TPublish, TSeo>;
 
-  const relationEntries = oneToOne ? Object.entries(oneToOne) : [];
-  for (const [name] of relationEntries) {
-    if (name in allFields) {
-      throw new Error(
-        `One-to-one field set "${name}" conflicts with field "${name}".`,
-      );
-    }
-  }
-
   const defineFieldSet = <const TOptions extends FieldOptions>(
     fieldOptions: TOptions,
-    setName?: string,
   ) =>
     Object.fromEntries(
       Object.entries(fieldOptions).map(([key, field]) => {
         const { __kenstackField, ...definedField } = field;
         if (!__kenstackField) {
-          const location = setName
-            ? ` in one-to-one field set "${setName}"`
-            : "";
           throw new Error(
-            `Field "${key}"${location} must be created with a field helper.`,
+            `Field "${key}" must be created with a field helper.`,
           );
         }
 
@@ -180,6 +150,7 @@ export function defineFields<
           key,
           {
             ...definedField,
+            kind: field.kind ?? key,
             searchable: field.searchable === true,
             revisions: field.revisions ?? true,
           },
@@ -188,37 +159,10 @@ export function defineFields<
     ) as DefinedFieldsFromOptions<TOptions>;
 
   const definedFields = defineFieldSet(allFields);
-  const definedRelations = Object.fromEntries(
-    relationEntries.map(([name, fieldSet]) => {
-      if ("id" in fieldSet.fields) {
-        throw new Error(
-          `One-to-one field set "${name}" cannot define the reserved field "id".`,
-        );
-      }
-
-      const relatedFields = attachFieldSetRefinements(
-        defineFieldSet(fieldSet.fields, name),
-        {
-          from: fieldSet.fields,
-          superRefine: fieldSet.superRefine,
-        },
-      );
-
-      return [
-        name,
-        {
-          fields: relatedFields,
-          defaultValues: createDefaultValues(relatedFields),
-        },
-      ];
-    }),
-  ) as DefinedOneToOne<TOneToOne>;
-
-  return attachOneToOneFieldSets(
-    attachFieldSetRefinements(definedFields, {
-      from: allFields,
-      superRefine,
-    }),
-    definedRelations,
-  );
+  return attachFieldSetRefinements(definedFields, {
+    from: allFields,
+    superRefine,
+  }) as DefinedFieldsFromOptions<
+    TFields & GeneratedAdminFieldOptions<TPublish, TSeo>
+  >;
 }

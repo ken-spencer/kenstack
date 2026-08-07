@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 
 import { pipelineStage } from "@kenstack/api";
 import type { DefinedAdmin } from "@kenstack/admin/module";
-import { loadRecord, saveRecord } from "@kenstack/fields/records";
+import { loadRecord, saveRecord } from "@kenstack/records";
 
 export const loadModuleSettingsAction = (
   moduleConfig: DefinedAdmin[string],

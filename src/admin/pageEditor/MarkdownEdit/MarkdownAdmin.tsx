@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 import { makeEditorWrapper } from "../wrapper/makeEditorWrapper";
-import { type PageEditorAdminProps } from "../types";
+import type { PageEditorAdminProps } from "../wrapper/makeEditorWrapper";
 
 import Field from "@kenstack/forms/Field";
 import { type ControllerRenderProps } from "react-hook-form";

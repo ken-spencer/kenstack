@@ -1,29 +1,16 @@
 "use client";
 
+import type { ComponentType, ReactNode } from "react";
 import { useFormContext } from "react-hook-form";
 import { format } from "date-fns";
 import { twMerge } from "tailwind-merge";
 
-import { ImageField } from "@kenstack/admin/forms";
-import DateTimeField from "@kenstack/forms/DateTimeField";
-import InputField from "@kenstack/forms/InputField";
-import RadioButtonField from "@kenstack/forms/RadioButtonField";
-import TextareaField from "@kenstack/forms/TextareaField";
-import { visibilityStatusOptions } from "@kenstack/admin/lib/visibilityStatus";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@kenstack/components/Accordion";
-
-const defaultFields = {
-  visibility: true,
-  publishedAt: true,
-  seoTitle: true,
-  seoDescription: true,
-  ogImage: true,
-} as const;
 
 function formatPublishedAt(value: unknown) {
   if (!value) {
@@ -39,12 +26,19 @@ function formatPublishedAt(value: unknown) {
 }
 
 export default function MetaFields({
-  fields = defaultFields,
+  fields,
   className,
 }: {
-  fields?: Partial<Record<keyof typeof defaultFields, boolean>>;
+  fields: MetaFieldComponents;
   className?: string;
 }) {
+  const {
+    visibility: VisibilityField,
+    publishedAt: PublishedAtField,
+    seoTitle: SeoTitleField,
+    seoDescription: SeoDescriptionField,
+    ogImage: OgImageField,
+  } = fields;
   const { watch } = useFormContext();
   const visibility = watch("visibility");
   const publishedAt = watch("publishedAt");
@@ -53,57 +47,34 @@ export default function MetaFields({
     ? "Not listed"
     : formatPublishedAt(publishedAt);
   const metaFieldCount = [
-    fields.publishedAt,
-    fields.seoTitle,
-    fields.seoDescription,
-    fields.ogImage,
+    PublishedAtField,
+    SeoTitleField,
+    SeoDescriptionField,
+    OgImageField,
   ].filter(Boolean).length;
   const showMetaFields = metaFieldCount > 0;
   const showAccordion = metaFieldCount > 1;
   const accordionTitle =
-    fields.seoTitle || fields.seoDescription || fields.ogImage
+    SeoTitleField || SeoDescriptionField || OgImageField
       ? "Scheduling & Meta"
       : "Scheduling";
   const metaFields = (
     <>
-      {fields.publishedAt ? (
-        <DateTimeField
-          disabled={isDraft}
-          name="publishedAt"
-          label="Publish On"
-        />
-      ) : null}
-      {fields.seoTitle ? (
-        <InputField
-          label="SEO Title (If different than Title)"
-          name="seoTitle"
-        />
-      ) : null}
-      {fields.seoDescription ? (
-        <TextareaField
-          label="SEO Description (if different than Description)"
-          name="seoDescription"
-        />
-      ) : null}
-      {fields.ogImage ? (
-        <ImageField
-          help="The image shown in social media and messaging app previews when this page is shared. If left empty, the site default image is used."
-          label="Open Graph Image (1200 x 630)"
-          name="ogImage"
-        />
+      {PublishedAtField ? <PublishedAtField disabled={isDraft} /> : null}
+      {SeoTitleField ? <SeoTitleField /> : null}
+      {SeoDescriptionField ? <SeoDescriptionField /> : null}
+      {OgImageField ? (
+        <OgImageField help="The image shown in social media and messaging app previews when this page is shared. If left empty, the site default image is used." />
       ) : null}
     </>
   );
 
   return (
     <div className={twMerge("space-y-4", className)}>
-      {fields.visibility ? (
-        <RadioButtonField
-          name="visibility"
-          label="Status"
+      {VisibilityField ? (
+        <VisibilityField
           groupClassName="grid grid-cols-3 gap-1.5"
           buttonClassName="min-w-0"
-          options={visibilityStatusOptions}
         />
       ) : null}
 
@@ -132,3 +103,21 @@ export default function MetaFields({
     </div>
   );
 }
+
+type CommonFieldProps = {
+  className?: string;
+  help?: ReactNode;
+};
+
+type MetaFieldComponents = {
+  visibility?: ComponentType<
+    CommonFieldProps & {
+      buttonClassName?: string;
+      groupClassName?: string;
+    }
+  >;
+  publishedAt?: ComponentType<CommonFieldProps & { disabled?: boolean }>;
+  seoTitle?: ComponentType<CommonFieldProps>;
+  seoDescription?: ComponentType<CommonFieldProps>;
+  ogImage?: ComponentType<CommonFieldProps>;
+};

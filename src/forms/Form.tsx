@@ -15,6 +15,7 @@ import { type UseFormReturn, type FieldValues } from "react-hook-form";
 
 import type { UseMutationResult } from "@tanstack/react-query";
 import { QueryBoundary } from "@kenstack/context/QueryProvider";
+import Notice from "./Notice";
 type SubmitData<
   TResult extends Record<string, unknown>,
   TVariables extends Record<string, unknown>,
@@ -55,6 +56,7 @@ type FormProps<
   TVariables extends Record<string, unknown>,
   TSchema extends FormSchema,
 > = Omit<React.ComponentProps<"form">, "onSubmit" | "onChange" | "onBlur"> & {
+  validationMessage?: React.ReactNode;
   onSubmit: (
     props: SubmitData<TResult, TVariables, z.input<TSchema>, z.output<TSchema>>,
   ) => void;
@@ -79,6 +81,7 @@ export default function FormContainer<
   onError,
   onSuccess,
   schema,
+  validationMessage,
   ...props
 }: FormProviderProps<TResult, TVariables, TSchema> &
   FormProps<TResult, TVariables, TSchema>) {
@@ -97,6 +100,7 @@ export default function FormContainer<
           onSubmit={onSubmit}
           onChange={onChange}
           onBlur={onBlur}
+          validationMessage={validationMessage}
           {...props}
         />
       </FormProvider>
@@ -112,6 +116,8 @@ export function Form<
   onSubmit,
   onChange,
   onBlur,
+  validationMessage,
+  children,
   ...props
 }: FormProps<TResult, TVariables, TSchema>) {
   const { form, mutation, setStatusMessage, uploadingFields } = useForm<
@@ -135,6 +141,9 @@ export function Form<
           });
           return;
         }
+
+        setStatusMessage(null);
+        form.clearErrors();
 
         form.handleSubmit((data, submitEvent) =>
           onSubmit({
@@ -161,6 +170,9 @@ export function Form<
       }
       onChange={onChange ? (event) => onChange({ event, form }) : undefined}
       {...props}
-    />
+    >
+      <Notice validationMessage={validationMessage} />
+      {children}
+    </form>
   );
 }

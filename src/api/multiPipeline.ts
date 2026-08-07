@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { type FetchError } from "./fetcher";
-import { pipeline, type PipelineOptions } from ".";
+import pipeline, { type PipelineOptions } from "./pipeline";
 import { isRecord } from "@kenstack/lib/isRecord";
 
 export default async function multiPipeline(

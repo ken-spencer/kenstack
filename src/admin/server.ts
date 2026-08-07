@@ -20,10 +20,11 @@ export * from "./table";
 export * from "./types/list";
 export * from "./module";
 
-import { getOneToOneFieldSets } from "@kenstack/fields/oneToOneFieldSets";
+import { isSingleRelationshipField } from "@kenstack/fields/relationship";
 import type { DefinedAdmin } from "./module";
 import type { AdminClientRegistry } from "./clientLoaders";
 import { resolveScopedReorders } from "./lib/scopedReorder";
+import { resolveSingleRelationship } from "./lib/singleRelationship";
 
 export type { DefinedAdmin };
 
@@ -88,6 +89,28 @@ export function defineAdmin<const TEntries extends readonly AdminEntry[]>(
 
   const resolvedModules = resolveScopedReorders(modules);
 
+  for (const moduleConfig of resolvedModules) {
+    if (!moduleConfig.admin) {
+      continue;
+    }
+    const adminModuleConfig = {
+      ...moduleConfig,
+      admin: moduleConfig.admin,
+    };
+
+    for (const [fieldName, field] of Object.entries(
+      moduleConfig.admin.fields,
+    )) {
+      if (isSingleRelationshipField(field)) {
+        resolveSingleRelationship(
+          adminModuleConfig,
+          resolvedModules,
+          fieldName,
+        );
+      }
+    }
+  }
+
   return Object.fromEntries(
     resolvedModules.map((moduleConfig) => {
       validateOneToOne(moduleConfig, resolvedModules);
@@ -113,29 +136,13 @@ function validateOneToOne(
   }
 
   const admin = moduleConfig.admin;
-  const declarations = getOneToOneFieldSets(admin.fields);
-  const declarationNames = Object.keys(declarations).sort();
   const oneToOne = admin.oneToOne;
   if (!oneToOne) {
-    if (declarationNames.length) {
-      throw new Error(
-        `Admin module "${moduleConfig.name}" one-to-one bindings must exactly match declarations (${declarationNames.join(", ")}).`,
-      );
-    }
     return;
   }
 
   const bindings = oneToOne.relations;
   const bindingNames = Object.keys(bindings).sort();
-
-  if (
-    declarationNames.length !== bindingNames.length ||
-    declarationNames.some((name, index) => name !== bindingNames[index])
-  ) {
-    throw new Error(
-      `Admin module "${moduleConfig.name}" one-to-one bindings must exactly match declarations (${declarationNames.join(", ") || "none"}).`,
-    );
-  }
 
   const parentTable = admin.table;
   const parentColumns = getTableColumns(parentTable);

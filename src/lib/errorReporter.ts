@@ -185,11 +185,11 @@ async function writeErrorReport(
       ].join(""),
     });
 
-    if (result === false) {
-      // The mailer logs its own provider failure. This marker keeps the event
-      // searchable without recursively reporting it.
+    if (result.status === "recipient-rejected") {
+      // The mailer logs operational failures. This configuration failure remains
+      // caller-specific because ordinary recipient rejection is expected input.
       // eslint-disable-next-line no-console
-      console.error("[kenstack:error] Monitoring email could not be sent.", {
+      console.error("[kenstack:error] Monitoring email was rejected.", {
         fingerprint,
       });
     }

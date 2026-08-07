@@ -7,7 +7,7 @@ import crypto from "crypto";
 
 import mailer, { type Attachment } from "@kenstack/lib/mailer";
 import { formatUserName } from "@kenstack/lib/user";
-import { render } from "@react-email/render";
+import { render } from "react-email";
 
 import {
   guardPublicEmailRequest,

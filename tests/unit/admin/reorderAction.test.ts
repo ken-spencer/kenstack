@@ -46,8 +46,7 @@ import { reorderAction } from "@kenstack/admin/api/reorder";
 import { defineFields } from "@kenstack/admin/fields";
 import { defineModule, type DefinedAdminModule } from "@kenstack/admin/module";
 import { defineTable } from "@kenstack/admin/table";
-import { field, textField } from "@kenstack/fields/client";
-import { serverFields } from "@kenstack/fields/server";
+import { field, textField } from "@kenstack/fields";
 
 const products = defineTable({
   name: "reorder_action_products",
@@ -61,18 +60,16 @@ const products = defineTable({
 const moduleConfig = defineModule({
   name: "reorder-action-products",
   admin: {
-    fields: serverFields(
-      defineFields({
-        fields: {
-          categoryId: field({
-            default: 0,
-            kind: "custom",
-            zod: z.number().int().positive(),
-          }),
-          name: textField(),
-        },
-      }),
-    ),
+    fields: defineFields({
+      fields: {
+        categoryId: field({
+          default: 0,
+          kind: "test-category-id",
+          zod: z.number().int().positive(),
+        }),
+        name: textField(),
+      },
+    }),
     table: products,
     list: {
       reorder: {

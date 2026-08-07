@@ -7,10 +7,6 @@ imports, caching, Suspense, and public runtime boundaries.
 
 - Before Next.js work, read the relevant installed guide in `node_modules/next/dist/docs/`; the
   installed version is the source of truth.
-- Use the App Router.
-- Prefer Server Components by default.
-- Add `"use client"` only when needed.
-- Do not pass non-serializable values from server to client components.
 - When a Client Component renders date or time text using the environment's local timezone or
   current-time-relative formatting during server rendering, add `suppressHydrationWarning` to the exact
   text-bearing element or input whose value can legitimately differ in the browser. Do not suppress a
@@ -29,6 +25,12 @@ imports, caching, Suspense, and public runtime boundaries.
 - Before adding local state, refs, maps, or context to preserve query or cache data, inspect the owning
   library's retention and cache APIs. Do not mirror React Query server state; demonstrate the missing
   capability before adding another state owner.
+- Treat effects and lifecycle callbacks as synchronization boundaries. Do not use them for state derived
+  during render, ordinary control flow, or work already owned by an event, query, mutation, or action.
+- Load data at the narrowest useful consumer. Do not aggregate unrelated authentication, routing,
+  configuration, and record data in a parent merely to shorten its children.
+- Keep terminal UI states direct. Prefer explicit returns or one shared shell over temporary status or
+  message state and duplicated loading, empty, error, or success shells.
 
 ## Client Registries and Dynamic Imports
 
@@ -75,9 +77,8 @@ barrel's runtime boundary is determined by its consumers, not only by its direct
   helpers. Put API-only helpers under the module's `api/` folder or another server-owned path, and keep
   shared helpers in an isomorphic file.
 
-## Routes and Discovery
+## Public Discovery
 
-- Use route handlers for API endpoints.
 - Do not enumerate private, account, auth, or unlisted page paths in `robots.txt` or `robots.ts`. Robots
   files are public and are not access control; use auth, redirects, and `noindex` metadata/headers for
   those pages instead. Keep robots disallow rules to broad technical buckets such as `/admin` and `/api/`,

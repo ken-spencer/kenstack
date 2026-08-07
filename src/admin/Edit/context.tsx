@@ -5,7 +5,6 @@ import { type ZodObject } from "zod";
 import React, { createContext, use, useContext, useMemo } from "react";
 import { usePathname } from "next/navigation";
 
-import EditForm from "./Form";
 import type { AdminClient } from "@kenstack/admin/client";
 import type { AdminClientRegistry } from "@kenstack/admin/clientLoaders";
 import type { PreviewPath } from "@kenstack/admin/module";
@@ -118,7 +117,7 @@ export function AdminEditProvider({
   };
   return (
     <AdminEditContext.Provider value={context}>
-      <EditForm>{children}</EditForm>
+      {children}
     </AdminEditContext.Provider>
   );
 }

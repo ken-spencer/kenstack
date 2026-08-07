@@ -12,7 +12,7 @@ import { createInterface } from "node:readline/promises";
 import { emitKeypressEvents } from "node:readline";
 import * as z from "zod";
 import { users } from "@kenstack/modules/users/tables";
-import { password as passwordSchema } from "@kenstack/zod/password";
+import { password as passwordSchema } from "@kenstack/auth/schemas/password";
 
 const emailSchema = z
   .string()

@@ -15,6 +15,47 @@ import type { UserAccess } from "@kenstack/auth/types";
 import type { User } from "@kenstack/types";
 import { isRecord } from "@kenstack/lib/isRecord";
 
+type ValidationErrorTree = {
+  errors: string[];
+  items?: (ValidationErrorTree | undefined)[];
+  properties?: Record<string, ValidationErrorTree | undefined>;
+};
+
+function validationErrors(error: z.ZodError) {
+  const fieldErrors: Record<string, string[]> = {};
+  const formErrors: string[] = [];
+  const tree = z.treeifyError(error) as ValidationErrorTree;
+
+  const visit = (node: ValidationErrorTree, path: string[]) => {
+    if (node.errors.length) {
+      if (path.length) {
+        fieldErrors[path.join(".")] ??= [];
+        fieldErrors[path.join(".")].push(...node.errors);
+      } else {
+        formErrors.push(...node.errors);
+      }
+    }
+
+    Object.entries(node.properties ?? {}).forEach(([name, child]) => {
+      if (child) {
+        visit(child, [...path, name]);
+      }
+    });
+    node.items?.forEach((child, index) => {
+      if (child) {
+        visit(child, [...path, String(index)]);
+      }
+    });
+  };
+
+  visit(tree, []);
+
+  return {
+    ...(Object.keys(fieldErrors).length ? { fieldErrors } : {}),
+    ...(formErrors.length ? { formErrors } : {}),
+  };
+}
+
 export type PipelineOptions = {
   request: NextRequest;
   json?: Record<string, unknown>;
@@ -190,12 +231,10 @@ export const pipelineStage =
           : undefined;
         const parsedValues = await valuesSchema.safeParseAsync(valuesInput);
         if (!parsedValues.success) {
-          const { fieldErrors } = z.flattenError(parsedValues.error);
-
           return ctx.response.error({
             message:
               "Please review the form and correct the highlighted fields.",
-            fieldErrors: fieldErrors as Record<string, string[]>,
+            ...validationErrors(parsedValues.error),
           });
         }
 
@@ -206,12 +245,10 @@ export const pipelineStage =
       } else {
         const parsed = await schema.safeParseAsync(ctx.dataIn);
         if (!parsed.success) {
-          const { fieldErrors } = z.flattenError(parsed.error);
-
           return ctx.response.error({
             message:
               "Please review the form and correct the highlighted fields.",
-            fieldErrors: fieldErrors as Record<string, string[]>,
+            ...validationErrors(parsed.error),
           });
         }
 

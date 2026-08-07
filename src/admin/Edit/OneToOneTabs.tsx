@@ -143,8 +143,14 @@ function TabSet({ oneToOne }: { oneToOne: OneToOneEdit }) {
 // Renders the active relation form and loads its values without adding inactive sections to form
 // state.
 function Panel({ relation }: { relation: OneToOneEdit["relations"][number] }) {
-  const { getFieldState, getValues, resetField, setValue } = useFormContext();
+  const { getFieldState, getValues, register, resetField, setValue } =
+    useFormContext();
   const { apiPath, client, id, isNew, name } = useAdminEdit();
+  const clientRelation = client.oneToOne?.relations[relation.name];
+  // Controls may be unmounted inside collapsed UI, but resetField only resets registered names.
+  for (const fieldName of Object.keys(clientRelation?.fields ?? {})) {
+    register(`${relation.name}.${fieldName}`);
+  }
   const relationQuery = useQuery({
     enabled: Boolean(id && !isNew),
     queryKey: getOneToOneQueryKey({
@@ -225,12 +231,18 @@ function Panel({ relation }: { relation: OneToOneEdit["relations"][number] }) {
     );
   }
 
-  const EditForm = client.oneToOne?.[relation.name];
-  if (!EditForm) {
+  if (!clientRelation) {
     return (
-      <Alert>This related panel does not have an edit form configured.</Alert>
+      <Alert>This related panel does not have client configuration.</Alert>
     );
   }
+  const { EditForm, fields } = clientRelation;
 
-  return <EditForm ParentEditForm={client.EditForm} />;
+  return (
+    <EditForm
+      ParentEditForm={client.EditForm}
+      fields={fields}
+      prefix={relation.name}
+    />
+  );
 }

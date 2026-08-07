@@ -1,85 +1,120 @@
 # Code Organization
 
-Consult this reference before adding or moving files, changing canonical implementation ownership, or
-introducing a new folder or entry point.
+Consult this reference for principles that apply across Kenstack and host sites. Repository and module
+layouts are defined separately in `docs/kenstack-anatomy.md`, `docs/site-anatomy.md`, and
+`docs/module-anatomy.md`.
 
-## Feature Ownership
+## Unit ownership
 
-- Code under Kenstack must not import host-site modules directly, including `@/`, root `src/`, relative
-  paths into a host application, or site module paths. Host dependencies flow through the explicit
-  `@app/deps` or `@app/deps/*` boundary.
-- Keep top-level files in broad feature folders, such as `src/admin`, reserved for primary public APIs and
-  major entry points that should be easy to reference. Secondary implementation details, support
-  constants, and internal UI adapters go in a subfolder such as `lib`, `components`, or another existing
-  domain folder — but only after passing the helper ladder below: a helper with one consuming file stays
-  file-local in its consumer, not in `lib`.
-- Folders named `modules` are for actual module definitions and module-owned files. Do not put helper code
-  that builds, loads, renders, or works with modules in `modules`; place that infrastructure under the
-  feature it belongs to, such as `admin/moduleSettings`.
-- Within a module, reserve `fields` for the primary record fields exported from `fields.ts`. Use a specific
-  name for secondary field sets, such as `settingsFields`, so imports stay consistent and the role of each
-  field set is clear.
-- Field definitions, field helpers, field handlers, field lifecycle code, and field-based record save
-  helpers belong in `src/fields`, not under `src/admin`. Admin may re-export field APIs for ergonomics, but
-  the canonical implementation should stay outside admin when it can be used by non-admin workflows.
-- Shared components live directly under `src/components`. Keep shared UI behavior in Kenstack-owned
-  components with narrow APIs.
+- A definition belongs to the unit whose behavior or schema it configures, decided by what it defines
+  and who consumes it — never by what it references. A product's `categoryId` field belongs to the
+  product module even though it points at the category table: dependency does not transfer ownership.
+- A consumer that displays another owner's data derives or references it; it does not redeclare the
+  source contract. Aggregators and registries assemble owners without taking ownership from them.
+- Resolving misplacement moves definitions across existing boundaries. It does not merge, split, or
+  dissolve the units themselves. Unit structure is a product decision changed only with explicit
+  authorization.
 
-## Type Ownership
+## Canonical ownership
 
-- `src/deps/mock.ts` is a standalone compilation harness, not the authority for consumer-facing
-  `@app/deps` contracts. Do not weaken a real host's schema or capability inference to satisfy the mock.
-- When an aggregate host dependency creates a type cycle, derive the contract from the narrower real
-  owner, such as the host table registry, instead of widening the aggregate, casting it, or introducing a
-  hand-written capability witness.
-- Do not widen an inferred builder, schema, or configuration result to suppress `TS7022` or another
-  circular-initializer error. Fix the dependency cycle or type the narrow callback boundary that causes
-  it.
-- A type that describes a function's parameters or result belongs in that function's file, beside its
-  owner, no matter how many Kenstack files consume it. Consumers import it from the owner or derive it
-  (`Parameters`, `ReturnType`, `typeof`) rather than pulling the type into `lib` or a types file. The
-  helper ladder governs runtime helpers, not the types that state an owner's contract.
-- A hand-written type predicate that narrows a shared, named domain type is part of that type's contract
-  and lives beside the type's declaration, even while it has one caller — future consumers look for the
-  guard where the type is. Keep one guard per narrowing: before writing a predicate for a type you do
-  not own locally, look for the one already beside the type. One-off structural checks that narrow no
-  shared named type stay local to their use.
+- Identifiers, labels, options, mappings, statuses, schemas, and configuration belong to the closest
+  unit that defines their meaning. Expose or derive them there instead of making a consumer maintain a
+  synchronized copy.
+- Registries assemble owners. They may add registry-specific behavior, but they do not redeclare facts
+  already known by each registered value.
+- When disagreement between two inputs can only produce an error or no-op override, remove the
+  duplicate input and derive it from the canonical owner.
+- Before creating a primitive, helper, component, schema, validator, or adapter, check whether its owner
+  or the adopted library already provides the capability. Setup intrinsic to every use of an owner's API
+  belongs behind that owner even with one current consumer; consumer-specific policy stays at the
+  consumer. Extend the owner when behavior is shared; do not preserve a parallel implementation merely
+  because the current surface was inconvenient.
+- A factory, parser, resolver, compiler, or schema owns the values and states it constructs. Names such
+  as `Defined`, `Resolved`, `Parsed`, `Validated`, and `Compiled` are construction-boundary signals:
+  construct those values through their owner unless direct construction is explicitly supported.
+- Do not stack a base value, schema, configuration, or helper with a one-off "enhanced" copy when the
+  owner can be defined correctly where its required context is available. Keep a separate construction
+  only when it has a different owner or absorbing it would broaden the canonical contract beyond current
+  need.
 
-## File and Folder Shape
+## Direct expression
 
-- Entry-point and public-surface files, such as `admin/server.ts`, carry a header comment stating their
-  public role and export boundary. Name importers concretely in headers — host applications, Kenstack
-  code — never a relative word like "internal". Use enough lines to make the distinction explicit. For
-  example:
+- When handling one optional value, use a direct lookup and explicit branch. Use collection operations
+  only when the value is genuinely a collection, not to hide a zero-or-one decision.
+- Omit a prop or option that exactly matches the consumer's declared default when omission and explicit
+  presence have the same meaning. Pass it when it changes behavior or deliberately pins a policy that
+  should remain stable if the default changes.
+- Inline a one-use binding when its name only repeats the expression. Keep it when the name identifies a
+  domain concept, preserves inference, coordinates several uses, or makes a genuinely complex expression
+  easier to read.
+- Construct a value as a complete literal when it is always complete; do not declare an empty array or
+  object and immediately assemble it through mutation.
+- Combine adjacent guards when the inner branch only returns, throws, continues, or breaks and the
+  resulting condition still expresses one decision. Keep separate branches when they represent distinct
+  decisions or failure reasons.
 
-  ```ts
-  /*
-   * Public entry point: the admin client-configuration API for host applications.
-   * Export only supported host-facing APIs. Kenstack code imports non-public
-   * implementation from its canonical files, not through this entry point.
-   */
-  ```
+## Configuration surfaces
 
-  Keep these files reserved for their boundary: do not add code or re-exports solely so other Kenstack
-  files can import them; Kenstack code imports the owning module directly. The header governs exports,
-  not implementation placement. File ownership is governed by the feature and helper rules above. Add
-  this header only when the file exists primarily as a host-facing boundary, not merely because an
-  implementation area exposes some utilities to hosts.
+- Treat every prop and option as supported API. Begin with the default behavior owned by the
+  implementation, then add configuration only when a current production caller needs a genuine
+  variation. Do not pre-design controls for imagined future wording, styling, or behavior.
+- Expose the smallest meaningful difference. Keep invariant labels, defaults, state transitions, and
+  implementation details internal instead of making every internal value configurable.
 
-- Do not give a helper its own file until it has earned one: with a single caller, inline it; with a
-  single consuming file, keep it file-local and unexported. A helper file is justified by multiple
-  production consumers or a real boundary — test files are not consumers and never justify separation
-  or an export — and it belongs in a folder whose existing files do the same kind of work, not one
-  whose name merely sounds plausible.
-- Do not create a folder just to hold a single file or an index barrel. Use a direct file, such as
-  `admin/modules.ts` or `queries.ts`, unless the folder already groups multiple files that work together
-  or the current change is adding those sibling files as part of the same feature. Do not add an index
-  barrel only to preserve an import path.
-- When multiple components or files are designed to work together as one unit, put them in a dedicated
-  folder and avoid repeating the folder concept in each filename when the shorter names remain clear. For
-  example, prefer `components/AdminShortcutLink/index.tsx` and
-  `components/AdminShortcutLink/Client.tsx` over sibling files named `AdminShortcutLink.tsx` and
-  `AdminShortcutLinkClient.tsx`.
-- For internal moves, update internal call sites to the new owner and delete the old file. Do not leave
-  old-path wrapper components, re-export files, or local adapter imports solely to preserve an internal
-  path.
+## Type ownership
+
+- A public entry point keeps its caller-facing parameter and result contracts beside the function. Keep
+  intermediate construction and resolution types internal; continue deriving public value types from
+  canonical schemas and tables.
+- Prefer inferred internal types. Name and export a type only when it states a contract that consumers
+  need to reference.
+- A type describing a function's parameters or result belongs beside that function, regardless of how
+  many files consume it. Consumers import it from the owner or derive it with `Parameters`, `ReturnType`,
+  or `typeof`.
+- A hand-written type predicate narrowing a shared named domain type belongs beside that type. Keep
+  one-off structural checks local to their use.
+- Derive contracts from canonical schemas, tables, and narrower owners. Do not introduce hand-written
+  witnesses, widening annotations, casts, or global type fragments to break an inference cycle.
+
+## Helper ladder
+
+- With one caller, inline a helper unless its name hides genuinely complex work or marks a real policy
+  boundary.
+- With one consuming file, keep the helper file-local and unexported.
+- A separate helper file requires multiple production consumers or a concrete runtime, tooling, or
+  public-contract boundary. Tests are not production consumers and never justify a production export.
+- Place an earned helper in the closest existing owner and role home. Use that owner's `lib` location
+  only when no more specific documented home applies; do not create a shared folder because its name
+  merely sounds plausible.
+
+## File and folder shape
+
+- Treat files directly under a host-facing namespace such as `admin/` or `fields/` as supported entry
+  points. A namespace may designate an `internal/` folder for implementation that host applications
+  must not import. Do not leave a private support file at the public namespace root, and do not assume
+  an existing `lib/` folder is private unless its owner explicitly migrates it to `internal/`.
+- Keep a standard kind as one file while one file is sufficient. Promote it to the same-named folder
+  only when multiple owned files need to be grouped. Do not create a folder solely for one file or an
+  index barrel.
+- When several files form one unit, use the folder name for the concept and concise role filenames
+  inside it. Do not repeat the concept in every filename when the shorter names remain clear.
+- For internal moves, update consumers directly and delete the old path. Do not leave compatibility
+  barrels, wrappers, aliases, or adapter imports unless a committed external contract requires them.
+- Entry-point and public-surface files carry a short header stating their audience and export boundary.
+  Omit it only when framework syntax or a documented fixed-entry surface determines both, and the file
+  contains no additional exports. Name the actual importers and keep the file reserved for that boundary;
+  do not route internal imports through a public entry point for convenience.
+- Apply formatting only through the configured formatter and only within the touched scope.
+
+## Names and reading order
+
+- Name a function, value, type, or boolean for what callers observe and the contract guarantees. Do not
+  use a name that overclaims behavior, hides a precise domain concept behind a vague container, or leaves
+  a boolean's true condition ambiguous at its call site.
+- Rename only when the current name is materially misleading or needlessly difficult to read. Do not
+  rename for vocabulary preference or remove a qualifier that distinguishes another live variant.
+- Keep decision-defining facts, including authorization and current-user state, near the predicates they
+  control. A reader should be able to follow required behavior, optional behavior, state transitions,
+  and failure paths in reading order without tracing scattered flags or compensating effects.
+- Keep optional behavior explicit: finish shared work, establish applicability once, then enter the
+  enabled path with the values that path requires.

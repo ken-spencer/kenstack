@@ -6,7 +6,7 @@ import type {
   AnyAdminConfig,
   ModuleParentOptions,
 } from "@kenstack/admin/module";
-import { loadRecord } from "@kenstack/fields/records";
+import { loadRecord } from "@kenstack/records";
 import { serializeValues } from "./serialize";
 
 type AdminLoadTarget = number | "single";

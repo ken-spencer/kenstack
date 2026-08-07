@@ -56,7 +56,7 @@ export const saveAction = (moduleConfig: DefinedAdminModule) => {
       const rawSaveData = withServerPublishDate(rawData);
       const { id } = rawSaveData;
       const { changes } = rawSaveData;
-      let { values } = rawSaveData;
+      let values: Record<string, unknown> = rawSaveData.values;
 
       if (!id && parent) {
         if (!rawSaveData.parentId) {

@@ -45,6 +45,10 @@ keys, or generic CRUD support.
   `Enter a valid date like June 25, 2026`.
 - Treat the field schema as the owner of field-value validation. Before adding `preSave` validation, trace the submitted value through the form and schema and state why those boundaries cannot enforce the requirement. Use `preSave` only when correctness depends on current server state and accepting a stale submission would have a meaningful consequence; a hypothetical race or extra layer of checking is not sufficient.
 - Prefer the shared `Field` and `FormControl` components for a custom control that represents one registered field; they own the field message and accessible `aria-invalid` / `aria-describedby` wiring. When a composite or repeated control must use React Hook Form controllers directly because one field wrapper cannot represent its nested error paths, render each relevant error with the shared `FieldErrorMessage` beside the affected control and wire that control's invalid and described-by state to the message. Do not infer that schema validation is missing merely because a custom control bypasses the standard field wrapper that normally presents those errors.
+- Use `Combobox` for the standard searchable options interaction, `ComboboxRoot` with the named
+  combobox parts for custom composition, and `ComboboxField` when the standard control should connect
+  directly to React Hook Form. Domain fields should compose the lowest suitable shared control and keep
+  its keyboard, filtering, selection, and clear behavior.
 
 ## Form State
 
@@ -58,6 +62,53 @@ keys, or generic CRUD support.
   only to stabilize `defaultValues`; use a key or remount at the record or route-input boundary when
   changing defaults should reset the form. When a form must reset after submit, do it explicitly from the
   mutation or navigation path.
+- Keep independently persisted values as ordinary fields when one value changes the presentation of
+  another. Watch the driving value in the module `EditForm` or a small form section, then conditionally
+  render the dependent field or pass the watched state into its editor. Cross-field presentation logic
+  does not justify a custom field kind or a component that owns both values.
+
+## Generated Fields
+
+- Module form-component generation, client registration, settings forms, and import direction follow
+  `docs/module-anatomy.md`. Reusable field and component boundaries follow
+  `docs/kenstack-anatomy.md#field-library`.
+- Put invariant control configuration on the field definition. Kind-specific options such as combobox
+  choices and empty-state copy, or number bounds and step size, then travel with the field and are not
+  available as render-site overrides. Explicit labels and descriptions are also field-owned; generated
+  controls derive a label from the field name only when none is configured. Keep render props for local
+  presentation such as layout classes, contextual help, and interaction state.
+- Field-specific server behavior registered through `admin.fieldServers` does not require a matching
+  custom component. Keep the field's built-in editor unless editing that field's own value requires a
+  different control.
+- Configure `imageField({ selectVariant: "original" })` when record loads need the original image rather
+  than the default square selection. Configure a file field's empty-state instruction with `placeholder`;
+  the built-in editor owns its standard replacement instruction. These variations do not require a new
+  field kind or component.
+- A component registered for a field property represents that field and must consume its supplied
+  `name`. A custom component is warranted when the field's own value requires a specialized control.
+  Compound editors may read or update sibling values, but their owned value cannot be bound to an
+  embedded property path.
+- One-to-one edit forms receive the bare relation `fields` and their `prefix` through the client
+  configuration. Resolve and generate ordinary relation controls inside the relation form, where their
+  components are owned; when a bespoke panel renders only a subset, generate that subset and pass the
+  same prefix or full field names into its custom controls. Reuse a parent's shared generated map when
+  one already exists; extract one only when the additional consumer earns it. Keep a one-use generated
+  map in its consuming form.
+- Define every relation field map with ordinary `defineFields(...)`. The owning kind's server entry uses
+  `defineOneToOne({ fields, table, fieldServers?, title?, translateError? })`; the parent module only
+  imports that config and registers it by canonical key in `admin.oneToOne`. The key is the persisted
+  discriminator, and the first registered relation is the default. The host table still declares the
+  persisted `kind` column; `defineModule(...)` adds the reserved field to the resolved map, schema,
+  defaults, list, and filters. Do not declare or render it as an ordinary parent field.
+- The owning kind's client entry uses `defineOneToOneClient({ fields, EditForm })`; the parent client only
+  imports that config and registers it under the same key. Parent fields shared by every kind stay in
+  the parent `EditForm`; do not inject them through a relation panel. Follow
+  `docs/module-anatomy.md#one-to-one-kind-units` for placement.
+- Use `relationshipField({ mode: "single" })` for a scalar foreign-key selector. The field name must
+  identify a directly persisted table column with exactly one single-column foreign key to the `id` of
+  exactly one registered admin-list module. Kenstack derives the searchable options, labels, and order
+  from that target module. The default mode remains `"multiple"`; many-to-many fields continue to pair
+  the isomorphic definition with `relationshipField(relationship)` from `@kenstack/fields/server`.
 
 ## Record Saving
 

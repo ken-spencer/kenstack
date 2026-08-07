@@ -60,6 +60,10 @@ type PickerItemProps<T = AnyItem> = Omit<
 
 const PickerContext = React.createContext<PickerContextValue | null>(null);
 
+function isSameValue<T>(first: T, second: T) {
+  return first === second;
+}
+
 function isDisabledByProperty(item: AnyItem) {
   return (
     typeof item === "object" &&
@@ -84,7 +88,7 @@ function Picker<T>({
   children,
   className,
   isItemDisabled = isDisabledByProperty,
-  isItemEqualToValue = Object.is,
+  isItemEqualToValue = isSameValue,
   items,
   onBlur,
   onItemHighlighted,
@@ -550,7 +554,7 @@ function PickerItem<T = AnyItem>({
 }: PickerItemProps<T>) {
   const context = usePickerContext("PickerItem");
   const itemRef = React.useRef<HTMLDivElement | null>(null);
-  const index = context.items.findIndex((item) => Object.is(item, value));
+  const index = context.items.findIndex((item) => item === value);
   const disabled = context.isItemDisabled(value);
   const highlighted = index === context.highlightedIndex;
   const selected = context.isSelected(value);

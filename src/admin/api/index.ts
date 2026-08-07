@@ -189,7 +189,13 @@ const runAdminPipeline = async (request: NextRequest) => {
     case "tags":
       return pipeline({ request, json }, tagsAction(adminConfig));
     case "relationship-search":
-      return pipeline({ request, json }, relationshipSearchAction(adminConfig));
+      return pipeline(
+        { request, json },
+        relationshipSearchAction(
+          adminModuleConfig,
+          Object.values(deps.modules),
+        ),
+      );
   }
 
   return NextResponse.json({

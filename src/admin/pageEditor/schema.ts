@@ -1,8 +1,9 @@
 import { pageEditorFields } from "./fields";
-import { createZodSchema } from "@kenstack/fields/createZodSchema";
+import { createSchemaFromFields } from "@kenstack/fields/createSchemaFromFields";
 import type * as z from "zod";
 
-export const pageEditorSchema = createZodSchema(pageEditorFields).strict();
+export const pageEditorSchema =
+  createSchemaFromFields(pageEditorFields).strict();
 export const pageEditorSettingsSchema = pageEditorSchema.pick({
   seoTitle: true,
   seoDescription: true,

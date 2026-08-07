@@ -8,7 +8,6 @@ import Link from "next/link";
 import Form from "@kenstack/forms/Form";
 import loginSchema from "@kenstack/auth/schemas/login";
 import { getSafeReturnToPath } from "@kenstack/auth/returnTo";
-import Notice from "@kenstack/forms/Notice";
 import Alert from "@kenstack/components/Alert";
 import InputField from "@kenstack/forms/InputField";
 import PasswordField from "@kenstack/forms/PasswordField";
@@ -59,7 +58,6 @@ export function LoginForm() {
       <Suspense fallback={null}>
         <LoginMessage isCleared={isMessageCleared} />
       </Suspense>
-      <Notice />
       <InputField name="email" label="Email" type="email" autoFocus />
       <PasswordField name="password" label="Password" />
 

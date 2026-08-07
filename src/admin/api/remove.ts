@@ -55,6 +55,8 @@ export const removeAction = ({
         .select({
           ...columns,
           id: table.id,
+          createdAt: table.createdAt,
+          updatedAt: table.updatedAt,
           ...("slug" in columns ? { slug: columns.slug } : {}),
           ...("title" in columns ? { title: columns.title } : {}),
         })
@@ -70,18 +72,18 @@ export const removeAction = ({
         if (adminConfig.oneToOne) {
           const rowIds = rows.map((row) => row.id);
           for (const binding of Object.values(adminConfig.oneToOne.relations)) {
-            const relatedColumns = getTableColumns(binding.table);
             // Related field delete hooks may inspect any column, so this
             // boundary loads the full rows.
             const relatedRows = await db
-              .select(relatedColumns)
+              .select(getTableColumns(binding.table))
               .from(binding.table)
               .where(inArray(binding.foreignKey, rowIds));
-            const relatedById = new Map(
-              relatedRows.map((relatedRow) => [relatedRow.id, relatedRow]),
-            );
-
-            relatedRowsByBinding.push({ binding, relatedById });
+            relatedRowsByBinding.push({
+              binding,
+              relatedById: new Map(
+                relatedRows.map((relatedRow) => [relatedRow.id, relatedRow]),
+              ),
+            });
           }
         }
 

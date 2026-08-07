@@ -10,12 +10,12 @@ import { useAdminEdit } from "@kenstack/admin/Edit/context";
 import kebabCase from "lodash-es/kebabCase";
 
 import {
-  Combobox,
   ComboboxContent,
   ComboboxEmpty,
   ComboboxInput,
   ComboboxItem,
   ComboboxList,
+  ComboboxRoot,
 } from "@kenstack/forms/controls/Combobox";
 import type { SelectOption } from "@kenstack/forms/controls/Select";
 
@@ -100,12 +100,11 @@ export default function TagSearcht({ field }: { field: AnyField }) {
   }
 
   return (
-    <Combobox
+    <ComboboxRoot
       items={tags}
       open={open}
       inputValue={keywords}
       filter={null}
-      autoHighlight
       onInputValueChange={(value) => {
         setKeywords(value);
         setHighlightedTag(null);
@@ -186,6 +185,6 @@ export default function TagSearcht({ field }: { field: AnyField }) {
           );
         })()}
       </ComboboxContent>
-    </Combobox>
+    </ComboboxRoot>
   );
 }

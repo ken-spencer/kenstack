@@ -1,5 +1,5 @@
 import { defineFields } from "@kenstack/admin/fields";
-import { imageField, textField } from "@kenstack/fields/client";
+import { imageField, textField } from "@kenstack/fields";
 import * as z from "zod";
 
 export const fields = defineFields({
@@ -20,6 +20,6 @@ export const fields = defineFields({
           ),
       ),
     }),
-    ogImage: imageField(),
+    ogImage: imageField({ label: "Open Graph Image (1200 x 630)" }),
   },
 });

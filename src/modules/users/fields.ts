@@ -5,7 +5,8 @@ import {
   emailField,
   imageField,
   textField,
-} from "@kenstack/fields/client";
+} from "@kenstack/fields";
+import { email } from "@kenstack/fields/email";
 import * as z from "zod";
 
 export const userFields = {
@@ -28,6 +29,7 @@ export const userFields = {
     list: true,
     filter: true,
     sort: true,
+    zod: email,
   }),
   avatar: imageField({ list: "square" }),
 };

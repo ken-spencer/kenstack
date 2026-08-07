@@ -1,6 +1,6 @@
 import { pipelineStage } from "@kenstack/api";
 import { deps } from "@app/deps";
-import { saveRecord } from "@kenstack/fields/records/saveRecord";
+import { saveRecord } from "@kenstack/records/save";
 import * as z from "zod";
 
 import { pageEditorSchema } from "./schema";

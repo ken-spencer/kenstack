@@ -20,6 +20,26 @@ type UploadMediaCompletePayload = {
   squareCrop?: SquareCrop | null;
 };
 
+export function mediaValueFromUpload(
+  complete: UploadMediaCompletePayload,
+  file: File,
+) {
+  return {
+    kind: complete.kind,
+    url: complete.url,
+    width: complete.width,
+    height: complete.height,
+    filename: complete.filename ?? file.name,
+    sourceType: complete.sourceType ?? file.type,
+    sourceSize: complete.sourceSize ?? file.size,
+    sourceWidth: complete.sourceWidth,
+    sourceHeight: complete.sourceHeight,
+    originalUrl: complete.originalUrl,
+    original: complete.original,
+    squareCrop: complete.squareCrop,
+  };
+}
+
 export async function uploadMedia({
   apiPath,
   extraData,

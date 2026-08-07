@@ -59,6 +59,8 @@ function useRemoveMutation(mode: "trash" | "permanent" | "restore") {
         queryClient.invalidateQueries({
           queryKey: ["admin-list"],
         });
+        queryClient.invalidateQueries({ queryKey: ["relationship-search"] });
+        queryClient.invalidateQueries({ queryKey: ["relationship-selected"] });
       }
     },
   });

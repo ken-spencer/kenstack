@@ -1,4 +1,4 @@
-import type { AnyColumn } from "drizzle-orm";
+import { sql, type AnyColumn, type SQL } from "drizzle-orm";
 
 const adminRecordTitleKeys = ["title", "name", "slug"] as const;
 
@@ -28,4 +28,22 @@ export function getAdminRecordTitleSelect(columns: Record<string, AnyColumn>) {
   }
 
   return select;
+}
+
+export function getAdminRecordTitleSql(
+  columns: Record<string, AnyColumn>,
+  id: AnyColumn,
+  moduleTitle: string,
+): SQL {
+  const titleColumns = Object.values(getAdminRecordTitleSelect(columns));
+  const fallback = sql`concat(cast(${moduleTitle + " #"} as text), ${id})`;
+
+  return titleColumns.length
+    ? sql`coalesce(${sql.join(
+        titleColumns.map(
+          (column) => sql`nullif(btrim(cast(${column} as text)), '')`,
+        ),
+        sql`, `,
+      )}, ${fallback})`
+    : fallback;
 }

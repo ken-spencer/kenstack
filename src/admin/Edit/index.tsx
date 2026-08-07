@@ -1,6 +1,6 @@
 import { AdminEditProvider } from "./context";
+import EditForm from "./Form";
 import Header from "./Header";
-import Alerts from "./Alerts";
 import Footer from "./Footer";
 import OneToOneTabs from "./OneToOneTabs";
 import Breadcrumbs from "@kenstack/admin/components/Breadcrumbs";
@@ -138,18 +138,19 @@ export default async function AdminEdit({
         oneToOne={oneToOne}
         clients={clients}
       >
-        <div className="flex flex-col gap-2">
-          <Breadcrumbs
-            currentTitle={isNew ? "New Entry" : getAdminRecordTitle(item)}
-            moduleName={name}
-            moduleTitle={moduleTitle}
-            parent={parentRecord}
-          />
-          <Header />
-          <Alerts />
-          <OneToOneTabs />
-          <Footer />
-        </div>
+        <EditForm>
+          <div className="flex flex-col gap-2">
+            <Breadcrumbs
+              currentTitle={isNew ? "New Entry" : getAdminRecordTitle(item)}
+              moduleName={name}
+              moduleTitle={moduleTitle}
+              parent={parentRecord}
+            />
+            <Header />
+            <OneToOneTabs />
+            <Footer />
+          </div>
+        </EditForm>
       </AdminEditProvider>
     </HydrationBoundary>
   );

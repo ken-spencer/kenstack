@@ -13,12 +13,10 @@ import {
   DialogTitle,
 } from "@kenstack/components/Dialog";
 import Form from "@kenstack/forms/Form";
-import Notice from "@kenstack/forms/Notice";
 import Submit from "@kenstack/forms/Submit";
 import { QueryBoundary } from "@kenstack/context/QueryProvider";
 import type { SettingsClient } from "@kenstack/admin/client";
 import { createDefaultValues } from "@kenstack/fields/createDefaultValues";
-import FieldLayout from "./FieldLayout";
 
 type ModuleSettingsModalProps = {
   client: SettingsClient;
@@ -140,8 +138,7 @@ function ModuleSettingsModalContent({
               disabled={query.isPending}
               className="min-w-0 space-y-4 border-0 p-0"
             >
-              <Notice />
-              <FieldLayout fields={client.fields} />
+              <client.SettingsForm />
             </fieldset>
             <Submit disabled={query.isPending} disabledUntilDirty>
               Save Settings

@@ -2,7 +2,7 @@ import mdToHtml, { type MarkdownOptions } from "./mdToHtml";
 
 import { twMerge } from "tailwind-merge";
 
-import { type ComponentProps } from "@kenstack/admin/pageEditor/types";
+import type { PageEditorContentProps } from "@kenstack/admin/pageEditor/wrapper";
 import {
   loadMarkdownMentionTargets,
   remarkKenStackMarkdown,
@@ -10,7 +10,7 @@ import {
   type MarkdownMentionTargets,
 } from "./plugins";
 
-export type MarkdownProps = ComponentProps<"div"> &
+export type MarkdownProps = PageEditorContentProps<"div"> &
   MarkdownOptions & {
     mentionTargets?: MarkdownMentionTargets;
     mentionLoader?: MarkdownMentionLoader;

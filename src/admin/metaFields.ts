@@ -4,7 +4,7 @@ import {
   radioButtonField,
   textField,
   textareaField,
-} from "@kenstack/fields/client";
+} from "@kenstack/fields";
 import { visibilityStatusOptions } from "./lib/visibilityStatus";
 import * as z from "zod";
 
@@ -19,10 +19,12 @@ export const metaFieldOptions = {
   }),
   publishedAt: dateTimeField({
     filter: true,
+    label: "Publish On",
     sort: { defaultDirection: "desc" },
   }),
-  ogImage: imageField(),
+  ogImage: imageField({ label: "Open Graph Image (1200 x 630)" }),
   seoTitle: textField({
+    label: "SEO Title (If different than Title)",
     searchable: true,
     zod: z
       .string()
@@ -30,6 +32,7 @@ export const metaFieldOptions = {
       .max(100, "Max of 100 characters. 50 to 60 will be shown"),
   }),
   seoDescription: textareaField({
+    label: "SEO Description (if different than Description)",
     searchable: true,
     zod: z.string().trim().max(300, "max of 300 characters"),
   }),

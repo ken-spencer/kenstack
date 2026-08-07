@@ -12,7 +12,7 @@ import {
   type PgColumn,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
+import { sql, type SQL } from "drizzle-orm";
 import snakeCase from "lodash-es/snakeCase";
 
 export const mediaKindEnum = pgEnum("media_kind", ["raster", "svg", "file"]);
@@ -171,6 +171,10 @@ export type SelectedMedia = {
   squareCrop?: SquareCrop | null;
 };
 
+export type SelectedImage = SelectedMedia & {
+  kind: "raster" | "svg";
+};
+
 /**
  * Selects a single media row as JSON from a foreign-key column.
  *
@@ -181,6 +185,32 @@ export type SelectedMedia = {
 export function selectMediaSubquery(
   mediaCol: AnyPgColumn,
   variant: MediaVariantName = "original",
+) {
+  return mediaSubquery(mediaCol, variant, false);
+}
+
+/** Selects a single raster or SVG media row from a foreign-key column. */
+export function selectImageSubquery(
+  mediaCol: AnyPgColumn,
+  variant: MediaVariantName = "original",
+) {
+  return mediaSubquery(mediaCol, variant, true);
+}
+
+function mediaSubquery(
+  mediaCol: AnyPgColumn,
+  variant: MediaVariantName,
+  imagesOnly: true,
+): SQL<SelectedImage | null>;
+function mediaSubquery(
+  mediaCol: AnyPgColumn,
+  variant: MediaVariantName,
+  imagesOnly: false,
+): SQL<SelectedMedia | null>;
+function mediaSubquery(
+  mediaCol: AnyPgColumn,
+  variant: MediaVariantName,
+  imagesOnly: boolean,
 ) {
   const variantKey = mediaVariantKey(variant);
 
@@ -226,6 +256,7 @@ export function selectMediaSubquery(
   )
   from ${media}
   where ${media.id} = ${mediaCol}
+  ${imagesOnly ? sql`and ${media.kind} in ('raster', 'svg')` : sql``}
   limit 1
 )`;
 }

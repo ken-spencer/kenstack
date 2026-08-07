@@ -6,12 +6,15 @@ import MediaListField, {
 import { documentMimeTypes } from "@kenstack/db/tables/media/mimeTypes";
 import { twMerge } from "tailwind-merge";
 
-export type FileFieldProps = Omit<MediaListFieldProps, "multiple" | "variant">;
+export type FileFieldProps = Omit<
+  MediaListFieldProps,
+  "multiple" | "replacementPlaceholder" | "variant"
+>;
 
 export default function FileField({
   accept = documentMimeTypes,
   className,
-  placeholder,
+  placeholder = "Select or drop one file.",
   uploadClassName,
   ...props
 }: FileFieldProps) {
@@ -24,16 +27,8 @@ export default function FileField({
         className,
       )}
       multiple={false}
-      placeholder={
-        placeholder ?? (
-          <>
-            <span className="block font-medium">Attach a file</span>
-            <span className="text-muted-foreground block text-xs">
-              Select or drop one file.
-            </span>
-          </>
-        )
-      }
+      placeholder={placeholder}
+      replacementPlaceholder="Select or drop a new file."
       uploadClassName={twMerge("rounded-none border-0", uploadClassName)}
       variant="attachments"
     />

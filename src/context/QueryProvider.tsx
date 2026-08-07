@@ -1,5 +1,5 @@
 "use client";
-import { useContext, type ReactNode } from "react";
+import { useContext, useState, type ReactNode } from "react";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import {
   QueryClient,
@@ -8,21 +8,23 @@ import {
 } from "@tanstack/react-query";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 
-const queryClient = new QueryClient({
-  queryCache: new QueryCache({
-    onError: (error) => {
-      // eslint-disable-next-line no-console
-      console.error(error);
+function createQueryClient() {
+  return new QueryClient({
+    queryCache: new QueryCache({
+      onError: (error) => {
+        // eslint-disable-next-line no-console
+        console.error(error);
+      },
+    }),
+    defaultOptions: {
+      queries: {
+        // With SSR, we usually want to set some default staleTime
+        // above 0 to avoid refetching immediately on the client
+        staleTime: 60 * 1000,
+      },
     },
-  }),
-  defaultOptions: {
-    queries: {
-      // With SSR, we usually want to set some default staleTime
-      // above 0 to avoid refetching immediately on the client
-      staleTime: 60 * 1000,
-    },
-  },
-});
+  });
+}
 
 const dummyForServer = {
   getItem: () => null,
@@ -30,6 +32,7 @@ const dummyForServer = {
   removeItem: () => {},
 };
 export default function QueryProvider({ children }: { children: ReactNode }) {
+  const [queryClient] = useState(createQueryClient);
   // Safe on client because this is a Client Component
   const persister = createAsyncStoragePersister({
     storage:

@@ -1,12 +1,9 @@
 "use client";
 
-import Field, { FormControl, type FieldProps } from "@kenstack/forms/Field";
+import Field, { FormControl } from "@kenstack/forms/Field";
 import Help from "@kenstack/components/Help";
+import type { CheckedFieldProps } from "@kenstack/forms/CheckboxField";
 import { cn } from "@kenstack/lib/utils";
-
-type SwitchFieldProps = FieldProps & {
-  className?: string;
-};
 
 export function Switch({
   checked = false,
@@ -15,7 +12,7 @@ export function Switch({
   ...props
 }: Omit<React.ComponentProps<"button">, "onChange"> & {
   checked?: boolean;
-  onCheckedChange?: (checked: boolean) => void;
+  onCheckedChange?: (isChecked: boolean) => void;
 }) {
   const state = checked ? "checked" : "unchecked";
 
@@ -44,26 +41,46 @@ export function Switch({
   );
 }
 
+type InputProps = CheckedFieldProps &
+  Omit<React.ComponentProps<typeof Switch>, "checked" | "onCheckedChange">;
+
+// SwitchField is the switch presentation of CheckboxField. Keep their value
+// semantics and form behavior aligned; CheckedFieldProps enforces the shared API.
 export default function SwitchField({
+  checked = true,
   name,
   label,
   help,
   description,
   className,
-}: SwitchFieldProps) {
+  inputClass,
+  unchecked = false,
+  ...props
+}: InputProps) {
   return (
     <Field
       name={name}
       description={description}
       className={className}
       render={({ field }) => (
-        <div className="flex items-center gap-2">
+        <label className="flex items-center gap-3 text-lg select-text">
           <FormControl>
-            <Switch checked={field.value} onCheckedChange={field.onChange} />
+            <Switch
+              {...props}
+              className={inputClass}
+              name={field.name}
+              ref={field.ref}
+              checked={field.value === checked}
+              onBlur={field.onBlur}
+              onCheckedChange={(isChecked) => {
+                field.onChange(isChecked === true ? checked : unchecked);
+                field.onBlur();
+              }}
+            />
           </FormControl>
-          <label className="gap-3 text-lg select-text">{label}</label>
-          {help && <Help message={help} />}
-        </div>
+          {label}
+          {help ? <Help message={help} /> : null}
+        </label>
       )}
     />
   );

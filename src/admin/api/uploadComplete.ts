@@ -4,8 +4,8 @@ import { pipelineStage } from "@kenstack/api";
 import {
   completeMediaUpload,
   mediaUploadCompleteSchema,
-} from "@kenstack/fields/records/mediaUpload";
-import type { ServerDefinedFields } from "@kenstack/fields/server";
+} from "@kenstack/fields/internal/media/upload";
+import type { ServerDefinedFields } from "@kenstack/fields/internal/serverResolution";
 
 export const uploadCompleteAction = (adminConfig: {
   table: AnyPgTable;

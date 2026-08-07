@@ -1,6 +1,5 @@
 "use client";
 import Form from "@kenstack/forms/Form";
-import Notice from "@kenstack/forms/Notice";
 import { pageEditorSchema } from "./schema";
 import { usePageEditor } from "./context";
 import fetcher from "@kenstack/api/fetcher";
@@ -18,7 +17,6 @@ export const PageEditorForm = ({ children }: { children: React.ReactNode }) => {
       schema={pageEditorSchema}
       defaultValues={content.data}
     >
-      <Notice />
       {children}
     </Form>
   );

@@ -300,6 +300,17 @@ function DialogContent({
           return;
         }
 
+        const bounds = event.currentTarget.getBoundingClientRect();
+        const clickedInsideDialog =
+          event.clientX >= bounds.left &&
+          event.clientX <= bounds.right &&
+          event.clientY >= bounds.top &&
+          event.clientY <= bounds.bottom;
+
+        if (clickedInsideDialog) {
+          return;
+        }
+
         event.stopPropagation();
 
         if (!event.defaultPrevented && isTopOverlay()) {

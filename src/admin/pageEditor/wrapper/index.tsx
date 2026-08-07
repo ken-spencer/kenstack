@@ -3,35 +3,64 @@
 import React, { Suspense } from "react";
 import { useAdminUi } from "@kenstack/admin/components/PageControls/useAdminUi";
 import { usePageEditor } from "@kenstack/admin/pageEditor/context";
+import type { PageEditorFieldName } from "@kenstack/admin/pageEditor/fields";
 
-import type {
-  PageEditorProps,
-  PageEditorLoader,
-  ComponentProps,
-  BlockTag,
-} from "../types";
+export type BlockTag =
+  | "blockquote"
+  | "h1"
+  | "h2"
+  | "h3"
+  | "h4"
+  | "h5"
+  | "h6"
+  | "li"
+  | "p"
+  | "div"
+  | "pre";
 
-type Props = {
-  component: React.ComponentType<ComponentProps<BlockTag>>;
-  editor: PageEditorLoader;
-};
+export type PageEditorContentProps<T extends BlockTag> = {
+  tag?: T;
+  content?: string;
+  placeholder?: string;
+} & React.ComponentProps<T>;
 
-type PolymorphicEditorComponent = <TTag extends BlockTag>(
-  props: PageEditorProps<TTag>,
-) => React.ReactElement | null;
+export type PageEditorProps<T extends BlockTag = "div"> = T extends BlockTag
+  ? {
+      name: PageEditorFieldName;
+      placeholder?: string;
+    } & (T extends "div" ? { tag?: T } : { tag: T }) &
+      React.ComponentProps<T>
+  : never;
 
-type EditorWrapperProps<TTag extends BlockTag> = {
-  name: PageEditorProps<TTag>["name"];
-  tag: TTag;
-  Component: React.ComponentType<ComponentProps<TTag>>;
+export type EditorWrapperProps<T extends BlockTag = "div"> = {
+  name: PageEditorFieldName;
+  tag: T;
+  Component: React.ComponentType<PageEditorContentProps<T>>;
   componentProps: Omit<
-    PageEditorProps<TTag>,
+    PageEditorProps<T>,
     "name" | "tag" | "placeholder" | "content"
   >;
   placeholder?: string;
 };
 
-export default function createEditor({ component: Component, editor }: Props) {
+type NonDivBlockTag = Exclude<BlockTag, "div">;
+
+type PolymorphicEditorComponent = {
+  (props: PageEditorProps<"div">): React.ReactElement | null;
+  <TTag extends NonDivBlockTag>(
+    props: PageEditorProps<TTag> & { tag: TTag },
+  ): React.ReactElement | null;
+};
+
+export default function createEditor({
+  component: Component,
+  editor,
+}: {
+  component: React.ComponentType<PageEditorContentProps<BlockTag>>;
+  editor: () => Promise<{
+    default: React.ComponentType<EditorWrapperProps>;
+  }>;
+}) {
   const PageEditor = React.lazy(editor) as React.ComponentType<
     EditorWrapperProps<BlockTag>
   >;
@@ -45,11 +74,12 @@ export default function createEditor({ component: Component, editor }: Props) {
     const { content } = usePageEditor();
     const displayValue = content.display[name];
 
+    // PageEditorProps permits an omitted tag only for the div variant.
     const tagProp = tag ?? ("div" as Tag);
     const ComponentForTag = Component as React.ComponentType<
-      ComponentProps<Tag>
+      PageEditorContentProps<Tag>
     >;
-    const componentProps = props as ComponentProps<Tag>;
+    const componentProps = props as PageEditorContentProps<Tag>;
 
     if (showAdminControls) {
       return (
@@ -85,6 +115,8 @@ export default function createEditor({ component: Component, editor }: Props) {
         />
       );
     }
+
+    return null;
   };
 
   return PageEditCont as PolymorphicEditorComponent;

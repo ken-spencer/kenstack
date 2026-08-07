@@ -1,4 +1,4 @@
-import { Html, Head, Body, Container } from "@react-email/components";
+import { Html, Head, Body, Container } from "react-email";
 
 export type EmailContainerProps = {
   children: React.ReactNode;

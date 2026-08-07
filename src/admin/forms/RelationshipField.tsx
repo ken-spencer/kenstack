@@ -9,13 +9,13 @@ import Alert from "@kenstack/components/Alert";
 import { Badge } from "@kenstack/components/Badge";
 import { Button } from "@kenstack/components/Button";
 import { Skeleton } from "@kenstack/components/Skeleton";
-import {
-  Combobox,
+import Combobox, {
   ComboboxContent,
   ComboboxEmpty,
   ComboboxInput,
   ComboboxItem,
   ComboboxList,
+  ComboboxRoot,
 } from "@kenstack/forms/controls/Combobox";
 import Field, { type FieldProps } from "@kenstack/forms/Field";
 import useDebounce from "@kenstack/hooks/useDebounce";
@@ -30,6 +30,7 @@ type RelationshipValue = {
 type RelationshipFieldProps = React.ComponentProps<"div"> &
   FieldProps & {
     relationship: string;
+    mode?: "multiple" | "single";
     placeholder?: string;
   };
 
@@ -61,7 +62,7 @@ function RelationshipControl({
     : [];
   const exclude = selected.map((item) => item.id);
 
-  const { data, error, isPending } = useQuery({
+  const { data, error, isFetching } = useQuery({
     queryKey: [
       "relationship-search",
       adminName,
@@ -95,10 +96,11 @@ function RelationshipControl({
   });
 
   const items = data?.status === "success" ? data.items : [];
+  const isSearching = keywords !== debouncedKeywords || isFetching;
 
   return (
     <div className="space-y-2">
-      <Combobox
+      <ComboboxRoot
         items={items}
         open={open}
         inputValue={keywords}
@@ -129,7 +131,7 @@ function RelationshipControl({
             <Alert>{error.message}</Alert>
           ) : data?.status === "error" ? (
             <Alert>{data.message}</Alert>
-          ) : isPending ? (
+          ) : isSearching ? (
             <div className="space-y-2 p-2">
               <Skeleton className="h-8 w-full" />
               <Skeleton className="h-8 w-5/6" />
@@ -147,7 +149,7 @@ function RelationshipControl({
             </>
           )}
         </ComboboxContent>
-      </Combobox>
+      </ComboboxRoot>
 
       {selected.length ? (
         <div className="flex flex-wrap gap-2">
@@ -177,11 +179,122 @@ function RelationshipControl({
   );
 }
 
+function SingleRelationshipControl({
+  field,
+  relationship,
+  placeholder,
+}: {
+  field: ControllerRenderProps<FieldValues, string>;
+  relationship: string;
+  placeholder: string;
+}) {
+  const { apiPath, name: adminName } = useAdminEdit();
+  const [keywords, debouncedKeywords, setKeywords] = useDebounce();
+  const [open, setOpen] = useState(false);
+  const selectedId =
+    typeof field.value === "number" && Number.isInteger(field.value)
+      ? field.value
+      : null;
+  const selectedQuery = useQuery({
+    queryKey: ["relationship-selected", adminName, relationship, selectedId],
+    queryFn: () =>
+      fetcher<{ items: RelationshipValue[] }>(apiPath, {
+        action: "relationship-search",
+        name: adminName,
+        relationship,
+        keywords: "",
+        ids: selectedId === null ? [] : [selectedId],
+      }),
+    enabled: selectedId !== null,
+  });
+  const searchQuery = useQuery({
+    queryKey: [
+      "relationship-search",
+      adminName,
+      relationship,
+      debouncedKeywords,
+    ],
+    queryFn: () =>
+      fetcher<{ items: RelationshipValue[] }>(apiPath, {
+        action: "relationship-search",
+        name: adminName,
+        relationship,
+        keywords: debouncedKeywords,
+      }),
+    placeholderData: keepPreviousData,
+    enabled: open,
+  });
+  const selected =
+    selectedQuery.data?.status === "success"
+      ? selectedQuery.data.items[0]
+      : undefined;
+  const searchItems =
+    searchQuery.data?.status === "success" ? searchQuery.data.items : [];
+  const isSearching = keywords !== debouncedKeywords || searchQuery.isFetching;
+  const items = [
+    ...(selected ? [selected] : []),
+    ...searchItems.filter(({ id }) => id !== selected?.id),
+  ].map((item) => ({ ...item, value: String(item.id) }));
+  const queryError = selectedQuery.error ?? searchQuery.error;
+  const responseError =
+    selectedQuery.data?.status === "error"
+      ? selectedQuery.data.message
+      : searchQuery.data?.status === "error"
+        ? searchQuery.data.message
+        : undefined;
+  const emptyMessage = queryError ? (
+    <Alert>{queryError.message}</Alert>
+  ) : responseError ? (
+    <Alert>{responseError}</Alert>
+  ) : isSearching ? (
+    <div className="space-y-2 p-2">
+      <Skeleton className="h-8 w-full" />
+      <Skeleton className="h-8 w-5/6" />
+    </div>
+  ) : (
+    "No matches found."
+  );
+
+  return (
+    <Combobox
+      commitOnBlur={false}
+      emptyMessage={emptyMessage}
+      filter={null}
+      inputValue={
+        open
+          ? keywords
+          : (selected?.label ?? (selectedId === null ? "" : `#${selectedId}`))
+      }
+      inputProps={{
+        onBlur: field.onBlur,
+        placeholder,
+        showClear: true,
+      }}
+      open={open}
+      options={items}
+      value={selectedId === null ? "" : String(selectedId)}
+      onInputValueChange={setKeywords}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+        if (nextOpen) {
+          setKeywords("");
+        }
+      }}
+      onValueChange={(_value, item) => {
+        field.onChange(item?.id ?? null);
+        setKeywords("");
+      }}
+    />
+  );
+}
+
 export default function RelationshipField({
   name,
   label,
   description,
+  help,
   relationship,
+  mode = "multiple",
   placeholder = "Search...",
   className,
 }: RelationshipFieldProps) {
@@ -190,14 +303,23 @@ export default function RelationshipField({
       name={name}
       label={label}
       description={description}
+      help={help}
       className={className}
-      render={({ field }) => (
-        <RelationshipControl
-          field={field}
-          relationship={relationship}
-          placeholder={placeholder}
-        />
-      )}
+      render={({ field }) =>
+        mode === "single" ? (
+          <SingleRelationshipControl
+            field={field}
+            relationship={relationship}
+            placeholder={placeholder}
+          />
+        ) : (
+          <RelationshipControl
+            field={field}
+            relationship={relationship}
+            placeholder={placeholder}
+          />
+        )
+      }
     />
   );
 }

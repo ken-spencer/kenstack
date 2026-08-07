@@ -1,38 +1,308 @@
 # Kenstack Migrations
 
-Use this file to document breaking Kenstack API changes that downstream sites may need to apply.
+Use this file to document breaking Kenstack API changes that downstream sites may need to apply. Treat
+every committed public API as externally consumed for this purpose, even when no consumer is visible in
+the current repository. Document the required migration even when a compiler, type checker, schema, or
+lint rule will also expose the break. Do not add migration notes for uncommitted APIs or internal
+surfaces with no downstream consumers; update their in-repository call sites directly.
 
 Migration notes describe the current implemented API; they do not define it. During review, verify each note against the implementation and current public contract. If a note has drifted, correct the note—do not rename, reshape, or otherwise change the current API merely to make it match migration documentation. Change the API only when the implementation requirements independently call for that change, then update the migration note to describe the result.
+
+## Unreleased: Automatic Form Alerts
+
+Old API:
+
+- Forms rendered `<Notice />` manually where mutation status messages should appear. Forms that omitted
+  it had no outlet for request errors, form-level validation errors, or errors belonging to fields that
+  were not rendered.
+
+New API:
+
+- `@kenstack/forms/Form` renders its alert outlet automatically before the supplied form children. It
+  displays mutation status, pathless schema and server errors, and errors for unrendered fields. Field
+  controls continue to display their own errors inline.
+- `Form` accepts `validationMessage` when a workflow needs more specific introductory copy. It preserves
+  every distinct client or server message for a field rather than showing only the first one.
+
+Migration steps:
+
+- Remove explicit `@kenstack/forms/Notice` imports and `<Notice />` children from forms to avoid rendering
+  the same status twice.
+
+## Unreleased: Per-Kind Field Configuration
+
+Old API:
+
+- `FieldDefinition` declared `checked`, `unchecked`, and `options` for every field, so every factory
+  accepted `checked` and `unchecked` regardless of kind, and `kind: "custom"` was rejected as a
+  reserved legacy kind.
+
+New API:
+
+- `FieldDefinition` carries only the shared admin surface. A base definition declares its own
+  configurable keys by spreading `configurable<...>(...editorProperties)` from `@kenstack/fields`.
+  The named properties are captured as definition-owned editor props; configurable keys omitted from
+  that argument remain available to server and record infrastructure without reaching the editor.
+  For example, upload fields forward `accept` but not server-only size policy, while checkbox and
+  toggle fields forward their configured checked values. Factories reject keys their base does not
+  declare, and generated components do not allow definition-owned editor props to be overridden.
+- `checkboxField(...)` and `toggleField(...)` no longer accept `options`. String-valued checked
+  fields derive their enum-filter choices from the two declared values, labeled with `startCase`;
+  remove any explicit `options` from checked field configurations. Custom `field(...)` definitions
+  may carry extra keys; spread `configurable<...>(...editorProperties)` into a concrete definition
+  when those keys should be captured for its registered editor.
+- Other fields with `filterKind: "enum"` or `"includes"` still provide filter choices through
+  `options`.
+- The `"custom"` kind is no longer specially rejected; it behaves like any other kind and fails only
+  if no component or behavior is registered for it.
+- `defineFormFields(...)` does not throw for a kind without a registered client component; it omits the
+  unresolved field because a module's own `EditForm` may render it through a bespoke panel.
+  `defineClient(...)` receives the bare field definitions and performs no component resolution.
+  Relation forms pass the field subset they render and their `prefix` directly to
+  `defineFormFields(...)`. Settings follow the same model: their supplied `SettingsForm` decides which
+  generated or bespoke controls to render.
+- Generated form-field components no longer accept render-site `label` or `description` overrides.
+  Configure that copy on the field definition; when no label is configured, the generated component
+  derives one from the field name.
+- The intermediate `DerivedFields`, `ResolvedClientFieldSetFrom`, `ResolvedClientFieldsFrom`,
+  `StitchedField`, and `StitchedFields` exports are removed. Use `FormFields<TFields>` from
+  `@kenstack/fields/formFields` when a component needs the generated map's public type.
+- `checkboxField(...)` and `toggleField(...)` with `filter: true` require string or boolean value
+  pairs; other pairs are a type error and throw at definition time. Boolean pairs filter as boolean
+  filters; string pairs filter as enum filters with derived choices.
+- `relationshipField({ mode: "single" })` defines a scalar foreign-key selector with a `number | null`
+  base schema. The field name must map to one direct single-column foreign key whose target `id` belongs
+  to exactly one registered admin-list module; Kenstack validates that registry contract and derives the
+  option query from the target module. Existing `relationshipField()` definitions remain many-to-many.
+
+## Unreleased: Field Library Organization
+
+Old APIs:
+
+- Whole-record helpers were exported from `@kenstack/fields/records` and record selection from
+  `@kenstack/fields/select`.
+- Address data and schemas were exported from `@kenstack/fields/supportedCountries` and
+  `@kenstack/fields/countryRegionSchemas`.
+- Field contracts were imported from `@kenstack/fields/types`.
+- Relationship builders and contracts were imported from `@kenstack/fields/relationships`.
+- Shared field validation schemas were imported from `@kenstack/zod/*`.
+
+New APIs:
+
+- Whole-record helpers are exported from `@kenstack/records`; direct save and selection imports use
+  `@kenstack/records/save` and `@kenstack/records/select`.
+- Address data is exported from `@kenstack/fields/address/countries`; address schemas are exported from
+  `@kenstack/fields/address`.
+- Isomorphic field contracts including `FieldKind`, `FieldOption`, and `FieldOptions` are exported from
+  `@kenstack/fields`; `DefinedField` and `DefinedFields` are exported from
+  `@kenstack/admin/fields`; `FieldComponentProps` is exported from
+  `@kenstack/fields/formFields`.
+- Relationship builders and contracts are exported from
+  `@kenstack/fields/relationship/relationships`. Infer a relationship map from
+  `defineRelationships(...)`; the broad `Relationships` alias has been removed.
+- Field schemas are exported by their owners: `@kenstack/fields/email`, `phone`, `file`, `image`,
+  `mediaList`, `tags`, and `unsecureId`. Password validation is authentication policy and is exported
+  from `@kenstack/auth/schemas/password`.
+- Simple reusable field definitions live in `fields/index.ts`; a field has a per-field directory only when
+  it owns additional colocated files. `@kenstack/fields` is the isomorphic definition entry point, and
+  `@kenstack/fields/server` remains the server-only entry point.
+- `numberField()` now uses `null` as its empty default and normalizes an empty string to `null`. It is
+  optional by default; a consuming field that requires a number supplies a non-nullable `zod` override.
+
+Migration steps:
+
+- Apply these record and field-owner path replacements:
+  - `@kenstack/fields/records` → `@kenstack/records`
+  - `@kenstack/fields/records/loadRecord` → `@kenstack/records/load`
+  - `@kenstack/fields/records/saveRecord` → `@kenstack/records/save`
+  - `@kenstack/fields/select` → `@kenstack/records/select`
+  - `@kenstack/fields/supportedCountries` → `@kenstack/fields/address/countries`
+  - `@kenstack/fields/countryRegionSchemas` → `@kenstack/fields/address`
+  - `@kenstack/fields/relationships` → `@kenstack/fields/relationship/relationships`
+  - `@kenstack/fields/relationshipSchema` → `@kenstack/fields/relationship`
+- Replace exports from `@kenstack/fields/types` by name:
+  - `FieldKind`, `FieldOption`, `FieldOptions`, `FieldInputOption`, and `MediaUploadOptions` →
+    `@kenstack/fields`
+  - `DefinedField` and `DefinedFields` → `@kenstack/admin/fields`
+  - `DefaultValuesFromFields` → `@kenstack/fields/createDefaultValues`
+  - `FieldComponentProps` → `@kenstack/fields/formFields`
+  - `FieldComponent` was removed; type custom editors with `FieldComponentProps` at their declaration.
+  - `MediaListUploadOptions` → `MediaUploadOptions` from `@kenstack/fields`
+  - `FieldDisplay`, `FieldDisplayContext`, and `FieldComponentLoader` were removed.
+- Replace `@kenstack/fields/client` imports with `@kenstack/fields`.
+- Replace `createZodSchema` from `@kenstack/fields/createZodSchema` with
+  `createSchemaFromFields` from `@kenstack/fields/createSchemaFromFields`.
+- Replace each `@kenstack/zod/<field>` import with `@kenstack/fields/<field>`. The old
+  `@kenstack/zod` aggregate's `imageSchema` and `phone` exports move to
+  `@kenstack/fields/image` and `@kenstack/fields/phone`. Replace `@kenstack/zod/password` with
+  `@kenstack/auth/schemas/password`.
+- Move `getDisplayValues` imports from `@kenstack/fields/display` to
+  `@kenstack/admin/pageEditor/display`. Generic field display callbacks were removed; keep display
+  behavior with its owning consumer.
+- Move page-editor types from `@kenstack/admin/pageEditor/types`:
+  - `BlockTag`, `PageEditorProps`, and `EditorWrapperProps` →
+    `@kenstack/admin/pageEditor/wrapper`
+  - `ComponentProps` → `PageEditorContentProps` from `@kenstack/admin/pageEditor/wrapper`
+  - `PageEditorAdminProps` → `@kenstack/admin/pageEditor/wrapper/makeEditorWrapper`
+  - `Name` → `PageEditorFieldName` from `@kenstack/admin/pageEditor/fields`
+  - `PageEditorLoader` was removed.
+- Move direct server-kind imports:
+  - `@kenstack/fields/server/date` → `@kenstack/fields/date/server`
+  - `@kenstack/fields/server/dateTime` → `@kenstack/fields/dateTime/server`
+  - `@kenstack/fields/server/file` → `@kenstack/fields/file/server`
+  - `@kenstack/fields/server/image` → `@kenstack/fields/image/server`
+  - `@kenstack/fields/server/mediaList` → `@kenstack/fields/mediaList/server`
+  - `@kenstack/fields/server/relationship` → `@kenstack/fields/relationship/server`
+  - `@kenstack/fields/server/tags` → `@kenstack/fields/tags/server`
+  - The old boolean, checkbox-list, radio-button, and text server subpaths were removed because those
+    kinds no longer own server behavior.
+- Register removed field component loaders by property with
+  `defineFormFields(fields, { components: { propertyName: Component } })`.
+- Review `numberField()` consumers that previously relied on the implicit zero default. Supply an
+  explicit default only when zero is the domain default, and supply a non-nullable schema when the field
+  is required.
+- Do not import a field component or server implementation through `@kenstack/fields`; use the kind's
+  explicit `Component` or `server` subpath when direct access is required.
+
+## Unreleased: Resolved Client Fields
+
+Old APIs:
+
+- Module clients assembled and exported a second resolved field registry before calling
+  `defineClient(...)`.
+- `Field` from `@kenstack/admin/forms` accepted a runtime `name` and the combined prop surface of every
+  supported field kind.
+
+New APIs:
+
+- A module generates its form components with `defineFormFields(fields, { components?, prefix? })` from
+  `@kenstack/fields/formFields`. Keep a one-use generated map in its consuming form; extract a
+  module-owned `fields/formFields.ts` only when multiple consumers need the same configured map. Custom
+  components go in the property-keyed `components` map. The returned map holds fixed-name components
+  such as `<fields.title />`, and they read form state through the standard form context.
+- `defineClient(...)` takes the bare isomorphic definitions as `admin.fields` for the record schema,
+  list typing, and one-to-one relation metadata. It rejects component-bearing fields and no longer
+  accepts `fieldKinds` or `fieldComponents`. `AdminEditFormProps` is removed: module edit forms take no
+  `fields` prop.
+- The `prefix` option produces relation paths such as `movie.releaseYear` without rebuilding those
+  paths in the panel. `FieldComponentProps` and `FormFields<TFields>` are exported from
+  `@kenstack/fields/formFields`.
+- One-to-one edit forms receive bare relation `fields` and `prefix` alongside `ParentEditForm`. The
+  relation form resolves the controls it owns; a panel that creates a second consumer of a parent's
+  generated map imports the shared map instead of receiving a `parentFields` prop.
+
+Migration steps:
+
+- Remove intermediate resolved field maps. Call
+  `defineFormFields(definitions, { components?, prefix? })` in a sole consuming form or a shared
+  `fields/formFields.ts`, pass the bare definitions as `admin.fields` in `defineClient(...)`, and remove
+  the `fieldKinds` and `fieldComponents` arguments from `defineClient(...)`. The client entry never
+  imports generated form maps.
+- Replace `<Field name="title" />` with a generated component such as `<fields.title />`. Remove the
+  `fields` prop and `AdminEditFormProps` typing from module edit forms and their section components;
+  remove `name` and move field identity and static configuration into the definition.
+- Update one-to-one edit forms to consume their supplied bare relation map and resolve their controls in
+  the relation form before generating them with the supplied prefix. Pass the prefix or full names into
+  bespoke controls instead of embedding relation paths. Replace `parentFields` reads with imports from
+  the parent's shared generated map when that additional consumer earns one.
+- Pass that generated field map to shared admin layouts that render named fields. `MetaFields` now
+  requires it explicitly:
+
+  ```tsx
+  import MetaFields from "@kenstack/admin/components/MetaFields";
+
+  <MetaFields formFields={fields} />;
+  ```
+
+- Keep the low-level `Field` from `@kenstack/forms/Field` for implementing controls. Only the high-level
+  admin name resolver was removed.
+
+## Unreleased: Mail Delivery Results
+
+Old API:
+
+- `@kenstack/lib/mailer` returned the SES response on success and `false` or `undefined` on provider failure.
+
+New API:
+
+- The mailer returns a discriminated result with `status: "sent"`, `status: "recipient-rejected"`, or `status: "operational-failure"`.
+- Operational failures include only sanitized provider diagnostics: the provider code, HTTP status when available, and attempt count. They never include recipient addresses or raw provider messages.
+- The mailer contains failures that occur before the provider request as operational failures with zero
+  attempts, so callers do not add a separate mailer exception-reporting path.
+
+Migration steps:
+
+- Replace truthiness checks with a `result.status` check.
+- Treat `recipient-rejected` as expected customer input. It is limited to an
+  `InvalidParameterValue` response that explicitly identifies the recipient;
+  general SES `MessageRejected` responses remain operational because they can
+  represent sender, account, or policy failures. The mailer writes sanitized
+  `operational-failure` details through `errorLog(...)`; callers must not route
+  mail delivery failures through the email-backed `deps.error(...)` reporter.
 
 Before renaming a committed shared or exported type, inspect every consumer and require the old name to be
 materially misleading about the public contract. Compile Kenstack and a representative host, and document
 the downstream migration when the rename proceeds.
 
-## Unreleased: Admin Module Field Behaviors
+## Unreleased: Module Field Implementations
 
 Old API:
 
-- Modules attached server behavior by wrapping the field map at the config boundary:
-  `admin.fields = serverFields(fields, { title: { preSave } })`.
+- Modules attached server behavior by field property name through `serverFields(...)`,
+  `admin.behaviors`, or relation-level `behaviors`.
+- `@kenstack/fields/server` exported intermediate pipeline types including `FieldBehavior`,
+  `ServerDefinedFields`, `ServerDefinedFieldsFrom`, and `ServerBehaviors`.
 
 New API:
 
 - `admin.fields` accepts the `defineFields(...)` field map directly; `defineModule(...)` resolves
   server defaults itself.
-- `admin.behaviors` carries the per-field server behavior that was previously the second argument of
-  `serverFields(...)`. Entries are the same `ServerField` contributions or `ServerFieldResolver`
-  helpers, including server field factories such as `tagField({ table })`.
-- One-to-one relation config is unchanged; `relations[name].behaviors` already used this shape.
-- `serverFields(...)` remains exported and already-resolved field maps are still accepted by
-  `admin.fields`, so existing modules keep working. New and migrated modules should use
-  `fields` + `behaviors`.
+- Module server behavior targets a field property through `admin.fieldServers`. One-to-one relation
+  behavior uses the same property-keyed `fieldServers` shape beside that relation's table binding.
+- A module client passes the isomorphic field map directly to `defineClient(...)`. A separate
+  consumer-owned `defineFormFields(...)` call supplies custom editor components through the
+  property-keyed `components` option. Extract it to `fields/formFields.ts` only when the configured map
+  is shared. Unknown registrations throw; a field without a component remains available for a bespoke
+  panel and is omitted from the generated component map.
+- Standard field kinds keep their built-in server behavior and client editor when the module does not
+  register an override. Module-specific fields use a descriptive custom kind such as
+  `event-occurrences`.
+- Field definitions no longer carry component loaders. Standard list filters retain the serializable
+  `filterKind` capability. Loaded-value types now come from registered server-selection and client
+  component contracts; register the server implementation by kind and the client component by property
+  when replacing a standard kind with a semantic kind. The page editor owns its supported inline field
+  set.
+- `resolveServerFields(...)` remains available for lower-level field-map resolution, with the same
+  registration options contract. It resolves an isomorphic field map once; do not pass its resolved
+  output into another resolution call.
+- The caller-facing server type surface includes `ServerField`, `ServerFieldKinds`,
+  `ServerFieldResolver`, `ServerFieldResolverFor`, `SelectedServerFieldResolverFor`, and the field
+  lifecycle context, result, task, and upload types. Resolved-map intermediates remain internal.
 
 Migration steps:
 
-- Replace `fields: serverFields(fields, behaviors)` with `fields` and `behaviors` config properties.
-- Replace `fields: serverFields(fields)` with `fields`.
-- Remove `serverFields` imports that are no longer used; keep server field factory imports for
-  `behaviors` entries.
+- Pass the isomorphic field map directly as `admin.fields`.
+- Assemble server registrations at the module entry boundary through property-keyed `fieldServers` in
+  `index.ts`, and assemble property-specific client components in their consuming form or a shared
+  `fields/formFields.ts`. Keep an implementation in its owning `fields/<name>/server.ts` or
+  `Component.tsx`, but remove assembly-only `fields/server.ts` and `fields/client.tsx` files.
+- Move relation registrations into the owning kind's local `defineOneToOne(...)` server config beside
+  its relation table.
+- Remove `component` from isomorphic field definitions. Register generic editors through
+  `defineFormFields(...)`; keep bespoke, context-dependent editors in the module form. Import the
+  generated fixed-name components there for JSX such as `<fields.title />`.
+- Replace `serverFields(...)` with `resolveServerFields(...)` only where a resolved field map is
+  needed outside `defineModule(...)`; otherwise remove the wrapper.
+- Pass bare `defineFields(...)` output to `defineModule(...)` and apply module registrations through
+  `admin.fieldServers`. Remove any path that resolves a map before giving it to
+  `defineModule(...)` or passes a `resolveServerFields(...)` result into another resolution call.
+- Replace `FieldBehavior` with `ServerField`. Type registries with `ServerFieldKinds<typeof fields>` and
+  obtain resolver entries from `defineServerField(...)` or
+  `serverField(configuredField, resolver)`. The latter takes the configured output of `field(...)` or a
+  configured field factory call such as `textField(...)`; it does not take the factory function itself.
+  The typed registry surface does not accept raw `ServerField` objects.
+  Derive resolved-map types from `resolveServerFields(...)` when needed instead of importing
+  pipeline-stage types.
 
 ## Unreleased: Operational Error Reporting
 
@@ -191,25 +461,26 @@ Migration steps:
 - Keep `data-admin-theme="dark"` or `data-admin-theme="light"` on the admin layout wrapper.
 - Remove copied admin palette declarations from the site's public global stylesheet. The host application still owns its Tailwind dark-variant strategy and public-site palette.
 
-## Unreleased: Flat Server Field Behavior
+## Unreleased: Flat Server Field Implementations
 
 Old APIs:
 
-- `serverFields(...)` entries were resolver callbacks that received the client field and returned server behavior inside `{ behavior: { ... } }`.
+- The old `serverFields(...)` entries were resolver callbacks that received the client field and returned server behavior inside `{ behavior: { ... } }`.
 - Resolved server fields exposed lifecycle and query behavior through `field.behavior`, such as `field.behavior.save` and `field.behavior.select`.
 - Server filter configuration was stored at `field.behavior.filter`, alongside the client field's `filter: boolean` option.
 - Custom resolver helpers used the `ServerFieldDefaults` return type.
 
 New APIs:
 
-- `serverFields(...)` entries are direct `ServerField` contributions with `load`, `save`, `preSave`, `delete`, `select`, `listSelect`, `upload`, and other server properties at the top level.
+- Kind registry entries are direct `ServerField` contributions with `load`, `save`, `preSave`, `delete`, `select`, `listSelect`, `upload`, and other server properties at the top level.
 - Resolved server fields expose those properties directly, such as `field.save` and `field.select`.
-- The client `filter: boolean` option remains unchanged. Resolved server filter configuration is now `filterConfig` so the flat property names remain distinct.
+- The client `filter: boolean` option remains unchanged. Standard filter behavior is selected by the
+  separate isomorphic `filterKind` capability and its field options when the admin list is built.
 - Custom resolver helpers do not need a patch-specific return type.
 
 Migration steps:
 
-- Remove the `behavior` object from every `serverFields(...)` resolver:
+- Remove the `behavior` object and register the implementation by semantic kind:
 
   ```ts
   // Before
@@ -223,17 +494,30 @@ Migration steps:
   });
 
   // After
-  serverFields(fields, {
-    title: {
-      preSave: validateTitle,
-      select: selectTitle,
+  const fields = defineFields({
+    fields: {
+      title: field({ ...textField(), kind: "validated-title" }),
     },
+  });
+
+  defineModule({
+    admin: {
+      fields,
+      fieldServers: {
+        title: serverField(fields.title, () => ({
+          preSave: validateTitle,
+          select: selectTitle,
+        })),
+      },
+      // ...
+    },
+    // ...
   });
   ```
 
 - Remove `ServerFieldDefaults` return annotations from custom server-field helpers. Let TypeScript infer the return type, use `ServerField` for a direct field contribution, or use `ServerFieldResolver` for a helper that derives behavior from the client field.
 - Replace resolved-field reads such as `field.behavior?.load`, `field.behavior?.save`, and `field.behavior?.select` with `field.load`, `field.save`, and `field.select`.
-- Replace custom server filter patches and reads from `behavior.filter` with `filterConfig`. Do not rename the client field option `filter: true`.
+- Remove custom server filter patches and reads from `behavior.filter`. Server field implementations no longer expose filter configuration; keep the isomorphic field option as `filter: true`.
 
 ## Unreleased: Admin Table and Field Capabilities
 
@@ -303,10 +587,13 @@ New APIs:
 - Client loader maps use `defineAdminClients(...)` from `@kenstack/admin/clientLoaders`, with a map of dynamic imports.
 - Sites pass the resolved module registry to `createDeps({ modules })`; admin pages, API routes, and the sidebar read it from `deps.modules`.
 - Admin edit screens load records on the server through `loadAdminEdit` instead of posting `{ action: "load" }` from the client.
-- Module settings client config uses `defineSettingsClient(...)` from `@kenstack/admin/client`.
+- Module settings client config is declared in `defineClient(...)` with bare `fields` and a supplied
+  `SettingsForm`.
 - Server field metadata imports should use explicit server-safe paths such as `@kenstack/admin/metaFields` instead of importing mixed admin APIs from the main admin barrel.
 - Public routes that expose admin-only settings controls should pass the enriched registry module to `ModuleSettingsControl`; the control reads `module.client` internally.
-- Custom field components use loader functions, for example `component: () => import("./components/MyField")`, instead of direct component imports.
+- Generic custom field components are imported by the consuming form or shared `fields/formFields.ts`
+  boundary and passed to `defineFormFields(...)` through its property-keyed `components` argument. The
+  site-level client registry already lazy-loads the whole module client.
 - The main `@kenstack/admin` barrel is for shared admin types, list metadata types, search-param helpers, and meta field constants. Do not use it for server-only builders or client config builders.
 
 Migration steps:
@@ -347,7 +634,10 @@ Migration steps:
 - Remove client queries that post `{ action: "load" }`; let `<Edit />` load server edit data and use `adminLoadCacheTag(...)` when save or remove actions invalidate cached records.
 - Directly re-export `generateMetadata` from `@kenstack/admin/AdminPage` alongside `export default createAdminPage()`. `createAdminPage()` reads `deps.modules[name].client` internally, while Next.js discovers metadata through the route file's named export.
 - Do not import `client.ts`, form components, list item renderers, or other admin Client Components from server module files.
-- For module settings, move client-side settings field config into a module-owned `settings.ts` using `defineSettingsClient({ fields: settingsFields })`.
+- For module settings, pass the bare settings field map and a module-owned form to `defineClient(...)`
+  as `settings: { fields: settingsFields, SettingsForm }`. The form imports generated controls from its
+  module-owned form-fields file just like an admin `EditForm`; it may also render bespoke controls.
+  The settings modal continues to own loading, validation, saving, notices, and submission.
 - Render settings controls with a module entry from the `defineAdmin(...)` registry. Do not pass a separate `loadClient` prop:
 
   ```tsx
@@ -359,7 +649,10 @@ Migration steps:
   </ModuleSettingsControl>;
   ```
 
-- For custom field components, replace direct imports like `component: MyField` with loader functions such as `component: () => import("./components/MyField")`. The loaded field file should be a Client Component when it uses hooks, browser APIs, or client-only libraries.
+- For generic custom field components, remove `component` from the field definition and register each
+  property in `defineFormFields(fields, { components: { myField: MyField } })`. Pass the isomorphic field
+  map directly as `defineClient(...)` `admin.fields`. The field component should be a Client Component
+  when it uses hooks, browser APIs, or client-only libraries.
 - For any dynamic/lazy loader intended to keep optional client code out of public route bundles, make the loader file itself a Client Component. Next.js currently does not reliably keep dynamically imported Client Components split when the loader is a Server Component; `ssr: false` also only belongs inside Client Components.
 - Keep loader props serializable when a Client Component loader is rendered by a Server Component.
 
@@ -457,7 +750,7 @@ New APIs:
 
 - `DateTimeField` from `@kenstack/forms/DateTimeField` and `@kenstack/admin/forms`.
 - `DateField` now means a date-only field that stores `YYYY-MM-DD` values.
-- `dateField()` is available from `@kenstack/fields/client` for date-only fields.
+- `dateField()` is available from `@kenstack/fields` for date-only fields.
 
 Migration steps:
 

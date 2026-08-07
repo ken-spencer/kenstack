@@ -6,7 +6,6 @@ import Link from "next/link";
 
 import Form from "@kenstack/forms/Form";
 import schema from "@kenstack/auth/schemas/forgotPassword";
-import Notice from "@kenstack/forms/Notice";
 import InputField from "@kenstack/forms/InputField";
 import Alert from "@kenstack/components/Alert";
 import { deleteCookie, getCookie } from "@kenstack/lib/cookies";
@@ -73,7 +72,6 @@ export function ForgotPasswordForm() {
       }}
     >
       {message && <Alert>{message}</Alert>}
-      <Notice />
       <InputField
         name="email"
         label="Email"

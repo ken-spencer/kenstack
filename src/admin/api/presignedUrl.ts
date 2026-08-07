@@ -1,11 +1,11 @@
 import type { AnyPgTable } from "drizzle-orm/pg-core";
-import type { ServerDefinedFields } from "@kenstack/fields/server";
+import type { ServerDefinedFields } from "@kenstack/fields/internal/serverResolution";
 
 import { pipelineStage } from "@kenstack/api";
 import {
   createMediaUpload,
   mediaUploadRequestSchema,
-} from "@kenstack/fields/records/mediaUpload";
+} from "@kenstack/fields/internal/media/upload";
 
 export const getPresignedUrlAction = (adminConfig: {
   table: AnyPgTable;

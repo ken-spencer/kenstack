@@ -17,11 +17,11 @@ import {
   useAdminControl,
   useAdminUi,
 } from "@kenstack/admin/components/PageControls/useAdminUi";
-import { getDisplayValues } from "@kenstack/fields/display";
+import { getDisplayValues } from "./display";
 
 import { type Content } from "./loadContent";
 import { pageEditorFields } from "./fields";
-import { type Name } from "./types";
+import type { PageEditorFieldName } from "./fields";
 import {
   createPageEditorStore,
   type PageEditorStore,
@@ -33,8 +33,8 @@ type Context = {
   slug: string;
   setContent: React.Dispatch<React.SetStateAction<Content>>;
   tenant?: string;
-  editing: Name | null;
-  setEditing: React.Dispatch<React.SetStateAction<Name | null>>;
+  editing: PageEditorFieldName | null;
+  setEditing: React.Dispatch<React.SetStateAction<PageEditorFieldName | null>>;
 };
 
 type PageContentProviderProps = {
@@ -136,7 +136,7 @@ export const useCommit = () => {
   const { form, mutation } = useForm();
   const { setPageEditorError } = useAdminUi();
   return useCallback(
-    async (name: Name) => {
+    async (name: PageEditorFieldName) => {
       const value = form.getValues(name);
       if (value !== undefined && content.data[name] !== value) {
         const data = {

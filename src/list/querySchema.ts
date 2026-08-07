@@ -430,6 +430,8 @@ function parseOptionSearchValues(
 
   return Object.fromEntries(
     stringValues(value).flatMap((item) => {
+      // Written values always carry a "+" or "-" state prefix; bare values
+      // come from older links and parse as included.
       const state = item.startsWith("-") ? "-" : "+";
       const option =
         item.startsWith("-") || item.startsWith("+") ? item.slice(1) : item;
@@ -465,10 +467,10 @@ function addFilterSearchParam(
   }
 
   for (const [option, state] of entries) {
-    if (state === "+") {
-      params.append(name, option);
-    } else if (state === "-") {
-      params.append(name, "-" + option);
+    if (state === "+" || state === "-") {
+      // Always write the state prefix so option values that begin with "+" or
+      // "-" stay unambiguous; the parser reads the first character as state.
+      params.append(name, state + option);
     }
   }
 }

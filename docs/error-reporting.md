@@ -12,8 +12,15 @@ reporting, or request metadata capture.
 - Keep expected empty results distinct from unexpected failures. The public failure state accepts a
   module title and says, “There is an unexpected problem loading {module title}. Please check back later.”
   Never expose exception messages, stack traces, query details, or error digests in the page.
+- For an expected failure caused by stored or user-correctable data, preserve a usable repair path and
+  tell the user what needs correction. Use the generic unexpected-failure state when the code cannot
+  offer a safe specific action, or when the state is an unrecoverable invariant or security boundary.
 - Keep route- or page-level error handling for failures that invalidate the whole route. Do not use a
   route-segment `error.tsx` to contain one sibling section when the rest of the page can remain useful.
+- A user-facing validation, notification, toast, or status message must claim only what the reached
+  branch proves and, when a safe action exists, tell the user what to correct or try next. Keep expected
+  field-validation messages as the short fragments defined by the owning form conventions. Unexpected
+  failures remain deliberately non-diagnostic and use the generic contained failure state above.
 
 ## Operational Reporting
 
@@ -26,10 +33,15 @@ reporting, or request metadata capture.
   provider rejections, may be worth sanitized permanent logging but must not call `deps.error(...)`.
   Reserve operational reporting for failures that require operator action; user-caused failures must
   never generate operator email.
+- Email delivery failures must not call `deps.error(...)` because the operational reporter sends its
+  own alerts by email. `@kenstack/lib/mailer` owns sanitized delivery-failure logging through
+  `errorLog(...)` and returns its classified result. Callers may translate that result into user-facing
+  behavior but must not report it again.
 - Error messages sent to `deps.error(...)` or permanent server logs must stand on their own. Identify the
-  failure and any known status, code, or cause in the message. Use `context` only for structured filtering,
-  correlation, or supporting details; do not repeat the message there or make context the only
-  explanation.
+  failed operation and any useful non-sensitive identifier, expected condition, status, code, or cause.
+  Developer-facing configuration and API errors state the required state, the actual state when useful
+  and non-sensitive, and the corrective action. Use `context` only for structured filtering, correlation,
+  or supporting details; do not repeat the message there or make context the only explanation.
 - Use awaited Next.js `headers()` as the canonical source of incoming headers in supported request
   contexts. Use context already supplied by Next.js hooks, and capture sanitized header values before
   scheduling Server Component `after()` work. Reporting must still work without request metadata when no

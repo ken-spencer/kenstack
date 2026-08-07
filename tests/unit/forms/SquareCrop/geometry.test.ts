@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { squareCropSchema } from "@kenstack/zod/image";
+import { squareCropSchema } from "@kenstack/fields/image";
 import {
   getSquareCropExtract,
   getSquareCropMaxZoom,

@@ -3,15 +3,17 @@ import { usePageEditor } from "@kenstack/admin/pageEditor/context";
 import { useAdminUi } from "@kenstack/admin/components/PageControls/useAdminUi";
 import Tooltip from "@kenstack/components/Tooltip";
 import { PageEditorForm } from "../Form";
-
-import type {
-  EditorWrapperProps,
-  PageEditorAdminProps,
-  Name,
-} from "@kenstack/admin/pageEditor/types";
+import type { PageEditorFieldName } from "@kenstack/admin/pageEditor/fields";
+import type { EditorWrapperProps } from ".";
 
 type DynamicComponent<P> = React.ComponentType<P> & {
   preload?: () => void;
+};
+
+export type PageEditorAdminProps = {
+  name: PageEditorFieldName;
+  placeholder?: string;
+  className?: string;
 };
 
 export function makeEditorWrapper(
@@ -66,7 +68,13 @@ export function makeEditorWrapper(
   };
 }
 
-function Toggle({ name, children }: { name: Name; children: React.ReactNode }) {
+function Toggle({
+  name,
+  children,
+}: {
+  name: PageEditorFieldName;
+  children: React.ReactNode;
+}) {
   const { editing, setEditing } = usePageEditor();
 
   return (

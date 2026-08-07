@@ -11,6 +11,7 @@ export type FetchSuccess<T extends Record<string, unknown>> = {
 export type FetchError = {
   status: "error";
   message?: string;
+  formErrors?: string[];
   fieldErrors?: Record<string, string | string[]>;
   redirect?: string;
 };

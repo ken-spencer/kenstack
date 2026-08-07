@@ -1,3 +1,5 @@
+"use client";
+
 import { useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Form from "@kenstack/forms/Form";
@@ -35,6 +37,7 @@ export default function EditForm({ children }: { children: React.ReactNode }) {
   return (
     <Form
       guardUnsaved
+      validationMessage="We couldn't save your changes. Check the highlighted fields below for more information."
       schema={schema}
       defaultValues={defaultValues}
       apiPath={apiPath}
@@ -54,6 +57,8 @@ export default function EditForm({ children }: { children: React.ReactNode }) {
       }}
       onSuccess={(data, variables, { form }) => {
         queryClient.invalidateQueries({ queryKey: ["admin-list"] });
+        queryClient.invalidateQueries({ queryKey: ["relationship-search"] });
+        queryClient.invalidateQueries({ queryKey: ["relationship-selected"] });
         queryClient.removeQueries({
           queryKey: ["admin-edit", name, revisionTarget, "revisions"],
           exact: true,

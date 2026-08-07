@@ -6,39 +6,41 @@ vi.mock("server-only", () => ({}));
 vi.mock("@app/deps", () => ({ deps: {}, tables: {} }));
 
 import { defineFields } from "@kenstack/admin/fields";
-import { defineModule } from "@kenstack/admin/module";
+import { defineModule, defineOneToOne } from "@kenstack/admin/module";
+import {
+  resolveOneToOneDefinition,
+  withOneToOneSelectionField,
+} from "@kenstack/admin/internal/oneToOne";
 import { defineAdmin } from "@kenstack/admin/server";
 import { defineTable } from "@kenstack/admin/table";
-import { textField } from "@kenstack/fields/client";
+import { dateField, textField } from "@kenstack/fields";
 import { createDefaultValues } from "@kenstack/fields/createDefaultValues";
-import { createZodSchema } from "@kenstack/fields/createZodSchema";
-import { serverFields } from "@kenstack/fields/server";
+import { createSchemaFromFields } from "@kenstack/fields/createSchemaFromFields";
 import { resolveOneToOneList } from "@kenstack/admin/queries/listRelations";
 
-const fieldTree = defineFields({
+const fields = defineFields({
   fields: {
-    kind: textField({ default: "movie", zod: z.enum(["movie"]) }),
     title: textField({ default: "", zod: z.string().min(1) }),
   },
-  oneToOne: {
-    movie: {
-      fields: {
-        runtime: textField({
-          default: "",
-          filter: true,
-          list: true,
-          searchable: true,
-          sort: true,
-          zod: z.string().min(1),
-        }),
-      },
-    },
+});
+const movieFields = defineFields({
+  fields: {
+    runtime: textField({
+      default: "",
+      filter: true,
+      list: true,
+      searchable: true,
+      sort: true,
+      zod: z.string().min(1),
+    }),
   },
 });
+const oneToOne = resolveOneToOneDefinition({ movie: movieFields });
+const fieldTree = withOneToOneSelectionField(fields, oneToOne);
 
 describe("one-to-one field configuration", () => {
   it("generates an optional namespace with a generated optional identity", () => {
-    const schema = createZodSchema(fieldTree);
+    const schema = createSchemaFromFields(fieldTree, oneToOne);
 
     expect(schema.safeParse({ kind: "movie", title: "Event" }).success).toBe(
       true,
@@ -62,133 +64,40 @@ describe("one-to-one field configuration", () => {
     });
   });
 
-  it("rejects a relation value normalized by the selection schema", () => {
-    const fields = defineFields({
-      fields: {
-        kind: textField({ default: "movie", zod: z.string().trim() }),
-      },
-      oneToOne: {
-        movie: {
-          fields: {
-            runtime: textField({ default: "", zod: z.string() }),
-          },
-        },
-      },
+  it("derives selection values, labels, and the default from relation keys", () => {
+    const parentFields = defineFields({ fields: { title: textField() } });
+    const selection = resolveOneToOneDefinition({
+      movie: defineFields({ fields: {} }),
+      tv_series: defineFields({ fields: {} }),
     });
-    const events = defineTable({
-      name: "one_to_one_normalized_value_events",
-      columns: { kind: text("kind").notNull().default("movie") },
-    });
-    const details = pgTable("one_to_one_normalized_value_details", {
-      id: integer()
-        .primaryKey()
-        .references(() => events.id, { onDelete: "cascade" }),
-      runtime: integer(),
-    });
+    const fields = withOneToOneSelectionField(parentFields, selection);
 
-    expect(() =>
-      defineModule({
-        name: "oneToOneNormalizedValueEvents",
-        admin: {
-          table: events,
-          fields: serverFields(fields),
-          oneToOne: {
-            field: "kind",
-            relations: {
-              movie: { table: details, value: " movie " },
-            },
-          },
-          list: {},
-        },
-      }),
-    ).toThrow(/value " movie " must remain the same string/i);
+    expect(fields.kind).toMatchObject({
+      default: "movie",
+      filter: true,
+      kind: "one-to-one",
+      label: "Type",
+      list: true,
+      options: [
+        { label: "Movie", value: "movie" },
+        { label: "Tv Series", value: "tv_series" },
+      ],
+    });
+    expect(fields.kind.zod.safeParse("movie").success).toBe(true);
+    expect(fields.kind.zod.safeParse("tv_series").success).toBe(true);
+    expect(fields.kind.zod.safeParse("book").success).toBe(false);
   });
 
-  it("rejects a relation value changed to another type by the selection schema", () => {
-    const fields = defineFields({
-      fields: {
-        kind: textField({
-          default: "movie",
-          zod: z.string().transform((value) => value.length),
-        }),
-      },
-      oneToOne: {
-        movie: {
-          fields: {
-            runtime: textField({ default: "", zod: z.string() }),
-          },
-        },
-      },
-    });
-    const events = defineTable({
-      name: "one_to_one_changed_type_events",
-      columns: { kind: text("kind").notNull().default("movie") },
-    });
-    const details = pgTable("one_to_one_changed_type_details", {
-      id: integer()
-        .primaryKey()
-        .references(() => events.id, { onDelete: "cascade" }),
-      runtime: integer(),
-    });
-
+  it("rejects relation keys that collide with parent-owned fields", () => {
     expect(() =>
-      defineModule({
-        name: "oneToOneChangedTypeEvents",
-        admin: {
-          table: events,
-          fields: serverFields(fields),
-          oneToOne: {
-            field: "kind",
-            relations: {
-              movie: { table: details },
-            },
-          },
-          list: {},
-        },
-      }),
-    ).toThrow(/value "movie" must remain the same string/i);
-  });
-
-  it("rejects a selection default normalized by its schema", () => {
-    const fields = defineFields({
-      fields: {
-        kind: textField({ default: " movie ", zod: z.string().trim() }),
-      },
-      oneToOne: {
-        movie: {
-          fields: {
-            runtime: textField({ default: "", zod: z.string() }),
-          },
-        },
-      },
-    });
-    const events = defineTable({
-      name: "one_to_one_normalized_default_events",
-      columns: { kind: text("kind").notNull().default("movie") },
-    });
-    const details = pgTable("one_to_one_normalized_default_details", {
-      id: integer()
-        .primaryKey()
-        .references(() => events.id, { onDelete: "cascade" }),
-      runtime: integer(),
-    });
-
-    expect(() =>
-      defineModule({
-        name: "oneToOneNormalizedDefaultEvents",
-        admin: {
-          table: events,
-          fields: serverFields(fields),
-          oneToOne: {
-            field: "kind",
-            relations: {
-              movie: { table: details },
-            },
-          },
-          list: {},
-        },
-      }),
-    ).toThrow(/default must remain the same string/i);
+      withOneToOneSelectionField(
+        fields,
+        resolveOneToOneDefinition({ title: movieFields }),
+      ),
+    ).toThrow(/relation "title" conflicts with parent field/i);
+    expect(() => resolveOneToOneDefinition({ kind: movieFields })).toThrow(
+      /reserved selection field/i,
+    );
   });
 
   it("resolves and validates the shared-primary-key default", () => {
@@ -206,10 +115,13 @@ describe("one-to-one field configuration", () => {
       name: "oneToOneDefaultEvents",
       admin: {
         table: events,
-        fields: serverFields(fieldTree),
+        fields,
         oneToOne: {
-          field: "kind",
-          relations: { movie: { table: details } },
+          movie: defineOneToOne({
+            fields: movieFields,
+            table: details,
+            title: "Feature Film",
+          }),
         },
         list: {},
       },
@@ -223,11 +135,11 @@ describe("one-to-one field configuration", () => {
     }
     expect(config.list.sort["movie.runtime"]).toMatchObject({
       defaultDirection: "asc",
-      label: "Movie: Runtime",
+      label: "Feature Film: Runtime",
     });
     expect(config.list.filters["movie.runtime"]).toMatchObject({
       kind: "text",
-      label: "Movie: Runtime",
+      label: "Feature Film: Runtime",
     });
 
     const relatedList = resolveOneToOneList(config);
@@ -245,6 +157,41 @@ describe("one-to-one field configuration", () => {
     expect(joinQuery.params).toEqual(["movie"]);
   });
 
+  it("uses resolved server schemas for related field sets", () => {
+    const events = defineTable({
+      name: "one_to_one_server_schema_events",
+      columns: { kind: text("kind").notNull().default("movie") },
+    });
+    const details = pgTable("one_to_one_server_schema_details", {
+      id: integer()
+        .primaryKey()
+        .references(() => events.id, { onDelete: "cascade" }),
+      premiereDate: text("premiere_date"),
+    });
+    const fields = defineFields({ fields: {} });
+    const premiereFields = defineFields({
+      fields: { premiereDate: dateField() },
+    });
+    const moduleConfig = defineModule({
+      name: "oneToOneServerSchemaEvents",
+      admin: {
+        fields,
+        table: events,
+        oneToOne: {
+          movie: defineOneToOne({ fields: premiereFields, table: details }),
+        },
+        list: {},
+      },
+    });
+
+    expect(
+      moduleConfig.admin.schema.parse({
+        kind: "movie",
+        movie: { premiereDate: "" },
+      }),
+    ).toMatchObject({ movie: { premiereDate: null } });
+  });
+
   it("requires the parent identity foreign key to cascade deletion", () => {
     const events = defineTable({
       name: "one_to_one_non_cascade_events",
@@ -260,10 +207,9 @@ describe("one-to-one field configuration", () => {
       name: "oneToOneNonCascadeEvents",
       admin: {
         table: events,
-        fields: serverFields(fieldTree),
+        fields,
         oneToOne: {
-          field: "kind",
-          relations: { movie: { table: details } },
+          movie: defineOneToOne({ fields: movieFields, table: details }),
         },
         list: {},
       },
@@ -293,12 +239,9 @@ describe("one-to-one field configuration", () => {
       name: "oneToOneListEvents",
       admin: {
         table: events,
-        fields: serverFields(fieldTree),
+        fields,
         oneToOne: {
-          field: "kind",
-          relations: {
-            movie: { table: movies },
-          },
+          movie: defineOneToOne({ fields: movieFields, table: movies }),
         },
         list: {},
       },
@@ -324,10 +267,9 @@ describe("one-to-one field configuration", () => {
       name: "oneToOneOwnedEvents",
       admin: {
         table: events,
-        fields: serverFields(fieldTree),
+        fields,
         oneToOne: {
-          field: "kind",
-          relations: { movie: { table: details } },
+          movie: defineOneToOne({ fields: movieFields, table: details }),
         },
         list: {},
       },

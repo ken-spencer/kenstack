@@ -13,12 +13,12 @@ vi.mock("server-only", () => ({}));
 vi.mock("@app/deps", () => ({ deps: {}, tables: {} }));
 
 import { defineFields } from "@kenstack/admin/fields";
-import { defineModule } from "@kenstack/admin/module";
+import { defineModule, defineOneToOne } from "@kenstack/admin/module";
 import { defineAdmin } from "@kenstack/admin/server";
 import { defineTable } from "@kenstack/admin/table";
 import type { AdminSort } from "@kenstack/admin/types/list";
-import { field, textField } from "@kenstack/fields/client";
-import { serverFields } from "@kenstack/fields/server";
+import { field, textField } from "@kenstack/fields";
+import { serverField } from "@kenstack/fields/server";
 
 const categories = defineTable({
   name: "reorder_config_categories",
@@ -41,13 +41,15 @@ const products = defineTable({
   },
 });
 
+const categoryIdField = field({
+  default: 0,
+  kind: "test-category-id",
+  zod: z.number().int().positive(),
+});
+
 const fields = defineFields({
   fields: {
-    categoryId: field({
-      default: 0,
-      kind: "custom",
-      zod: z.number().int().positive(),
-    }),
+    categoryId: categoryIdField,
     name: textField(),
   },
 });
@@ -63,7 +65,7 @@ describe("scoped admin reordering", () => {
     const categoryModule = defineModule({
       name: "categories",
       admin: {
-        fields: serverFields(categoryFields),
+        fields: categoryFields,
         table: categories,
         list: {
           reorder: true,
@@ -73,7 +75,7 @@ describe("scoped admin reordering", () => {
     const moduleConfig = defineModule({
       name: "reorder-config-products",
       admin: {
-        fields: serverFields(fields),
+        fields,
         table: products,
         list: {
           reorder: {
@@ -90,7 +92,7 @@ describe("scoped admin reordering", () => {
       throw new Error("Expected resolved list configuration.");
     }
 
-    expect(admin.list.reorder).toEqual({
+    expect(admin.list.reorder).toMatchObject({
       field: products.sortOrder,
       fieldKey: "sortOrder",
       label: "Catalogue order",
@@ -174,7 +176,7 @@ describe("scoped admin reordering", () => {
     const categoryModule = defineModule({
       name: "alphabetical-categories",
       admin: {
-        fields: serverFields(alphabeticalCategoryFields),
+        fields: alphabeticalCategoryFields,
         table: alphabeticalCategories,
         list: {},
       },
@@ -182,7 +184,7 @@ describe("scoped admin reordering", () => {
     const productModule = defineModule({
       name: "alphabetical-products",
       admin: {
-        fields: serverFields(fields),
+        fields,
         table: alphabeticalProducts,
         list: {
           reorder: {
@@ -236,30 +238,24 @@ describe("scoped admin reordering", () => {
     });
     const joinedCategoryFields = defineFields({
       fields: {
-        kind: textField({
-          default: "details",
-          zod: z.enum(["details"]),
-        }),
         name: textField(),
       },
-      oneToOne: {
-        details: {
-          fields: {
-            rank: textField({ sort: true }),
-          },
-        },
+    });
+    const detailFields = defineFields({
+      fields: {
+        rank: textField({ sort: true }),
       },
     });
     const categoryModule = defineModule({
       name: "joined-categories",
       admin: {
-        fields: serverFields(joinedCategoryFields),
+        fields: joinedCategoryFields,
         table: joinedCategories,
         oneToOne: {
-          field: "kind",
-          relations: {
-            details: { table: categoryDetails },
-          },
+          details: defineOneToOne({
+            fields: detailFields,
+            table: categoryDetails,
+          }),
         },
         list: {
           sort: {
@@ -273,7 +269,7 @@ describe("scoped admin reordering", () => {
     const productModule = defineModule({
       name: "joined-products",
       admin: {
-        fields: serverFields(fields),
+        fields,
         table: joinedProducts,
         list: {
           reorder: {
@@ -314,7 +310,7 @@ describe("scoped admin reordering", () => {
       defineModule({
         name: "invalid-reorder-config-products",
         admin: {
-          fields: serverFields(fields),
+          fields,
           table: products,
           list: {
             reorder: {
@@ -331,7 +327,7 @@ describe("scoped admin reordering", () => {
       defineModule({
         name: "nullable-reorder-scope-products",
         admin: {
-          fields: serverFields(fields),
+          fields,
           table: products,
           list: {
             reorder: {
@@ -348,7 +344,7 @@ describe("scoped admin reordering", () => {
       defineModule({
         name: "non-number-reorder-scope-products",
         admin: {
-          fields: serverFields(fields),
+          fields,
           table: products,
           list: {
             reorder: {
@@ -371,7 +367,7 @@ describe("scoped admin reordering", () => {
       defineModule({
         name: "missing-reorder-scope-products",
         admin: {
-          fields: serverFields(nameOnlyFields),
+          fields: nameOnlyFields,
           table: products,
           list: {
             reorder: {
@@ -388,11 +384,12 @@ describe("scoped admin reordering", () => {
       defineModule({
         name: "custom-save-reorder-scope-products",
         admin: {
-          fields: serverFields(fields, {
-            categoryId: {
+          fields,
+          fieldServers: {
+            categoryId: serverField(categoryIdField, () => ({
               save: async ({ value }) => value,
-            },
-          }),
+            })),
+          },
           table: products,
           list: {
             reorder: {
@@ -408,7 +405,7 @@ describe("scoped admin reordering", () => {
     const categoryModule = defineModule({
       name: "categories",
       admin: {
-        fields: serverFields(categoryFields),
+        fields: categoryFields,
         table: categories,
         list: {},
       },
@@ -420,7 +417,7 @@ describe("scoped admin reordering", () => {
         foreignKey: "categoryId",
       },
       admin: {
-        fields: serverFields(fields),
+        fields,
         table: products,
         list: {
           reorder: true,
@@ -435,7 +432,7 @@ describe("scoped admin reordering", () => {
     const categoryModule = defineModule({
       name: "categories",
       admin: {
-        fields: serverFields(categoryFields),
+        fields: categoryFields,
         table: categories,
         list: {},
       },
@@ -443,7 +440,7 @@ describe("scoped admin reordering", () => {
     const childModule = defineModule({
       name: "child-reorder-scope-products",
       admin: {
-        fields: serverFields(fields),
+        fields,
         table: products,
         list: {
           reorder: {
@@ -467,7 +464,7 @@ describe("scoped admin reordering", () => {
     const moduleConfig = defineModule({
       name: "products-without-category-module",
       admin: {
-        fields: serverFields(fields),
+        fields,
         table: products,
         list: {
           reorder: {
@@ -494,7 +491,7 @@ describe("scoped admin reordering", () => {
     const moduleConfig = defineModule({
       name: "unreferenced-products",
       admin: {
-        fields: serverFields(fields),
+        fields,
         table: unreferencedProducts,
         list: {
           reorder: {

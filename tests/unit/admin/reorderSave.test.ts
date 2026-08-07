@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { integer, text } from "drizzle-orm/pg-core";
 import * as z from "zod";
-import type { saveRecord } from "@kenstack/fields/records";
+import type { saveRecord } from "@kenstack/records";
 
 const mocks = vi.hoisted(() => ({
   saveRecord: vi.fn(async (options: Parameters<typeof saveRecord>[0]) => ({
@@ -14,8 +14,8 @@ const mocks = vi.hoisted(() => ({
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidateTag: vi.fn() }));
 vi.mock("@app/deps", () => ({ deps: {}, tables: {} }));
-vi.mock("@kenstack/fields/records", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@kenstack/fields/records")>()),
+vi.mock("@kenstack/records", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@kenstack/records")>()),
   saveRecord: mocks.saveRecord,
 }));
 
@@ -23,8 +23,7 @@ import { defineFields } from "@kenstack/admin/fields";
 import { defineModule } from "@kenstack/admin/module";
 import { saveAdminRecord } from "@kenstack/admin/queries/save";
 import { defineTable } from "@kenstack/admin/table";
-import { field, textField } from "@kenstack/fields/client";
-import { serverFields } from "@kenstack/fields/server";
+import { field, textField } from "@kenstack/fields";
 
 const categories = defineTable({
   name: "reorder_save_categories",
@@ -48,7 +47,7 @@ const fields = defineFields({
   fields: {
     categoryId: field({
       default: 0,
-      kind: "custom",
+      kind: "test-category-id",
       zod: z.number().int().positive(),
     }),
     name: textField(),
@@ -58,7 +57,7 @@ const fields = defineFields({
 const moduleConfig = defineModule({
   name: "reorder-save-products",
   admin: {
-    fields: serverFields(fields),
+    fields,
     table: products,
     list: {
       reorder: {

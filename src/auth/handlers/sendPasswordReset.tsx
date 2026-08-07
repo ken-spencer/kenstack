@@ -8,7 +8,7 @@ import * as z from "zod";
 
 import mailer, { type Attachment } from "@kenstack/lib/mailer";
 import { formatUserName } from "@kenstack/lib/user";
-import { render } from "@react-email/render";
+import { render } from "react-email";
 
 import { pipeline, type PipelineOptions, pipelineStage } from "@kenstack/api";
 import { type ForgotPasswordEmailProps } from "@kenstack/auth/email/ForgotPassword";
@@ -116,17 +116,31 @@ export const sendPasswordResetAction = ({
         />,
       );
 
-      await deps.logger.audit({
-        action: "password-reset-sent",
-        data: { userId },
-      });
-
-      await mailer({
+      const delivery = await mailer({
         to: email,
         from,
         subject: `${adminName} has requested a password reset`,
         html: emailHtml,
         attachments,
+      });
+
+      if (delivery.status === "recipient-rejected") {
+        return response.error(
+          "The user's email address could not receive the password reset email.",
+        );
+      }
+
+      if (delivery.status === "operational-failure") {
+        return response.error({
+          message:
+            "The password reset email could not be sent. Please try again later.",
+          status: 503,
+        });
+      }
+
+      await deps.logger.audit({
+        action: "password-reset-sent",
+        data: { userId },
       });
 
       return response.success({

@@ -1,5 +1,6 @@
 import { SESClient, SendRawEmailCommand } from "@aws-sdk/client-ses";
 import { createMimeMessage } from "mimetext";
+import errorLog from "@kenstack/lib/errorLog";
 
 const ses = new SESClient();
 
@@ -40,7 +41,98 @@ interface Options {
   attachments?: Attachment[];
 }
 
-export default async function rawMailer({
+export type MailDeliveryResult =
+  | { messageId: string; status: "sent" }
+  | { status: "recipient-rejected" }
+  | {
+      attempts: number;
+      code: string;
+      httpStatusCode?: number;
+      status: "operational-failure";
+    };
+
+function errorName(err: unknown) {
+  return typeof err === "object" &&
+    err !== null &&
+    "name" in err &&
+    typeof err.name === "string"
+    ? err.name
+    : "UnknownError";
+}
+
+function isRecipientRejection(err: unknown, recipient: string) {
+  if (errorName(err) !== "InvalidParameterValue") {
+    return false;
+  }
+
+  const message =
+    typeof err === "object" &&
+    err !== null &&
+    "message" in err &&
+    typeof err.message === "string"
+      ? err.message.toLowerCase()
+      : "";
+  const normalizedRecipient = recipient.trim().toLowerCase();
+
+  return (
+    normalizedRecipient.length > 0 && message.includes(normalizedRecipient)
+  );
+}
+
+function operationalFailure(
+  err: unknown,
+  attempts: number,
+): MailDeliveryResult {
+  const httpStatusCode =
+    typeof err === "object" &&
+    err !== null &&
+    "$metadata" in err &&
+    typeof err.$metadata === "object" &&
+    err.$metadata !== null &&
+    "httpStatusCode" in err.$metadata &&
+    typeof err.$metadata.httpStatusCode === "number"
+      ? err.$metadata.httpStatusCode
+      : undefined;
+
+  return {
+    attempts,
+    code: errorName(err),
+    ...(httpStatusCode === undefined ? {} : { httpStatusCode }),
+    status: "operational-failure",
+  };
+}
+
+async function logOperationalFailure(
+  delivery: Extract<MailDeliveryResult, { status: "operational-failure" }>,
+) {
+  try {
+    // Mail delivery cannot use deps.error because that reporter sends alerts by email.
+    const httpStatus =
+      delivery.httpStatusCode === undefined
+        ? ""
+        : `; HTTP ${delivery.httpStatusCode}`;
+    await errorLog({
+      name: "ses-email-delivery-failed",
+      message: `SES email delivery failed (${delivery.code}${httpStatus}) after ${delivery.attempts} attempt${delivery.attempts === 1 ? "" : "s"}.`,
+      context: {
+        attempts: delivery.attempts,
+        code: delivery.code,
+        ...(delivery.httpStatusCode === undefined
+          ? {}
+          : { httpStatusCode: delivery.httpStatusCode }),
+      },
+    });
+  } catch (error) {
+    // This fallback must not enter the email-backed operational reporter.
+    // eslint-disable-next-line no-console
+    console.error("[kenstack:mailer] Email delivery failure logging failed.", {
+      code: delivery.code,
+      errorName: errorName(error),
+    });
+  }
+}
+
+async function sendEmail({
   to,
   cc,
   bcc,
@@ -48,7 +140,7 @@ export default async function rawMailer({
   subject = "",
   html = "",
   attachments = [],
-}: Options) {
+}: Options): Promise<MailDeliveryResult> {
   const msg = createMimeMessage();
   msg.setSender(from);
 
@@ -88,26 +180,50 @@ export default async function rawMailer({
   const maxRetries = 3;
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      return await ses.send(cmd);
+      const result = await ses.send(cmd);
+      if (!result.MessageId) {
+        return {
+          attempts: attempt,
+          code: "MissingMessageId",
+          status: "operational-failure",
+        };
+      }
+      return { messageId: result.MessageId, status: "sent" };
     } catch (err) {
+      if (isRecipientRejection(err, to)) {
+        return { status: "recipient-rejected" };
+      }
+
       if (!isRateLimitError(err)) {
-        // eslint-disable-next-line no-console
-        console.error("There was a problem sending email to", to, "\n", err);
-        return false;
+        return operationalFailure(err, attempt);
       }
 
       if (attempt === maxRetries) {
-        // eslint-disable-next-line no-console
-        console.error(
-          `Exceeded ${maxRetries} rate-limit retries. Giving up.`,
-          err,
-        );
-      } else {
-        // eslint-disable-next-line no-console
-        console.error(`SES Rate limit hit (attempt ${attempt}):`, err);
+        return operationalFailure(err, attempt);
       }
 
       await new Promise((res) => setTimeout(res, 1000));
     }
   }
+
+  return {
+    attempts: maxRetries,
+    code: "RetryLoopEnded",
+    status: "operational-failure",
+  };
+}
+
+export default async function mailer(options: Options) {
+  let delivery: MailDeliveryResult;
+  try {
+    delivery = await sendEmail(options);
+  } catch (error) {
+    delivery = operationalFailure(error, 0);
+  }
+
+  if (delivery.status === "operational-failure") {
+    await logOperationalFailure(delivery);
+  }
+
+  return delivery;
 }

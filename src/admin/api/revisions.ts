@@ -4,7 +4,7 @@ import { deps } from "@app/deps";
 import { revisions } from "@kenstack/db/tables/revisions";
 import { and, desc, eq, getTableName } from "drizzle-orm";
 import * as z from "zod";
-import { filterRevisionSnapshot } from "@kenstack/fields/records";
+import { filterRevisionSnapshot } from "@kenstack/records";
 import { formatUserName } from "@kenstack/lib/user";
 
 export const revisionsAction = (adminConfig: AnyAdminConfig) =>
@@ -45,6 +45,7 @@ export const revisionsAction = (adminConfig: AnyAdminConfig) =>
             snapshot: filterRevisionSnapshot(
               revision.snapshot,
               adminConfig.fields,
+              adminConfig.oneToOne?.relations,
             ),
           },
         });

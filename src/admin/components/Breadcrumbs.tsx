@@ -37,8 +37,11 @@ export default function Breadcrumbs({
       : {
           title: moduleTitle,
         },
-    ...(currentTitle ? [{ title: currentTitle }] : []),
-  ] satisfies { href?: string; title: string }[];
+  ];
+
+  if (currentTitle) {
+    items.push({ title: currentTitle });
+  }
 
   return (
     <nav

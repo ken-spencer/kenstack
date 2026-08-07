@@ -5,9 +5,16 @@ pipeline schema work.
 
 ## Database
 
-- Use Drizzle ORM.
-- Do not edit generated migrations casually.
-- Do not run Prettier against generated Drizzle `.sql` migration files.
+- Leave generated files under `drizzle/` exactly as Drizzle emits them. Review the generated SQL diff
+  directly; do not run Prettier or other source formatters there. Format only handwritten schema and
+  source files.
+- Never make a Drizzle migration the durable owner of a database object or invariant that the Drizzle
+  schema cannot express, such as an extension, exclusion constraint, trigger, function, or grant.
+  Migration history is routinely rebased and host code may move without its old migration chain.
+  Instead, keep an idempotent installer beside the module that owns the invariant and register it with
+  the site's single database-setup executable. Run that executable after every successful
+  `drizzle-kit migrate`; its failure must fail `db:migrate`. A site has one setup executable that calls
+  ordinary module installer functions, never a growing chain of module scripts.
 - Do not change schema names or column names without checking existing migrations.
 - Treat existing migration files and journal entries as durable and append-only by default. Do not infer that a database is disposable from its URL, environment name, current contents, repository deployment configuration, or the absence of another visible database.
 - A request to reset, rebase, squash, or regenerate migration history authorizes changes to migration files, snapshots, and journals only. It does not authorize modifying a database, its schemas, its data, or its migration ledger, even when the database is described as development-only, greenfield, disposable, or safe to reset.
@@ -15,7 +22,6 @@ pipeline schema work.
 - Generate append-only migrations for normal schema evolution. Rebase or squash history only when the user explicitly requests it; treat that as authorization for migration-artifact cleanup only, not as a permanent project state.
 - Keep schema changes and data transformations needed by every existing database in the replayable migration chain. For a simple development-only change to one known database, use a direct transactional query and verify the result. Use a separate operator-run script only when the operation is complex, repeatable, or needs to remain as a runbook; keep either path outside the replayable chain and give retained scripts narrow preconditions and rerun protection.
 - After rebasing migration history, report that existing databases may have an incompatible ledger and stop. Do not reset a database or rewrite/reconcile its migration ledger unless the user separately requests that database operation.
-- Prefer explicit nullability and defaults.
 - Use `defineTable` flags for standard Kenstack table capabilities: `reorder: true` for `sortOrder` and its active-record index, `publish: true` for `visibility`/`publishedAt` and their active-record composite index, and `seo: true` for `seoTitle`/`seoDescription`/`ogImage`. Do not hand-add those standard bundles or indexes unless the table intentionally needs a custom shape.
 - Use existing Kenstack table helpers for standard relationship tables. In particular, use `defineTags({ table, prefix })` from `@kenstack/db/tables/tags` for tag relation tables instead of hand-writing the same `tableId`/`tagId`/`createdAt` table and indexes.
 - Use isomorphic `defineFields({ publish: true, seo: true, fields: { ... } })` from `@kenstack/admin/fields` for field maps. Keep field-set options on that wrapper instead of creating alternate plain field-definition paths.
@@ -33,7 +39,9 @@ pipeline schema work.
 ## Embedded IDs
 
 - For stable identity inside a small, non-secret JSONB collection, prefer `unsecureId()` from `@kenstack/lib/unsecureId` over `crypto.randomUUID()`, array indexes, or a new ad hoc generator. Reuse an existing durable domain key instead when it already uniquely identifies the entry.
-- Do not use `unsecureId()` for authentication or reset tokens, access-control decisions, or identifiers that must be difficult to guess. Keep those on their secure-token path.
+- Use `unsecureId()` only for non-secret identifiers. Authentication, password-reset, session, and other
+  bearer tokens use the existing generator and storage behavior owned by their authentication flow; do
+  not substitute `unsecureId()` or add a parallel token path.
 
 ## Record saves
 
@@ -41,7 +49,6 @@ pipeline schema work.
 
 ## Validation
 
-- Use Zod v4.
 - Check the installed Zod version and current documentation before using version-sensitive APIs. Prefer
   Zod 4 top-level string formats such as `z.url()`, `z.email()`, and `z.iso.date()` over deprecated
   chained forms.
@@ -50,8 +57,6 @@ pipeline schema work.
 - Normalize accepted input at its owning schema with transforms such as `.trim()`, `.toLowerCase()`, or
   `.toUpperCase()` when downstream code should receive the normalized value.
 - Prefer Zod's direct string message syntax when it is supported, for example `.refine(check, "Message")` and `.min(1, "Message")`, instead of wrapping simple messages in `{ message: "Message" }`.
-- Keep client and server schemas aligned.
-- Use server-specific coercion only where needed.
 - Prefer passing schemas to `pipelineStage({ schema })` so parsing and errors are handled by the pipeline. Manual `safeParse` / `parse` inside a stage is an escape hatch for cases the pipeline cannot express.
 - Before adding a Zod `.parse(...)` or `.safeParse(...)`, trace the boundary that produced the value. If a route, pipeline stage, admin field schema, field lifecycle, or prior helper already parsed it, consume the parsed output type instead of reparsing.
 - For submitted request data, the schema passed to `pipelineStage({ schema })` should produce the validated and normalized shape the action needs. Put request-field transforms, defaults, refinements, and derived request values in that pipeline schema instead of reparsing or reshaping the same fields inside the action handler.
@@ -64,8 +69,6 @@ pipeline schema work.
 - Do not re-parse field values inside field save/load/display behavior when the enclosing action has already parsed the payload through its pipeline schema. Treat field behavior as receiving validated values, and keep any necessary cast narrow at that untyped lifecycle boundary.
 - Preserve the fetcher's existing discriminated result union and narrow it through its status field.
   Do not define parallel success or error shapes at consumers.
-- Keep required lower-level values required. Validate optional runtime configuration where it enters
-  instead of weakening the lower-level type and throwing later.
 - In field maps, keep short Zod schemas at the field that owns them. Do not extract a local schema constant only to reuse a short preprocess, coerce, or format chain a couple of times; extract only when the helper owns a canonical field pattern, meaningful per-call options, or enough repeated complexity that the field definitions become easier to audit.
 - Do not create a second enhanced schema when the original can be defined correctly at the point of use. Move the schema closer to the needed runtime context instead of layering `baseSchema` plus `schemaWithConfig`, unless the base schema is reused independently.
 - Be cautious with `z.unknown().transform(...)`. Use it only at a real untyped boundary. If the transform is mostly interpreting application grammar or query behavior, keep Zod focused on request shape/coercion and do that interpretation near the code that uses the result.
