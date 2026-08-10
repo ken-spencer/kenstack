@@ -11,7 +11,8 @@ Read only the references relevant to the current task:
 
 - React APIs, client state, Next.js runtime, caching, or Suspense: `docs/runtime-boundaries.md`
 - Public errors, reporting, or request metadata: `docs/error-reporting.md`
-- Admin modules, UI, forms, lists, or saving: `docs/admin.md`
+- Forms, shared form controls, React Hook Form state, or form validation: `docs/forms.md`
+- Admin modules, UI, lists, saving, or admin-specific form integration: `docs/admin.md`
 - Database, Drizzle, Zod, validation, or persistence: `docs/data.md`
 - Adding, organizing, reviewing, or cleaning types; TypeScript inference, generics, overloads,
   predicates, assertions, or compiler diagnostics: `docs/typescript.md`

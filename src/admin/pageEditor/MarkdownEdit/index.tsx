@@ -19,6 +19,7 @@ function Markdown<T extends BlockTag = "div">({
   return React.createElement(tag ?? "div", {
     ...props,
     className: twMerge(
+      "markdown",
       className,
       !content && placeholder ? "opacity-50 select-none" : undefined,
     ),

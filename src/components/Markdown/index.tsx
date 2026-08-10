@@ -28,6 +28,7 @@ export async function Markdown({
   delete props.tag; // In case this was used in the page editor.
 
   const markdown = content ?? "";
+  const markdownClassName = twMerge("markdown", className);
   const loadedMentionTargets =
     mentionTargets ??
     (mentionLoader
@@ -44,7 +45,7 @@ export async function Markdown({
     return (
       <div
         {...props}
-        className={className}
+        className={markdownClassName}
         dangerouslySetInnerHTML={{ __html: html }}
       />
     );
@@ -53,7 +54,7 @@ export async function Markdown({
     return (
       <div
         {...props}
-        className={twMerge(className, "text-muted-foreground/50")}
+        className={twMerge(markdownClassName, "text-muted-foreground/50")}
       >
         {placeholder}
       </div>

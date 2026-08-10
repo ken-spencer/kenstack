@@ -1,3 +1,6 @@
+@import "../components/Markdown/theme.css";
+@import "./button.css";
+
 body:has([data-admin-theme="light"]) {
   --background: #f8fafc;
   --foreground: #18181b;

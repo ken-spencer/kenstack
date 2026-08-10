@@ -2,7 +2,7 @@ import { type AuthDeps } from "./types";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { hashToken } from "./token";
-import { and, isNull, eq, gt } from "drizzle-orm";
+import { and, isNull, eq, gt, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { selectMediaSubquery } from "@kenstack/db/tables";
 import type { AuthAccess } from "@kenstack/auth/server/auth";
@@ -40,7 +40,7 @@ export function createUser<
       .where(
         and(
           eq(sessions.tokenHash, tokenHash),
-          gt(sessions.expiresAt, new Date()),
+          gt(sessions.expiresAt, sql`now()`),
           isNull(users.deletedAt),
         ),
       )
@@ -92,7 +92,7 @@ export function createUser<
       .where(
         and(
           eq(sessions.tokenHash, tokenHash),
-          gt(sessions.expiresAt, new Date()),
+          gt(sessions.expiresAt, sql`now()`),
           isNull(users.deletedAt),
         ),
       )

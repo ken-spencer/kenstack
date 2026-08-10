@@ -8,6 +8,24 @@ surfaces with no downstream consumers; update their in-repository call sites dir
 
 Migration notes describe the current implemented API; they do not define it. During review, verify each note against the implementation and current public contract. If a note has drifted, correct the note—do not rename, reshape, or otherwise change the current API merely to make it match migration documentation. Change the API only when the implementation requirements independently call for that change, then update the migration note to describe the result.
 
+## Unreleased: Markdown Theme Styles
+
+Old behavior:
+
+- Markdown renderers depended on each caller to add the `markdown` class and each host to provide its own baseline typography. Hosts commonly copied the same paragraph spacing, heading, list, link, and blockquote rules.
+
+New behavior:
+
+- `@kenstack/components/Markdown`, `@kenstack/components/Markdown/Client`, and page-editor `MarkdownEdit` add the `markdown` class automatically.
+- `@kenstack/components/Markdown/theme.css` provides opt-in baseline styles for rendered Markdown and Milkdown editors. Link colour uses the active theme's `--primary` token.
+- `@kenstack/admin/theme.css` loads the Markdown defaults for admin and page-editor surfaces.
+
+Migration steps:
+
+- Import `@kenstack/components/Markdown/theme.css` from the public theme entry point or layout before host-specific theme overrides.
+- Remove copied baseline `.markdown` and `.milkdown` rules. Keep host-specific typography or colour overrides when they express a real site design.
+- Remove explicit `markdown` classes passed only to identify a Kenstack Markdown renderer; the components now supply that class.
+
 ## Unreleased: Automatic Form Alerts
 
 Old API:

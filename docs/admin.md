@@ -1,7 +1,8 @@
 # Admin Reference
 
-Consult this reference for Kenstack admin modules, lists, edit forms, field validation ownership, form
-state, record saving, list configuration, relationship interfaces, and visual structure.
+Consult this reference for Kenstack admin modules, lists, edit forms, admin-specific validation
+ownership, record saving, list configuration, relationship interfaces, and visual structure. Shared form
+construction, controls, and state follow `docs/forms.md`.
 
 ## One-to-Many Relationships
 
@@ -49,23 +50,6 @@ keys, or generic CRUD support.
   combobox parts for custom composition, and `ComboboxField` when the standard control should connect
   directly to React Hook Form. Domain fields should compose the lowest suitable shared control and keep
   its keyboard, filtering, selection, and clear behavior.
-
-## Form State
-
-- Before adding local state, refs, maps, or context to preserve form data, inspect React Hook Form's
-  default, reset, unregister, and retention behavior. Do not mirror form defaults; if the library appears
-  insufficient, demonstrate the missing capability before adding another owner.
-- Treat React Hook Form `reset` and `resetField` as baseline-changing operations: they redefine the values considered saved and can clear dirty state. Reserve them for loading a different record, accepting a successful save response, or an explicit revert. When synchronizing browser or query state into a form without replacing the loaded record baseline, use `setValue` and choose `shouldDirty`, `shouldTouch`, and `shouldValidate` deliberately. Do not reset a field merely to add or update externally supplied options while the user may have unsaved edits.
-- Treat form `defaultValues` as initial state, not a reactive reset mechanism. Prefer module-scope constants
-  for static defaults when they naturally live outside render or are reused for explicit resets, and pass
-  server-derived defaults through serialized props when they depend on server data. Do not add `useMemo`
-  only to stabilize `defaultValues`; use a key or remount at the record or route-input boundary when
-  changing defaults should reset the form. When a form must reset after submit, do it explicitly from the
-  mutation or navigation path.
-- Keep independently persisted values as ordinary fields when one value changes the presentation of
-  another. Watch the driving value in the module `EditForm` or a small form section, then conditionally
-  render the dependent field or pass the watched state into its editor. Cross-field presentation logic
-  does not justify a custom field kind or a component that owns both values.
 
 ## Generated Fields
 

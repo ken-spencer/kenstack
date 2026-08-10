@@ -22,6 +22,7 @@ export default function MarkdownClient({
 }: MarkdownClientProps) {
   delete props.tag; // In case this was used in the page editor.
 
+  const markdownClassName = twMerge("markdown", className);
   const [html, setHtml] = useState("");
   useEffect(() => {
     let active = true;
@@ -54,7 +55,7 @@ export default function MarkdownClient({
     return (
       <div
         {...props}
-        className={className}
+        className={markdownClassName}
         dangerouslySetInnerHTML={{ __html: html }}
       />
     );
@@ -63,7 +64,7 @@ export default function MarkdownClient({
     return (
       <div
         {...props}
-        className={twMerge(className, "text-muted-foreground/50")}
+        className={twMerge(markdownClassName, "text-muted-foreground/50")}
       >
         {placeholder}
       </div>

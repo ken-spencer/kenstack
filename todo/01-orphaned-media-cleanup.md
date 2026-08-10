@@ -11,8 +11,9 @@ Media rows and S3 objects can be orphaned: uploads that never complete (`status:
 ## Current state
 
 - Table: `src/db/tables/media/index.ts` — `mediaStatusEnum` = `pending | uploaded | attached | removed`, with `media_status_idx` index. Columns include `sourceKey` (S3 key), `variants` (jsonb with per-variant `key`s), timestamps via `defineTable`.
-- S3 client + upload logic: `src/fields/records/mediaUpload.ts` (uses `AWS_S3_BUCKET`, `AWS_S3_REGION`/`AWS_REGION`).
-- Status transitions: `src/fields/server/image.ts`, `mediaList.ts`, `file.ts` set `attached` / `removed` on save.
+- S3 client + upload logic: `src/fields/internal/media/upload.ts` (uses `AWS_S3_BUCKET`, `AWS_S3_REGION`/`AWS_REGION`).
+- Status transitions: `src/fields/image/server.ts`, `src/fields/mediaList/server.ts`, and
+  `src/fields/file/server.ts` set `attached` / `removed` on save.
 - Consuming app cron config: `agatesprings.com/vercel.json` (currently has no `crons` entry).
 
 ## Adversarial review (2026-07-18)

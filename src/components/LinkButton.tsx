@@ -26,13 +26,10 @@ export function LinkButton({
   return (
     <NextLink
       className={twMerge(
-        "relative cursor-pointer",
+        "relative",
         buttonVariants({ size, variant }),
         className,
       )}
-      data-size={size}
-      data-slot="button"
-      data-variant={variant}
       {...props}
     >
       <span className="inline-flex items-center justify-center gap-1.5">

@@ -3,46 +3,50 @@ import * as React from "react";
 import ProgressIcon from "@kenstack/icons/Progress";
 
 import { twMerge } from "tailwind-merge";
-
-import { cva, type VariantProps } from "class-variance-authority";
 import Tooltip, { type TooltipBreakpoint } from "./Tooltip";
 
-const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground [a]:hover:bg-primary/80",
-        outline:
-          "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
-        secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
-        ghost:
-          "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
-        destructive:
-          "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
-        link: "text-primary underline-offset-4 hover:underline",
-      },
-      size: {
-        default:
-          "h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        xs: "h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: "h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        icon: "size-8",
-        "icon-xs":
-          "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm":
-          "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
-        "icon-lg": "size-9",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  },
-);
+export type ButtonVariant =
+  "default" | "secondary" | "outline" | "ghost" | "destructive" | "link";
+
+export type ButtonSize =
+  "default" | "xs" | "sm" | "lg" | "icon" | "icon-xs" | "icon-sm" | "icon-lg";
+
+const variantClassNames = {
+  default: "primary",
+  secondary: "secondary",
+  outline: "outline",
+  ghost: "ghost",
+  destructive: "destructive",
+  link: "link",
+} satisfies Record<ButtonVariant, string>;
+
+const sizeClassNames = {
+  default: "medium",
+  xs: "extra-small",
+  sm: "small",
+  lg: "large",
+  icon: "icon medium",
+  "icon-xs": "icon extra-small",
+  "icon-sm": "icon small",
+  "icon-lg": "icon large",
+} satisfies Record<ButtonSize, string>;
+
+function buttonVariants({
+  className,
+  size = "default",
+  variant = "default",
+}: {
+  className?: string;
+  size?: ButtonSize | null;
+  variant?: ButtonVariant | null;
+} = {}) {
+  return twMerge(
+    "button",
+    variantClassNames[variant ?? "default"],
+    sizeClassNames[size ?? "default"],
+    className,
+  );
+}
 
 const collapseButtonClassNames = {
   sm: "aspect-square gap-0 px-0 has-data-[icon=inline-start]:pl-0 has-data-[icon=inline-end]:pr-0 sm:aspect-auto sm:gap-1.5 sm:px-2.5 sm:has-data-[icon=inline-start]:pl-2 sm:has-data-[icon=inline-end]:pr-2",
@@ -69,15 +73,16 @@ const collapseLabelClassNames = {
   "2xl": "hidden 2xl:inline",
 } satisfies Record<TooltipBreakpoint, string>;
 
-export type ButtonProps = React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
-    collapseBelow?: TooltipBreakpoint;
-    isPending?: boolean;
-    asChild?: boolean;
-    icon?: React.ComponentType<React.ComponentProps<"svg">>;
-    iconPosition?: "start" | "end";
-    tooltip?: React.ReactNode;
-  };
+export type ButtonProps = React.ComponentProps<"button"> & {
+  size?: ButtonSize;
+  variant?: ButtonVariant;
+  collapseBelow?: TooltipBreakpoint;
+  isPending?: boolean;
+  asChild?: boolean;
+  icon?: React.ComponentType<React.ComponentProps<"svg">>;
+  iconPosition?: "start" | "end";
+  tooltip?: React.ReactNode;
+};
 
 export default function Button({
   asChild = false,
@@ -118,7 +123,7 @@ export default function Button({
   };
 
   const buttonClassName = twMerge(
-    "relative cursor-pointer",
+    "relative",
     buttonVariants({ variant, size }),
     isPending && "disabled:opacity-100",
     collapseBelow && collapseButtonClassNames[collapseBelow],
@@ -131,9 +136,6 @@ export default function Button({
       !React.isValidElement<
         React.HTMLAttributes<HTMLElement> & {
           children?: React.ReactNode;
-          "data-size"?: VariantProps<typeof buttonVariants>["size"];
-          "data-slot"?: string;
-          "data-variant"?: VariantProps<typeof buttonVariants>["variant"];
           disabled?: boolean;
         }
       >(child)
@@ -153,9 +155,6 @@ export default function Button({
     const button = React.cloneElement(content, {
       ...props,
       className: twMerge(buttonClassName, child.props.className),
-      "data-size": size,
-      "data-slot": "button",
-      "data-variant": variant,
       disabled: disabled || isPending,
     });
 
@@ -172,9 +171,6 @@ export default function Button({
 
   const button = (
     <button
-      data-slot="button"
-      data-variant={variant}
-      data-size={size}
       className={buttonClassName}
       disabled={disabled || isPending}
       {...props}
