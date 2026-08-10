@@ -6,6 +6,7 @@ export default function SubmitButton({
   children = "Submit",
   disabled = false,
   disabledUntilDirty = false,
+  isPending: isExternallyPending = false,
   ...props
 }: ButtonProps & {
   disabledUntilDirty?: boolean;
@@ -14,7 +15,7 @@ export default function SubmitButton({
     formState: { isDirty, isReady, isSubmitting },
   } = useFormContext();
   const { mutation, uploadingFields } = useForm();
-  const isPending = isSubmitting || mutation.isPending;
+  const isPending = isExternallyPending || isSubmitting || mutation.isPending;
 
   return (
     <Button

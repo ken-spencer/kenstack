@@ -5,7 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import Alert from "@kenstack/components/Alert";
 import Help from "@kenstack/components/Help";
 import { Button } from "@kenstack/components/Button";
-import { LoaderCircle, RotateCcwKey } from "lucide-react";
+import { RotateCcwKey } from "lucide-react";
 
 import fetcher from "@kenstack/api/fetcher";
 import { useForm } from "@kenstack/forms/context";
@@ -38,15 +38,12 @@ export default function ResetPassword() {
       ) : (
         <>
           <Button
-            type="button"
-            disabled={mutation.isPending || !hasEmail}
+            disabled={!hasEmail}
+            icon={RotateCcwKey}
+            isPending={mutation.isPending}
             onClick={() => mutation.mutate()}
+            type="button"
           >
-            {mutation.isPending ? (
-              <LoaderCircle data-icon="inline-start" className="animate-spin" />
-            ) : (
-              <RotateCcwKey data-icon="inline-start" />
-            )}
             Reset Password
           </Button>
           <Help
