@@ -17,11 +17,13 @@ import {
   relationshipField,
   selectField,
   textField,
+  urlField,
 } from "@kenstack/fields";
 import CheckboxList from "@kenstack/forms/CheckboxList";
 import ComboboxField from "@kenstack/forms/ComboboxField";
 import RadioButtonField from "@kenstack/forms/RadioButtonField";
 import SelectField from "@kenstack/forms/SelectField";
+import UrlField from "@kenstack/forms/UrlField";
 
 const Component = () => null;
 const fields = defineFields({
@@ -217,6 +219,21 @@ describe("form field generation", () => {
       expect(element.type).toBe(Component);
       expect(element.props.options).toBe(options);
     }
+  });
+
+  it("uses the URL control for URL fields", () => {
+    const generated = defineFormFields(
+      defineFields({
+        fields: {
+          external: urlField(),
+        },
+      }),
+    );
+    const external = generated.external as unknown as (props: object) => {
+      type: unknown;
+    };
+
+    expect(external({}).type).toBe(UrlField);
   });
 
   it("allows a named component to override a built-in component", () => {

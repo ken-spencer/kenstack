@@ -222,6 +222,15 @@ function PopoverContent({
         return;
       }
 
+      // A dismissal handler that outlives its rendered content (for example
+      // across a layout-swapping navigation) must never cancel the page's
+      // events: swallowing pointerdown with a dead setOpen leaves the whole
+      // page unclickable until reload.
+      if (!dialogRef.current?.isConnected) {
+        setOpen(false);
+        return;
+      }
+
       event.preventDefault();
       event.stopPropagation();
       setOpen(false);

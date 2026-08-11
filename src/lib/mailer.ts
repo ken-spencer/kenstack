@@ -1,5 +1,5 @@
 import { SESClient, SendRawEmailCommand } from "@aws-sdk/client-ses";
-import { createMimeMessage } from "mimetext";
+import { createMimeMessage, Mailbox } from "mimetext";
 import errorLog from "@kenstack/lib/errorLog";
 
 const ses = new SESClient();
@@ -31,11 +31,14 @@ export interface Attachment {
   headers?: Record<string, string>;
 }
 
+type EmailAddress = string | { name: string; addr: string };
+
 interface Options {
   to: string;
   cc?: string;
   bcc?: string;
-  from: string | { name: string; addr: string };
+  from: EmailAddress;
+  replyTo?: EmailAddress;
   subject: string;
   html: string;
   attachments?: Attachment[];
@@ -137,12 +140,17 @@ async function sendEmail({
   cc,
   bcc,
   from,
+  replyTo,
   subject = "",
   html = "",
   attachments = [],
 }: Options): Promise<MailDeliveryResult> {
   const msg = createMimeMessage();
   msg.setSender(from);
+
+  if (replyTo) {
+    msg.setHeader("Reply-To", new Mailbox(replyTo));
+  }
 
   msg.setTo(to);
 

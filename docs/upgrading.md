@@ -8,6 +8,23 @@ surfaces with no downstream consumers; update their in-repository call sites dir
 
 Migration notes describe the current implemented API; they do not define it. During review, verify each note against the implementation and current public contract. If a note has drifted, correct the note—do not rename, reshape, or otherwise change the current API merely to make it match migration documentation. Change the API only when the implementation requirements independently call for that change, then update the migration note to describe the result.
 
+## Unreleased: Input Adornments
+
+Old API:
+
+- `@kenstack/forms/UrlField` accepted an `icon` prop for content at the start of the input.
+- Other controls built on `@kenstack/forms/controls/Input` had no shared API for content before or after the input value.
+
+New API:
+
+- `Input`, `InputField`, `SlugField`, and `UrlField` accept direction-aware `startAdornment` and `endAdornment` props.
+- `UrlField` supplies its default globe through `startAdornment`. Generated URL fields also accept both adornment props at the render site.
+
+Migration steps:
+
+- Replace `<UrlField icon={...} />` with `<UrlField startAdornment={...} />`.
+- Use `endAdornment` for content that belongs after the input value.
+
 ## Unreleased: Markdown Theme Styles
 
 Old behavior:

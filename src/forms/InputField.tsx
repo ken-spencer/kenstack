@@ -9,7 +9,7 @@ import {
 } from "react-hook-form";
 
 type InputProps = FieldProps &
-  Omit<React.ComponentProps<"input">, "onChange" | "onBlur"> & {
+  Omit<React.ComponentProps<typeof Input>, "onChange" | "onBlur"> & {
     inputClass?: string;
     onChange?: ({
       event,

@@ -28,11 +28,11 @@ export default function SidebarContent({
   const { open, isMobile, toggleSidebar } = useSidebar();
 
   return (
-    <div className="flex flex-1">
+    <div className="flex min-w-0 flex-1">
       <div>
         <SidebarTrigger className={open ? "hidden" : ""} />
       </div>
-      <div className="flex flex-grow flex-col gap-1 md:gap-2">
+      <div className="flex min-w-0 flex-grow flex-col gap-1 md:gap-2">
         <div className="grid min-h-10 grid-cols-[1fr_auto_1fr] items-center px-2 pt-1">
           <button
             aria-label="Toggle Sidebar"

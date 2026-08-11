@@ -11,7 +11,11 @@ import { Input } from "@kenstack/forms/controls/Input";
 import { useFormContext } from "react-hook-form";
 import { twMerge } from "tailwind-merge";
 
-type InputProps = React.ComponentProps<"input"> &
+// Adornments are omitted because the lock button occupies the input's end slot.
+type InputProps = Omit<
+  React.ComponentProps<typeof Input>,
+  "startAdornment" | "endAdornment"
+> &
   FieldProps & {
     inputClass?: string;
     watch?: string | string[];

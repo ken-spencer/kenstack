@@ -30,6 +30,7 @@ import SelectField from "@kenstack/forms/SelectField";
 import SlugField from "@kenstack/forms/SlugField";
 import SwitchField from "@kenstack/forms/SwitchField";
 import TextareaField from "@kenstack/forms/TextareaField";
+import UrlField from "@kenstack/forms/UrlField";
 import { hasKey } from "@kenstack/lib/hasKey";
 
 export type FieldComponentProps = {
@@ -57,10 +58,6 @@ function NumberInputField(props: InputProps) {
 
 function EmailInputField(props: InputProps) {
   return <InputField {...props} type="email" />;
-}
-
-function UrlInputField(props: InputProps) {
-  return <InputField {...props} type="url" />;
 }
 
 function BooleanField(
@@ -98,7 +95,7 @@ const builtInFieldComponents = {
   tags: TagField,
   slug: SlugField,
   toggle: SwitchField,
-  url: UrlInputField,
+  url: UrlField,
 };
 
 type FieldComponents<TFields extends DefinedFields> = Partial<

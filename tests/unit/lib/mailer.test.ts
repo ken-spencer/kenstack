@@ -39,6 +39,16 @@ describe("mailer delivery results", () => {
     });
   });
 
+  it("adds a reply-to mailbox to the raw message", async () => {
+    send.mockResolvedValue({ MessageId: "message-1" });
+
+    await mailer({ ...options, replyTo: "visitor@example.com" });
+
+    const command = send.mock.calls[0]?.[0];
+    const raw = Buffer.from(command.input.RawMessage.Data).toString("utf8");
+    expect(raw).toContain("Reply-To: <visitor@example.com>");
+  });
+
   it("treats an unusable success response as operational", async () => {
     send.mockResolvedValue({});
 
