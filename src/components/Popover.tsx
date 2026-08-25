@@ -266,6 +266,15 @@ function PopoverContent({
       onClick={(event) => {
         props.onClick?.(event);
 
+        if (
+          event.target instanceof Element &&
+          event.target.closest("a[href]")
+        ) {
+          event.currentTarget.close();
+          setOpen(false);
+          return;
+        }
+
         if (event.target !== event.currentTarget) {
           return;
         }

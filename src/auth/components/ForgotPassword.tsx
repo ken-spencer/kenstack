@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 
 import Link from "next/link";
 
@@ -32,20 +32,33 @@ export default function ForgotPasswordFormCont() {
 export function ForgotPasswordForm() {
   const searchParams = useSearchParams();
   const { executeRecaptcha } = useGoogleReCaptcha();
-  const [message, setMessage] = useState(() => {
-    if (typeof window === "undefined") {
+  const [message, setMessage] = useState<string>();
+  const hasLoadedMessage = useRef(false);
+
+  useEffect(() => {
+    if (hasLoadedMessage.current) {
       return;
     }
-    let m;
-    if ((m = searchParams.get("forgottenPasswordMessage"))) {
-      window.history.replaceState(null, "", window.location.pathname);
-    } else if ((m = getCookie("forgottenPasswordMessage"))) {
-      if (m) {
+    hasLoadedMessage.current = true;
+
+    let nextMessage = searchParams.get("forgottenPasswordMessage") ?? undefined;
+    if (nextMessage) {
+      const params = new URLSearchParams(window.location.search);
+      params.delete("forgottenPasswordMessage");
+      window.history.replaceState(
+        null,
+        "",
+        window.location.pathname + (params.size ? `?${params}` : ""),
+      );
+    } else {
+      nextMessage = getCookie("forgottenPasswordMessage") ?? undefined;
+      if (nextMessage) {
         deleteCookie("forgottenPasswordMessage", "/forgot-password");
       }
     }
-    return m;
-  });
+
+    setMessage(nextMessage);
+  }, [searchParams]);
 
   return (
     <Form
@@ -54,7 +67,7 @@ export function ForgotPasswordForm() {
       schema={schema}
       defaultValues={defaultValues}
       onSubmit={async ({ data, mutation, form }) => {
-        setMessage("");
+        setMessage(undefined);
         const recaptchaToken = executeRecaptcha
           ? await executeRecaptcha("forgottenPassword")
           : null;
@@ -80,8 +93,8 @@ export function ForgotPasswordForm() {
       />
 
       <div className="flex justify-between">
-        <Submit>Submit</Submit>
-        <Link href="/login">Return to Login?</Link>
+        <Submit>Send reset link</Submit>
+        <Link href="/login">Return to login</Link>
       </div>
 
       <RecaptchaTerms />
