@@ -1,6 +1,8 @@
 import bcrypt from "bcrypt";
 
+import { revalidateTag } from "next/cache";
 import { pipeline, PipelineOptions, pipelineStage } from "@kenstack/api";
+import { userSessionsCacheTag } from "@kenstack/auth/server/user";
 import schema from "@kenstack/auth/schemas/resetPassword";
 import { deps } from "@app/deps";
 import { and, eq, gte, isNull } from "drizzle-orm";
@@ -141,6 +143,8 @@ const resetPasswordAction = pipelineStage(
         throw err;
       }
 
+      revalidateTag(userSessionsCacheTag(user.id), { expire: 0 });
+
       await deps.auth.login(user.id);
       await deps.logger.audit({
         action: "reset-password",
@@ -243,6 +247,8 @@ const resetPasswordAction = pipelineStage(
           "We couldn't update your password. Please try again.",
         );
       }
+
+      revalidateTag(userSessionsCacheTag(session.userId), { expire: 0 });
 
       await deps.auth.login(session.userId);
       await deps.logger.audit({

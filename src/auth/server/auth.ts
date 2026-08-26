@@ -1,6 +1,8 @@
 import { cache } from "react";
+import { revalidateTag } from "next/cache";
 import { cookies } from "next/headers";
 import { generateToken, hashToken } from "./token";
+import { sessionCacheTag } from "./user";
 import { AuthDeps } from "./types";
 import { eq } from "drizzle-orm";
 import type { User } from "@kenstack/types";
@@ -104,6 +106,8 @@ export function createAuth<
       table: "sessions",
       data: { impersonatedUserId: userId },
     });
+
+    revalidateTag(sessionCacheTag(tokenHash), { expire: 0 });
   };
 
   const logout = async (): Promise<void> => {
@@ -139,6 +143,8 @@ export function createAuth<
         data: { impersonatedUserId: user.id },
       });
 
+      revalidateTag(sessionCacheTag(tokenHash), { expire: 0 });
+
       return;
     }
 
@@ -153,6 +159,8 @@ export function createAuth<
       rowId: deletedSession ? deletedSession.id : null,
       table: "sessions",
     });
+
+    revalidateTag(sessionCacheTag(tokenHash), { expire: 0 });
 
     const isProd =
       !process.env.DEVELOPMENT && process.env.NODE_ENV === "production";
