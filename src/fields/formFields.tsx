@@ -119,7 +119,9 @@ type GeneratedFieldProps<
 > = Omit<
   ComponentProps<ComponentFor<TFields, TName, TFieldComponents>>,
   "name" | "label" | keyof TFields[TName]
->;
+> & {
+  namePrefix?: string;
+};
 
 type GeneratedFormFields<
   TFields extends DefinedFields,
@@ -177,9 +179,18 @@ export function defineFormFields<
       }
 
       const configuredProps = getConfiguredFormProps(field);
-      const fieldName = options.prefix ? `${options.prefix}.${name}` : name;
+      const configuredFieldName = options.prefix
+        ? `${options.prefix}.${name}`
+        : name;
 
-      function GeneratedField(props: Record<string, unknown>) {
+      function GeneratedField({
+        namePrefix,
+        ...props
+      }: Record<string, unknown> & { namePrefix?: string }) {
+        const fieldName = namePrefix
+          ? `${namePrefix}.${configuredFieldName}`
+          : configuredFieldName;
+
         return createElement(
           Component as ComponentType<Record<string, unknown>>,
           {
@@ -191,7 +202,7 @@ export function defineFormFields<
         );
       }
 
-      GeneratedField.displayName = `Field.${fieldName}`;
+      GeneratedField.displayName = `Field.${configuredFieldName}`;
       return [[name, GeneratedField]];
     }),
   ) as unknown as GeneratedFormFields<TFields, TFieldComponents>;

@@ -18,6 +18,7 @@ import {
   type ComponentProps,
   type MouseEvent,
   type ReactNode,
+  type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
 
@@ -129,6 +130,7 @@ function PopoverTrigger({
 
 function PopoverContent({
   align = "center",
+  anchorRef,
   autoFocus = true,
   children,
   className,
@@ -138,6 +140,7 @@ function PopoverContent({
   ...props
 }: Omit<ComponentProps<"dialog">, "open"> & {
   align?: "center" | "end" | "start";
+  anchorRef?: RefObject<HTMLElement | null>;
   autoFocus?: boolean;
   onEscape?: () => void;
   sideOffset?: number;
@@ -147,9 +150,9 @@ function PopoverContent({
   const [mounted, setMounted] = useState(false);
   const positionCurrentDialog = useCallback(
     (dialog: HTMLDialogElement) => {
-      positionDialog(dialog, contentId, align, sideOffset);
+      positionDialog(dialog, contentId, align, sideOffset, anchorRef?.current);
     },
-    [align, contentId, sideOffset],
+    [align, anchorRef, contentId, sideOffset],
   );
   const visibleOpen = useDialogTransition(
     dialogRef,
@@ -186,18 +189,29 @@ function PopoverContent({
       const dialog = dialogRef.current;
 
       if (dialog?.open) {
-        positionDialog(dialog, contentId, align, sideOffset);
+        positionDialog(
+          dialog,
+          contentId,
+          align,
+          sideOffset,
+          anchorRef?.current,
+        );
       }
     }
 
     window.addEventListener("resize", handlePositionChange);
     window.addEventListener("scroll", handlePositionChange, true);
+    const resizeObserver = new ResizeObserver(handlePositionChange);
+    if (dialogRef.current) {
+      resizeObserver.observe(dialogRef.current);
+    }
 
     return () => {
       window.removeEventListener("resize", handlePositionChange);
       window.removeEventListener("scroll", handlePositionChange, true);
+      resizeObserver.disconnect();
     };
-  }, [align, contentId, open, sideOffset]);
+  }, [align, anchorRef, contentId, open, sideOffset]);
 
   useEffect(() => {
     if (!open) {
@@ -212,7 +226,9 @@ function PopoverContent({
       }
 
       if (
-        getTriggerElement(contentId)?.contains(target) ||
+        (anchorRef?.current ?? getTriggerElement(contentId))?.contains(
+          target,
+        ) ||
         dialogRef.current?.contains(target)
       ) {
         return;
@@ -240,7 +256,7 @@ function PopoverContent({
     return () => {
       document.removeEventListener("pointerdown", handlePointerDown, true);
     };
-  }, [contentId, isTopOverlay, open, setOpen]);
+  }, [anchorRef, contentId, isTopOverlay, open, setOpen]);
 
   const portalTarget = mounted ? document.body : null;
 
@@ -313,23 +329,24 @@ function positionDialog(
   contentId: string,
   align: "center" | "end" | "start",
   sideOffset: number,
+  anchor?: HTMLElement | null,
 ) {
-  const trigger = getTriggerElement(contentId);
+  const trigger = anchor ?? getTriggerElement(contentId);
 
   if (!trigger) {
     return;
   }
 
   const triggerRect = trigger.getBoundingClientRect();
-  const dialogRect = dialog.getBoundingClientRect();
+  const dialogWidth = dialog.offsetWidth;
   const viewportPadding = 8;
   const viewportHeight = document.documentElement.clientHeight;
   const viewportWidth = document.documentElement.clientWidth;
   const left =
     align === "end"
-      ? triggerRect.right - dialogRect.width
+      ? triggerRect.right - dialogWidth
       : align === "center"
-        ? triggerRect.left + triggerRect.width / 2 - dialogRect.width / 2
+        ? triggerRect.left + triggerRect.width / 2 - dialogWidth / 2
         : triggerRect.left;
 
   dialog.style.position = "fixed";
@@ -340,7 +357,7 @@ function positionDialog(
   dialog.style.left =
     Math.min(
       Math.max(viewportPadding, left),
-      viewportWidth - dialogRect.width - viewportPadding,
+      viewportWidth - dialogWidth - viewportPadding,
     ) + "px";
   const dialogHeight = dialog.offsetHeight;
   const belowTop = triggerRect.bottom + sideOffset;
@@ -363,14 +380,6 @@ function positionDialog(
     "--popover-trigger-height",
     triggerRect.height + "px",
   );
-
-  const adjustedRect = dialog.getBoundingClientRect();
-  const adjustedLeft = Math.min(
-    Math.max(viewportPadding, adjustedRect.left),
-    viewportWidth - adjustedRect.width - viewportPadding,
-  );
-
-  dialog.style.left = adjustedLeft + "px";
 }
 
 function getTriggerElement(contentId: string) {

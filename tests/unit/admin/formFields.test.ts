@@ -98,6 +98,21 @@ describe("form field generation", () => {
     expect(Object.keys(formFields)).toEqual(["title"]);
   });
 
+  it("composes a runtime prefix for fields in repeated records", () => {
+    const Name = () => null;
+    const formFields = defineFormFields(
+      defineFields({ fields: { title: textField() } }),
+      { components: { title: Name }, prefix: "content" },
+    );
+    const title = formFields.title as unknown as (props: object) => {
+      props: Record<string, unknown>;
+    };
+
+    expect(title({ namePrefix: "blocks.2" }).props.name).toBe(
+      "blocks.2.content.title",
+    );
+  });
+
   it("keeps field-owned options out of generated render props", () => {
     const configuredFields = defineFields({
       fields: {

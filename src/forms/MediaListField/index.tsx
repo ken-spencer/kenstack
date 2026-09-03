@@ -15,6 +15,7 @@ import ProgressIcon from "@kenstack/icons/Progress";
 import AttachmentList, {
   type AttachmentListItem,
 } from "@kenstack/components/AttachmentList";
+import { SortableItem, SortableList } from "@kenstack/components/SortableList";
 import Field, { FormControl, type FieldProps } from "@kenstack/forms/Field";
 import AddImageIcon from "@kenstack/forms/ImageField/AddImageIcon";
 import { useForm } from "@kenstack/forms/context";
@@ -149,7 +150,6 @@ const mediaRender = ({
   }) {
     const { form, finishUploading, setStatusMessage, startUploading } =
       useForm();
-    const [dragIndex, setDragIndex] = useState<number | null>(null);
     const [editing, setEditing] = useState<{
       index: number;
       mode: "crop" | "details";
@@ -454,135 +454,121 @@ const mediaRender = ({
         )}
         {...dragEvents}
       >
-        {value.map((image, index) => {
-          const fileMedia = image.kind === "file";
-          const uploadStatus =
-            image.uploadState && image.uploadState !== "done"
-              ? attachmentUploadStatusLabels[image.uploadState]
-              : null;
-          const cropSource = image.original;
-          const imagePreview = fileMedia ? (
-            <AttachmentFilePreview media={image} />
-          ) : cropSource && form.getFieldState(field.name).isDirty ? (
-            <SquareCropPreview
-              alt={image.alt ?? ""}
-              className="h-full w-full"
-              crop={image.squareCrop}
-              source={cropSource}
-            />
-          ) : (
-            <img
-              alt={image.alt ?? ""}
-              className="h-full w-full object-cover"
-              src={image.previewUrl ?? image.url}
-            />
-          );
+        <SortableList
+          ids={value.map((image) =>
+            String(image.id ?? image.mediaId ?? image.url),
+          )}
+          layout="grid"
+          onMove={moveImage}
+        >
+          {value.map((image, index) => {
+            const fileMedia = image.kind === "file";
+            const uploadStatus =
+              image.uploadState && image.uploadState !== "done"
+                ? attachmentUploadStatusLabels[image.uploadState]
+                : null;
+            const cropSource = image.original;
+            const imagePreview = fileMedia ? (
+              <AttachmentFilePreview media={image} />
+            ) : cropSource && form.getFieldState(field.name).isDirty ? (
+              <SquareCropPreview
+                alt={image.alt ?? ""}
+                className="h-full w-full"
+                crop={image.squareCrop}
+                source={cropSource}
+              />
+            ) : (
+              <img
+                alt={image.alt ?? ""}
+                className="h-full w-full object-cover"
+                src={image.previewUrl ?? image.url}
+              />
+            );
 
-          return (
-            <div
-              key={image.id ?? image.mediaId ?? image.url}
-              draggable
-              className={twMerge(
-                "border-border bg-muted/50 relative size-28 cursor-grab overflow-hidden rounded border active:cursor-grabbing",
-                image.uploadState === "error" && "opacity-45 grayscale",
-                itemClassName,
-              )}
-              onDragStart={(evt) => {
-                setDragIndex(index);
-                evt.dataTransfer.effectAllowed = "move";
-                evt.dataTransfer.setData("action", "moveMediaImage");
-              }}
-              onDragEnd={() => {
-                setDragIndex(null);
-              }}
-              onDragOver={(evt) => {
-                if (dragIndex !== null) {
-                  evt.preventDefault();
-                  evt.dataTransfer.dropEffect = "move";
-                }
-              }}
-              onDrop={(evt) => {
-                evt.preventDefault();
-                evt.stopPropagation();
-                if (dragIndex !== null) {
-                  moveImage(dragIndex, index);
-                  setDragIndex(null);
-                }
-              }}
-            >
-              <button
-                type="button"
-                title="Remove media"
-                aria-label="Remove media"
-                draggable={false}
-                className={"absolute top-1 right-1 z-20 " + buttonClass}
-                onPointerDown={(evt) => {
-                  evt.stopPropagation();
-                }}
-                onClick={(evt) => {
-                  evt.stopPropagation();
-                  removeImage(index);
-                }}
+            return (
+              <SortableItem
+                key={image.id ?? image.mediaId ?? image.url}
+                className={twMerge(
+                  "border-border bg-muted/50 relative size-28 cursor-grab overflow-hidden rounded border active:cursor-grabbing",
+                  image.uploadState === "error" && "opacity-45 grayscale",
+                  itemClassName,
+                )}
+                id={String(image.id ?? image.mediaId ?? image.url)}
               >
-                <X />
-              </button>
-              {ImageDetails ? (
                 <button
                   type="button"
-                  aria-label="Edit image details"
-                  className="block h-full w-full"
-                  disabled={image.uploadState === "error" || fileMedia}
-                  onClick={() => {
-                    if (!fileMedia) {
-                      setEditing({ index, mode: "details" });
-                    }
+                  title="Remove media"
+                  aria-label="Remove media"
+                  draggable={false}
+                  className={"absolute top-1 right-1 z-20 " + buttonClass}
+                  onPointerDown={(evt) => {
+                    evt.stopPropagation();
+                  }}
+                  onClick={(evt) => {
+                    evt.stopPropagation();
+                    removeImage(index);
                   }}
                 >
-                  {imagePreview}
+                  <X />
                 </button>
-              ) : (
-                <div className="h-full w-full">{imagePreview}</div>
-              )}
-              <div className="pointer-events-none absolute inset-0">
-                {uploadStatus && image.uploadState !== "uploading" ? (
-                  <div
-                    className={twMerge(
-                      "absolute inset-0 flex items-center justify-center bg-black/35 text-xs font-medium text-white",
-                      image.uploadState === "error" &&
-                        "bg-black/45 px-2 text-center",
-                    )}
+                {ImageDetails ? (
+                  <button
+                    type="button"
+                    aria-label="Edit image details"
+                    className="block h-full w-full"
+                    disabled={image.uploadState === "error" || fileMedia}
+                    onClick={() => {
+                      if (!fileMedia) {
+                        setEditing({ index, mode: "details" });
+                      }
+                    }}
                   >
-                    {uploadStatus}
-                  </div>
+                    {imagePreview}
+                  </button>
+                ) : (
+                  <div className="h-full w-full">{imagePreview}</div>
+                )}
+                <div className="pointer-events-none absolute inset-0">
+                  {uploadStatus && image.uploadState !== "uploading" ? (
+                    <div
+                      className={twMerge(
+                        "absolute inset-0 flex items-center justify-center bg-black/35 text-xs font-medium text-white",
+                        image.uploadState === "error" &&
+                          "bg-black/45 px-2 text-center",
+                      )}
+                    >
+                      {uploadStatus}
+                    </div>
+                  ) : null}
+                  {image.uploadState === "uploading" ? (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/35">
+                      <ProgressIcon
+                        className="size-8 animate-spin text-white"
+                        style={{ animationDuration: "2s" }}
+                      />
+                    </div>
+                  ) : null}
+                </div>
+                {canUpload && cropSource && image.uploadState !== "error" ? (
+                  <Button
+                    type="button"
+                    aria-label="Adjust crop"
+                    className="bg-background/90 absolute right-1 bottom-1 z-20"
+                    icon={Crop}
+                    size="icon-xs"
+                    tooltip="Adjust crop"
+                    variant="outline"
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setEditing({ index, mode: "crop" });
+                    }}
+                  />
                 ) : null}
-                {image.uploadState === "uploading" ? (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/35">
-                    <ProgressIcon
-                      className="size-8 animate-spin text-white"
-                      style={{ animationDuration: "2s" }}
-                    />
-                  </div>
-                ) : null}
-              </div>
-              {canUpload && cropSource && image.uploadState !== "error" ? (
-                <Button
-                  type="button"
-                  aria-label="Adjust crop"
-                  className="bg-background/90 absolute right-1 bottom-1 z-20"
-                  icon={Crop}
-                  size="icon-xs"
-                  tooltip="Adjust crop"
-                  variant="outline"
-                  onPointerDown={(event) => event.stopPropagation()}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setEditing({ index, mode: "crop" });
-                  }}
-                />
-              ) : null}
-            </div>
-          );
-        })}
+              </SortableItem>
+            );
+          })}
+        </SortableList>
 
         <label
           className={twMerge(
