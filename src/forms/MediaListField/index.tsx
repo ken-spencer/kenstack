@@ -506,9 +506,8 @@ const createMediaRender = ({
                   aria-label="Remove media"
                   draggable={false}
                   className={"absolute top-1 right-1 z-20 " + buttonClass}
-                  onPointerDown={(evt) => {
-                    evt.stopPropagation();
-                  }}
+                  onMouseDown={(evt) => evt.stopPropagation()}
+                  onTouchStart={(evt) => evt.stopPropagation()}
                   onClick={(evt) => {
                     evt.stopPropagation();
                     removeImage(index);
@@ -563,7 +562,8 @@ const createMediaRender = ({
                     size="icon-xs"
                     tooltip="Adjust crop"
                     variant="outline"
-                    onPointerDown={(event) => event.stopPropagation()}
+                    onMouseDown={(event) => event.stopPropagation()}
+                    onTouchStart={(event) => event.stopPropagation()}
                     onClick={(event) => {
                       event.stopPropagation();
                       setEditing({ index, mode: "crop" });

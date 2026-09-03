@@ -23,7 +23,6 @@ import {
   ChevronDown,
   ChevronLeft,
   Eye,
-  GripVertical,
   Plus,
   Save,
   Trash2,
@@ -58,7 +57,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@kenstack/components/Popover";
-import { SortableItem, SortableList } from "@kenstack/components/SortableList";
+import {
+  SortableHandle,
+  SortableItem,
+  SortableList,
+} from "@kenstack/components/SortableList";
 import { defineFormFields } from "@kenstack/fields/formFields";
 import DateTimeField from "@kenstack/forms/DateTimeField";
 import unsecureId from "@kenstack/lib/unsecureId";
@@ -526,6 +529,7 @@ export default function EditComposerClient({
             }`}
           >
             <SortableList
+              activator="handle"
               ids={activeEntries.map(({ block }) => block.id)}
               onMove={(from, to) => {
                 const fromEntry = activeEntries[from];
@@ -558,6 +562,7 @@ export default function EditComposerClient({
                       key={block.formKey}
                     >
                       <div className="flex items-start gap-1 p-2">
+                        <SortableHandle />
                         <button
                           aria-pressed={selected}
                           className="flex min-w-0 flex-1 items-start gap-2 text-left"
@@ -567,10 +572,6 @@ export default function EditComposerClient({
                           }}
                           type="button"
                         >
-                          <GripVertical
-                            aria-hidden="true"
-                            className="text-muted-foreground mt-0.5 size-4 shrink-0 cursor-grab"
-                          />
                           <span className="text-muted-foreground mt-0.5 shrink-0">
                             {definition?.icon}
                           </span>

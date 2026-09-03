@@ -18,6 +18,7 @@ import {
 } from "@kenstack/list/querySchema";
 import { loadAdminList } from "@kenstack/admin/queries/list";
 import { loadAdminParentRecord } from "@kenstack/admin/queries/parent";
+import { io } from "next/cache";
 import { notFound } from "next/navigation";
 import {
   dehydrate,
@@ -77,6 +78,9 @@ export default async function AdminListCont({
     notFound();
   }
 
+  // The list load is cached, so nothing above suspends prerendering; the
+  // query cache stamps the current time when it stores the data.
+  await io();
   const queryClient = new QueryClient();
 
   queryClient.setQueryData(

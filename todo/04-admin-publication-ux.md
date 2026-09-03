@@ -27,12 +27,13 @@ Kenstack work; Composer persistence and host page/content decisions stay with th
   (2026-08-28). Auto-save may return once draft isolation exists: draft saves would overwrite the
   draft in place with revisions written at publish or coalesced per session, so revision pollution is
   not the blocker.
-- **Touch-safe drag activation** (review finding, 2026-08-28): `SortableItem` currently puts
-  `touch-none` and the drag listeners on the whole item, so touch scrolling is blocked over Composer
-  outline cards and media tiles. The outline card's grip icon becomes the dnd-kit activator via
-  `setActivatorNodeRef` (listeners, attributes, and `touch-none` move onto the grip); `MediaListField`
-  keeps whole-tile drag but switches to `MouseSensor` (distance) plus press-delay `TouchSensor` with
-  the blanket `touch-none` dropped, so scroll wins unless the user holds to drag.
+- **Touch-safe drag activation** (review finding, 2026-08-28; landed 2026-09-03): `SortableList`
+  gained `activator="handle"`, under which only a `SortableHandle` grip inside the item starts a drag
+  and carries the listeners, attributes, and `touch-none`. Composer outline cards and the admin list
+  reorder use it; the admin list dropped its native HTML5 drag events for the shared component, with
+  subgrid row wrappers and one list per group so scoped reorder cannot cross groups. `MediaListField`
+  keeps whole-tile drag on `MouseSensor` (distance) plus press-delay `TouchSensor` with the blanket
+  `touch-none` dropped, so scroll wins unless the user holds to drag.
 
 ## Deferred: record-wide draft isolation
 

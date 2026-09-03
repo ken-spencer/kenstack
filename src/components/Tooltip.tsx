@@ -47,7 +47,11 @@ function clamp(value: number, minimum: number, maximum: number) {
   return Math.min(Math.max(value, minimum), Math.max(minimum, maximum));
 }
 
-function placeAlongViewport(center: number, size: number, viewportSize: number) {
+function placeAlongViewport(
+  center: number,
+  size: number,
+  viewportSize: number,
+) {
   const start = clamp(
     center - size / 2,
     viewportMargin,
@@ -77,8 +81,7 @@ function getTooltipPosition(
     right:
       rect.right + tooltipGap + width <= window.innerWidth - viewportMargin,
     bottom:
-      rect.bottom + tooltipGap + height <=
-      window.innerHeight - viewportMargin,
+      rect.bottom + tooltipGap + height <= window.innerHeight - viewportMargin,
     left: rect.left - tooltipGap - width >= viewportMargin,
   } satisfies Record<TooltipSide, boolean>;
   const oppositeSide = {
@@ -89,9 +92,7 @@ function getTooltipPosition(
   } as const satisfies Record<TooltipSide, TooltipSide>;
   const opposite = oppositeSide[preferredSide];
   const side =
-    !sideFits[preferredSide] && sideFits[opposite]
-      ? opposite
-      : preferredSide;
+    !sideFits[preferredSide] && sideFits[opposite] ? opposite : preferredSide;
 
   switch (side) {
     case "top":
@@ -167,7 +168,9 @@ export default function Tooltip({
   }, []);
   const updatePosition = useCallback(() => {
     if (triggerRef.current && tooltipRef.current) {
-      setPosition(getTooltipPosition(triggerRef.current, tooltipRef.current, side));
+      setPosition(
+        getTooltipPosition(triggerRef.current, tooltipRef.current, side),
+      );
     }
   }, [side]);
   const setTooltipNode = useCallback(

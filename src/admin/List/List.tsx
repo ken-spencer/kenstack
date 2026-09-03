@@ -1,21 +1,19 @@
 "use client";
-import {
-  Fragment,
-  useRef,
-  useState,
-  type CSSProperties,
-  type DragEvent,
-} from "react";
+import { Fragment, useState, type CSSProperties } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { GripVertical } from "lucide-react";
+import { arrayMove } from "@dnd-kit/sortable";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAdminList, type AdminListQueryData } from "./context";
 
 import Notice from "@kenstack/components/Notice";
-import Button from "@kenstack/components/Button";
 import { Skeleton } from "@kenstack/components/Skeleton";
+import {
+  SortableHandle,
+  SortableItem,
+  SortableList,
+} from "@kenstack/components/SortableList";
 import { Checkbox } from "@kenstack/forms/controls/Checkbox";
 import ListTitle from "@kenstack/admin/components/ListTitle";
 import Updated from "@kenstack/admin/components/Updated";
@@ -51,11 +49,6 @@ function AdminList() {
     client: { listItems },
   } = useAdminList();
   const [reorderError, setReorderError] = useState<string | null>(null);
-  const draggedId = useRef<number | null>(null);
-  const draggedScope = useRef<{ by: string; value: number | string } | null>(
-    null,
-  );
-  const dragStartOrder = useRef<number[]>([]);
   const queryClient = useQueryClient();
 
   const { data, error, isFetching, isPending, isPlaceholderData } = query;
@@ -87,52 +80,6 @@ function AdminList() {
       queryClient.invalidateQueries({ queryKey: ["admin-list", name] });
     },
   });
-  const getQueryOrder = (
-    scope: { by: string; value: number | string } | null,
-  ) => {
-    const current = queryClient.getQueryData<AdminListQueryData>(queryKey);
-    return current?.status === "success"
-      ? current.items
-          .filter((row) => !scope || groupValue(row, scope.by) === scope.value)
-          .map((row) => row.id)
-      : [];
-  };
-  const reorderToTarget = (targetId: number) => {
-    const sourceId = draggedId.current;
-    if (sourceId === null || sourceId === targetId) {
-      return;
-    }
-
-    const current = queryClient.getQueryData<AdminListQueryData>(queryKey);
-    if (!current || current.status === "error") {
-      return;
-    }
-
-    const sourceIndex = current.items.findIndex((row) => row.id === sourceId);
-    const targetIndex = current.items.findIndex((row) => row.id === targetId);
-
-    if (sourceIndex === -1 || targetIndex === -1) {
-      return;
-    }
-    const scope = draggedScope.current;
-    if (
-      scope &&
-      (groupValue(current.items[sourceIndex], scope.by) !== scope.value ||
-        groupValue(current.items[targetIndex], scope.by) !== scope.value)
-    ) {
-      return;
-    }
-
-    const nextItems = [...current.items];
-    nextItems[sourceIndex] = current.items[targetIndex];
-    nextItems[targetIndex] = current.items[sourceIndex];
-
-    queryClient.setQueryData<AdminListQueryData>(queryKey, () => ({
-      ...current,
-      items: nextItems,
-    }));
-  };
-
   if (error) {
     return <Notice className="my-2">{error.message}</Notice>;
   }
@@ -175,124 +122,119 @@ function AdminList() {
       )
       .join(" "),
   };
-  const finishReorderDrag = () => {
-    const startedWith = dragStartOrder.current;
-    const currentIds = getQueryOrder(draggedScope.current);
-    draggedId.current = null;
-    draggedScope.current = null;
-    dragStartOrder.current = [];
+  // Consecutive rows sharing a group value form one section. Each section
+  // reorders on its own so a row cannot be dragged into another group's
+  // sequence.
+  const sections: {
+    rows: typeof data.items;
+    start: number;
+    value: number | string | null;
+  }[] = [];
+  data.items.forEach((item, index) => {
+    const value = group ? groupValue(item, group.by) : null;
+    const section = sections.at(-1);
 
-    if (
-      startedWith.length === currentIds.length &&
-      currentIds.some((id, index) => id !== startedWith[index])
-    ) {
-      reorderMutation.mutate(currentIds);
+    if (section && section.value === value) {
+      section.rows.push(item);
+    } else {
+      sections.push({ rows: [item], start: index, value });
     }
-  };
-  const handleReorderDragEnter = (event: DragEvent<HTMLDivElement>) => {
-    if (draggedId.current === null) {
-      return;
-    }
-
-    const targetId = findReorderTargetId(event.target);
-    const previousTargetId = findReorderTargetId(event.relatedTarget);
-
-    if (targetId === null || previousTargetId === targetId) {
-      return;
-    }
-
-    reorderToTarget(targetId);
-  };
-  const handleReorderDragOver = (event: DragEvent<HTMLDivElement>) => {
-    if (draggedId.current === null) {
-      return;
-    }
-
-    if (findReorderTargetId(event.target) === null) {
-      return;
-    }
-
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
-  };
-
+  });
   return (
     <>
       {reorderError ? <Notice className="my-2">{reorderError}</Notice> : null}
       <div
-        className="grid [grid-template-columns:min-content_var(--list-item-mobile-columns)] gap-x-2 md:[grid-template-columns:min-content_var(--list-item-columns)]"
-        onDragEnter={isReorderSort ? handleReorderDragEnter : undefined}
-        onDragOver={isReorderSort ? handleReorderDragOver : undefined}
-        onDrop={
-          isReorderSort
-            ? (event) => {
-                event.preventDefault();
-                finishReorderDrag();
-              }
-            : undefined
-        }
+        className="grid [grid-template-columns:min-content_var(--list-item-mobile-columns)] gap-x-2 pb-2 md:[grid-template-columns:min-content_var(--list-item-columns)]"
         style={listStyle}
       >
-        {data.items.map((item, key) => {
-          const value = group ? groupValue(item, group.by) : null;
-          const previous =
-            group && key > 0 ? groupValue(data.items[key - 1], group.by) : null;
-          const path =
-            `/admin/${name}/${item.id}` +
-            (searchParams.size ? "?" + searchParams : "");
+        {sections.map(({ rows, start, value }) => {
+          const rowElements = rows.map((item, index) => {
+            const path =
+              `/admin/${name}/${item.id}` +
+              (searchParams.size ? "?" + searchParams : "");
+            const rowClassName = cn(
+              "col-span-full grid grid-cols-subgrid",
+              start + index < data.items.length - 1 &&
+                "border-b border-b-[var(--admin-divider)]",
+            );
+            const cells = (
+              <>
+                <div className="flex items-center justify-self-start px-1 py-2">
+                  {isReorderSort ? (
+                    <SortableHandle />
+                  ) : (
+                    <Checkbox
+                      checked={selected.includes(item.id)}
+                      onCheckedChange={(checked) => {
+                        return checked
+                          ? setSelected([...selected, item.id])
+                          : setSelected(
+                              selected.filter((value) => value !== item.id),
+                            );
+                      }}
+                    />
+                  )}
+                </div>
+                <ListItemCells
+                  item={{ ...item, path }}
+                  listItems={resolvedListItems}
+                  grouped={value !== null}
+                />
+              </>
+            );
+
+            return isReorderSort ? (
+              <SortableItem
+                className={rowClassName}
+                disabled={!canDragReorder}
+                id={String(item.id)}
+                key={item.id}
+              >
+                {cells}
+              </SortableItem>
+            ) : (
+              <div className={rowClassName} key={item.id}>
+                {cells}
+              </div>
+            );
+          });
 
           return (
-            <Fragment key={item.id}>
-              {group && value !== null && (key === 0 || value !== previous) ? (
+            <Fragment key={start}>
+              {group && value !== null ? (
                 <GroupHeading
                   id={value}
-                  label={groupValue(item, group.label) ?? value}
+                  label={groupValue(rows[0], group.label) ?? value}
                   link={group.link}
                 />
               ) : null}
-              <div
-                className="flex items-center justify-self-start px-1 py-2"
-                data-reorder-id={isReorderSort ? item.id : undefined}
-              >
-                {isReorderSort ? (
-                  <ReorderHandle
-                    disabled={!canDragReorder}
-                    itemId={item.id}
-                    onDragStart={() => {
-                      draggedId.current = item.id;
-                      draggedScope.current =
-                        group && value !== null
-                          ? { by: group.by, value }
-                          : null;
-                      dragStartOrder.current = getQueryOrder(
-                        draggedScope.current,
-                      );
-                    }}
-                    onDragEnd={finishReorderDrag}
-                  />
-                ) : (
-                  <Checkbox
-                    checked={selected.includes(item.id)}
-                    onCheckedChange={(checked) => {
-                      return checked
-                        ? setSelected([...selected, item.id])
-                        : setSelected(
-                            selected.filter((value) => value !== item.id),
-                          );
-                    }}
-                  />
-                )}
-              </div>
-              <ListItemCells
-                item={{ ...item, path }}
-                listItems={resolvedListItems}
-                reorderId={isReorderSort ? item.id : undefined}
-                grouped={value !== null}
-              />
-              {data.items.length > key + 1 ? (
-                <div className="col-span-full border-t border-t-[var(--admin-divider)]" />
+              {isReorderSort ? (
+                <SortableList
+                  activator="handle"
+                  ids={rows.map(({ id }) => String(id))}
+                  onMove={(from, to) => {
+                    const moved = arrayMove(rows, from, to);
+
+                    queryClient.setQueryData<AdminListQueryData>(
+                      queryKey,
+                      () => ({
+                        ...data,
+                        items: [
+                          ...data.items.slice(0, start),
+                          ...moved,
+                          ...data.items.slice(start + moved.length),
+                        ],
+                      }),
+                    );
+                    reorderMutation.mutate(moved.map(({ id }) => id));
+                  }}
+                >
+                  <div className="col-span-full grid grid-cols-subgrid">
+                    {rowElements}
+                  </div>
+                </SortableList>
               ) : (
-                <div className="col-span-full mt-2" />
+                rowElements
               )}
             </Fragment>
           );
@@ -336,51 +278,6 @@ function GroupHeading({
   );
 }
 
-function ReorderHandle({
-  disabled,
-  itemId,
-  onDragEnd,
-  onDragStart,
-}: {
-  disabled: boolean;
-  itemId: number;
-  onDragEnd: () => void;
-  onDragStart: () => void;
-}) {
-  return (
-    <Button
-      aria-label="Drag to reorder"
-      className="!cursor-grab touch-none active:!cursor-grabbing"
-      data-reorder-id={itemId}
-      disabled={disabled}
-      draggable={!disabled}
-      onDragEnd={onDragEnd}
-      onDragStart={(event) => {
-        event.dataTransfer.effectAllowed = "move";
-        event.dataTransfer.setData("text/plain", String(itemId));
-        onDragStart();
-      }}
-      size="icon-xs"
-      type="button"
-      variant="ghost"
-    >
-      <GripVertical className="text-muted-foreground size-4" />
-    </Button>
-  );
-}
-
-function findReorderTargetId(target: EventTarget | null) {
-  if (!(target instanceof HTMLElement)) {
-    return null;
-  }
-
-  const id = Number(
-    target.closest<HTMLElement>("[data-reorder-id]")?.dataset.reorderId,
-  );
-
-  return Number.isInteger(id) ? id : null;
-}
-
 function AdminListRowsSkeleton() {
   return (
     <div className="divide-border/50 divide-y">
@@ -421,19 +318,16 @@ function ListItemCells({
   grouped,
   item,
   listItems,
-  reorderId,
 }: {
   grouped: boolean;
   item: BaseListItem & Record<string, unknown> & { path: string };
   listItems: ListItems;
-  reorderId?: number;
 }) {
   return listItems.map(([render, options], key) => {
     return (
       <div
         key={key}
         className={cn("min-w-0 py-2 md:px-2", options?.className)}
-        data-reorder-id={reorderId}
         style={{ gridColumn: key + 2 }}
       >
         {render(item, { grouped })}

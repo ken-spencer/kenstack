@@ -6,6 +6,7 @@ import OneToOneTabs from "./OneToOneTabs";
 import Breadcrumbs from "@kenstack/admin/components/Breadcrumbs";
 import Button from "@kenstack/components/Button";
 import { uploadsConfigured } from "@kenstack/lib/mediaStorage";
+import { io } from "next/cache";
 import { notFound } from "next/navigation";
 import {
   dehydrate,
@@ -76,6 +77,9 @@ export default async function AdminEdit({
     notFound();
   }
 
+  // The record loads are cached, so nothing above suspends prerendering; the
+  // query cache stamps the current time when it stores a relation's data.
+  await io();
   const queryClient = new QueryClient();
   const oneToOneConfig = adminConfig.oneToOne;
   const relationEntries = oneToOneConfig

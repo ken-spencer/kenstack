@@ -5,6 +5,29 @@ contract lives in `docs/upgrading.md`.
 
 ## Unreleased
 
+### Sortable Activation
+
+Old API:
+
+- `SortableList` always used dnd-kit's `PointerSensor`, so any pointer type dragged a `SortableItem`
+  after a short distance, and every item carried `touch-none`, which blocked touch scrolling over
+  the list.
+
+New API:
+
+- `SortableList` takes `activator?: "handle" | "item"` (default `"item"`). With `"item"` a mouse
+  drags after a short distance and a touch after a short hold, and items no longer carry
+  `touch-none`, so touch scrolling wins unless the user holds. With `"handle"` only a
+  `SortableHandle` rendered inside the item starts a drag; it carries the drag listeners, dnd-kit's
+  aria attributes, and `touch-none`, and stays focusable while reordering is disabled.
+- `SortableHandle` is exported from `@kenstack/components/SortableList`.
+
+Migration steps:
+
+- Lists whose items are mostly links or buttons: pass `activator="handle"` and render
+  `<SortableHandle />` inside each `SortableItem`.
+- Whole-item drags need no change; touch users now hold briefly before a drag starts.
+
 ### React 19.2 Floor
 
 Old API:
