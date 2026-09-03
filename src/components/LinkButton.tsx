@@ -32,7 +32,10 @@ export function LinkButton({
       )}
       {...props}
     >
-      <span className="inline-flex items-center justify-center gap-1.5">
+      <span
+        className="inline-flex items-center justify-center gap-1.5"
+        data-slot="link-button-content"
+      >
         {iconPosition === "start" ? icon : null}
         {children}
         {iconPosition === "end" ? icon : null}

@@ -1,14 +1,14 @@
 # Kenstack
 
-Kenstack is a shared CMS/admin core for Next.js host sites. Host projects provide application-specific modules, tables, dependency wiring, and environment configuration through the documented Kenstack entry points.
+Kenstack is a shared CMS/admin core for Next.js host sites. Host projects provide application-specific modules, tables, narrow host bindings, and environment configuration through the documented Kenstack entry points.
 
 ## Host Expectations
 
 - Next.js App Router
-- React 19+
+- React 19.2+
 - Node.js 24+
 - Drizzle/Postgres application tables
-- `@app/deps` configured by the host site
+- `@app/db`, `@app/email`, `@app/modules`, and `@app/roles` mapped to their host owners
 - Kenstack modules defined with `defineModule`, `defineTable`, `defineFields`, and field helpers
 
 ## Scripts
@@ -54,5 +54,5 @@ Email alerting is enabled when the host provides:
 
 ## Conventions
 
-Standing agent rules live in `AGENTS.md`; stable technical references and downstream migration notes live
-in `docs/`.
+Standing agent rules live in `AGENTS.md`; stable technical references live in `docs/`, and downstream
+migration notes live in `CHANGELOG.md`.

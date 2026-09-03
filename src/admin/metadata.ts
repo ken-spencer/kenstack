@@ -8,17 +8,6 @@ import "server-only";
 
 import type { Metadata } from "next";
 
-import { selectImageSubquery } from "@kenstack/db/tables/media";
-import type { AdminSeoTable } from "./table";
-
-export function metaSelect<TTable extends AdminSeoTable>(table: TTable) {
-  return {
-    seoTitle: table.seoTitle,
-    seoDescription: table.seoDescription,
-    ogImage: selectImageSubquery(table.ogImage, "original"),
-  };
-}
-
 export function buildMetadata(
   record:
     | {

@@ -10,7 +10,10 @@ export type FetchSuccess<T extends Record<string, unknown>> = {
 
 export type FetchError = {
   status: "error";
+  code?: string;
   message?: string;
+  debugMessage?: string;
+  debugStack?: string;
   formErrors?: string[];
   fieldErrors?: Record<string, string | string[]>;
   redirect?: string;
@@ -82,12 +85,20 @@ export default async function fetcher<
   }
 
   if (json.status === "error" && response.status >= 500) {
-    throw ReturnedError(
+    const error = ReturnedError(
       typeof json.message === "string"
         ? json.message
         : "There was an unexpected problem with your request.",
       { status: response.status },
     );
+    if (typeof json.debugMessage === "string") {
+      const cause = new Error(json.debugMessage);
+      if (typeof json.debugStack === "string") {
+        cause.stack = json.debugStack;
+      }
+      error.cause = cause;
+    }
+    throw error;
   }
 
   if (json.redirect) {

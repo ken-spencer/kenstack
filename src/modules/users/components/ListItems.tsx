@@ -5,7 +5,7 @@ import Link from "next/link";
 import Avatar from "@kenstack/components/Avatar";
 import Updated from "@kenstack/admin/components/Updated";
 import type { ListItemRow } from "@kenstack/admin/client";
-import type { SelectedMedia } from "@kenstack/db/tables";
+import type { SelectedMedia } from "@kenstack/db/queries";
 import { formatUserInitials, formatUserName } from "@kenstack/lib/user";
 
 type UserListRow = ListItemRow<{

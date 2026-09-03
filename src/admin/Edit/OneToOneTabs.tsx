@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import fetcher from "@kenstack/api/fetcher";
-import Alert from "@kenstack/components/Alert";
+import Notice from "@kenstack/components/Notice";
 import { Skeleton } from "@kenstack/components/Skeleton";
 import { isRecord } from "@kenstack/lib/isRecord";
 import { useAdminEdit, type OneToOneEdit } from "./context";
@@ -83,10 +83,10 @@ function TabSet({ oneToOne }: { oneToOne: OneToOneEdit }) {
   return (
     <div className="space-y-6">
       {!activeRelation ? (
-        <Alert>
+        <Notice>
           The saved related type is unavailable. Choose a related type to repair
           this record.
-        </Alert>
+        </Notice>
       ) : null}
       <div
         aria-label="Record sections"
@@ -219,7 +219,7 @@ function Panel({ relation }: { relation: OneToOneEdit["relations"][number] }) {
   ]);
 
   if (relationQuery.error) {
-    return <Alert>{relationQuery.error.message}</Alert>;
+    return <Notice>{relationQuery.error.message}</Notice>;
   }
 
   if (!isNew && id && relationQuery.isPending) {
@@ -233,7 +233,7 @@ function Panel({ relation }: { relation: OneToOneEdit["relations"][number] }) {
 
   if (!clientRelation) {
     return (
-      <Alert>This related panel does not have client configuration.</Alert>
+      <Notice>This related panel does not have client configuration.</Notice>
     );
   }
   const { EditForm, fields } = clientRelation;

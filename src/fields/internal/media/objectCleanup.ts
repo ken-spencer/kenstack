@@ -1,7 +1,7 @@
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { waitUntil } from "@vercel/functions";
 
-import { deps } from "@app/deps";
+import { reportError } from "@kenstack/lib/errorReporter";
 import { mediaStorage } from "@kenstack/lib/mediaStorage";
 
 type MediaObjectCleanupMessage = {
@@ -36,7 +36,7 @@ function reportCleanupError(
   error: unknown,
   message: MediaObjectCleanupMessage,
 ) {
-  return deps.error(error, {
+  return reportError(error, {
     source: "media.objectCleanup",
     context: {
       mediaId: message.mediaId,

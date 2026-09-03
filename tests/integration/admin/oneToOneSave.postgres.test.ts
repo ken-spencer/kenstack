@@ -16,19 +16,20 @@ const mocks = vi.hoisted(() => {
   const audit = vi.fn(async () => {});
   return {
     audit,
-    deps: {
-      auth: {
-        requireUser: vi.fn(async () => ({ id: 1 })),
-      },
-      db: undefined as unknown,
-      logger: { audit },
-    },
+    database: undefined as unknown as Record<PropertyKey, unknown>,
+    requireUser: vi.fn(async () => ({ id: 1 })),
   };
 });
 
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidateTag: vi.fn() }));
-vi.mock("@app/deps", () => ({ deps: mocks.deps, tables: {} }));
+vi.mock("@app/db", () => ({
+  db: new Proxy({}, { get: (_target, property) => mocks.database[property] }),
+}));
+vi.mock("@kenstack/auth/server/user", () => ({
+  requireUser: mocks.requireUser,
+}));
+vi.mock("@kenstack/logger", () => ({ audit: mocks.audit }));
 
 import { defineFields } from "@kenstack/admin/fields";
 import { defineModule, defineOneToOne } from "@kenstack/admin/module";
@@ -106,7 +107,7 @@ beforeAll(async () => {
     prepare: false,
   });
   database = drizzle(sqlClient, { schema });
-  mocks.deps.db = database;
+  mocks.database = database as unknown as Record<PropertyKey, unknown>;
 
   await sqlClient.unsafe(`
     create table integration_one_to_one_parents (

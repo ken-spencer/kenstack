@@ -3,7 +3,7 @@ import "server-only";
 import { and, eq } from "drizzle-orm";
 import type * as z from "zod";
 
-import { selectMediaSubquery } from "@kenstack/db/tables";
+import { selectMediaSubquery } from "@kenstack/db/queries/media";
 import { media } from "@kenstack/db/tables/media";
 import { documentMimeTypes } from "@kenstack/db/tables/media/mimeTypes";
 import { fileField as createFileField, fileSchema } from ".";
@@ -43,9 +43,8 @@ export function fileField(
       maxSizeMessage: configuredField.uploadMaxSizeMessage,
     },
     listSelect: ({ column }) =>
-      column ? selectMediaSubquery(column, "original") : undefined,
-    select: ({ column }) =>
-      column ? selectMediaSubquery(column, "original") : undefined,
+      column ? selectMediaSubquery(column) : undefined,
+    select: ({ column }) => (column ? selectMediaSubquery(column) : undefined),
     preSave: prepareFileSave,
   }));
 }

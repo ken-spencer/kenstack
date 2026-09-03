@@ -21,7 +21,7 @@ import { cn } from "@kenstack/lib/utils";
 import { useControllableOpen, useDialogTransition } from "./overlay";
 import { useOverlayStack } from "./overlayStack";
 
-const transitionDurationMs = 200;
+const transitionDurationMs = 300;
 
 const SheetContext = createContext<{
   descriptionId: string;
@@ -232,7 +232,7 @@ function SheetContent({
       {...props}
       className={cn(
         // Reset dialog user-agent color and inset styles.
-        "bg-background text-foreground fixed z-50 m-0 max-h-none flex-col gap-4 bg-clip-padding p-0 text-sm opacity-0 shadow-lg transition-[opacity,transform] duration-200 ease-in-out backdrop:bg-black/10 backdrop:backdrop-blur-xs data-[state=open]:opacity-100",
+        "bg-background text-foreground fixed z-50 m-0 max-h-none flex-col gap-4 bg-clip-padding p-0 text-sm opacity-0 shadow-lg transition-[opacity,translate] duration-300 ease-in-out will-change-[translate,opacity] outline-none backdrop:bg-black/10 data-[state=open]:opacity-100 data-[state=open]:duration-500",
         side === "left" &&
           "inset-y-0 right-auto left-0 h-full w-3/4 max-w-sm -translate-x-full border-r data-[state=open]:translate-x-0",
         side === "right" &&

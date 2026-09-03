@@ -24,7 +24,7 @@ export function formatUserName(
 }
 
 export function formatUserInitials(
-  user: Pick<UserNameFields, "email" | "familyName" | "givenName">,
+  user: Pick<UserNameFields, "familyName" | "givenName">,
   { fallback = "" }: { fallback?: string } = {},
 ) {
   const initials = [user.givenName, user.familyName]
@@ -33,5 +33,5 @@ export function formatUserInitials(
     .join("")
     .toUpperCase();
 
-  return initials || user.email?.trim().slice(0, 2).toUpperCase() || fallback;
+  return initials || fallback;
 }

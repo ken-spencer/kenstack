@@ -1,4 +1,4 @@
-export type User<TRoles extends readonly string[] = readonly string[]> = {
+export type User<TRole extends string = string> = {
   id: number;
   impersonatedBy?: number;
   givenName: string;
@@ -8,7 +8,7 @@ export type User<TRoles extends readonly string[] = readonly string[]> = {
   initials: string;
   avatar: { url: string; width: number | null; height: number | null } | null;
   email: string;
-  roles: TRoles[number][];
+  roles: TRole[];
 };
 
 export type Prettify<T> = { [K in keyof T]: T[K] } & {};

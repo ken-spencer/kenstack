@@ -3,7 +3,7 @@ import "server-only";
 import { eq } from "drizzle-orm";
 
 import { media } from "@kenstack/db/tables/media";
-import type { FieldAfterSave } from "../../serverField";
+import type { FieldAfterSave } from "@kenstack/fields/serverField";
 
 export function imageMetadata(input: {
   alt?: string | null;

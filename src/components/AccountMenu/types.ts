@@ -1,5 +1,5 @@
 import type { ComponentType, SVGProps } from "react";
-import type { User } from "@kenstack/types";
+import type { PublicAuthState } from "@kenstack/auth/server/state";
 
 export type AccountMenuItem = readonly [
   href: string,
@@ -10,5 +10,5 @@ export type AccountMenuItem = readonly [
 export type AccountMenuItems = readonly AccountMenuItem[];
 
 export type AccountMenuItemsResolver = (
-  user: User,
+  user: Extract<PublicAuthState, { state: "authenticated" }>,
 ) => AccountMenuItems | Promise<AccountMenuItems>;

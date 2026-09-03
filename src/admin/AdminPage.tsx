@@ -6,7 +6,7 @@ import * as z from "zod";
 import { Skeleton } from "@kenstack/components/Skeleton";
 import AdminList from "@kenstack/admin/List";
 import Edit from "@kenstack/admin/Edit";
-import { deps } from "@app/deps";
+import { modules } from "@app/modules";
 import { pageRoute } from "@kenstack/pageRoute";
 import { parseAdminRouteSegments } from "@kenstack/admin/lib/route";
 
@@ -32,7 +32,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { admin } = await params;
   const route = parseAdminRouteSegments(admin);
-  const moduleConfig = route ? deps.modules[route.name] : undefined;
+  const moduleConfig = route ? modules[route.name] : undefined;
 
   return {
     title: {
@@ -54,7 +54,7 @@ export function createAdminPage() {
     },
     async ({ params, searchIn, user }) => {
       const { name, id, isNew = false, parentId } = params;
-      const moduleConfig = deps.modules[name];
+      const moduleConfig = modules[name];
 
       if (!moduleConfig?.admin) {
         notFound();
@@ -67,7 +67,7 @@ export function createAdminPage() {
           notFound();
         }
 
-        const parentModuleConfig = deps.modules[moduleParent.module];
+        const parentModuleConfig = modules[moduleParent.module];
 
         if (!parentModuleConfig?.admin) {
           notFound();

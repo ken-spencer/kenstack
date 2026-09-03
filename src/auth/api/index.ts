@@ -1,44 +1,97 @@
-import { multiPipeline } from "@kenstack/api";
-import { NextRequest } from "next/server";
-import { loginPipeline } from "@kenstack/auth/handlers/login";
-import { logoutPipeline } from "@kenstack/auth/handlers/logout";
-import { resetPasswordPipeline } from "@kenstack/auth/handlers/resetPassword";
-import { sendPasswordResetPipeline } from "@kenstack/auth/handlers/sendPasswordReset";
-import { deps } from "@app/deps";
+import type { NextRequest } from "next/server";
+import {
+  loadPublicAuthState,
+  type PublicAuthState,
+} from "@kenstack/auth/server/state";
+import { multiPipeline, pipeline, pipelineStage } from "@kenstack/api";
+import ForgotPasswordEmail, {
+  attachments as forgotPasswordAttachments,
+} from "@kenstack/auth/handlers/forgotPassword/Email";
+import {
+  createEmailLogin,
+  type EmailLoginOptions,
+} from "@kenstack/auth/email/login/api";
 import {
   forgotPasswordPipeline,
   type ForgotPasswordProps,
 } from "@kenstack/auth/handlers/forgotPassword";
+import { loginPipeline } from "@kenstack/auth/handlers/login";
+import { logoutPipeline } from "@kenstack/auth/handlers/logout";
+import { resetPasswordPipeline } from "@kenstack/auth/handlers/resetPassword";
+import { sendOnboardingEmailAction } from "@kenstack/auth/handlers/sendOnboarding";
 
-import merge from "lodash-es/merge";
-import FpEmail, {
-  attachments as FpAttachments,
-} from "@kenstack/auth/email/ForgotPassword";
+export type LoginActionResult = {
+  authenticated: true;
+  authState: PublicAuthState;
+  path: string;
+};
 
-type AuthPipelineOptions = { forgotPassword?: ForgotPasswordProps };
-const defaults = {
-  forgotPassword: {
-    from: deps.email.from,
-    Email: FpEmail,
-    attachments: FpAttachments,
-  },
-} satisfies Required<AuthPipelineOptions>;
+export type EmailLoginRequestResult =
+  | { authState: PublicAuthState; path: string }
+  | {
+      authState: Extract<PublicAuthState, { state: "code-sent" }>;
+      challengeKey: string;
+    };
 
-export const authPipeline = (props: AuthPipelineOptions = {}) => {
-  const options = merge({}, defaults, props);
-  const POST = (request: NextRequest) =>
-    multiPipeline(
-      { request },
-      {
-        login: loginPipeline(),
-        logout: logoutPipeline(),
-        "forgot-password": forgotPasswordPipeline(options.forgotPassword),
-        "reset-password": resetPasswordPipeline(),
-        "send-password-reset": sendPasswordResetPipeline(
-          options.forgotPassword,
-        ),
-      },
-    );
+export type EmailLoginVerificationResult = {
+  authState: PublicAuthState;
+  path: string;
+};
 
-  return { POST };
+export type UserInfoResult = {
+  authState: PublicAuthState;
+};
+
+export type LogoutResult = {
+  // The session that remains, since logging out while impersonating restores
+  // the administrator's own.
+  authState: PublicAuthState;
+  path: string;
+};
+
+export const authPipeline = (
+  options: {
+    // Email-login and recovery-link behavior and copy.
+    emailLogin?: EmailLoginOptions;
+    forgotPassword?: ForgotPasswordProps;
+  } = {},
+) => {
+  const forgotPassword = {
+    Email: ForgotPasswordEmail,
+    attachments: forgotPasswordAttachments,
+    ...options.forgotPassword,
+  };
+  const emailLogin = createEmailLogin(options.emailLogin);
+  return {
+    POST: (request: NextRequest) =>
+      multiPipeline(
+        { request },
+        {
+          logout: logoutPipeline(),
+          "user-info": (actionOptions) =>
+            pipeline(
+              actionOptions,
+              pipelineStage({}, async ({ response }) => {
+                response.headers.set("Cache-Control", "no-store");
+                return response.success<UserInfoResult>({
+                  authState: await loadPublicAuthState(),
+                });
+              }),
+            ),
+
+          login: loginPipeline(),
+          "forgot-password": forgotPasswordPipeline(forgotPassword),
+          "reset-password": resetPasswordPipeline(),
+
+          "email-login": (actionOptions) =>
+            pipeline(actionOptions, emailLogin.request),
+          "verify-email-login-code": (actionOptions) =>
+            pipeline(actionOptions, emailLogin.verifyCode),
+          "verify-email-login-link": (actionOptions) =>
+            pipeline(actionOptions, emailLogin.verifyLink),
+
+          "send-onboarding": sendOnboardingEmailAction,
+        },
+      ),
+  };
 };

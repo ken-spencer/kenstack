@@ -3,7 +3,7 @@ import type { AnyAdminConfig } from "@kenstack/admin/module";
 import { tagsSchema } from "@kenstack/fields/tags";
 import { tags as tagsTable } from "@kenstack/db/tables/tags";
 import { and, count, desc, eq, ilike, notInArray } from "drizzle-orm";
-import { deps } from "@app/deps";
+import { db } from "@app/db";
 
 import { pipelineStage } from "@kenstack/api";
 import { isTagField } from "@kenstack/fields/server";
@@ -33,7 +33,7 @@ export const tagsAction = (adminConfig: AnyAdminConfig) =>
       where.push(notInArray(tagsTable.slug, excludedSlugs));
     }
 
-    const tags = await deps.db
+    const tags = await db
       .select({
         count: count(tagRelations.tagId),
         name: tagsTable.name,

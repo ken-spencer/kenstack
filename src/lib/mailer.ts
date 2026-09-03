@@ -4,18 +4,14 @@ import errorLog from "@kenstack/lib/errorLog";
 
 const ses = new SESClient();
 
-function isRateLimitError(err: unknown) {
-  if (typeof err !== "object" || err === null || !("name" in err)) {
-    return false;
-  }
-
+function isRateLimitError(error: unknown) {
   // SES can return error.name = "Throttling" or "ThrottlingException"
-  return (
-    err.name === "Throttling" ||
-    err.name === "ThrottlingException" ||
-    err.name === "TooManyRequestsException" ||
-    err.name === "TooManyRequests"
-  );
+  return [
+    "Throttling",
+    "ThrottlingException",
+    "TooManyRequestsException",
+    "TooManyRequests",
+  ].includes(errorName(error));
 }
 
 export interface Attachment {
@@ -31,9 +27,9 @@ export interface Attachment {
   headers?: Record<string, string>;
 }
 
-type EmailAddress = string | { name: string; addr: string };
+export type EmailAddress = string | { name: string; addr: string };
 
-interface Options {
+interface MailerOptions {
   to: string;
   cc?: string;
   bcc?: string;
@@ -109,7 +105,7 @@ async function logOperationalFailure(
   delivery: Extract<MailDeliveryResult, { status: "operational-failure" }>,
 ) {
   try {
-    // Mail delivery cannot use deps.error because that reporter sends alerts by email.
+    // Mail delivery cannot use reportError because that reporter sends alerts by email.
     const httpStatus =
       delivery.httpStatusCode === undefined
         ? ""
@@ -144,7 +140,7 @@ async function sendEmail({
   subject = "",
   html = "",
   attachments = [],
-}: Options): Promise<MailDeliveryResult> {
+}: MailerOptions): Promise<MailDeliveryResult> {
   const msg = createMimeMessage();
   msg.setSender(from);
 
@@ -221,7 +217,7 @@ async function sendEmail({
   };
 }
 
-export default async function mailer(options: Options) {
+export default async function mailer(options: MailerOptions) {
   let delivery: MailDeliveryResult;
   try {
     delivery = await sendEmail(options);

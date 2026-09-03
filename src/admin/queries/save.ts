@@ -2,7 +2,8 @@ import { revalidateTag } from "next/cache";
 import { and, eq, getTableColumns, isNull, sql } from "drizzle-orm";
 import isEqual from "lodash-es/isEqual";
 
-import { deps } from "@app/deps";
+import { db as appDb } from "@app/db";
+import { requireUser } from "@kenstack/auth/server/user";
 import type { DefinedAdminModule } from "../module";
 import {
   prepareRecordFields,
@@ -228,7 +229,7 @@ async function prepareOneToOneSave({
     expectedId = await loadRelationId({
       parentId: id,
       binding,
-      db: deps.db,
+      db: appDb,
     });
     if (expectedId) {
       baseline = await loadActiveRelatedValues(binding, expectedId);
@@ -251,7 +252,7 @@ async function prepareOneToOneSave({
     id: expectedId ?? undefined,
     shouldSaveField: (key) => changedFields.has(key),
     table: binding.table,
-    user: await deps.auth.requireUser(),
+    user: await requireUser(),
     values: relatedInput,
   });
   if (preparation.status === "error") {
@@ -541,7 +542,7 @@ async function loadRelationId({
 }: {
   parentId: number;
   binding: AdminOneToOneBinding;
-  db: Pick<typeof deps.db, "select">;
+  db: Pick<typeof appDb, "select">;
   lock?: boolean;
 }) {
   const query = db
@@ -577,7 +578,7 @@ async function loadActiveRelated(
 async function loadActiveRelatedValues(
   binding: AdminOneToOneBinding,
   id: number,
-  db: Pick<typeof deps.db, "select"> = deps.db,
+  db: Pick<typeof appDb, "select"> = appDb,
 ) {
   const columns = getTableColumns(binding.table);
   const result = await loadRecord({

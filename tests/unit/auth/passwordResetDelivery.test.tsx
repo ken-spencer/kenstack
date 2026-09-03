@@ -3,88 +3,83 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PipelineResponse } from "@kenstack/api/PipelineResponse";
 
-const {
-  audit,
-  createInsert,
-  createUpdate,
-  guardPublicEmailRequest,
-  insertValues,
-  mailer,
-  render,
-  selectWhere,
-  transaction,
-  updateWhere,
-  table,
-} = vi.hoisted(() => {
-  const insertValues = vi.fn();
-  const updateWhere = vi.fn();
+const mocks = vi.hoisted(() => ({
+  checkQuota: vi.fn(),
+  claimQuota: vi.fn(),
+  pipeline: vi.fn(),
+  recaptcha: vi.fn(),
+  render: vi.fn(),
+  selectWhere: vi.fn(),
+  sendVerificationLink: vi.fn(),
+}));
 
-  return {
-    audit: vi.fn(),
-    createInsert: () => ({ values: insertValues }),
-    createUpdate: () => ({
-      set: vi.fn(() => ({ where: updateWhere })),
+vi.mock("server-only", () => ({}));
+vi.mock("@app/db", () => ({
+  db: {
+    select: vi.fn(() => {
+      const query = {
+        from: vi.fn(),
+        limit: mocks.selectWhere,
+        where: vi.fn(),
+      };
+      query.from.mockReturnValue(query);
+      query.where.mockReturnValue(query);
+      return query;
     }),
-    guardPublicEmailRequest: vi.fn(),
-    insertValues,
-    mailer: vi.fn(),
-    render: vi.fn(),
-    selectWhere: vi.fn(),
-    table: {},
-    transaction: vi.fn(),
-    updateWhere,
-  };
-});
-
-vi.mock("@app/deps", () => ({
-  deps: {
-    db: {
-      insert: vi.fn(createInsert),
-      select: vi.fn(() => ({
-        from: vi.fn(() => ({ where: selectWhere })),
-      })),
-      transaction,
-      update: vi.fn(createUpdate),
-    },
-    email: { from: "sender@example.com" },
-    logger: { audit },
-    tables: {
-      passwordResetRequests: table,
-      users: table,
-    },
   },
 }));
-
-vi.mock("@kenstack/api", () => ({
-  guardPublicEmailRequest,
-  pipeline: vi.fn(),
-  pipelineStage: (_options: unknown, action: (context: unknown) => unknown) =>
-    action,
+vi.mock("@app/email", () => ({
+  loadEmailFrom: vi.fn(async () => "sender@example.com"),
 }));
-vi.mock("@kenstack/auth/email/ForgotPassword", () => ({
+vi.mock("@app/modules", () => ({
+  modules: { users: { admin: { table: {} } } },
+}));
+vi.mock("@kenstack/logger", () => ({ audit: vi.fn() }));
+vi.mock("@kenstack/api", () => {
+  class ReturnedError extends Error {
+    status: number;
+
+    constructor(message: string, { status = 400 }: { status?: number } = {}) {
+      super(message);
+      this.status = status;
+    }
+  }
+
+  return {
+    checkQuota: mocks.checkQuota,
+    claimQuota: mocks.claimQuota,
+    pipeline: mocks.pipeline,
+    pipelineStage: (_options: unknown, action: (context: unknown) => unknown) =>
+      action,
+    recaptcha: mocks.recaptcha,
+    ReturnedError,
+  };
+});
+vi.mock("@kenstack/auth/handlers/forgotPassword/Email", () => ({
   attachments: [],
   default: vi.fn(),
 }));
-vi.mock("@kenstack/lib/mailer", () => ({ default: mailer }));
+vi.mock("@kenstack/auth/email/verification/sendCode", () => ({
+  sendVerificationLink: mocks.sendVerificationLink,
+}));
+vi.mock("@kenstack/lib/ip", () => ({
+  default: vi.fn(async () => "127.0.0.1"),
+}));
 vi.mock("@kenstack/lib/user", () => ({
   formatUserName: vi.fn(() => "Patron"),
 }));
-vi.mock("react-email", () => ({ render }));
-vi.mock("@vercel/functions", () => ({
-  geolocation: vi.fn(() => ({})),
-  ipAddress: vi.fn(() => "127.0.0.1"),
-}));
+vi.mock("react-email", () => ({ render: mocks.render }));
+vi.mock("@vercel/functions", () => ({ geolocation: vi.fn(() => ({})) }));
 vi.mock("drizzle-orm", () => ({
   and: vi.fn(() => ({})),
-  eq: vi.fn(() => ({})),
-  gte: vi.fn(() => ({})),
   isNull: vi.fn(() => ({})),
+  sql: vi.fn(() => ({})),
 }));
 
-import { forgottenPasswordAction } from "@kenstack/auth/handlers/forgotPassword";
-import { sendPasswordResetAction } from "@kenstack/auth/handlers/sendPasswordReset";
+import { ReturnedError } from "@kenstack/api";
+import { forgotPasswordPipeline } from "@kenstack/auth/handlers/forgotPassword";
 
-const request = new NextRequest("https://example.com/api/password-reset");
+const request = new NextRequest("https://example.com/api/auth");
 const customer = {
   email: "patron@example.com",
   familyName: "Patron",
@@ -92,106 +87,93 @@ const customer = {
 };
 const admin = { email: "admin@example.com", name: "Admin" };
 
-function responsePayload(response: PipelineResponse) {
-  return response.toNextResponse().json();
+async function runPipeline(
+  options: { json?: Record<string, unknown>; request: NextRequest },
+  action: (context: unknown) => Promise<unknown>,
+) {
+  const response = new PipelineResponse();
+  await action({
+    data: options.json,
+    dataIn: options.json,
+    request: options.request,
+    response,
+    user: admin,
+  });
+  return response.toNextResponse();
 }
 
 async function runForgottenPassword() {
-  const response = new PipelineResponse();
-  await forgottenPasswordAction({ from: "sender@example.com" })({
-    data: { email: customer.email, recaptchaToken: "token" },
-    dataIn: {},
+  const response = await forgotPasswordPipeline({
+    from: "sender@example.com",
+  })({
     request,
-    response,
-  } as never);
-  return responsePayload(response);
+    json: { email: customer.email, recaptchaToken: "token" },
+  });
+  return response.json();
 }
 
-async function runAdministrativePasswordReset() {
-  const response = new PipelineResponse();
-  await sendPasswordResetAction({ from: "sender@example.com" })({
-    data: { userId: 42 },
-    dataIn: {},
-    request,
-    response,
-    user: admin,
-  } as never);
-  return { payload: await responsePayload(response), response };
-}
-
-describe("password reset email delivery results", () => {
+describe("password recovery email delivery", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.pipeline.mockImplementation(runPipeline);
     vi.spyOn(Date, "now").mockReturnValueOnce(0).mockReturnValue(6_000);
-    guardPublicEmailRequest.mockResolvedValue(undefined);
-    insertValues.mockResolvedValue(undefined);
-    render.mockResolvedValue("<p>Reset password</p>");
-    selectWhere.mockResolvedValue([customer]);
-    transaction.mockImplementation(async (callback) =>
-      callback({ insert: createInsert, update: createUpdate }),
-    );
-    updateWhere.mockResolvedValue(undefined);
+    mocks.checkQuota.mockResolvedValue(null);
+    mocks.claimQuota.mockResolvedValue(null);
+    mocks.recaptcha.mockResolvedValue(undefined);
+    mocks.render.mockResolvedValue("<p>Reset password</p>");
+    mocks.selectWhere.mockResolvedValue([customer]);
+    mocks.sendVerificationLink.mockResolvedValue(undefined);
   });
 
-  it("preserves the generic public response after operational delivery failure", async () => {
-    mailer.mockResolvedValue({
-      attempts: 3,
-      code: "ThrottlingException",
-      httpStatusCode: 429,
-      status: "operational-failure",
+  it("sends the familiar recovery email through an email-login link", async () => {
+    mocks.sendVerificationLink.mockImplementation(
+      async (_input, createVerificationEmail) => {
+        await createVerificationEmail({
+          code: "123456",
+          email: customer.email,
+          expiresInMinutes: 4,
+          url: "https://example.com/login?token=token",
+        });
+      },
+    );
+    const payload = await runForgottenPassword();
+
+    expect(payload).toMatchObject({ status: "success" });
+    expect(mocks.sendVerificationLink).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: customer.email,
+        linkPath: "/login?returnTo=%2Freset-password",
+      }),
+      expect.any(Function),
+    );
+    expect(mocks.render.mock.calls[0]?.[0]).toMatchObject({
+      props: { expiresInMinutes: 4 },
     });
+  });
+
+  it("creates a decoy verification when the account is missing", async () => {
+    mocks.selectWhere.mockResolvedValue([]);
 
     const payload = await runForgottenPassword();
 
     expect(payload).toMatchObject({ status: "success" });
-  });
-
-  it("does not record administrative recipient rejection as sent", async () => {
-    mailer.mockResolvedValue({ status: "recipient-rejected" });
-
-    const { payload } = await runAdministrativePasswordReset();
-
-    expect(payload).toEqual({
-      message:
-        "The user's email address could not receive the password reset email.",
-      status: "error",
-    });
-    expect(audit).not.toHaveBeenCalled();
-  });
-
-  it("returns an administrative delivery error without recording success", async () => {
-    mailer.mockResolvedValue({
-      attempts: 1,
-      code: "ServiceUnavailable",
-      status: "operational-failure",
-    });
-
-    const { payload, response } = await runAdministrativePasswordReset();
-
-    expect(response.toNextResponse().status).toBe(503);
-    expect(payload).toEqual({
-      message:
-        "The password reset email could not be sent. Please try again later.",
-      status: "error",
-    });
-    expect(audit).not.toHaveBeenCalled();
-  });
-
-  it("records and returns administrative success after confirmed delivery", async () => {
-    mailer.mockResolvedValue({ messageId: "message-id", status: "sent" });
-
-    const { payload } = await runAdministrativePasswordReset();
-
-    expect(audit).toHaveBeenCalledWith({
-      action: "password-reset-sent",
-      data: { userId: 42 },
-    });
-    expect(mailer.mock.invocationCallOrder[0]).toBeLessThan(
-      audit.mock.invocationCallOrder[0],
+    expect(mocks.sendVerificationLink).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: customer.email,
+        isDecoy: true,
+      }),
+      expect.any(Function),
     );
-    expect(payload).toEqual({
-      message: `An email has been sent to ${customer.email}`,
-      status: "success",
-    });
+    expect(mocks.render).not.toHaveBeenCalled();
+  });
+
+  it("keeps the generic response when verification preparation is rejected", async () => {
+    mocks.sendVerificationLink.mockRejectedValue(
+      new ReturnedError("Delivery failed", { status: 503 }),
+    );
+
+    const payload = await runForgottenPassword();
+
+    expect(payload).toMatchObject({ status: "success" });
   });
 });

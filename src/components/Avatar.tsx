@@ -1,4 +1,7 @@
+import Image from "next/image";
 import { twMerge } from "tailwind-merge";
+import { UserRound } from "lucide-react";
+
 const palette = [
   "#F44336", // Red
   "#E91E63", // Pink
@@ -20,20 +23,33 @@ const palette = [
   "#607D8B", // Blue Grey
 ];
 
-type AvatarProps = {
-  url?: string | null;
-  initials?: string;
+export default function Avatar({
+  className,
+  initials = "",
+  url,
+}: {
   className?: string;
-};
-
-import Image from "next/image";
-
-export default function Avatar({ url, initials = "", className }: AvatarProps) {
+  initials?: string;
+  url?: string | null;
+}) {
   let hash = 0;
   for (let i = 0; i < initials.length; i++) {
     hash += initials.charCodeAt(i);
   }
-  const index = hash % palette.length;
+  const colorIndex = hash % palette.length;
+
+  if (!url && !initials) {
+    return (
+      <div
+        className={twMerge(
+          "border-border bg-muted text-muted-foreground inline-flex size-10 items-center justify-center rounded-full border",
+          className,
+        )}
+      >
+        <UserRound aria-hidden="true" className="size-[60%]" />
+      </div>
+    );
+  }
 
   if (url) {
     return (
@@ -49,7 +65,7 @@ export default function Avatar({ url, initials = "", className }: AvatarProps) {
 
   return (
     <div
-      style={{ backgroundColor: palette[index] }}
+      style={{ backgroundColor: palette[colorIndex] }}
       className={twMerge(
         "inline-flex size-10 items-center justify-center rounded-full text-xl text-white",
         className,

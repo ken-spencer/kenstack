@@ -1,20 +1,19 @@
 "use client";
 
 import type React from "react";
+import { type UseFormReturn, type FieldValues } from "react-hook-form";
+import type { UseMutationResult } from "@tanstack/react-query";
 import * as z from "zod";
 
+import { type FetchResult } from "@kenstack/api/fetcher";
 import {
   FormProvider,
   useForm,
   type FormProviderProps,
+  type SetStatusError,
   type SetStatusMessage,
   type FormSchema,
 } from "./context";
-import { type FetchResult } from "@kenstack/api/fetcher";
-import { type UseFormReturn, type FieldValues } from "react-hook-form";
-
-import type { UseMutationResult } from "@tanstack/react-query";
-import { QueryBoundary } from "@kenstack/context/QueryProvider";
 import Notice from "./Notice";
 type SubmitData<
   TResult extends Record<string, unknown>,
@@ -28,6 +27,7 @@ type SubmitData<
   isDirty: boolean;
   changes: string[];
   form: UseFormReturn<TValues, unknown, TSubmitValues>;
+  setStatusError: SetStatusError;
   setStatusMessage: SetStatusMessage;
 };
 
@@ -48,6 +48,7 @@ type BlurData<
   event: React.FocusEvent<HTMLFormElement>;
   form: UseFormReturn<TValues, unknown, TSubmitValues>;
   mutation: UseMutationResult<FetchResult<TResult>, Error, TVariables>;
+  setStatusError: SetStatusError;
   setStatusMessage: SetStatusMessage;
 };
 
@@ -55,7 +56,10 @@ type FormProps<
   TResult extends Record<string, unknown>,
   TVariables extends Record<string, unknown>,
   TSchema extends FormSchema,
-> = Omit<React.ComponentProps<"form">, "onSubmit" | "onChange" | "onBlur"> & {
+> = Omit<
+  React.ComponentProps<"form">,
+  "onSubmit" | "onChange" | "onBlur" | "onError"
+> & {
   validationMessage?: React.ReactNode;
   onSubmit: (
     props: SubmitData<TResult, TVariables, z.input<TSchema>, z.output<TSchema>>,
@@ -77,6 +81,7 @@ export default function FormContainer<
   onChange,
   apiPath,
   guardUnsaved,
+  initialStatusMessage,
   mutationFn,
   onError,
   onSuccess,
@@ -86,25 +91,24 @@ export default function FormContainer<
 }: FormProviderProps<TResult, TVariables, TSchema> &
   FormProps<TResult, TVariables, TSchema>) {
   return (
-    <QueryBoundary>
-      <FormProvider
-        mutationFn={mutationFn}
-        apiPath={apiPath}
-        guardUnsaved={guardUnsaved}
-        schema={schema}
-        defaultValues={defaultValues}
-        onError={onError}
-        onSuccess={onSuccess}
-      >
-        <Form
-          onSubmit={onSubmit}
-          onChange={onChange}
-          onBlur={onBlur}
-          validationMessage={validationMessage}
-          {...props}
-        />
-      </FormProvider>
-    </QueryBoundary>
+    <FormProvider
+      mutationFn={mutationFn}
+      apiPath={apiPath}
+      guardUnsaved={guardUnsaved}
+      initialStatusMessage={initialStatusMessage}
+      schema={schema}
+      defaultValues={defaultValues}
+      onError={onError}
+      onSuccess={onSuccess}
+    >
+      <Form
+        onSubmit={onSubmit}
+        onChange={onChange}
+        onBlur={onBlur}
+        validationMessage={validationMessage}
+        {...props}
+      />
+    </FormProvider>
   );
 }
 
@@ -120,12 +124,8 @@ export function Form<
   children,
   ...props
 }: FormProps<TResult, TVariables, TSchema>) {
-  const { form, mutation, setStatusMessage, uploadingFields } = useForm<
-    TResult,
-    TVariables,
-    z.input<TSchema>,
-    z.output<TSchema>
-  >();
+  const { form, mutation, setStatusError, setStatusMessage, uploadingFields } =
+    useForm<TResult, TVariables, z.input<TSchema>, z.output<TSchema>>();
   const {
     formState: { isDirty },
   } = form;
@@ -153,6 +153,7 @@ export function Form<
             isDirty,
             changes: Object.keys(form.formState.dirtyFields),
             form,
+            setStatusError,
             setStatusMessage,
           }),
         )(event);
@@ -164,6 +165,7 @@ export function Form<
                 event,
                 mutation,
                 form,
+                setStatusError,
                 setStatusMessage,
               })
           : undefined

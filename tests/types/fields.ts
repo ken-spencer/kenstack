@@ -6,7 +6,7 @@ import { integer, pgTable, text } from "drizzle-orm/pg-core";
 
 import { defineFields, type DefinedFields } from "@kenstack/admin/fields";
 import { defineRelationship, defineTable } from "@kenstack/admin/table";
-import type { SelectedImage } from "@kenstack/db/tables";
+import type { SelectedImage } from "@kenstack/db/queries";
 import {
   booleanField,
   checkboxField,

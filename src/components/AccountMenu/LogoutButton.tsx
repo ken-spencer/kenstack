@@ -1,29 +1,23 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import fetcher from "@kenstack/api/fetcher";
 
 import { LogOut } from "lucide-react";
 
-export default function LogoutButton() {
+import { logoutUser } from "@kenstack/auth/useUserInfo";
+import { cn } from "@kenstack/lib/utils";
+
+export default function LogoutButton({ className }: { className?: string }) {
   const router = useRouter();
   return (
     <button
-      className="text-foreground focus-visible:border-ring focus-visible:ring-ring/50 inline-flex h-8 w-full cursor-pointer items-center justify-start gap-1.5 rounded-lg border border-transparent px-2.5 text-sm font-medium whitespace-nowrap transition-all outline-none hover:underline focus-visible:ring-3"
+      className={cn("menu-item", className)}
       type="button"
-      tabIndex={-1} // stop Safari from automatically putting a focus style on this button
       onClick={() => {
-        fetcher("/api/auth", {
-          action: "logout",
-        })
-          .then((data) => {
-            if (data?.status === "error") {
-              window.alert(data.message);
-            }
-            if (data?.status === "success") {
-              router.push("/");
-              router.refresh();
-            }
+        logoutUser()
+          .then(() => {
+            router.push("/");
+            router.refresh();
           })
           .catch((error) => {
             window.alert(

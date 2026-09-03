@@ -1,6 +1,7 @@
 import { and, eq, getTableColumns, isNull } from "drizzle-orm";
 
-import { deps } from "@app/deps";
+import { db } from "@app/db";
+import { modules } from "@app/modules";
 import {
   getAdminRecordTitle,
   getAdminRecordTitleSelect,
@@ -20,7 +21,7 @@ export async function loadAdminParentRecord({
   id: number;
   name: string;
 }): Promise<AdminParentRecord | null> {
-  const moduleConfig = deps.modules[name];
+  const moduleConfig = modules[name];
   const adminConfig = moduleConfig?.admin;
 
   if (!moduleConfig || !adminConfig || !("list" in adminConfig)) {
@@ -31,7 +32,7 @@ export async function loadAdminParentRecord({
   const where = adminConfig.table.deletedAt
     ? and(eq(adminConfig.table.id, id), isNull(adminConfig.table.deletedAt))
     : eq(adminConfig.table.id, id);
-  const [row] = await deps.db
+  const [row] = await db
     .select({
       id: adminConfig.table.id,
       ...getAdminRecordTitleSelect(columns),

@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 import { boolean, text } from "drizzle-orm/pg-core";
 
 vi.mock("server-only", () => ({}));
-vi.mock("@app/deps", () => ({ deps: {}, tables: {} }));
 
 import { defineFields } from "@kenstack/admin/fields";
 import { defineModule } from "@kenstack/admin/module";

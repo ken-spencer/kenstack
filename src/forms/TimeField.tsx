@@ -20,6 +20,7 @@ export default function TimeField({
   description,
   className,
   inputClass,
+  placeholder = "e.g. 7:00 PM",
   ...props
 }: InputProps) {
   return (
@@ -36,6 +37,7 @@ export default function TimeField({
             name={field.name}
             ref={field.ref}
             className={inputClass}
+            placeholder={placeholder}
             value={field.value}
             onValueCommit={field.onBlur}
             onValueChange={field.onChange}

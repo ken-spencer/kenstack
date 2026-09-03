@@ -4,9 +4,9 @@ import { text, varchar, integer, uniqueIndex } from "drizzle-orm/pg-core";
 import { type ExtraTable } from "@kenstack/admin/table";
 
 export const userColumns = {
-  givenName: text("given_name").notNull(),
+  givenName: text("given_name").notNull().default(""),
   middleName: text("middle_name").notNull().default(""),
-  familyName: text("family_name").notNull(),
+  familyName: text("family_name").notNull().default(""),
   email: varchar("email", { length: 320 }).notNull(),
   roles: text("roles")
     .array()

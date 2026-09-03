@@ -1,6 +1,6 @@
 "use client";
 
-import ResetPassword from "./ResetPassword";
+import Onboarding from "./Onboarding";
 import AvatarPlaceholder from "./AvatarPlaceholder";
 import { defineFormFields } from "@kenstack/fields/formFields";
 import { fields as definitions } from "../fields";
@@ -25,7 +25,7 @@ export default function EditForm() {
         </div>
         <div className="flex flex-col gap-4">
           <fields.roles />
-          <ResetPassword />
+          <Onboarding />
         </div>
       </div>
     </div>

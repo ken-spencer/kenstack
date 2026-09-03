@@ -13,14 +13,15 @@ import { GripVertical } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAdminList, type AdminListQueryData } from "./context";
 
-import Alert from "@kenstack/components/Alert";
+import Notice from "@kenstack/components/Notice";
 import Button from "@kenstack/components/Button";
 import { Skeleton } from "@kenstack/components/Skeleton";
 import { Checkbox } from "@kenstack/forms/controls/Checkbox";
+import ListTitle from "@kenstack/admin/components/ListTitle";
 import Updated from "@kenstack/admin/components/Updated";
 import VisibilityStatus from "./VisibilityStatus";
 import type { AdminClient, BaseListItem } from "@kenstack/admin/client";
-import type { SelectedMedia } from "@kenstack/db/tables";
+import type { SelectedMedia } from "@kenstack/db/queries";
 import fetcher from "@kenstack/api/fetcher";
 import { cn } from "@kenstack/lib/utils";
 
@@ -133,7 +134,7 @@ function AdminList() {
   };
 
   if (error) {
-    return <Alert className="my-2">{error.message}</Alert>;
+    return <Notice className="my-2">{error.message}</Notice>;
   }
 
   if (isPending) {
@@ -141,7 +142,7 @@ function AdminList() {
   }
 
   if ("error" === data.status) {
-    return <Alert className="my-2">{data.message}</Alert>;
+    return <Notice className="my-2">{data.message}</Notice>;
   }
 
   if (data.items.length === 0) {
@@ -150,7 +151,7 @@ function AdminList() {
 
   const resolvedListItems = listItems?.length
     ? listItems
-    : getDefaultListItems(data.items);
+    : buildDefaultListItems(data.items);
   const canDragReorder =
     canReorder &&
     data.items.length === data.total &&
@@ -193,8 +194,8 @@ function AdminList() {
       return;
     }
 
-    const targetId = getReorderTargetId(event.target);
-    const previousTargetId = getReorderTargetId(event.relatedTarget);
+    const targetId = findReorderTargetId(event.target);
+    const previousTargetId = findReorderTargetId(event.relatedTarget);
 
     if (targetId === null || previousTargetId === targetId) {
       return;
@@ -207,7 +208,7 @@ function AdminList() {
       return;
     }
 
-    if (getReorderTargetId(event.target) === null) {
+    if (findReorderTargetId(event.target) === null) {
       return;
     }
 
@@ -217,7 +218,7 @@ function AdminList() {
 
   return (
     <>
-      {reorderError ? <Alert className="my-2">{reorderError}</Alert> : null}
+      {reorderError ? <Notice className="my-2">{reorderError}</Notice> : null}
       <div
         className="grid [grid-template-columns:min-content_var(--list-item-mobile-columns)] gap-x-2 md:[grid-template-columns:min-content_var(--list-item-columns)]"
         onDragEnter={isReorderSort ? handleReorderDragEnter : undefined}
@@ -368,7 +369,7 @@ function ReorderHandle({
   );
 }
 
-function getReorderTargetId(target: EventTarget | null) {
+function findReorderTargetId(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) {
     return null;
   }
@@ -400,7 +401,7 @@ function AdminListRowsSkeleton() {
   );
 }
 
-function getDefaultListItems(
+function buildDefaultListItems(
   items: (BaseListItem & Record<string, unknown>)[],
 ): ListItems {
   return [
@@ -453,15 +454,9 @@ function DefaultTitleCell({
   return (
     <div className="flex min-w-0 items-center gap-2">
       {hasImageSlot ? <ImageCell media={media} path={row.path} /> : null}
-      <div className="flex min-w-0 flex-col">
-        <Link
-          className="max-w-full self-start truncate text-lg"
-          href={row.path}
-        >
-          {title || `ID ${row.id}`}
-        </Link>
+      <ListTitle path={row.path} title={title || `ID ${row.id}`}>
         <Updated value={row.updatedAt} />
-      </div>
+      </ListTitle>
     </div>
   );
 }

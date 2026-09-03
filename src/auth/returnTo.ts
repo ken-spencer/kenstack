@@ -1,4 +1,6 @@
-export function getSafeReturnToPath(value?: string | null) {
+export function getSafeReturnToPath(
+  value?: string | null,
+): `/${string}` | undefined {
   const path = value?.trim();
 
   if (
@@ -17,5 +19,5 @@ export function getSafeReturnToPath(value?: string | null) {
     return;
   }
 
-  return path;
+  return path as `/${string}`;
 }

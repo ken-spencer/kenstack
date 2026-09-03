@@ -14,7 +14,7 @@ import {
 } from "@kenstack/components/Dialog";
 import Form from "@kenstack/forms/Form";
 import Submit from "@kenstack/forms/Submit";
-import { QueryBoundary } from "@kenstack/context/QueryProvider";
+import QueryProvider from "@kenstack/context/QueryProvider";
 import type { SettingsClient } from "@kenstack/admin/client";
 import { createDefaultValues } from "@kenstack/fields/createDefaultValues";
 
@@ -40,7 +40,7 @@ export default function ModuleSettingsModal({
   title,
 }: ModuleSettingsModalProps) {
   return (
-    <QueryBoundary>
+    <QueryProvider>
       <ModuleSettingsModalContent
         client={client}
         description={description}
@@ -49,7 +49,7 @@ export default function ModuleSettingsModal({
         onOpenChange={onOpenChange}
         title={title}
       />
-    </QueryBoundary>
+    </QueryProvider>
   );
 }
 

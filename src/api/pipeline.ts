@@ -10,8 +10,10 @@ import isPlainObject from "lodash-es/isPlainObject";
 
 import { unstable_rethrow } from "next/navigation";
 import { PipelineResponse } from "./PipelineResponse";
-import { deps } from "@app/deps";
-import type { UserAccess } from "@kenstack/auth/types";
+import { hasAccess, isAuthenticated } from "@kenstack/auth/server/auth";
+import { requireUser } from "@kenstack/auth/server/user";
+import { reportError } from "@kenstack/lib/errorReporter";
+import type { AuthAccess } from "@kenstack/auth/server/auth";
 import type { User } from "@kenstack/types";
 import { isRecord } from "@kenstack/lib/isRecord";
 
@@ -76,6 +78,14 @@ export type PipelineStageContext<
   user: [TAccess] extends [undefined] ? User | undefined : User;
 };
 
+type PipelineStageContextWithSchema<
+  TSchema extends ObjectSchema,
+  TAccess,
+> = PipelineContext & {
+  data: z.output<TSchema>;
+  user: [TAccess] extends [undefined] ? User | undefined : User;
+};
+
 type PipelineStageResult =
   | void
   | PipelineResponse
@@ -91,11 +101,8 @@ type PipelineStage = (
   ctx: PipelineContext,
 ) => Promise<PipelineStageResult> | PipelineStageResult;
 
-type PipelineStageCallback<
-  TSchema extends ObjectSchema | undefined,
-  TAccess = undefined,
-> = (
-  arg: PipelineStageContext<TSchema, TAccess>,
+type PipelineStageCallback<TContext extends PipelineContext> = (
+  arg: TContext,
 ) => Promise<PipelineStageResult> | PipelineStageResult;
 
 type PipelineStageOptions<TSchema extends ObjectSchema | undefined, TAccess> = {
@@ -153,13 +160,14 @@ export default async function pipeline(
       if (e instanceof ReturnedError) {
         return response
           .error({
+            code: e.code,
             message: e.message,
             status: e.status,
           })
           .toNextResponse();
       }
 
-      await deps.error(e, {
+      await reportError(e, {
         source: "api.pipeline",
         context: { stage: key },
         request,
@@ -169,6 +177,12 @@ export default async function pipeline(
           status: "error",
           message:
             "There was an unexpected problem processing your request. Please try again later.",
+          ...(process.env.NODE_ENV === "development" && e instanceof Error
+            ? {
+                debugMessage: e.message,
+                debugStack: e.stack,
+              }
+            : {}),
         } satisfies FetchError,
         { status: 500 },
       );
@@ -190,15 +204,31 @@ export default async function pipeline(
   return response.toNextResponse();
 }
 
-export const pipelineStage =
-  <
-    TSchema extends ObjectSchema | undefined = undefined,
-    const TAccess extends UserAccess | undefined = undefined,
-  >(
-    { schema, access, fieldsKey }: PipelineStageOptions<TSchema, TAccess>,
-    action: PipelineStageCallback<TSchema, TAccess>,
-  ) =>
-  async (ctx: PipelineContext) => {
+export function pipelineStage<
+  TSchema extends ObjectSchema,
+  const TAccess extends AuthAccess | undefined = undefined,
+>(
+  options: PipelineStageOptions<TSchema, TAccess> & { schema: TSchema },
+  action: PipelineStageCallback<
+    PipelineStageContextWithSchema<TSchema, TAccess>
+  >,
+): PipelineStage;
+
+export function pipelineStage<
+  const TAccess extends AuthAccess | undefined = undefined,
+>(
+  options: PipelineStageOptions<undefined, TAccess>,
+  action: PipelineStageCallback<PipelineStageContext<undefined, TAccess>>,
+): PipelineStage;
+
+export function pipelineStage<
+  TSchema extends ObjectSchema | undefined = undefined,
+  const TAccess extends AuthAccess | undefined = undefined,
+>(
+  { schema, access, fieldsKey }: PipelineStageOptions<TSchema, TAccess>,
+  action: PipelineStageCallback<PipelineStageContext<TSchema, TAccess>>,
+): PipelineStage {
+  return async (ctx: PipelineContext) => {
     let data: PipelineStageContext<TSchema, TAccess>["data"];
 
     if (schema) {
@@ -260,8 +290,8 @@ export const pipelineStage =
 
     let user: User | undefined;
     if (access !== undefined) {
-      if (!(await deps.auth.hasAccess(access))) {
-        if (!(await deps.auth.isAuthenticated())) {
+      if (!(await hasAccess(access))) {
+        if (!(await isAuthenticated())) {
           return ctx.response.error({
             message: "You must be signed in to perform this action.",
             status: 401,
@@ -274,7 +304,7 @@ export const pipelineStage =
         });
       }
 
-      user = await deps.auth.requireUser();
+      user = await requireUser();
     }
 
     const arg = {
@@ -285,3 +315,4 @@ export const pipelineStage =
 
     return action(arg);
   };
+}

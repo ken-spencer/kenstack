@@ -2,8 +2,8 @@ import { Suspense, type ReactNode } from "react";
 import { notFound } from "next/navigation";
 import type * as z from "zod";
 
-import { deps } from "@app/deps";
-import type { UserAccess } from "@kenstack/auth/types";
+import { requireUser } from "@kenstack/auth/server/user";
+import type { AuthAccess } from "@kenstack/auth/server/auth";
 
 type MaybeSchema = z.ZodType | undefined;
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -12,7 +12,7 @@ type SchemaValue<TSchema extends MaybeSchema> = TSchema extends z.ZodType
   : undefined;
 type RouteUser<TAccess> = [TAccess] extends [undefined]
   ? undefined
-  : Awaited<ReturnType<typeof deps.auth.requireUser>>;
+  : Awaited<ReturnType<typeof requireUser>>;
 
 type PageRouteProps = {
   params?: Promise<SearchParams>;
@@ -22,7 +22,7 @@ type PageRouteProps = {
 export function pageRoute<
   const TParams extends MaybeSchema = undefined,
   const TSearch extends MaybeSchema = undefined,
-  const TAccess extends UserAccess | undefined = undefined,
+  const TAccess extends AuthAccess | undefined = undefined,
 >(
   options: {
     access?: TAccess;
@@ -58,9 +58,7 @@ export function pageRoute<
       parseInput(options.params, paramsIn),
       parseInput(options.search, searchIn),
     ]);
-    const user = options.access
-      ? await deps.auth.requireUser(options.access)
-      : undefined;
+    const user = options.access ? await requireUser(options.access) : undefined;
 
     const context = {
       params: parsedParams,

@@ -1,4 +1,5 @@
 import getGeo from "@kenstack/lib/geo";
+import getIp from "@kenstack/lib/ip";
 import { headers } from "next/headers";
 
 type ErrorLogInput = {
@@ -16,6 +17,7 @@ export default async function errorLog({
   name,
 }: ErrorLogInput) {
   const headersList = await headers();
+  const request = new Request("http://internal", { headers: headersList });
   const { city, country, region } = await getGeo();
   const location = [city, region, country].filter(Boolean).join(", ");
   let errorDetails;
@@ -31,7 +33,7 @@ export default async function errorLog({
 
   const details: Record<string, unknown> = {
     path: headersList.get("x-pathname") ?? null,
-    ip: headersList.get("x-real-ip") ?? "unknown",
+    ip: (await getIp(request)) ?? "unknown",
     userAgent: headersList.get("user-agent"),
   };
   if (message) {

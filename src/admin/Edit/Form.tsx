@@ -86,6 +86,12 @@ export default function EditForm({ children }: { children: React.ReactNode }) {
           router.refresh();
         }
 
+        // Next preserves the new-entry route with Activity. Clear every
+        // completed create before a save action stays, returns, or moves on.
+        if (isNew) {
+          form.reset(defaultValues);
+        }
+
         if (
           typeof variables.submitter === "string" &&
           variables.submitter.startsWith("/")
@@ -94,27 +100,29 @@ export default function EditForm({ children }: { children: React.ReactNode }) {
             pathname + (searchParams.size ? "?" + searchParams : "");
 
           if (variables.submitter === currentPath) {
-            let resetValues = savedValues;
-            if (oneToOne) {
-              const selection =
-                savedValues[oneToOne.field] ?? form.getValues(oneToOne.field);
-              const activeRelation = oneToOne.relations.find(
-                ({ value }) => value === selection,
-              );
-              if (
-                activeRelation &&
-                !Object.hasOwn(savedValues, activeRelation.name)
-              ) {
-                const relationValues = form.getValues(activeRelation.name);
-                if (isRecord(relationValues)) {
-                  resetValues = {
-                    ...savedValues,
-                    [activeRelation.name]: relationValues,
-                  };
+            if (!isNew) {
+              let resetValues = savedValues;
+              if (oneToOne) {
+                const selection =
+                  savedValues[oneToOne.field] ?? form.getValues(oneToOne.field);
+                const activeRelation = oneToOne.relations.find(
+                  ({ value }) => value === selection,
+                );
+                if (
+                  activeRelation &&
+                  !Object.hasOwn(savedValues, activeRelation.name)
+                ) {
+                  const relationValues = form.getValues(activeRelation.name);
+                  if (isRecord(relationValues)) {
+                    resetValues = {
+                      ...savedValues,
+                      [activeRelation.name]: relationValues,
+                    };
+                  }
                 }
               }
+              form.reset(resetValues);
             }
-            form.reset(resetValues);
           } else {
             router.push(variables.submitter);
           }

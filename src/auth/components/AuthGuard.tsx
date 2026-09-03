@@ -1,18 +1,16 @@
 import { Suspense } from "react";
 
-import { deps } from "@app/deps";
-import type { UserAccess } from "@kenstack/auth/types";
+import { hasAccess, type AuthAccess } from "@kenstack/auth/server/auth";
 
 type Props = {
-  access?: UserAccess;
+  access?: AuthAccess;
   fallback?: React.ReactNode;
-  loading?: React.ReactNode;
   children: React.ReactNode;
 };
 
 export default function AuthGuard(props: Props) {
   return (
-    <Suspense fallback={props.loading ?? props.fallback ?? null}>
+    <Suspense fallback={props.fallback ?? null}>
       <AuthGuardContent {...props} />
     </Suspense>
   );
@@ -23,7 +21,7 @@ async function AuthGuardContent({
   fallback = null,
   children,
 }: Props) {
-  const authorized = await deps.auth.hasAccess(access);
+  const authorized = await hasAccess(access);
 
   return authorized ? children : fallback;
 }

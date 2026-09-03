@@ -5,7 +5,8 @@ import type * as z from "zod";
 import type { AnyPgColumn, AnyPgTable } from "drizzle-orm/pg-core";
 import isEqual from "lodash-es/isEqual";
 
-import { media as mediaTable, selectMediaSubquery } from "@kenstack/db/tables";
+import { selectMediaSubquery } from "@kenstack/db/queries/media";
+import { media as mediaTable } from "@kenstack/db/tables";
 import type { User } from "@kenstack/types";
 import { mediaListField as createMediaListField, mediaListSchema } from ".";
 import type { FieldLoadContext, FieldSaveContext } from "../serverField";
@@ -82,9 +83,8 @@ export function mediaListField({
       });
     },
     async prepareSave({ admin, db, id, value, user }) {
-      const selected = value;
       if (
-        !selected.some(
+        !value.some(
           (item) =>
             "squareCropChanged" in item && item.squareCropChanged === true,
         )
@@ -106,19 +106,19 @@ export function mediaListField({
         }
       }
       if (admin) {
-        selected.forEach((item) => {
+        value.forEach((item) => {
           if (item.id !== undefined) {
             allowedMediaIds.add(item.id);
           }
         });
       }
-      const next = [...selected];
+      const next = [...value];
       const afterSave = [];
       const afterCommit = [];
       const afterFailure = [];
 
       try {
-        for (const [index, item] of selected.entries()) {
+        for (const [index, item] of value.entries()) {
           if (!("squareCropChanged" in item)) {
             continue;
           }

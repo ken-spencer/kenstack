@@ -94,49 +94,66 @@ export default function AddressFields({
   return (
     <section className={twMerge("space-y-4", className)}>
       {title ? <h2 className="text-lg font-semibold">{title}</h2> : null}
-      <ComboboxField
-        name="countryCode"
-        label="Country"
-        disabled={!countryOptions.length}
-        emptyMessage="No countries found."
-        placeholder="Select country"
-        onChange={(nextCountryCode) => {
-          const currentRegion =
-            typeof regionCode === "string" ? regionCode : "";
-          const nextCountry = findSupportedCountry(
-            countryOptions,
-            nextCountryCode,
-          );
-          const nextRegion =
-            regionDrafts.current[nextCountryCode] ??
-            findRegion(nextCountry, currentRegion)?.code ??
-            (nextCountry?.regions.length ? "" : currentRegion);
+      <div className="grid items-start gap-4 md:grid-cols-2">
+        <InputField
+          autoComplete="address-line1"
+          name="addressLine1"
+          label="Address"
+        />
+        <InputField
+          autoComplete="address-line2"
+          name="addressLine2"
+          label="Address 2"
+          placeholder="Apt, suite, unit"
+        />
+      </div>
+      {/* Country must stay ahead of the region and postal fields: their
+          options and labels follow the selected country. */}
+      <div className="grid items-start gap-4 md:grid-cols-2">
+        <InputField
+          autoComplete="address-level2"
+          name="locality"
+          label={labels.localityLabel}
+        />
+        <ComboboxField
+          name="countryCode"
+          label="Country"
+          disabled={!countryOptions.length}
+          emptyMessage="No countries found."
+          inputAutoComplete="country-name"
+          placeholder="Select country"
+          onChange={(nextCountryCode) => {
+            const currentRegion =
+              typeof regionCode === "string" ? regionCode : "";
+            const nextCountry = findSupportedCountry(
+              countryOptions,
+              nextCountryCode,
+            );
+            const nextRegion =
+              regionDrafts.current[nextCountryCode] ??
+              findRegion(nextCountry, currentRegion)?.code ??
+              (nextCountry?.regions.length ? "" : currentRegion);
 
-          regionDrafts.current[selectedCountryCode] = currentRegion;
-          setValue("regionCode", nextRegion, {
-            shouldDirty: true,
-            shouldTouch: true,
-            shouldValidate: true,
-          });
-        }}
-        options={countryOptions.map((country) => ({
-          value: country.code,
-          label: country.name,
-        }))}
-      />
-      <InputField name="addressLine1" label="Address" />
-      <InputField
-        name="addressLine2"
-        label="Address 2"
-        placeholder="Apartment, suite, unit, floor"
-      />
-      <div className="grid items-start gap-4 md:grid-cols-3">
-        <InputField name="locality" label={labels.localityLabel} />
+            regionDrafts.current[selectedCountryCode] = currentRegion;
+            setValue("regionCode", nextRegion, {
+              shouldDirty: true,
+              shouldTouch: true,
+              shouldValidate: true,
+            });
+          }}
+          options={countryOptions.map((country) => ({
+            value: country.code,
+            label: country.name,
+          }))}
+        />
+      </div>
+      <div className="grid items-start gap-4 md:grid-cols-2">
         {selectedCountry?.regions.length ? (
           <ComboboxField
             name="regionCode"
             label={labels.regionLabel}
             emptyMessage={`No ${labels.regionLabel.toLowerCase()} found.`}
+            inputAutoComplete="address-level1"
             placeholder={`Select ${labels.regionLabel.toLowerCase()}`}
             options={selectedCountry.regions.map((region) => ({
               value: region.code,
@@ -144,9 +161,14 @@ export default function AddressFields({
             }))}
           />
         ) : (
-          <InputField name="regionCode" label={labels.regionLabel} />
+          <InputField
+            autoComplete="address-level1"
+            name="regionCode"
+            label={labels.regionLabel}
+          />
         )}
         <InputField
+          autoComplete="postal-code"
           name="postalCode"
           label={labels.postalCodeLabel}
           maxLength={32}

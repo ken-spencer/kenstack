@@ -8,7 +8,7 @@ export default function SubmitButton({
   disabledUntilDirty = false,
   isPending: isExternallyPending = false,
   ...props
-}: ButtonProps & {
+}: Omit<ButtonProps, "type"> & {
   disabledUntilDirty?: boolean;
 }) {
   const {
@@ -20,6 +20,7 @@ export default function SubmitButton({
   return (
     <Button
       {...props}
+      type="submit"
       disabled={
         disabled ||
         (disabledUntilDirty && (!isReady || !isDirty)) ||

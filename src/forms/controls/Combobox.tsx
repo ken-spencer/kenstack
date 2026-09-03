@@ -18,6 +18,7 @@ import type { SelectOption } from "@kenstack/forms/controls/Select";
 
 type ComboboxInputContextValue = {
   clearValue: () => void;
+  commitInputValue?: (value: string) => void;
   inputValue: string;
   setInputValue: (value: string) => void;
 };
@@ -32,6 +33,7 @@ type ComboboxRootProps<T extends SelectOption = SelectOption> = Omit<
   inputValue?: string;
   isItemDisabled?: (item: T) => boolean;
   items: readonly T[];
+  onInputCommit?: (value: string) => void;
   onInputValueChange?: (value: string) => void;
   onItemHighlighted?: (item: T | null) => void;
   onOpenChange?: (open: boolean) => void;
@@ -52,7 +54,7 @@ type ComboboxInputProps = Omit<
 const ComboboxInputContext =
   React.createContext<ComboboxInputContextValue | null>(null);
 
-function optionMatchesInput(option: SelectOption, inputValue: string) {
+function isOptionMatch(option: SelectOption, inputValue: string) {
   const query = inputValue.trim().toLowerCase();
 
   if (!query) {
@@ -80,6 +82,7 @@ function ComboboxRoot<T extends SelectOption>({
   filter,
   inputValue: inputValueProp,
   items,
+  onInputCommit,
   onInputValueChange,
   onOpenChange,
   onValueChange,
@@ -102,7 +105,7 @@ function ComboboxRoot<T extends SelectOption>({
   if (filter) {
     filteredItems = items.filter((item) => filter(item, inputValue));
   } else if (filter !== null && query) {
-    filteredItems = items.filter((item) => optionMatchesInput(item, query));
+    filteredItems = items.filter((item) => isOptionMatch(item, query));
   }
 
   const setOpen = React.useCallback(
@@ -141,10 +144,11 @@ function ComboboxRoot<T extends SelectOption>({
         setInputValue("");
         onValueChange?.("", null);
       },
+      commitInputValue: onInputCommit,
       inputValue,
       setInputValue,
     }),
-    [inputValue, onValueChange, setInputValue],
+    [inputValue, onInputCommit, onValueChange, setInputValue],
   );
 
   return (
@@ -235,6 +239,22 @@ function ComboboxInputControl({
   );
 }
 
+// Autofill and password managers write into an input they never focus, so no
+// blur follows to commit the text; the change event is the only signal.
+function isAutofillChange(input: HTMLInputElement) {
+  for (const selector of [":autofill", ":-webkit-autofill"]) {
+    try {
+      if (input.matches(selector)) {
+        return true;
+      }
+    } catch {
+      // The browser does not support this selector.
+    }
+  }
+
+  return document.activeElement !== input;
+}
+
 function ComboboxInput({
   className,
   children,
@@ -282,8 +302,20 @@ function ComboboxInput({
         className={inputClassName}
         disabled={disabled}
         onChange={(event) => {
-          combobox.setInputValue(event.currentTarget.value);
-          picker.setOpen(true);
+          const nextInputValue = event.currentTarget.value;
+
+          combobox.setInputValue(nextInputValue);
+
+          if (
+            combobox.commitInputValue &&
+            isAutofillChange(event.currentTarget)
+          ) {
+            combobox.commitInputValue(nextInputValue);
+            picker.setOpen(false);
+          } else {
+            picker.setOpen(true);
+          }
+
           onChange?.(event);
         }}
         onBlur={onBlur}
@@ -401,7 +433,7 @@ function findTypedOption<TOption extends ComboboxOption>(
   }
 
   const possibleMatches = enabledOptions.filter((option) =>
-    optionMatchesInput(option, searchValue),
+    isOptionMatch(option, searchValue),
   );
 
   return possibleMatches.length === 1 ? possibleMatches[0] : null;
@@ -446,6 +478,10 @@ function Combobox<TOption extends ComboboxOption>({
       items={options}
       open={open}
       value={value}
+      onInputCommit={(inputValue) => {
+        latestInputValue.current = null;
+        commitTypedValue(inputValue);
+      }}
       onInputValueChange={(inputValue) => {
         latestInputValue.current = inputValue;
         onInputValueChange?.(inputValue);

@@ -1,6 +1,8 @@
 import "server-only";
 
-import { deps } from "@app/deps";
+import { db } from "@app/db";
+import { requireUser } from "@kenstack/auth/server/user";
+import { audit } from "@kenstack/logger";
 import type { DbTransaction, NumericIdTable } from "@kenstack/db/types";
 import { filterRevisionSnapshot, type RevisionRelations } from "./revisions";
 import { selectFields } from "./select";
@@ -96,7 +98,7 @@ export async function saveRecord<
   try {
     // Inside the try so an authentication failure still runs the failure
     // tasks of already-staged additional preparations.
-    const user = await deps.auth.requireUser();
+    const user = await requireUser();
     const preparation = await prepareRecordFields({
       admin,
       fields,
@@ -114,7 +116,7 @@ export async function saveRecord<
     }
     afterFailure = [...preparation.afterFailure, ...afterFailure];
 
-    const result = await deps.db.transaction((tx) =>
+    const result = await db.transaction((tx) =>
       savePreparedRecord({
         revisionChanges,
         revisionRelations: options.revisionRelations,
@@ -142,7 +144,7 @@ export async function saveRecord<
       ...additionalPreparations.flatMap((additional) => additional.afterCommit),
     ]);
 
-    await deps.logger.audit({
+    await audit({
       action,
       table: tableName,
       rowId: result.row?.id,
@@ -208,7 +210,7 @@ export async function prepareRecordFields<TTable extends NumericIdTable>({
     try {
       result = await field.prepareSave({
         admin,
-        db: deps.db,
+        db,
         key,
         column: columns[key],
         value,

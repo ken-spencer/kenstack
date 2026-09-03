@@ -4,8 +4,8 @@ import type { Metadata } from "next";
 import { cacheLife, cacheTag } from "next/cache";
 import { eq } from "drizzle-orm";
 
-import { deps } from "@app/deps";
-import { selectMediaSubquery } from "@kenstack/db/tables";
+import { db } from "@app/db";
+import { selectMediaSubquery } from "@kenstack/db/queries/media";
 import { fields } from "./fields";
 import { siteSettings } from "./tables";
 
@@ -14,11 +14,11 @@ export async function loadSiteSettings() {
   cacheLife("max");
   cacheTag("site-settings");
 
-  const [row] = await deps.db
+  const [row] = await db
     .select({
       title: siteSettings.title,
       titleTemplate: siteSettings.titleTemplate,
-      ogImage: selectMediaSubquery(siteSettings.ogImage, "original"),
+      ogImage: selectMediaSubquery(siteSettings.ogImage),
     })
     .from(siteSettings)
     .where(eq(siteSettings.key, "site-settings"))

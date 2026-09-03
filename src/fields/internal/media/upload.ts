@@ -8,7 +8,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import type { ResizeOptions, WebpOptions } from "sharp";
-import { deps } from "@app/deps";
+import { db } from "@app/db";
 import { media } from "@kenstack/db/tables";
 import {
   imageMimeTypes,
@@ -27,6 +27,7 @@ import * as z from "zod";
 
 const maxOriginalWidth = 1920;
 const maxOriginalHeight = 1920;
+const defaultUploadMaxSize = 5 * 1024 ** 2;
 const svgMimeType = "image/svg+xml";
 
 function includesValue<T>(values: readonly T[], value: unknown): value is T {
@@ -116,7 +117,7 @@ export async function createMediaUpload({
 
   const publicUrl = storage.publicUrl(key);
 
-  const [image] = await deps.db
+  const [image] = await db
     .insert(media)
     .values({
       createdBy: userId,
@@ -163,7 +164,7 @@ export async function completeMediaUpload({
     return mediaUploadError(`Field "${fieldname}" does not support uploads.`);
   }
 
-  const [pendingImage] = await deps.db
+  const [pendingImage] = await db
     .select({
       id: media.id,
       key: media.sourceKey,
@@ -235,7 +236,7 @@ export async function completeMediaUpload({
       sourceSize = originalBuffer.length;
     }
 
-    const [file] = await deps.db
+    const [file] = await db
       .update(media)
       .set({
         status: "uploaded",
@@ -293,7 +294,7 @@ export async function completeMediaUpload({
       }),
     );
 
-    const [image] = await deps.db
+    const [image] = await db
       .update(media)
       .set({
         status: "uploaded",
@@ -372,7 +373,7 @@ export async function completeMediaUpload({
     return squareWebp;
   }
 
-  const [image] = await deps.db
+  const [image] = await db
     .update(media)
     .set({
       status: "uploaded",
@@ -440,11 +441,11 @@ function getUploadConfig(field: ServerDefinedFields[string]) {
     upload === true || !upload.accept?.length ? rasterMimeTypes : upload.accept;
   const maxSize =
     upload === true
-      ? deps.uploadMaxImageSize
-      : (upload.maxSize ?? deps.uploadMaxImageSize);
+      ? defaultUploadMaxSize
+      : (upload.maxSize ?? defaultUploadMaxSize);
   const maxSizeMessage =
     upload === true
-      ? deps.uploadMaxImageSizeMessage
+      ? getDefaultMaxSizeMessage(accept, maxSize)
       : (upload.maxSizeMessage ?? getDefaultMaxSizeMessage(accept, maxSize));
 
   return {
@@ -457,9 +458,7 @@ function getUploadConfig(field: ServerDefinedFields[string]) {
 function getDefaultMaxSizeMessage(accept: readonly string[], maxSize: number) {
   const allImages = accept.every((type) => includesValue(imageMimeTypes, type));
 
-  return allImages
-    ? deps.uploadMaxImageSizeMessage
-    : `Maximum file size is ${formatFileSize(maxSize, { unitStyle: "long" })}.`;
+  return `Maximum ${allImages ? "image" : "file"} size is ${formatFileSize(maxSize, { unitStyle: "long" })}.`;
 }
 
 async function sanitizeSvg(buffer: Buffer) {
@@ -543,7 +542,7 @@ async function removePendingImage(
     }),
   );
 
-  await deps.db
+  await db
     .delete(media)
     .where(and(eq(media.id, id), eq(media.createdBy, userId)));
 }

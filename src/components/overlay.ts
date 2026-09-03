@@ -40,7 +40,6 @@ export function useDialogTransition(
   onShow?: (dialog: HTMLDialogElement) => void,
 ) {
   const closeTimerRef = useRef<number | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
   const [visibleOpen, setVisibleOpen] = useState(false);
 
   useEffect(() => {
@@ -74,31 +73,25 @@ export function useDialogTransition(
       closeTimerRef.current = null;
     }
 
-    if (animationFrameRef.current) {
-      window.cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
-    }
-
     if (!dialog.open) {
       dialog.showModal();
     }
 
     onShow?.(dialog);
-    animationFrameRef.current = window.requestAnimationFrame(() => {
-      animationFrameRef.current = null;
-      onShow?.(dialog);
-      setVisibleOpen(true);
-    });
+    // Committing the just-shown dialog's closed-state layout makes the open
+    // state that follows a style change, so the transition starts on the very
+    // next paint — no animation-frame wait between the press and the motion.
+    // The synchronous set is deliberate: both renders land in one pre-paint
+    // task, which is what keeps the enter transition immediate.
+    void dialog.getBoundingClientRect();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setVisibleOpen(true);
   }, [dialogRef, durationMs, onShow, open]);
 
   useEffect(
     () => () => {
       if (closeTimerRef.current) {
         window.clearTimeout(closeTimerRef.current);
-      }
-
-      if (animationFrameRef.current) {
-        window.cancelAnimationFrame(animationFrameRef.current);
       }
     },
     [],

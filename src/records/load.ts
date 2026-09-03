@@ -1,6 +1,6 @@
 import "server-only";
 
-import { deps } from "@app/deps";
+import { db as appDb } from "@app/db";
 import type { NumericIdTable } from "@kenstack/db/types";
 import { selectFields } from "./select";
 import type { FieldLoadContext } from "@kenstack/fields/server";
@@ -51,7 +51,7 @@ export async function loadRecord<
   TDefaults extends Record<string, unknown> = Record<string, unknown>,
 >(options: LoadRecordOptions<TTable, TSelect, TDefaults>) {
   const { table, fields, id } = options;
-  const db = options.db ?? deps.db;
+  const db = options.db ?? appDb;
   const defaults = options.defaults ?? ({} as TDefaults);
   const select = {
     ...selectFields(table, fields),

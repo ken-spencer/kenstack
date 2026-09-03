@@ -5,7 +5,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 
 import { useAdminEdit } from "@kenstack/admin/Edit/context";
-import Alert from "@kenstack/components/Alert";
+import Notice from "@kenstack/components/Notice";
 import { Badge } from "@kenstack/components/Badge";
 import { Button } from "@kenstack/components/Button";
 import { Skeleton } from "@kenstack/components/Skeleton";
@@ -104,7 +104,6 @@ function RelationshipControl({
         items={items}
         open={open}
         inputValue={keywords}
-        value=""
         filter={null}
         onInputValueChange={(value) => {
           setKeywords(value);
@@ -128,9 +127,9 @@ function RelationshipControl({
         <ComboboxInput placeholder={placeholder} showClear className="w-full" />
         <ComboboxContent>
           {error ? (
-            <Alert>{error.message}</Alert>
+            <Notice>{error.message}</Notice>
           ) : data?.status === "error" ? (
-            <Alert>{data.message}</Alert>
+            <Notice>{data.message}</Notice>
           ) : isSearching ? (
             <div className="space-y-2 p-2">
               <Skeleton className="h-8 w-full" />
@@ -243,9 +242,9 @@ function SingleRelationshipControl({
         ? searchQuery.data.message
         : undefined;
   const emptyMessage = queryError ? (
-    <Alert>{queryError.message}</Alert>
+    <Notice>{queryError.message}</Notice>
   ) : responseError ? (
-    <Alert>{responseError}</Alert>
+    <Notice>{responseError}</Notice>
   ) : isSearching ? (
     <div className="space-y-2 p-2">
       <Skeleton className="h-8 w-full" />

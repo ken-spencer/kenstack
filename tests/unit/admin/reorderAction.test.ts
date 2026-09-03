@@ -33,13 +33,10 @@ vi.mock("@kenstack/api", () => ({
     action: (context: Record<string, unknown>) => unknown,
   ) => action,
 }));
-vi.mock("@app/deps", () => ({
-  deps: {
-    db: { transaction: mocks.transaction },
-    logger: { audit: mocks.audit },
-  },
-  tables: {},
+vi.mock("@app/db", () => ({
+  db: { transaction: mocks.transaction },
 }));
+vi.mock("@kenstack/logger", () => ({ audit: mocks.audit }));
 
 import { PipelineResponse } from "@kenstack/api/PipelineResponse";
 import { reorderAction } from "@kenstack/admin/api/reorder";

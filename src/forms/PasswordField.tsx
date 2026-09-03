@@ -1,13 +1,12 @@
 "use client";
 
 import { useState } from "react";
-
-import Field, { type FieldProps } from "@kenstack/forms/Field";
-import { Input } from "@kenstack/forms/controls/Input";
-
-import { Button } from "@kenstack/components/Button";
 import { Eye, EyeOff } from "lucide-react";
 import { twMerge } from "tailwind-merge";
+
+import { Button } from "@kenstack/components/Button";
+import Field, { FormControl, type FieldProps } from "@kenstack/forms/Field";
+import { Input } from "@kenstack/forms/controls/Input";
 
 type InputProps = FieldProps &
   React.ComponentProps<"input"> & {
@@ -31,26 +30,30 @@ export default function InputField({
       className={className}
       render={({ field }) => (
         <div className="flex-cl flex items-center">
-          <Input
-            {...props}
-            className={twMerge(inputClass, "-mr-9 pr-10")}
-            {...field}
-            onChange={(evt) => {
-              field.onChange(evt.target.value.trim());
-            }}
-            type={type}
-          />
+          <FormControl>
+            <Input
+              {...props}
+              className={twMerge(inputClass, "-mr-9 pr-10")}
+              {...field}
+              onChange={(evt) => {
+                field.onChange(evt.target.value.trim());
+              }}
+              type={type}
+            />
+          </FormControl>
           <Button
-            tabIndex={-1}
+            aria-label={type === "password" ? "Show password" : "Hide password"}
             type="button"
             variant="ghost"
             size="icon"
-            onClick={() => setType(type === "text" ? "password" : "text")}
+            onClick={() =>
+              setType((current) => (current === "text" ? "password" : "text"))
+            }
           >
             {type === "password" ? (
-              <Eye className="text-muted-foreground size-6" />
+              <Eye aria-hidden className="text-muted-foreground size-6" />
             ) : (
-              <EyeOff className="text-muted-foreground size-6" />
+              <EyeOff aria-hidden className="text-muted-foreground size-6" />
             )}
           </Button>
         </div>

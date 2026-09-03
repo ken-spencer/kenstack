@@ -1,5 +1,4 @@
-import type { tables } from "@app/deps";
-import type { createDb } from "@kenstack/db";
+import type { db } from "@app/db";
 import type {
   AnyPgColumn,
   AnyPgTable,
@@ -19,7 +18,7 @@ export type AnyPgTableWithId = PgTableWithColumns<{
   dialect: "pg";
 }>;
 
-export type Database = ReturnType<typeof createDb<typeof tables>>;
+export type Database = typeof db;
 
 export type DbTransaction = Parameters<
   Parameters<Database["transaction"]>[0]

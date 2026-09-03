@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { deps } from "@app/deps";
+import { db } from "@app/db";
 import { eq, type SQL } from "drizzle-orm";
 import { type Prettify } from "@kenstack/types";
 
 import { cache } from "react";
 import { cacheLife, cacheTag } from "next/cache";
-import { selectImageSubquery } from "@kenstack/db/tables";
+import { selectImageSubquery } from "@kenstack/db/queries/media";
+import { content } from "@kenstack/db/tables/content";
 import { createDefaultValues } from "@kenstack/fields/createDefaultValues";
 import { loadRecord } from "@kenstack/records";
 import { pageEditorFieldNames, pageEditorFields } from "./fields";
@@ -50,10 +51,6 @@ export const loadContent = cache(
       ...defaultValues,
     } satisfies ContentData;
 
-    const {
-      tables: { content },
-    } = deps;
-
     const { values } = await loadRecord({
       table: content,
       fields: pageEditorServerFields,
@@ -88,16 +85,11 @@ export const loadMeta = async (
     throw Error("slug is required");
   }
 
-  const {
-    db,
-    tables: { content },
-  } = deps;
-
   const [row] = await db
     .select({
       title: content.title,
       description: content.description,
-      ogImage: selectImageSubquery(content.ogImage, "original"),
+      ogImage: selectImageSubquery(content.ogImage),
       seoTitle: content.seoTitle,
       seoDescription: content.seoDescription,
     })

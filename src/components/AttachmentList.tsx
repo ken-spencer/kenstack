@@ -5,7 +5,7 @@ import { X } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 
 import ProgressIcon from "@kenstack/icons/Progress";
-import type { SelectedMedia } from "@kenstack/db/tables";
+import type { SelectedMedia } from "@kenstack/db/queries";
 import {
   attachmentUploadStatusLabels,
   getAttachmentDocumentMeta,

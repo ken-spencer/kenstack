@@ -1,11 +1,12 @@
-import { and, eq, getTableColumns } from "drizzle-orm";
+import { eq, getTableColumns } from "drizzle-orm";
 import { draftMode } from "next/headers";
 import { redirect } from "next/navigation";
 import type { NextRequest } from "next/server";
 
-import { deps } from "@app/deps";
-import { pageWhere } from "@kenstack/admin/queries/page";
+import { modules } from "@app/modules";
+import { requireUser } from "@kenstack/auth/server/user";
 import type { AdminContentTable } from "@kenstack/admin/table";
+import { pageQuery, resolveVisiblePage } from "@kenstack/db/queries/page";
 
 const previewOrigin = "https://kenstack.local";
 
@@ -85,31 +86,10 @@ function isContentTable(table: unknown): table is AdminContentTable {
   );
 }
 
-async function isPublicSlugRecord({
-  table,
-  slug,
-}: {
-  table: AdminContentTable;
-  slug: string;
-}) {
-  const slugColumn = getTableColumns(table).slug;
-  if (!slugColumn) {
-    return false;
-  }
-
-  const [row] = await deps.db
-    .select({ id: table.id })
-    .from(table)
-    .where(and(await pageWhere(table), eq(slugColumn, slug)))
-    .limit(1);
-
-  return !!row;
-}
-
 async function getDisableDraftRedirect(next: string) {
   const nextUrl = new URL(next, previewOrigin);
 
-  for (const moduleConfig of Object.values(deps.modules)) {
+  for (const moduleConfig of Object.values(modules)) {
     const adminConfig = moduleConfig.admin;
     const { basePath } = moduleConfig;
     if (
@@ -131,10 +111,18 @@ async function getDisableDraftRedirect(next: string) {
         : basePath;
     }
 
-    return (await isPublicSlugRecord({
-      table: adminConfig.table,
-      slug,
-    }))
+    const slugColumn = getTableColumns(adminConfig.table).slug;
+    if (!slugColumn) {
+      return basePath;
+    }
+
+    return (await resolveVisiblePage(
+      await pageQuery(adminConfig.table, {
+        select: { id: adminConfig.table.id },
+        where: eq(slugColumn, slug),
+      }),
+      { draft: false },
+    ))
       ? next
       : basePath;
   }
@@ -143,7 +131,7 @@ async function getDisableDraftRedirect(next: string) {
 }
 
 export async function enableDraftModeAction(request: NextRequest) {
-  await deps.auth.requireUser("admin");
+  await requireUser("admin");
   (await draftMode()).enable();
   return redirect(getRedirectPath(request));
 }

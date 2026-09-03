@@ -23,7 +23,7 @@ import { loadAdminEdit, loadOneToOne } from "@kenstack/admin/queries/load";
 import { loadAdminParentRecord } from "@kenstack/admin/queries/parent";
 import { getAdminRecordTitle } from "@kenstack/admin/lib/recordTitle";
 import { getOneToOneQueryKey } from "./queryKey";
-import { deps } from "@app/deps";
+import { modules } from "@app/modules";
 import { GuardedLink } from "@kenstack/forms/NavigationBlocker";
 
 export default async function AdminEdit({
@@ -131,9 +131,7 @@ export default async function AdminEdit({
         parentId={resolvedParentId}
         preview={preview}
         childModuleLinks={
-          !isNew && item
-            ? renderChildModuleLinks(deps.modules, name, item.id)
-            : null
+          !isNew && item ? renderChildModuleLinks(modules, name, item.id) : null
         }
         oneToOne={oneToOne}
         clients={clients}

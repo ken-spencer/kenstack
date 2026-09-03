@@ -313,16 +313,19 @@ export type AdminPublicIdTable = AdminTable & {
 };
 
 export type AdminPublishTable = AdminTable & {
-  visibility: AnyPgColumn<{ data: "draft" | "published" | "unlisted" }>;
-  publishedAt: AnyPgColumn<{ data: Date | null }>;
+  visibility: AnyPgColumn<{
+    data: "draft" | "published" | "unlisted";
+    notNull: true;
+  }>;
+  publishedAt: AnyPgColumn<{ data: Date | null; notNull: false }>;
 };
 
 export type AdminContentTable = AdminPublishTable;
 
 export type AdminSeoTable = AdminTable & {
-  ogImage: AnyPgColumn<{ data: number | null }>;
-  seoTitle: AnyPgColumn<{ data: string | null }>;
-  seoDescription: AnyPgColumn<{ data: string | null }>;
+  ogImage: AnyPgColumn<{ data: number | null; notNull: false }>;
+  seoTitle: AnyPgColumn<{ data: string; notNull: true }>;
+  seoDescription: AnyPgColumn<{ data: string; notNull: true }>;
 };
 
 export type AdminKeyTable = AnyPgTable & {

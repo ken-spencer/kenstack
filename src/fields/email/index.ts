@@ -4,6 +4,11 @@ import tlds from "tlds";
 
 import { defineField } from "../field";
 
+// Stored and compared form of an address, matching what the schema accepts.
+export function normalizeEmail(value: string) {
+  return value.trim().toLowerCase();
+}
+
 export const email = z
   .string()
   .trim()
