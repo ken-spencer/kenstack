@@ -139,10 +139,19 @@ export async function saveRecord<
     }
     committed = true;
 
-    await runSaveTasks([
-      ...preparation.afterCommit,
-      ...additionalPreparations.flatMap((additional) => additional.afterCommit),
-    ]);
+    try {
+      await runSaveTasks([
+        ...preparation.afterCommit,
+        ...additionalPreparations.flatMap(
+          (additional) => additional.afterCommit,
+        ),
+      ]);
+    } finally {
+      // The row is committed, so invalidate even when a follow-up task or the
+      // audit fails; otherwise a stale record, or stale authorization for the
+      // users module, would stay cached.
+      revalidator(revalidate, result.row);
+    }
 
     await audit({
       action,
@@ -150,8 +159,6 @@ export async function saveRecord<
       rowId: result.row?.id,
       data: { changes: revisionChanges },
     });
-
-    revalidator(revalidate, result.row);
 
     return result;
   } catch (err) {

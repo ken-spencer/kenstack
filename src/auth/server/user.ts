@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { cacheLife, cacheTag } from "next/cache";
 import { cookies } from "next/headers";
 import { and, isNull, eq, gt, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
@@ -16,11 +17,17 @@ import { hashToken } from "./token";
 import type { Role } from "./types";
 
 const users = modules.users.admin.table;
+const maxSessionCacheSeconds = 15 * 60;
 
-async function loadFreshUserBySessionToken(token: string) {
-  if (!token) {
-    return;
-  }
+export function sessionCacheTag(tokenHash: string) {
+  return `auth-session:${tokenHash}`;
+}
+
+export function userSessionsCacheTag(userId: number) {
+  return `auth-user-sessions:${userId}`;
+}
+
+async function loadUserByTokenHash(tokenHash: string) {
   const [user] = await db
     .select({
       id: users.id,
@@ -31,38 +38,86 @@ async function loadFreshUserBySessionToken(token: string) {
       email: users.email,
       avatar: selectMediaSubquery(users.avatar, "square"),
       roles: users.roles,
+      expiresAt: sessions.expiresAt,
     })
     .from(sessions)
     .innerJoin(users, eq(users.id, sessions.userId))
     .where(
       and(
-        eq(sessions.tokenHash, hashToken(token)),
+        eq(sessions.tokenHash, tokenHash),
         gt(sessions.expiresAt, sql`now()`),
         isNull(users.deletedAt),
       ),
     )
     .limit(1);
 
+  return user;
+}
+
+// Cached per session for up to fifteen minutes; login, logout, impersonation,
+// password changes, and user edits revalidate the tags so a change takes
+// effect on the next request. getFreshCurrentUser bypasses it.
+async function getCachedUserByTokenHash(tokenHash: string) {
+  "use cache: remote";
+  cacheTag(sessionCacheTag(tokenHash));
+
+  const user = await loadUserByTokenHash(tokenHash);
   if (!user) {
-    return undefined;
+    // A miss carries no user tag, so restoring a deleted account could not
+    // revalidate it; keep misses too short to matter.
+    cacheLife({ expire: 1 });
+    return user;
   }
 
-  const { impersonatedBy, ...publicUser } = user;
+  const expiresInSeconds = Math.max(
+    1,
+    Math.floor((user.expiresAt.getTime() - Date.now()) / 1000),
+  );
+  const expire = Math.min(maxSessionCacheSeconds, expiresInSeconds);
+  cacheLife({ revalidate: Math.max(0, expire - 1), expire });
+  cacheTag(userSessionsCacheTag(user.id));
 
+  return user;
+}
+
+// Role filtering and display names are applied after the cache so a registry
+// change applies to cached sessions immediately.
+function toPublicUser(
+  user: NonNullable<Awaited<ReturnType<typeof loadUserByTokenHash>>>,
+) {
   return {
-    ...publicUser,
+    id: user.id,
+    givenName: user.givenName,
+    middleName: user.middleName,
+    familyName: user.familyName,
+    email: user.email,
+    avatar: user.avatar,
     // Persisted values grant authority only while the host still registers
     // them, so removing a role disables it without rewriting stored rows.
     roles: user.roles.filter((role): role is Role =>
       Object.hasOwn(roles, role),
     ),
-    ...(impersonatedBy ? { impersonatedBy } : {}),
+    ...(user.impersonatedBy ? { impersonatedBy: user.impersonatedBy } : {}),
     name: formatUserName(user),
     initials: formatUserInitials(user),
   };
 }
 
-const getUserBySessionToken = cache(loadFreshUserBySessionToken);
+async function loadFreshUserBySessionToken(token: string) {
+  if (!token) {
+    return;
+  }
+  const user = await loadUserByTokenHash(hashToken(token));
+  return user && toPublicUser(user);
+}
+
+const getUserBySessionToken = cache(async (token: string) => {
+  if (!token) {
+    return;
+  }
+  const user = await getCachedUserByTokenHash(hashToken(token));
+  return user && toPublicUser(user);
+});
 
 async function getCurrentUserUsing(
   getUser: (token: string) => ReturnType<typeof loadFreshUserBySessionToken>,

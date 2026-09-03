@@ -114,6 +114,8 @@ async function resolveAuthState(
   };
 }
 
+// Reads the cached session snapshot. A decision that must not trust a
+// snapshot, such as authorizing a write, uses loadFreshAuthState.
 export const loadAuthState = cache(async () =>
   resolveAuthState(await getCurrentUser()),
 );

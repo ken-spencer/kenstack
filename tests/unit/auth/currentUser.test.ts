@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   cacheResults: new Map<string, unknown>(),
+  cacheTag: vi.fn(),
   cookies: vi.fn(),
   select: vi.fn(),
 }));
@@ -22,6 +23,7 @@ vi.mock("@app/db", () => ({ db: { select: mocks.select } }));
 vi.mock("@app/modules", () => ({
   modules: { users: { admin: { table: {} } } },
 }));
+vi.mock("next/cache", () => ({ cacheLife: vi.fn(), cacheTag: mocks.cacheTag }));
 vi.mock("next/headers", () => ({ cookies: mocks.cookies }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 vi.mock("drizzle-orm", () => ({
@@ -52,6 +54,7 @@ function selectResult(roles: string[] = []) {
       {
         avatar: null,
         email: "person@example.com",
+        expiresAt: new Date(Date.now() + 60_000),
         familyName: "Example",
         givenName: "Person",
         id: 12,
@@ -96,5 +99,14 @@ describe("current-user loading", () => {
     );
 
     expect((await getCurrentUser())?.roles).toEqual(["admin"]);
+  });
+
+  it("tags the cached session read by session and by user", async () => {
+    const user = await getCurrentUser();
+
+    expect(user?.id).toBe(12);
+    expect(mocks.cacheTag).toHaveBeenCalledWith("auth-session:token-hash");
+    expect(mocks.cacheTag).toHaveBeenCalledWith("auth-user-sessions:12");
+    expect(mocks.select).toHaveBeenCalledTimes(1);
   });
 });

@@ -121,6 +121,16 @@ export const removeAction = ({
           .where(targetFilter);
       }
 
+      // Invalidate before auditing so a failed audit cannot leave stale
+      // authorization or content cached.
+      for (const row of rows) {
+        revalidator(adminConfig.revalidate, row);
+      }
+      rows.forEach((row) => {
+        revalidateTag(adminLoadCacheTag(name, row.id), { expire: 0 });
+      });
+      revalidateTag(adminListCacheTag(name), { expire: 0 });
+
       await audit({
         userId: user.id,
         rowId: rows.length === 1 ? rows[0].id : null,
@@ -134,15 +144,6 @@ export const removeAction = ({
           })),
         },
       });
-
-      for (const row of rows) {
-        revalidator(adminConfig.revalidate, row);
-      }
-
-      rows.forEach((row) => {
-        revalidateTag(adminLoadCacheTag(name, row.id), { expire: 0 });
-      });
-      revalidateTag(adminListCacheTag(name), { expire: 0 });
 
       return response.success({});
     },

@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt";
 import { eq } from "drizzle-orm";
+import { revalidateTag } from "next/cache";
 
 import { db } from "@app/db";
 import { modules } from "@app/modules";
@@ -16,7 +17,10 @@ import {
 import { requiresCurrentPassword } from "@kenstack/auth/passwordChange";
 import schema from "@kenstack/auth/schemas/resetPassword";
 import { login } from "@kenstack/auth/server/auth";
-import { getCurrentSession } from "@kenstack/auth/server/user";
+import {
+  getCurrentSession,
+  userSessionsCacheTag,
+} from "@kenstack/auth/server/user";
 import { sessions } from "@kenstack/db/tables/sessions";
 import { normalizeEmail } from "@kenstack/fields/email";
 import { audit } from "@kenstack/logger";
@@ -126,6 +130,8 @@ export const resetPasswordPipeline = () => (options: PipelineOptions) =>
           "We couldn't update your password. Please try again.",
         );
       }
+
+      revalidateTag(userSessionsCacheTag(session.userId), { expire: 0 });
 
       await login(session.userId);
       await audit({

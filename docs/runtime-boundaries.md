@@ -96,6 +96,12 @@ barrel's runtime boundary is determined by its consumers, not only by its direct
 - The cache boundary is a read-model boundary, not a blanket database-query rule. Transactional
   decisions, uniqueness and availability checks, authorization, command-side validation, and reads that
   determine a write observe the authoritative source and stay outside shared caches.
+- One exception: the session read behind `getCurrentUser` and `loadAuthState` uses
+  `"use cache: remote"`. It stays coherent only because every mutation that changes a session's
+  authority (login, logout, impersonation, password reset, user save or removal) revalidates the
+  session or user tag with blocking expiration immediately after its write, before any audit or
+  follow-up task. A new mutation that touches sessions or user roles must do the same, and a decision
+  that must not trust the snapshot uses `getFreshCurrentUser` or `loadFreshAuthState`.
 - Shared admin content reads may use regular or remote caching. Perform authorization outside the
   shared cached scope; a shared entry never includes the current user's permissions or private state.
   An admin mutation expires the record, list, and dependent public tags only after its transaction

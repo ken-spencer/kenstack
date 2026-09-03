@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { revalidateTag } from "next/cache";
 import { cookies } from "next/headers";
 import { eq } from "drizzle-orm";
 
@@ -9,7 +10,7 @@ import { audit } from "@kenstack/logger";
 
 import { generateToken, hashToken } from "./token";
 import type { Role } from "./types";
-import { getCurrentUser } from "./user";
+import { getCurrentUser, sessionCacheTag } from "./user";
 
 export type AuthAccess = "authenticated" | Role | readonly Role[];
 
@@ -72,14 +73,18 @@ export async function impersonate(userId: number): Promise<void> {
     return;
   }
 
+  const tokenHash = hashToken(sessionCookie.value);
   const [session] = await db
     .update(sessions)
     .set({
       userId,
       impersonatedBy: user.id,
     })
-    .where(eq(sessions.tokenHash, hashToken(sessionCookie.value)))
+    .where(eq(sessions.tokenHash, tokenHash))
     .returning({ id: sessions.id });
+  // Invalidate right after the write so a failed audit cannot leave the
+  // previous identity cached.
+  revalidateTag(sessionCacheTag(tokenHash), { expire: 0 });
 
   await audit({
     action: "start-impersonation",
@@ -114,6 +119,7 @@ export async function logout(): Promise<void> {
       })
       .where(eq(sessions.tokenHash, tokenHash))
       .returning({ id: sessions.id });
+    revalidateTag(sessionCacheTag(tokenHash), { expire: 0 });
 
     await audit({
       action: "end-impersonation",
@@ -130,6 +136,7 @@ export async function logout(): Promise<void> {
     .delete(sessions)
     .where(eq(sessions.tokenHash, tokenHash))
     .returning({ id: sessions.id });
+  revalidateTag(sessionCacheTag(tokenHash), { expire: 0 });
 
   await audit({
     action: "logout",

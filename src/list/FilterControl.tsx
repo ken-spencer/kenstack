@@ -239,19 +239,27 @@ function FilterEditor({
 
   if (option.kind === "boolean") {
     return (
-      <div className="flex gap-1">
+      <div
+        className="grid grid-cols-2 gap-2"
+        role="group"
+        aria-label={option.label}
+      >
         <Button
           type="button"
-          variant={value === true ? "secondary" : "ghost"}
+          variant={value === true ? "default" : "outline"}
           size="sm"
+          className="w-full"
+          aria-pressed={value === true}
           onClick={() => onChange(true)}
         >
           Yes
         </Button>
         <Button
           type="button"
-          variant={value === false ? "secondary" : "ghost"}
+          variant={value === false ? "default" : "outline"}
           size="sm"
+          className="w-full"
+          aria-pressed={value === false}
           onClick={() => onChange(false)}
         >
           No
