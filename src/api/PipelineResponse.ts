@@ -49,10 +49,12 @@ export class PipelineResponse implements PipelineResponseShape {
   }
 
   redirectToLogin() {
-    const message = encodeURIComponent(
-      "You are no longer logged in. Please log in and try again.",
-    );
-    return this.final({ redirect: `/login?loginMessage=${message}` });
+    const message = "You are no longer logged in. Please log in and try again.";
+    return this.error({
+      message,
+      redirect: `/login?loginMessage=${encodeURIComponent(message)}`,
+      status: 401,
+    });
   }
 
   success<TPayload extends Record<string, unknown> = Record<string, unknown>>({
@@ -69,6 +71,7 @@ export class PipelineResponse implements PipelineResponseShape {
     arg:
       | string
       | {
+          code?: string;
           message: string;
           status?: number;
           formErrors?: string[];

@@ -10,7 +10,13 @@ import type { ComponentType, SVGProps } from "react";
 import startCase from "lodash-es/startCase";
 import type { AnyColumn, InferSelectModel, SQL } from "drizzle-orm";
 import { getTableColumns, getTableName } from "drizzle-orm";
+
+import {
+  getListSelect,
+  resolveOneToOneList,
+} from "@kenstack/admin/queries/listRelations";
 import type { AnyPgTable } from "drizzle-orm/pg-core";
+import type { SelectedFields } from "drizzle-orm/pg-core/query-builders/select.types";
 
 import type {
   AdminFieldReference,
@@ -96,6 +102,10 @@ type AdminConfigBase<
   fields: TFields;
   oneToOne?: ServerOneToOneConfig;
   preview?: PreviewPath;
+  // Extra read-only columns loaded with the edit record, for custom edit UIs
+  // that display data no editable field owns. The list counterpart is
+  // `list.select`.
+  select?: SelectedFields;
   translateError?: (error: unknown) => FetchError | undefined;
 };
 
@@ -331,6 +341,23 @@ function resolveSettings(settings: ModuleSettingsConfig | undefined) {
   };
 }
 
+// Record and list queries spread a configured select over the columns they
+// select on their own, so an alias on one of those keys would replace it.
+function assertSelectKeys(
+  select: Record<string, unknown> | undefined,
+  selectedKeys: string[],
+  table: AnyPgTable,
+  option: string,
+) {
+  for (const key of Object.keys(select ?? {})) {
+    if (selectedKeys.includes(key)) {
+      throw new Error(
+        `${option} for ${getTableName(table)} cannot use the key "${key}": it is selected already.`,
+      );
+    }
+  }
+}
+
 function resolveAdmin(
   admin: AdminConfigRuntime | undefined,
   basePath: PreviewPath,
@@ -357,6 +384,19 @@ function resolveAdmin(
       : resolvedFields;
     // Erases module-specific field keys after validation so resolved modules share one registry type.
     const flatFields = fields as ServerDefinedFields;
+    assertSelectKeys(
+      config.select,
+      [
+        "id",
+        "createdAt",
+        "updatedAt",
+        "deletedAt",
+        "parentId",
+        ...Object.keys(flatFields),
+      ],
+      config.table,
+      "admin.select",
+    );
     const preview =
       config.preview ??
       ("slug" in fields ? `${basePath}/${"${slug}"}` : undefined);
@@ -369,6 +409,7 @@ function resolveAdmin(
       schema: createSchemaFromFields(flatFields, oneToOne),
       defaultValues: createDefaultValues(flatFields),
       oneToOne,
+      select: config.select,
     };
   };
 
@@ -377,6 +418,22 @@ function resolveAdmin(
     const { sort, filters, reorder, ...listOptions } = list;
     const resolvedAdmin = resolveBase(admin);
     const resolvedReorder = defineReorder(table, reorder);
+    assertSelectKeys(
+      listOptions.select,
+      [
+        "id",
+        "createdAt",
+        "updatedAt",
+        ...Object.keys({
+          ...getListSelect(table, resolvedAdmin.fields),
+          ...resolveOneToOneList({ oneToOne: resolvedAdmin.oneToOne, table })
+            .select,
+        }),
+        ...(resolvedReorder?.scope ? [resolvedReorder.scope.fieldKey] : []),
+      ],
+      table,
+      "admin.list.select",
+    );
     const listSort = defineSort(
       table,
       resolvedAdmin.fields,

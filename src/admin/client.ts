@@ -9,7 +9,7 @@
 import type { FC, PropsWithChildren, ReactNode } from "react";
 import type * as z from "zod";
 import type { ZodObject } from "zod";
-import type { SelectedImage, SelectedMedia } from "@kenstack/db/tables";
+import type { SelectedImage, SelectedMedia } from "@kenstack/db/queries";
 import { createSchemaFromFields } from "@kenstack/fields/createSchemaFromFields";
 import type { DefinedField, DefinedFields } from "@kenstack/admin/fields";
 import {

@@ -2,7 +2,7 @@ export * from "@kenstack/db/tables/sessions";
 export * from "@kenstack/db/tables/audit";
 export * from "@kenstack/db/tables/revisions";
 export * from "@kenstack/db/tables/content";
-export * from "@kenstack/db/tables/rateLimits";
+export * from "@kenstack/db/tables/quotas";
 export * from "@kenstack/modules/siteSettings/tables";
 export * from "./media";
 export * from "./tags";

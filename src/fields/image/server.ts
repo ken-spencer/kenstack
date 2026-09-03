@@ -4,7 +4,7 @@ import { and, eq, ne } from "drizzle-orm";
 import type * as z from "zod";
 import isEqual from "lodash-es/isEqual";
 
-import { selectImageSubquery } from "@kenstack/db/tables";
+import { selectImageSubquery } from "@kenstack/db/queries/media";
 import { media } from "@kenstack/db/tables/media";
 import {
   imageField as createImageField,

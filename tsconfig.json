@@ -19,8 +19,10 @@
       }
     ],
     "paths": {
-      "@app/deps": ["./src/deps/mock"],
-      "@app/deps/roles": ["./src/deps/roles"],
+      "@app/db": ["./mocks/app/db"],
+      "@app/email": ["./mocks/app/email"],
+      "@app/modules": ["./mocks/app/modules"],
+      "@app/roles": ["./mocks/app/roles"],
       "@kenstack/*": ["./src/*"]
     }
   },

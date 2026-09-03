@@ -1,10 +1,10 @@
 "use client";
 
-import Form from "@kenstack/forms/Form";
-import schema from "@kenstack/auth/schemas/resetPassword";
-import PasswordField from "@kenstack/forms/PasswordField";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 
+import schema from "@kenstack/auth/schemas/resetPassword";
+import Form from "@kenstack/forms/Form";
+import PasswordField from "@kenstack/forms/PasswordField";
 import Submit from "@kenstack/forms/Submit";
 
 const defaultValues = {
@@ -14,13 +14,10 @@ const defaultValues = {
 
 export default function ResetPasswordForm({
   requiresCurrentPassword = false,
-  token,
 }: {
   requiresCurrentPassword?: boolean;
-  token?: string;
 }) {
   const router = useRouter();
-  const pathname = usePathname();
   return (
     <Form
       className="w-full max-w-lg space-y-4"
@@ -32,15 +29,17 @@ export default function ResetPasswordForm({
           : defaultValues
       }
       onSubmit={async ({ data, mutation, form }) => {
-        return mutation
-          .mutateAsync({ ...data, token, action: "reset-password" })
-          .then((res) => {
-            if ("success" === res.status) {
-              form.reset();
-              router.replace(pathname);
-              router.refresh();
-            }
-          });
+        if (
+          (
+            await mutation.mutateAsync({
+              ...data,
+              action: "reset-password",
+            })
+          ).status === "success"
+        ) {
+          form.reset();
+          router.refresh();
+        }
       }}
     >
       {requiresCurrentPassword ? (
@@ -48,7 +47,7 @@ export default function ResetPasswordForm({
       ) : null}
       <PasswordField name="password" label="New password" />
       <PasswordField name="confirmPassword" label="Confirm new password" />
-      <Submit>Submit</Submit>
+      <Submit>Set password</Submit>
     </Form>
   );
 }

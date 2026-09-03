@@ -1,18 +1,19 @@
 "use client";
 
 import { useAdminEdit } from "@kenstack/admin/Edit/context";
+import { getReturnedErrorMessage } from "@kenstack/api/errors";
 import fetcher from "@kenstack/api/fetcher";
 import Button from "@kenstack/components/Button";
 import { useForm } from "@kenstack/forms/context";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { refreshUserInfo } from "@kenstack/auth/useUserInfo";
+import { useMutation } from "@tanstack/react-query";
 import { UserRoundKey } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export default function SwitchUserButton() {
   const { id, userId, apiPath, name } = useAdminEdit();
-  const queryClient = useQueryClient();
   const router = useRouter();
-  const { setStatusMessage } = useForm();
+  const { setStatusError, setStatusMessage } = useForm();
 
   const { mutate, isPending } = useMutation({
     mutationFn: (targetUserId: number) => {
@@ -28,12 +29,12 @@ export default function SwitchUserButton() {
       if (res.status === "error") {
         setStatusMessage(res);
       } else {
-        queryClient.invalidateQueries({ queryKey: ["user-info"] });
+        void refreshUserInfo();
         router.push("/");
       }
     },
     onError: (err) => {
-      setStatusMessage(err);
+      setStatusError(getReturnedErrorMessage(err));
 
       // eslint-disable-next-line no-console
       console.error(err);

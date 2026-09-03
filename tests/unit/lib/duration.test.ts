@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { type DurationString, parseDuration } from "../../../src/lib/duration";
+import { type DurationString, parseDuration } from "@kenstack/lib/duration";
 
 describe("parseDuration", () => {
   it.each([

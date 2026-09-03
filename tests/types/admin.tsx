@@ -10,7 +10,7 @@ import {
   withOneToOneSelectionField,
 } from "@kenstack/admin/internal/oneToOne";
 import { TextEdit } from "@kenstack/admin/pageEditor/TextEdit";
-import type { SelectedImage, SelectedMedia } from "@kenstack/db/tables";
+import type { SelectedImage, SelectedMedia } from "@kenstack/db/queries";
 import {
   booleanField,
   configurable,

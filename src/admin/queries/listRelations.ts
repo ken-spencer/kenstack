@@ -8,6 +8,51 @@ export type ListJoin = {
   table: AnyPgTable;
 };
 
+// Selects the parent columns every list row carries: list-flagged fields, the
+// title and publication fallback when none are flagged, and visibility.
+export function getListSelect(
+  table: AnyAdminConfig["table"],
+  fields: AnyAdminConfig["fields"],
+) {
+  const columns = getTableColumns(table);
+  const select: Record<string, (typeof columns)[keyof typeof columns] | SQL> =
+    {};
+
+  for (const [key, field] of Object.entries(fields)) {
+    if (!field.list) {
+      continue;
+    }
+
+    const column = columns[key];
+    const fieldSelect = field.listSelect?.({
+      key,
+      field,
+      column,
+      columns,
+    });
+
+    if (fieldSelect || column) {
+      select[key] = fieldSelect ?? column;
+    }
+  }
+
+  if (!Object.keys(select).length) {
+    if ("title" in columns) {
+      select.title = columns.title;
+    }
+
+    if ("publishedAt" in columns) {
+      select.publishedAt = columns.publishedAt;
+    }
+  }
+
+  if ("visibility" in columns) {
+    select.visibility ??= columns.visibility;
+  }
+
+  return select;
+}
+
 // Builds one-to-one joins and field metadata so related fields participate in parent list queries.
 export function resolveOneToOneList(
   adminConfig: Pick<AnyAdminConfig, "oneToOne" | "table">,

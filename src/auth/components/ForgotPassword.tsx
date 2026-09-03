@@ -1,51 +1,20 @@
 "use client";
 
-import { Suspense, useState } from "react";
-
 import Link from "next/link";
-
-import Form from "@kenstack/forms/Form";
-import schema from "@kenstack/auth/schemas/forgotPassword";
-import InputField from "@kenstack/forms/InputField";
-import Alert from "@kenstack/components/Alert";
-import { deleteCookie, getCookie } from "@kenstack/lib/cookies";
-
-import Submit from "@kenstack/forms/Submit";
-import Progress from "@kenstack/components/Progress";
-
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
+
+import schema from "@kenstack/auth/schemas/forgotPassword";
 import RecaptchaTerms from "@kenstack/components/RecaptchaTerms";
-import { useSearchParams } from "next/navigation";
+import Form from "@kenstack/forms/Form";
+import InputField from "@kenstack/forms/InputField";
+import Submit from "@kenstack/forms/Submit";
 
 const defaultValues = {
   email: "",
 };
 
-export default function ForgotPasswordFormCont() {
-  return (
-    <Suspense fallback={<Progress />}>
-      <ForgotPasswordForm />
-    </Suspense>
-  );
-}
-
 export function ForgotPasswordForm() {
-  const searchParams = useSearchParams();
   const { executeRecaptcha } = useGoogleReCaptcha();
-  const [message, setMessage] = useState(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-    let m;
-    if ((m = searchParams.get("forgottenPasswordMessage"))) {
-      window.history.replaceState(null, "", window.location.pathname);
-    } else if ((m = getCookie("forgottenPasswordMessage"))) {
-      if (m) {
-        deleteCookie("forgottenPasswordMessage", "/forgot-password");
-      }
-    }
-    return m;
-  });
 
   return (
     <Form
@@ -54,24 +23,22 @@ export function ForgotPasswordForm() {
       schema={schema}
       defaultValues={defaultValues}
       onSubmit={async ({ data, mutation, form }) => {
-        setMessage("");
         const recaptchaToken = executeRecaptcha
           ? await executeRecaptcha("forgottenPassword")
           : null;
-        return mutation
-          .mutateAsync({
-            ...data,
-            recaptchaToken,
-            action: "forgot-password",
-          })
-          .then((res) => {
-            if ("success" === res.status) {
-              form.reset();
-            }
-          });
+        if (
+          (
+            await mutation.mutateAsync({
+              ...data,
+              recaptchaToken,
+              action: "forgot-password",
+            })
+          ).status === "success"
+        ) {
+          form.reset();
+        }
       }}
     >
-      {message && <Alert>{message}</Alert>}
       <InputField
         name="email"
         label="Email"
@@ -80,11 +47,13 @@ export function ForgotPasswordForm() {
       />
 
       <div className="flex justify-between">
-        <Submit>Submit</Submit>
-        <Link href="/login">Return to Login?</Link>
+        <Submit>Send reset link</Submit>
+        <Link href="/login">Return to login</Link>
       </div>
 
       <RecaptchaTerms />
     </Form>
   );
 }
+
+export default ForgotPasswordForm;

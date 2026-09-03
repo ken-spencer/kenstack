@@ -11,7 +11,7 @@ import {
 } from "drizzle-orm";
 import * as z from "zod";
 
-import { deps } from "@app/deps";
+import { db } from "@app/db";
 import type { DefinedAdmin, DefinedAdminModule } from "@kenstack/admin/module";
 import { resolveSingleRelationship } from "@kenstack/admin/lib/singleRelationship";
 import { isSingleRelationshipField } from "@kenstack/fields/relationship";
@@ -78,7 +78,7 @@ export const relationshipSearchAction = (
       }
     }
 
-    const items = await deps.db
+    const items = await db
       .select({
         id: sql<number>`${primaryKey}`.mapWith(Number),
         label: sql<string>`${label}`.mapWith(String),

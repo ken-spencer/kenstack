@@ -7,105 +7,132 @@ imports, caching, Suspense, and public runtime boundaries.
 
 - Before Next.js work, read the relevant installed guide in `node_modules/next/dist/docs/`; the
   installed version is the source of truth.
+- A component exported from a `"use client"` module crosses the Server Component boundary as a
+  registered client reference, not an ordinary function prop. A Server Component may select and pass
+  that reference to another Client Component. Ordinary callbacks stay on the client or become Server
+  Functions.
 - When a Client Component renders date or time text using the environment's local timezone or
   current-time-relative formatting during server rendering, add `suppressHydrationWarning` to the exact
-  text-bearing element or input whose value can legitimately differ in the browser. Do not suppress a
-  parent section or use suppression for structural mismatches. Dates formatted with an explicit timezone
-  or otherwise guaranteed to be deterministic do not need suppression.
+  text-bearing element or input whose value can legitimately differ in the browser. Suppression covers
+  that element only, never a parent section or a structural mismatch. Dates formatted with an explicit
+  timezone or otherwise deterministic need no suppression.
 - Keep data loading on the server unless the UI requires client-side updates.
 
 ## React APIs and Client State
 
 - Before adding or changing React API patterns in shared controls or client UI primitives, check the
-  installed React version and current React documentation when the API may have changed. Do not introduce
-  a deprecated pattern when current documentation provides a simpler project-compatible API, such as
-  passing `ref` as a prop instead of using `React.forwardRef`.
-- For client-side API loading, use TanStack React Query with the shared `fetcher`. Avoid ad hoc
-  `useEffect` fetching unless React Query cannot express the required behavior.
+  installed React version and current React documentation when the API may have changed, and use the
+  current project-compatible API, such as passing `ref` as a prop; `React.forwardRef` is deprecated.
+- For client-side API loading, use TanStack React Query with the shared `fetcher`. Ad hoc `useEffect`
+  fetching is for behavior React Query cannot express.
 - Before adding local state, refs, maps, or context to preserve query or cache data, inspect the owning
-  library's retention and cache APIs. Do not mirror React Query server state; demonstrate the missing
-  capability before adding another state owner.
-- Treat effects and lifecycle callbacks as synchronization boundaries. Do not use them for state derived
-  during render, ordinary control flow, or work already owned by an event, query, mutation, or action.
-- Load data at the narrowest useful consumer. Do not aggregate unrelated authentication, routing,
-  configuration, and record data in a parent merely to shorten its children.
-- Keep terminal UI states direct. Prefer explicit returns or one shared shell over temporary status or
-  message state and duplicated loading, empty, error, or success shells.
+  library's retention and cache APIs. React Query server state has one owner; demonstrate the missing
+  capability before adding another.
+- Effects and lifecycle callbacks are synchronization boundaries. State derived during render, ordinary
+  control flow, and work already owned by an event, query, mutation, or action stay where they are.
+- Load data at the narrowest useful consumer; a parent aggregates unrelated authentication, routing,
+  configuration, and record data only when it uses them itself.
+- Keep terminal UI states direct: explicit returns or one shared shell, with no temporary status or
+  message state and no duplicated loading, empty, error, or success shells.
 
 ## Client Registries and Dynamic Imports
 
-- For lazy/dynamic loaders that are meant to keep optional client code out of the initial bundle, make the
+- For lazy or dynamic loaders meant to keep optional client code out of the initial bundle, make the
   loader itself a Client Component. A Next.js bug can cause a Server Component loader, even one with a
-  conditional or dynamic import, to pull the loaded client module and its dependencies into the
-  build/route bundle.
-- Admin/client registries that call `defineAdminClients` or export module `clients` maps must start with
-  `"use client"`. This is a required boundary, even when the file is imported by a server module today.
-  If the directive is removed, the registry's dynamic imports can be bundled like direct imports, causing
-  every registered admin/client module to leak onto every public page and massively increasing browser
-  download size. Do not remove the directive to satisfy import-boundary concerns, lint preferences, bundle
-  analysis, or a desire to make the file look server-safe.
+  conditional or dynamic import, to pull the loaded client module and its dependencies into the build
+  or route bundle.
+- Admin and client registries that call `defineAdminClients` or export module `clients` maps start with
+  `"use client"`. This boundary is required even when a server module imports the file today: without
+  the directive, the registry's dynamic imports can be bundled like direct imports, leaking every
+  registered admin or client module onto every public page and massively increasing browser download
+  size. Import-boundary concerns, lint preferences, bundle analysis, and a wish to make the file look
+  server-safe are never reasons to remove it.
 - Admin server routes decide whether an admin route exists from server-owned module config, such as
-  `moduleConfig.admin`, not from client loaders or client registries. Do not check `moduleConfig.client`
-  before rendering an admin route and do not make a missing client loader call `notFound()`. Client
-  registry wiring is UI behavior, not route existence. Validate client config only inside client
-  components that consume it.
-- Do not fix public bundle leakage by moving Client Component loaders into Server Components,
-  `server-only` files, or server-safe helper files. That can trigger the same Next.js bundling bug and pull
-  the dynamically imported Client Components and their dependencies into route bundles.
-- If a client registry appears in a public route graph, do not reinterpret that as evidence the registry
-  should be server-safe. Either fix the importing route/module graph while keeping the registry as a
-  Client Component, or explicitly accept the measured bundle trade-off. If a larger fix is justified,
-  split server-only module definitions from admin client registries, or pass client-enabled modules only
-  at the admin entry point.
-- Before changing any file with `"use client"` or any dynamic import of a Client Component, establish why
-  the boundary is safe. If the goal is bundle reduction, verify with a production build before and after
-  when the user has authorized production builds.
+  `moduleConfig.admin`. Client registry wiring is UI behavior, not route existence: an admin route never
+  checks `moduleConfig.client` before rendering, and a missing client loader never calls `notFound()`.
+  Validate client config only inside client components that consume it.
+- Fix public bundle leakage in the importing route or module graph while keeping the registry a Client
+  Component, or explicitly accept the measured bundle trade-off. Moving Client Component loaders into
+  Server Components, `server-only` files, or server-safe helper files triggers the same Next.js
+  bundling bug. When a larger fix is justified, split server-only module definitions from admin client
+  registries, or pass client-enabled modules only at the admin entry point. A client registry appearing
+  in a public route graph is not evidence that it should be server-safe.
+- Before changing any file with `"use client"` or any dynamic import of a Client Component, establish
+  why the boundary is safe. When the goal is bundle reduction, verify with a production build before and
+  after, once the user has authorized production builds.
 
 ## Server-Only Entry Points
 
 Before adding `server-only`, a server-only import, or a server builder to an existing `index.ts` or barrel,
 search every importer of that entry point. If any importer belongs to a Client Component graph, keep the
-barrel client-safe or update those consumers to explicit client-safe subpaths in the same change. A
+barrel client-safe or move those consumers to explicit client-safe subpaths in the same change. A
 barrel's runtime boundary is determined by its consumers, not only by its directives.
 
-- Isomorphic code must not be re-exported through a server-only barrel merely because its current callers
-  are server-side. Keep it on an isomorphic entry point or subpath. Likewise, do not expose server-only
-  code through client or shared entry points.
-- Keep server-only helpers separate from helpers consumed by Client Components. Do not put server-only
-  fetchers, database queries, HTML parsers, API action internals, or server lifecycle helpers in the same
-  module as client-used request builders, URL builders, field helpers, option lists, or presentation
-  helpers. Put API-only helpers under the module's `api/` folder or another server-owned path, and keep
-  shared helpers in an isomorphic file.
+- Reserve `api` in filenames, folder names, and symbol qualifiers for server-owned API code; the import
+  boundary treats any `api` path segment as server-only. Name a client-side wrapper for HTTP endpoints
+  by its actual role, such as `requests.ts`.
+- Isomorphic code stays on an isomorphic entry point or subpath, even when its current callers are all
+  server-side; server-only code stays off client and shared entry points.
+- Keep server-only helpers (fetchers, database queries, HTML parsers, API action internals, server
+  lifecycle helpers) in a separate module from helpers Client Components consume (request builders, URL
+  builders, field helpers, option lists, presentation helpers). API-only helpers go under the module's
+  `api/` folder or another server-owned path; shared helpers go in an isomorphic file.
 
 ## Public Discovery
 
-- Do not enumerate private, account, auth, or unlisted page paths in `robots.txt` or `robots.ts`. Robots
-  files are public and are not access control; use auth, redirects, and `noindex` metadata/headers for
-  those pages instead. Keep robots disallow rules to broad technical buckets such as `/admin` and `/api/`,
-  unless the user explicitly asks for a public crawl rule.
+- Robots files are public and are not access control. Keep robots disallow rules to broad technical
+  buckets such as `/admin` and `/api/` unless the user explicitly asks for a public crawl rule; private,
+  account, auth, and unlisted page paths are protected by auth, redirects, and `noindex` metadata or
+  headers, never enumerated in `robots.txt` or `robots.ts`.
 
 ## Caching and Suspense
 
 - In cached functions or components, place `cacheTag(...)` as high as it can go without changing
-  behavior, near `"use cache"` and `cacheLife(...)`, so cache identity is visible with the other cache
+  behavior, beside `"use cache"` and `cacheLife(...)`, so cache identity is visible with the other cache
   setup.
-- Keep admin data cacheable, but do not let admin mutations serve stale data while the affected cache
-  entries regenerate. Configure that behavior at the invalidation point with blocking expiration, such
-  as `revalidateTag(tag, { expire: 0 })`, rather than by forcing custom cache profiles on cached loaders
-  or host sites.
-- For user-visible cached loaders whose result depends on `publishedAt`, `publishedAt <= now()`, or
-  `Date.now()` for publishing visibility, use an hours-or-shorter cache lifetime. Do not use
-  `cacheLife("days")` or `cacheLife("max")` unless the loader cannot hide future-published content or
-  another mechanism guarantees timely invalidation.
+- Kenstack applications deploy to serverless infrastructure. Use `"use cache: remote"` when caching
+  database or API query results so every server instance shares the cached read; regular `"use cache"`
+  is for cached components or values whose purpose is prerendering, prefetching, or client stale-time.
+- The cache boundary is a read-model boundary, not a blanket database-query rule. Transactional
+  decisions, uniqueness and availability checks, authorization, command-side validation, and reads that
+  determine a write observe the authoritative source and stay outside shared caches.
+- One exception: the session read behind `getCurrentUser` and `loadAuthState` uses
+  `"use cache: remote"`. It stays coherent only because every mutation that changes a session's
+  authority (login, logout, impersonation, password reset, user save or removal) revalidates the
+  session or user tag with blocking expiration immediately after its write, before any audit or
+  follow-up task. A new mutation that touches sessions or user roles must do the same, and a decision
+  that must not trust the snapshot uses `getFreshCurrentUser` or `loadFreshAuthState`.
+- Shared admin content reads may use regular or remote caching. Perform authorization outside the
+  shared cached scope; a shared entry never includes the current user's permissions or private state.
+  An admin mutation expires the record, list, and dependent public tags only after its transaction
+  commits.
+- Preserve read-after-write behavior explicitly. In a Server Action, use `updateTag(tag)` when the next
+  request must see the write. In a Route Handler, use blocking expiration such as
+  `revalidateTag(tag, { expire: 0 })`. Return the committed row in place of an immediate reload; when
+  the same request genuinely needs a fresh reread, use an uncached authoritative query, because request
+  memoization may still hold a value read before the mutation. A CMS save whose editor must immediately
+  see the result never relies on stale-while-revalidate invalidation.
+- Publication-owned public list and detail reads follow the canonical `listQuery(...)` and
+  `pageQuery(...)` patterns in `docs/module-anatomy.md#canonical-public-query-patterns`, which own Draft
+  Mode resolution, visibility timing before pagination, filtered variants, and the list/detail
+  publication race. `revalidate` alone is stale-while-revalidate and can serve the old result to the
+  first request after publication; those patterns use a hard `expire` instead.
+- Cache final variants for bounded domain filters such as CMS-owned tag slugs. Normalize or resolve an
+  unbounded public search value before making it a shared cache key; the presence of a search parameter
+  is not a reason to bypass caching.
+- Keep client `stale` within the acceptable user-visible delay for scheduled transitions and editorial
+  changes, even when the server's `revalidate` and `expire` ceilings are days or months.
 - When server loaders might be called from more than one component or query path during a single page
-  render, wrap the shared database or API work in `React.cache` so duplicate calls deduplicate within the
-  request. Prefer primitive cache keys or stable arguments so equivalent calls hit the same cache entry.
-- Do not use `<Suspense fallback={null}>`, or component APIs that silently default to a null loading
-  fallback, when the fallback can be perceptibly rendered and collapsing the suspended content would
-  create a visible layout problem, especially by pulling persistent headers and footers together. Use a
-  height-preserving loading component or skeleton for page bodies or content sections with meaningful
-  latency. A null fallback is acceptable for small fixed-size slots whose surrounding layout already
-  reserves the space, work that resolves before the fallback is visibly displayed, or standalone layouts
-  without surrounding chrome that would collapse into the missing content. Judge the actual surrounding
-  layout and expected latency; do not add a large duplicate skeleton solely because a Suspense boundary
-  covers a large subtree.
+  render, wrap the shared database or API work in `React.cache` so duplicate calls deduplicate within
+  the request; primitive cache keys or stable arguments let equivalent calls hit the same entry.
+- Use a height-preserving loading component or skeleton for page bodies or content sections with
+  meaningful latency, so a perceptibly rendered fallback never collapses the suspended content and pulls
+  persistent headers and footers together. `<Suspense fallback={null}>`, or a component API that
+  silently defaults to a null fallback, is acceptable for small fixed-size slots whose surrounding
+  layout already reserves the space, work that resolves before the fallback is visibly displayed, or
+  standalone layouts without surrounding chrome. Judge the actual surrounding layout and expected
+  latency; a large Suspense subtree does not by itself call for a large duplicate skeleton. Review each
+  perceptibly rendered route or Suspense fallback against its resolved subtree, including nested
+  boundaries: it must preserve stable above-fold structure and known media dimensions so streamed
+  content cannot briefly expose the footer or repeatedly displace already-rendered content. A non-null
+  skeleton alone is not sufficient.

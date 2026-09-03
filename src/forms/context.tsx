@@ -1,11 +1,10 @@
-import type * as z from "zod";
-
 import React, {
   createContext,
   useCallback,
   useContext,
   useEffect,
   useLayoutEffect,
+  useRef,
   useState,
 } from "react";
 import {
@@ -17,16 +16,20 @@ import {
   type FieldErrors,
   type Path,
 } from "react-hook-form";
-
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useMutation, type UseMutationResult } from "@tanstack/react-query";
+import type * as z from "zod";
+
 import fetcher, {
   type FetchResult,
   type FetchSuccess,
 } from "@kenstack/api/fetcher";
-import { ReturnedError, getReturnedErrorMessage } from "@kenstack/api/errors";
+import { getReturnedErrorMessage } from "@kenstack/api/errors";
 import { formErrorName, moveRootFormError } from "./internal/fieldErrors";
 import { useNavigationBlocker } from "./NavigationBlocker";
+
+import type { NoticeProps } from "@kenstack/components/Notice";
+import QueryProvider from "@kenstack/context/QueryProvider";
 
 export type FormSchema = z.ZodType<Record<string, unknown>, FieldValues>;
 
@@ -34,7 +37,7 @@ export type FormSchema = z.ZodType<Record<string, unknown>, FieldValues>;
 const FormContext = createContext<UseFormResult<any, any, any> | null>(null);
 
 export type StatusMessage = {
-  status: "error" | "success";
+  status: NonNullable<NoticeProps["status"]>;
   message: React.ReactNode;
 };
 
@@ -47,14 +50,22 @@ type StatusMessageInput =
   | undefined;
 
 export type SetStatusMessage = (message: StatusMessageInput) => void;
+export type SetStatusError = (message: string | null) => void;
 
-function hasStatus(value: object): value is {
-  status: "error" | "success";
-  message?: React.ReactNode;
-} {
+const noticeStatuses: readonly string[] = [
+  "error",
+  "success",
+  "information",
+] satisfies Array<StatusMessage["status"]>;
+
+// Untyped callers can pass anything; only a notice-shaped object is shown.
+function hasStatus(
+  value: object,
+): value is { status: StatusMessage["status"]; message?: React.ReactNode } {
   return (
     "status" in value &&
-    (value.status === "error" || value.status === "success")
+    typeof value.status === "string" &&
+    noticeStatuses.includes(value.status)
   );
 }
 
@@ -64,22 +75,14 @@ function normalizeStatusMessage(
   if (message === null || message === undefined || message === "") {
     return null;
   }
-
-  if (message instanceof ReturnedError) {
-    return message.message
-      ? { status: "error", message: message.message }
-      : null;
-  }
-
   if (message instanceof Error) {
+    // Only a ReturnedError carries a message meant for the visitor.
     const errorMessage = getReturnedErrorMessage(message);
     return errorMessage ? { status: "error", message: errorMessage } : null;
   }
-
   if (typeof message === "string") {
     return { status: "error", message };
   }
-
   if (typeof message === "object" && hasStatus(message)) {
     return message.message
       ? { status: message.status, message: message.message }
@@ -105,6 +108,9 @@ export type FormProviderProps<
   schema: TSchema;
   defaultValues: DefaultValues<z.input<TSchema>>;
   guardUnsaved?: boolean;
+  // Initial status for a form that begins in a known state, such as a page
+  // reached from an expired-link redirect.
+  initialStatusMessage?: StatusMessage | null;
   onSuccess?: (
     data: FetchSuccess<TResult>,
     variables: TVariables,
@@ -117,6 +123,7 @@ export type FormProviderProps<
     variables: TVariables,
     context: {
       form: UseFormReturn<z.input<TSchema>, unknown, z.output<TSchema>>;
+      setStatusError: SetStatusError;
       setStatusMessage: SetStatusMessage;
     },
   ) => void;
@@ -132,6 +139,7 @@ export type UseFormResult<
   apiPath?: string;
   form: UseFormReturn<TValues, unknown, TSubmitValues>;
   statusMessage: StatusMessage | null;
+  setStatusError: SetStatusError;
   setStatusMessage: SetStatusMessage;
   uploadingFields: Set<string>;
   startUploading: (fieldName: string) => void;
@@ -139,7 +147,19 @@ export type UseFormResult<
   mutation: UseMutationResult<FetchResult<TResult>, Error, TVariables>;
 };
 
-function FormProvider<
+export function FormProvider<
+  TResult extends Record<string, unknown>,
+  TVariables extends Record<string, unknown>,
+  TSchema extends FormSchema,
+>(props: FormProviderProps<TResult, TVariables, TSchema>) {
+  return (
+    <QueryProvider>
+      <FormContextProvider {...props} />
+    </QueryProvider>
+  );
+}
+
+function FormContextProvider<
   TResult extends Record<string, unknown>,
   TVariables extends Record<string, unknown>,
   TSchema extends FormSchema,
@@ -147,6 +167,7 @@ function FormProvider<
   apiPath,
   defaultValues,
   guardUnsaved = false,
+  initialStatusMessage,
   schema,
   mutationFn,
   onError,
@@ -154,11 +175,13 @@ function FormProvider<
   children,
 }: FormProviderProps<TResult, TVariables, TSchema>) {
   const [statusMessage, setStatusMessageState] = useState<StatusMessage | null>(
-    null,
+    initialStatusMessage ?? null,
   );
+  const initialStatusMessageRef = useRef(initialStatusMessage ?? null);
   const setStatusMessage = useCallback<SetStatusMessage>((message) => {
     setStatusMessageState(normalizeStatusMessage(message));
   }, []);
+  const setStatusError: SetStatusError = setStatusMessage;
   const [uploadingFields, setUploadingFields] = useState<Set<string>>(
     () => new Set(),
   );
@@ -199,17 +222,17 @@ function FormProvider<
     shouldFocusError: true,
   });
 
-  const { reset, resetField, setError, clearErrors } = form;
+  const { resetField, setError: setFieldError, clearErrors } = form;
   useUnsavedGuard(guardUnsaved, form.formState.isDirty);
 
   useLayoutEffect(
     () => () => {
-      // Fixes a problem in Next where form state can persist navigation.
-      reset();
-      setStatusMessage(null);
-      setUploadingFields(new Set());
+      // Activity preserves the form draft. Clear only transient form state
+      // when its route or owning surface is hidden. The upload guard stays:
+      // each upload field settles its own entry when its upload ends.
+      setStatusMessage(initialStatusMessageRef.current);
     },
-    [reset, setStatusMessage],
+    [setStatusMessage],
   );
 
   const mutation = useMutation({
@@ -230,11 +253,13 @@ function FormProvider<
       if (err?.name === "AbortError") {
         return;
       }
-      setStatusMessage(err);
+      setStatusError(getReturnedErrorMessage(err));
 
       //eslint-disable-next-line no-console
-      console.error(err);
-      onError?.(err, variables, { form, setStatusMessage });
+      console.error(
+        err instanceof Error && err.cause instanceof Error ? err.cause : err,
+      );
+      onError?.(err, variables, { form, setStatusError, setStatusMessage });
     },
     onSuccess: (data, variables) => {
       if (data.status === "error") {
@@ -242,7 +267,7 @@ function FormProvider<
         if (fieldErrors || formErrors.length) {
           clearErrors();
           formErrors.forEach((message, index) => {
-            setError(
+            setFieldError(
               `${formErrorName}.server.${index}` as Path<z.input<TSchema>>,
               { type: "server", message },
               { shouldFocus: false },
@@ -252,7 +277,7 @@ function FormProvider<
         if (fieldErrors) {
           Object.entries(fieldErrors).forEach(([field, err]) => {
             const messages = Array.isArray(err) ? err : [err];
-            setError(
+            setFieldError(
               field as Path<z.input<TSchema>>,
               {
                 type: "server",
@@ -305,6 +330,7 @@ function FormProvider<
     apiPath,
     form,
     statusMessage,
+    setStatusError,
     setStatusMessage,
     uploadingFields,
     startUploading,
@@ -325,14 +351,18 @@ function useForm<
   TValues extends FieldValues,
   TSubmitValues extends FieldValues = TValues,
 >() {
-  const ctx = useContext(FormContext);
+  const ctx = useOptionalForm();
   if (!ctx) {
     throw new Error("useForm must be used within FormProvider");
   }
   return ctx as UseFormResult<TResult, TVariables, TValues, TSubmitValues>;
 }
 
-export { FormProvider, useForm };
+function useOptionalForm() {
+  return useContext(FormContext);
+}
+
+export { useForm, useOptionalForm };
 
 // Synchronizes form dirtiness with guarded links and full-document exit warnings.
 function useUnsavedGuard(enabled: boolean, isDirty: boolean) {

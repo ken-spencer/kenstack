@@ -268,7 +268,7 @@ function PopoverContent({
     <dialog
       {...props}
       className={cn(
-        "bg-popover text-popover-foreground fixed inset-auto z-50 m-0 max-h-[calc(100dvh-1rem)] w-72 scale-95 overflow-auto rounded-md border border-[var(--admin-divider,var(--border))] p-4 opacity-0 shadow-md outline-hidden transition-[opacity,transform] duration-150 ease-out backdrop:bg-transparent data-[state=open]:scale-100 data-[state=open]:opacity-100",
+        "bg-popover text-popover-foreground fixed inset-auto z-50 m-0 max-h-[calc(100dvh-1rem)] w-72 scale-95 overflow-auto rounded-md border border-[var(--admin-divider,var(--border))] p-4 opacity-0 shadow-md outline-hidden transition-[opacity,scale] duration-150 ease-out backdrop:bg-transparent data-[state=open]:scale-100 data-[state=open]:opacity-100",
         className,
         "hidden open:block",
       )}
@@ -281,6 +281,15 @@ function PopoverContent({
       }}
       onClick={(event) => {
         props.onClick?.(event);
+
+        if (
+          event.target instanceof Element &&
+          event.target.closest("a[href]")
+        ) {
+          event.currentTarget.close();
+          setOpen(false);
+          return;
+        }
 
         if (event.target !== event.currentTarget) {
           return;

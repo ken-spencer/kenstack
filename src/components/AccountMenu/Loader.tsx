@@ -1,4 +1,4 @@
-import { deps } from "@app/deps";
+import { loadPublicAuthState } from "@kenstack/auth/server/state";
 
 import Menu from "./Menu";
 import type { AccountMenuItems, AccountMenuItemsResolver } from "./types";
@@ -11,27 +11,20 @@ export default async function AccountMenuLoader({
   fallback: React.ReactNode;
   items?: AccountMenuItems | AccountMenuItemsResolver;
 }) {
-  const user = await deps.auth.getCurrentUser();
-
-  if (!user) {
-    return fallback ?? null;
-  }
-
-  const resolvedItems = typeof items === "function" ? await items(user) : items;
+  const authState = await loadPublicAuthState();
 
   return (
-    <Menu user={user}>
-      {resolvedItems &&
-        resolvedItems.map(([href, text, Icon], key) => (
-          <GuardedLink
-            className="text-foreground focus-visible:border-ring focus-visible:ring-ring/50 inline-flex h-8 w-full items-center justify-start gap-1.5 rounded-lg border border-transparent px-2.5 text-sm font-medium whitespace-nowrap transition-all outline-none hover:underline focus-visible:ring-3"
-            href={href}
-            key={href + key}
-          >
-            <Icon />
-            {text}
-          </GuardedLink>
-        ))}
+    <Menu authState={authState} fallback={fallback}>
+      {authState.state === "authenticated"
+        ? (typeof items === "function" ? await items(authState) : items)?.map(
+            ([href, text, Icon], key) => (
+              <GuardedLink className="menu-item" href={href} key={href + key}>
+                <Icon />
+                {text}
+              </GuardedLink>
+            ),
+          )
+        : null}
     </Menu>
   );
 }

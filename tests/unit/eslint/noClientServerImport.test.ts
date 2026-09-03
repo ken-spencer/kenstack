@@ -12,7 +12,7 @@ describe("kenstack/no-client-server-import", () => {
     await expect(
       lintClient(`
         "use client";
-        import { deps } from "@app/deps";
+        import { db } from "@app/db";
         import { events } from "@/modules/events/tables";
         export { loadEvents } from "../queries";
         const loadRecord = () => import("@kenstack/records");
@@ -35,7 +35,7 @@ describe("kenstack/no-client-server-import", () => {
   it("does not restrict server files", async () => {
     await expect(
       lintClient(`
-        import { deps } from "@app/deps";
+        import { db } from "@app/db";
         import { events } from "@/modules/events/tables";
       `),
     ).resolves.toHaveLength(0);

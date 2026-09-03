@@ -12,6 +12,7 @@ export default function DateField({
   description,
   className,
   inputClass,
+  placeholder = "Select date",
   ...props
 }: FieldProps &
   Omit<
@@ -34,6 +35,7 @@ export default function DateField({
             name={field.name}
             ref={field.ref}
             className={inputClass}
+            placeholder={placeholder}
             value={field.value}
             onValueCommit={field.onBlur}
             onValueChange={field.onChange}

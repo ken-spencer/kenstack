@@ -12,7 +12,7 @@ import { NavigationBlockerProvider } from "@kenstack/forms/NavigationBlocker";
 import { AppSidebar } from "./app-sidebar";
 import AccountMenu from "@kenstack/components/AccountMenu";
 import NavLink from "./NavLink";
-import { deps } from "@app/deps";
+import { modules } from "@app/modules";
 
 import Content from "./Content";
 
@@ -51,7 +51,7 @@ function AdminSidebarContent({
   children,
   defaultOpen,
 }: AdminSidebarProps & { defaultOpen: boolean }) {
-  const moduleLinks = Object.entries(deps.modules).flatMap(([name, module]) => {
+  const moduleLinks = Object.entries(modules).flatMap(([name, module]) => {
     if (!module.admin) {
       return [];
     }
@@ -71,7 +71,7 @@ function AdminSidebarContent({
   const childLinksByParent = new Map<string, typeof moduleLinks>();
 
   for (const link of moduleLinks) {
-    const moduleConfig = deps.modules[link.name];
+    const moduleConfig = modules[link.name];
     const navigationParent = moduleConfig.navigationParent;
 
     if (!navigationParent || moduleConfig.parent) {
@@ -85,7 +85,7 @@ function AdminSidebarContent({
   }
 
   const adminModules = moduleLinks.filter(({ name }) => {
-    const moduleConfig = deps.modules[name];
+    const moduleConfig = modules[name];
 
     return !moduleConfig.parent && !moduleConfig.navigationParent;
   });

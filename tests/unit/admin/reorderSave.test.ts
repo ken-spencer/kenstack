@@ -13,7 +13,6 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidateTag: vi.fn() }));
-vi.mock("@app/deps", () => ({ deps: {}, tables: {} }));
 vi.mock("@kenstack/records", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@kenstack/records")>()),
   saveRecord: mocks.saveRecord,

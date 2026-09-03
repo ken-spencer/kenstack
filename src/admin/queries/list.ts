@@ -1,16 +1,9 @@
-import {
-  and,
-  eq,
-  getTableColumns,
-  isNull,
-  lte,
-  sql,
-  type SQL,
-} from "drizzle-orm";
+import { and, eq, getTableColumns, sql } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
 import isEqual from "lodash-es/isEqual";
 
-import { deps } from "@app/deps";
+import { db } from "@app/db";
+import { modules } from "@app/modules";
 import {
   createDefaultListQueryState,
   parseListSearchParams,
@@ -21,10 +14,13 @@ import type {
   AnyAdminConfig,
   ModuleParentOptions,
 } from "@kenstack/admin/module";
-import type { AdminContentTable } from "@kenstack/admin/table";
 import { getSortMeta } from "@kenstack/admin/types/list";
 import { resolveListOrderBy, resolveListWhere } from "@kenstack/list/server";
-import { applyListJoins, resolveOneToOneList } from "./listRelations";
+import {
+  applyListJoins,
+  getListSelect,
+  resolveOneToOneList,
+} from "./listRelations";
 import { serializeValues } from "./serialize";
 
 export type AdminListQuery = ListQuery;
@@ -75,7 +71,7 @@ async function loadCachedList(name: string) {
   cacheLife("max");
   cacheTag("admin", adminListCacheTag(name));
 
-  const adminConfig = deps.modules[name]?.admin;
+  const adminConfig = modules[name]?.admin;
 
   if (!adminConfig || !("list" in adminConfig)) {
     return {
@@ -129,7 +125,6 @@ export async function queryAdminList({
   const isReorderSort = adminConfig.list.sort[data.sort]?.direction === false;
   const limit = adminConfig.list.limit ?? 25;
 
-  const { db } = deps;
   const { table, fields } = adminConfig;
   const parentColumn = moduleParent
     ? getTableColumns(table)[moduleParent.foreignKey]
@@ -236,7 +231,6 @@ export async function loadAdminListNeighbors({
     searchParams: searchParamsToRecord(new URLSearchParams(queryString)),
     sort: adminConfig.list.sort,
   });
-  const { db } = deps;
   const { table, fields } = adminConfig;
   const related = resolveOneToOneList(adminConfig);
   const searchable = [
@@ -309,65 +303,6 @@ export async function loadAdminListNeighbors({
     previousId: row?.previousId ?? null,
     nextId: row?.nextId ?? null,
   };
-}
-
-export async function listWhere<TTable extends AdminContentTable>(
-  table: TTable,
-  options: { draft?: boolean } = {},
-) {
-  if (options.draft) {
-    await deps.auth.requireUser("admin");
-    return isNull(table.deletedAt);
-  }
-
-  return and(
-    isNull(table.deletedAt),
-    eq(table.visibility, "published"),
-    lte(table.publishedAt, sql`now()`),
-  );
-}
-
-function getListSelect(
-  table: AnyAdminConfig["table"],
-  fields: AnyAdminConfig["fields"],
-) {
-  const columns = getTableColumns(table);
-  const select: Record<string, (typeof columns)[keyof typeof columns] | SQL> =
-    {};
-
-  for (const [key, field] of Object.entries(fields)) {
-    if (!field.list) {
-      continue;
-    }
-
-    const column = columns[key];
-    const fieldSelect = field.listSelect?.({
-      key,
-      field,
-      column,
-      columns,
-    });
-
-    if (fieldSelect || column) {
-      select[key] = fieldSelect ?? column;
-    }
-  }
-
-  if (!Object.keys(select).length) {
-    if ("title" in columns) {
-      select.title = columns.title;
-    }
-
-    if ("publishedAt" in columns) {
-      select.publishedAt = columns.publishedAt;
-    }
-  }
-
-  if ("visibility" in columns) {
-    select.visibility ??= columns.visibility;
-  }
-
-  return select;
 }
 
 // Collects searchable parent columns so list queries can combine them with related fields.

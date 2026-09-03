@@ -5,7 +5,7 @@ import {
   formatMoney,
   parseDecimalAmount,
   roundCashCents,
-} from "../../../src/lib/money";
+} from "@kenstack/lib/money";
 
 describe("money", () => {
   it.each([

@@ -4,12 +4,8 @@ export {
   type PipelineOptions,
 } from "./pipeline";
 export { default as multiPipeline } from "./multiPipeline";
-export { default as guardPublicEmailRequest } from "./guardPublicEmailRequest";
 export { default as recaptcha } from "./recaptcha";
-export {
-  default as rateLimitEmailRequest,
-  rateLimitIpRequest,
-} from "./rateLimit";
+export { checkQuota, claimQuota, consumeQuota } from "./quota";
 export { ReturnedError } from "./errors";
 
 import { z } from "zod";

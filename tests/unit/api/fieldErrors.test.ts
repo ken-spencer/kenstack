@@ -3,11 +3,6 @@ import { NextRequest } from "next/server";
 import * as z from "zod";
 
 vi.mock("server-only", () => ({}));
-vi.mock("@app/deps", () => ({
-  deps: {
-    error: vi.fn(),
-  },
-}));
 
 import pipeline, { pipelineStage } from "@kenstack/api/pipeline";
 

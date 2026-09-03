@@ -1,5 +1,5 @@
 import fetcher from "@kenstack/api/fetcher";
-import type { SelectedMedia } from "@kenstack/db/tables";
+import type { SelectedMedia } from "@kenstack/db/queries";
 import type { CropSource, SquareCrop } from "@kenstack/db/tables/media/types";
 import getUploadErrorMessage from "@kenstack/forms/getUploadErrorMessage";
 

@@ -1,6 +1,7 @@
 import { pipelineStage } from "@kenstack/api";
 import type { AnyAdminConfig } from "@kenstack/admin/module";
-import { deps } from "@app/deps";
+import { db } from "@app/db";
+import { modules } from "@app/modules";
 import { revisions } from "@kenstack/db/tables/revisions";
 import { and, desc, eq, getTableName } from "drizzle-orm";
 import * as z from "zod";
@@ -20,7 +21,7 @@ export const revisionsAction = (adminConfig: AnyAdminConfig) =>
       const tableName = getTableName(adminConfig.table);
 
       if (revisionId) {
-        const [revision] = await deps.db
+        const [revision] = await db
           .select({
             id: revisions.id,
             snapshot: revisions.snapshot,
@@ -51,8 +52,8 @@ export const revisionsAction = (adminConfig: AnyAdminConfig) =>
         });
       }
 
-      const { users } = deps.tables;
-      const rows = await deps.db
+      const users = modules.users.admin.table;
+      const rows = await db
         .select({
           id: revisions.id,
           createdAt: revisions.createdAt,

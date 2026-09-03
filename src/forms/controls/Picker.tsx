@@ -171,6 +171,9 @@ function Picker<T>({
     },
     [id],
   );
+  const selectedIndex = items.findIndex(
+    (item) => isSelected(item) && !isItemDisabled(item),
+  );
 
   const highlightedIndex =
     isOpen &&
@@ -179,7 +182,9 @@ function Picker<T>({
     !isItemDisabled(items[highlightedIndexState])
       ? highlightedIndexState
       : isOpen && autoHighlight
-        ? items.findIndex((item) => !isItemDisabled(item))
+        ? selectedIndex >= 0
+          ? selectedIndex
+          : items.findIndex((item) => !isItemDisabled(item))
         : -1;
 
   const moveHighlight = React.useCallback(

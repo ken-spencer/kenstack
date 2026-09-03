@@ -10,7 +10,6 @@ import { sql } from "drizzle-orm";
 import * as z from "zod";
 
 vi.mock("server-only", () => ({}));
-vi.mock("@app/deps", () => ({ deps: {}, tables: {} }));
 
 import { defineFields } from "@kenstack/admin/fields";
 import { defineModule, defineOneToOne } from "@kenstack/admin/module";

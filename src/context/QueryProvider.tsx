@@ -1,12 +1,11 @@
 "use client";
 import { useContext, useState, type ReactNode } from "react";
-import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import {
   QueryClient,
   QueryCache,
   QueryClientContext,
+  QueryClientProvider,
 } from "@tanstack/react-query";
-import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 
 function createQueryClient() {
   return new QueryClient({
@@ -26,42 +25,20 @@ function createQueryClient() {
   });
 }
 
-const dummyForServer = {
-  getItem: () => null,
-  setItem: () => {},
-  removeItem: () => {},
-};
 export default function QueryProvider({ children }: { children: ReactNode }) {
-  const [queryClient] = useState(createQueryClient);
-  // Safe on client because this is a Client Component
-  const persister = createAsyncStoragePersister({
-    storage:
-      typeof window !== "undefined" ? window.localStorage : dummyForServer,
-  });
-
-  return (
-    <PersistQueryClientProvider
-      client={queryClient}
-      persistOptions={{
-        persister,
-        maxAge: 1000 * 60 * 60 * 12, // 12 hours
-        dehydrateOptions: {
-          // Persist only specific queries if desired
-          shouldDehydrateQuery: (query) => query.queryKey[0] === "user-info",
-        },
-      }}
-    >
-      {children}
-    </PersistQueryClientProvider>
-  );
-}
-
-export function QueryBoundary({ children }: { children: ReactNode }) {
   const existingClient = useContext(QueryClientContext);
 
   if (existingClient) {
     return children;
   }
 
-  return <QueryProvider>{children}</QueryProvider>;
+  return <QueryClientRoot>{children}</QueryClientRoot>;
+}
+
+function QueryClientRoot({ children }: { children: ReactNode }) {
+  const [queryClient] = useState(createQueryClient);
+
+  return (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
 }

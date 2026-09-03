@@ -1,4 +1,4 @@
-import roles from "@app/deps/roles";
+import roles from "@app/roles";
 import { defineFields } from "@kenstack/admin/fields";
 import {
   checkboxListField,
@@ -8,6 +8,11 @@ import {
 } from "@kenstack/fields";
 import { email } from "@kenstack/fields/email";
 import * as z from "zod";
+
+const roleOptions = Object.entries(roles).map(([value, { label }]) => ({
+  value,
+  label,
+}));
 
 export const userFields = {
   givenName: textField({
@@ -37,7 +42,7 @@ export const userFields = {
 export const userRoleField = checkboxListField({
   filter: true,
   label: "Access Roles",
-  options: roles,
+  options: roleOptions,
 });
 
 export const fields = defineFields({

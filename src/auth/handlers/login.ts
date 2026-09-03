@@ -1,18 +1,24 @@
-import { NextRequest } from "next/server";
 import bcrypt from "bcrypt";
-import { geolocation, ipAddress } from "@vercel/functions";
+import { sql } from "drizzle-orm";
+
+import { db } from "@app/db";
 import {
+  checkQuota,
+  consumeQuota,
   pipeline,
   pipelineStage,
   recaptcha,
   type PipelineOptions,
 } from "@kenstack/api";
-import loginSchema from "@kenstack/auth/schemas/login";
-import { getSafeReturnToPath } from "@kenstack/auth/returnTo";
-import { deps } from "@app/deps";
-import { sql } from "drizzle-orm";
 
-import { PipelineResponse } from "@kenstack/api/PipelineResponse";
+import type { LoginActionResult } from "@kenstack/auth/api";
+import { login as loginUser } from "@kenstack/auth/server/auth";
+import { getSafeReturnToPath } from "@kenstack/auth/returnTo";
+import loginSchema from "@kenstack/auth/schemas/login";
+import { loadFreshPublicAuthState } from "@kenstack/auth/server/state";
+import { audit } from "@kenstack/logger";
+
+export const passwordFailureLimit = [3, "15 minutes"] as const;
 
 export const loginPipeline = () => (options: PipelineOptions) =>
   pipeline(options, login());
@@ -25,13 +31,18 @@ const login = () =>
       request,
       response,
     }) => {
-      const limited = await enforcePasswordAttemptLimit(
+      // Only failures count (see recordPasswordFailure); a successful sign-in
+      // consumes nothing. Locked after 3 failures per account in 15 minutes.
+      const locked = await checkQuota("password-failure", {
         email,
-        request,
-        response,
-      );
-      if (limited) {
-        return limited;
+        limits: { email: passwordFailureLimit },
+      });
+      if (locked) {
+        return response.error({
+          message:
+            "Sign-in is temporarily unavailable because too many recent requests were made. Please wait and try again.",
+          status: 429,
+        });
       }
 
       const recaptchaRejection = await recaptcha({
@@ -44,102 +55,51 @@ const login = () =>
         return recaptchaRejection;
       }
 
-      const user = await deps.db.query.users.findFirst({
+      const user = await db.query.users.findFirst({
         columns: { id: true, passwordHash: true },
-        where: (u, { and, eq, isNull }) =>
-          and(eq(u.email, email), isNull(u.deletedAt)),
+        where: (u, { and, isNull }) =>
+          and(sql`lower(${u.email}) = ${email}`, isNull(u.deletedAt)),
       });
 
       if (!user || !user.passwordHash) {
         // prevent introspection using timing.
-        const failHash =
-          "$2b$12$vU8SBwjV2ZMjNFqpESF7lug7JWrU3A3EfBFpT.lqUal5tlqvdIcV";
-        await bcrypt.compare("fake-to-delay", failHash);
+        await bcrypt.compare(
+          "fake-to-delay",
+          "$2b$12$vU8SBwjV2ZMjNFqpESF7lug7JWrU3A3EfBFpT.lqUal5tlqvdIcV",
+        );
 
-        return await passwordFailureResponse(email, request, response);
+        await recordPasswordFailure(email, null);
+        return response.error(passwordFailureMessage);
       }
 
-      const success = await bcrypt.compare(password, user.passwordHash);
-      if (!success) {
-        return await passwordFailureResponse(email, request, response);
+      if (!(await bcrypt.compare(password, user.passwordHash))) {
+        await recordPasswordFailure(email, user.id);
+        return response.error(passwordFailureMessage);
       }
 
       const path = getSafeReturnToPath(returnTo) ?? "/";
 
-      await deps.auth.login(user.id);
+      await loginUser(user.id);
 
-      return response.success({
+      return response.success<LoginActionResult>({
         authenticated: true,
+        authState: await loadFreshPublicAuthState(),
         path,
       });
     },
   );
 
-export async function enforcePasswordAttemptLimit(
-  email: string,
-  request: NextRequest,
-  response: PipelineResponse,
-) {
-  const ip = ipAddress(request) ?? "127.0.0.1";
-  const {
-    db,
-    tables: { loginFailures },
-  } = deps;
-  const [{ emailCount, ipCount }] = await db
-    .select({
-      emailCount: sql<number>`(count(*) FILTER (WHERE ${loginFailures.email} = ${email}))::int`,
-      ipCount: sql<number>`(count(*) FILTER (WHERE ${loginFailures.ip} = ${ip}))::int`,
-    })
-    .from(loginFailures)
-    .where(
-      sql`${loginFailures.attemptedAt} > now() - interval '15 minutes'
-      and (${loginFailures.email} = ${email} or ${loginFailures.ip} = ${ip})`,
-    );
-
-  if (emailCount >= 3) {
-    return response.error(
-      "Your account has been temporarily locked due to multiple failed login attempts. Please wait 15 minutes before trying again. If you've forgotten your password, consider using the 'Forgot Password' option.",
-    );
-  }
-
-  if (ipCount >= 10) {
-    return response.error(
-      "Your account has been temporarily locked due to suspicious activity from your network. Please wait 15 minutes before trying again. If you've forgotten your password, consider using the 'Forgot Password' option.",
-    );
-  }
-}
-
 export async function recordPasswordFailure(
   email: string,
-  request: NextRequest,
+  userId: number | null,
 ) {
-  const {
-    db,
-    tables: { loginFailures },
-  } = deps;
-  const ip = ipAddress(request) ?? "127.0.0.1";
-
-  const geo = geolocation(request) || null;
-
-  await db.insert(loginFailures).values({
-    email,
-    ip,
-    userAgent: request.headers.get("user-agent"),
-    geo,
+  await consumeQuota("password-failure", { email });
+  await audit({
+    action: "password-failure",
+    data: { email },
+    userId,
   });
 }
 
-async function passwordFailureResponse(
-  email: string,
-  request: NextRequest,
-  response: PipelineResponse,
-) {
-  await recordPasswordFailure(email, request);
-
-  return response.error(`
-    Please try again. If you are unable to sign in, use the “Forgotten your password” link below. 
-    Your access will temporarily be suspended after three failed login attempts.
-  `);
-}
-
-export default login;
+const passwordFailureMessage =
+  "Please try again. If you are unable to sign in, choose the email sign-in option instead. Your access will temporarily be suspended after three failed login attempts.";

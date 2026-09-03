@@ -18,6 +18,7 @@ import AttachmentList, {
 import { SortableItem, SortableList } from "@kenstack/components/SortableList";
 import Field, { FormControl, type FieldProps } from "@kenstack/forms/Field";
 import AddImageIcon from "@kenstack/forms/ImageField/AddImageIcon";
+import { getReturnedErrorMessage } from "@kenstack/api/errors";
 import { useForm } from "@kenstack/forms/context";
 import {
   mediaValueFromUpload,
@@ -122,12 +123,12 @@ function MediaListFieldControl({
       name={name}
       label={label}
       description={description}
-      render={mediaRender({ ...props, ImageDetails })}
+      render={createMediaRender({ ...props, ImageDetails })}
     />
   );
 }
 
-const mediaRender = ({
+const createMediaRender = ({
   apiPath,
   data: extraData,
   accept = acceptDefault,
@@ -148,8 +149,13 @@ const mediaRender = ({
   }: {
     field: ControllerRenderProps<FieldValues, string>;
   }) {
-    const { form, finishUploading, setStatusMessage, startUploading } =
-      useForm();
+    const {
+      finishUploading,
+      form,
+      setStatusError,
+      setStatusMessage,
+      startUploading,
+    } = useForm();
     const [editing, setEditing] = useState<{
       index: number;
       mode: "crop" | "details";
@@ -312,9 +318,8 @@ const mediaRender = ({
                 }
               }
             } catch (error) {
-              const message =
-                error instanceof Error ? error.message : String(error);
-              setStatusMessage(error instanceof Error ? error : message);
+              const message = getReturnedErrorMessage(error);
+              setStatusError(message);
               updateLocalImage(pending.localId, { uploadState: "error" });
               failedLocalIds.add(pending.localId);
               failedMessages.add(message);

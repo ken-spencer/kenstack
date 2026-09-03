@@ -3,7 +3,7 @@
 import { Suspense, type ReactNode } from "react";
 import { catchError, type ErrorInfo } from "next/error";
 
-import Alert from "@kenstack/components/Alert";
+import Notice from "@kenstack/components/Notice";
 import Button from "@kenstack/components/Button";
 
 function ErrorFallback(
@@ -23,14 +23,14 @@ function ErrorFallback(
   }
 
   return (
-    <Alert className="flex-wrap p-4" role="alert">
+    <Notice className="flex-wrap p-4" role="alert">
       <div className="flex grow flex-wrap items-center justify-between gap-3">
         <p>{message}</p>
         <Button type="button" variant="outline" onClick={retry}>
           Try again
         </Button>
       </div>
-    </Alert>
+    </Notice>
   );
 }
 

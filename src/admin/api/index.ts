@@ -8,8 +8,10 @@ import "server-only";
 
 import { NextRequest, NextResponse } from "next/server";
 
-import { deps } from "@app/deps";
+import { modules } from "@app/modules";
 import { pipeline } from "@kenstack/api";
+import { hasRole } from "@kenstack/auth/server/auth";
+import { content } from "@kenstack/db/tables/content";
 import { isRecord } from "@kenstack/lib/isRecord";
 
 import {
@@ -57,7 +59,7 @@ const runAdminGet = async (request: NextRequest) => {
 };
 
 const runAdminPipeline = async (request: NextRequest) => {
-  if (!(await deps.auth.hasRole("admin"))) {
+  if (!(await hasRole("admin"))) {
     return NextResponse.json({ redirect: "/login" });
   }
 
@@ -104,7 +106,7 @@ const runAdminPipeline = async (request: NextRequest) => {
       return pipeline(
         { request, json },
         getPresignedUrlAction({
-          table: deps.tables.content,
+          table: content,
           fields: pageEditorServerFields,
         }),
       );
@@ -112,14 +114,13 @@ const runAdminPipeline = async (request: NextRequest) => {
       return pipeline(
         { request, json },
         uploadCompleteAction({
-          table: deps.tables.content,
+          table: content,
           fields: pageEditorServerFields,
         }),
       );
   }
 
-  const moduleConfig =
-    typeof name === "string" ? deps.modules[name] : undefined;
+  const moduleConfig = typeof name === "string" ? modules[name] : undefined;
   if (!moduleConfig) {
     return NextResponse.json({
       status: "error",
@@ -191,10 +192,7 @@ const runAdminPipeline = async (request: NextRequest) => {
     case "relationship-search":
       return pipeline(
         { request, json },
-        relationshipSearchAction(
-          adminModuleConfig,
-          Object.values(deps.modules),
-        ),
+        relationshipSearchAction(adminModuleConfig, Object.values(modules)),
       );
   }
 

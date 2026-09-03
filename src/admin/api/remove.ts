@@ -13,7 +13,8 @@ import { pipelineStage } from "@kenstack/api";
 import type { DefinedAdminModule } from "@kenstack/admin/module";
 import { adminListCacheTag } from "@kenstack/admin/queries/list";
 import { adminLoadCacheTag } from "@kenstack/admin/queries/load";
-import { deps } from "@app/deps";
+import { db } from "@app/db";
+import { audit } from "@kenstack/logger";
 import { revalidator } from "@kenstack/lib/revalidate";
 
 const schema = z.object({
@@ -42,7 +43,6 @@ export const removeAction = ({
         return response.error("No records provided to delete.");
       }
       const { table } = adminConfig;
-      const { db } = deps;
       const columns = getTableColumns(table);
       const targetFilter = and(
         inArray(table.id, data.remove),
@@ -121,7 +121,17 @@ export const removeAction = ({
           .where(targetFilter);
       }
 
-      await deps.logger.audit({
+      // Invalidate before auditing so a failed audit cannot leave stale
+      // authorization or content cached.
+      for (const row of rows) {
+        revalidator(adminConfig.revalidate, row);
+      }
+      rows.forEach((row) => {
+        revalidateTag(adminLoadCacheTag(name, row.id), { expire: 0 });
+      });
+      revalidateTag(adminListCacheTag(name), { expire: 0 });
+
+      await audit({
         userId: user.id,
         rowId: rows.length === 1 ? rows[0].id : null,
         table: getTableName(table),
@@ -134,15 +144,6 @@ export const removeAction = ({
           })),
         },
       });
-
-      for (const row of rows) {
-        revalidator(adminConfig.revalidate, row);
-      }
-
-      rows.forEach((row) => {
-        revalidateTag(adminLoadCacheTag(name, row.id), { expire: 0 });
-      });
-      revalidateTag(adminListCacheTag(name), { expire: 0 });
 
       return response.success({});
     },

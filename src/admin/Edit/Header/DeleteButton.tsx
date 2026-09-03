@@ -17,10 +17,11 @@ import { useAdminEdit } from "../context";
 import fetcher from "@kenstack/api/fetcher";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { getReturnedErrorMessage } from "@kenstack/api/errors";
 import { useForm } from "@kenstack/forms/context";
 
 function useRemoveMutation(mode: "trash" | "permanent" | "restore") {
-  const { setStatusMessage } = useForm();
+  const { setStatusError, setStatusMessage } = useForm();
   const router = useRouter();
   const { name, apiPath, listPath } = useAdminEdit();
   const queryClient = useQueryClient();
@@ -34,7 +35,7 @@ function useRemoveMutation(mode: "trash" | "permanent" | "restore") {
         remove: [idToRemove],
       }),
     onError: (err) => {
-      setStatusMessage(err);
+      setStatusError(getReturnedErrorMessage(err));
 
       // eslint-disable-next-line no-console
       console.error(err);

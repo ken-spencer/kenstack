@@ -7,7 +7,8 @@ import { pipelineStage } from "@kenstack/api";
 import type { DefinedAdminModule } from "@kenstack/admin/module";
 import { adminListCacheTag } from "@kenstack/admin/queries/list";
 import { resolveReorderScopeField } from "@kenstack/admin/lib/scopedReorder";
-import { deps } from "@app/deps";
+import { db } from "@app/db";
+import { audit } from "@kenstack/logger";
 import { revalidator } from "@kenstack/lib/revalidate";
 
 const schema = z.object({
@@ -36,7 +37,7 @@ export const reorderAction = (moduleConfig: DefinedAdminModule) => {
       }
       const scopeField = resolveReorderScopeField(moduleConfig);
 
-      const reorderError = await deps.db.transaction(async (tx) => {
+      const reorderError = await db.transaction(async (tx) => {
         let scopeValue: unknown;
 
         if (scopeField) {
@@ -95,7 +96,7 @@ export const reorderAction = (moduleConfig: DefinedAdminModule) => {
         return response.error(reorderError);
       }
 
-      await deps.logger.audit({
+      await audit({
         userId: user.id,
         rowId: null,
         table: getTableName(table),

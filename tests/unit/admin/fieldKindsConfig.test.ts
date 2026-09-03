@@ -4,7 +4,6 @@ import { integer, pgTable, PgDialect, text } from "drizzle-orm/pg-core";
 import * as z from "zod";
 
 vi.mock("server-only", () => ({}));
-vi.mock("@app/deps", () => ({ deps: {}, tables: {} }));
 
 import { defineFields } from "@kenstack/admin/fields";
 import { defineModule } from "@kenstack/admin/module";

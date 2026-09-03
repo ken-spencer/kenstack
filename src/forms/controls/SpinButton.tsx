@@ -38,7 +38,7 @@ export default function SpinButton({
   incrementLabel = "Increase value",
   inputRef,
   max,
-  min,
+  min = 0,
   name,
   onBlur,
   onValueChange,

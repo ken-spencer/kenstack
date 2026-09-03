@@ -1,83 +1,46 @@
 import { redirect } from "next/navigation";
-import Form from "./Form";
-import { deps } from "@app/deps";
-import crypto from "crypto";
 import { eq } from "drizzle-orm";
-import Alert from "@kenstack/components/Alert";
-import { hasRecentPasswordAuthentication } from "@kenstack/auth/passwordChange";
 
-export default async function ForgottenPasswordFormLoader({
-  token,
-}: {
-  token?: string;
-}) {
-  if (token) {
-    if (!token.match(/^[A-Za-z0-9_-]{32}$/)) {
-      return errorRedirect(
-        "That password reset link isn't valid. Please request a new one below.",
-      );
-    }
-    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+import { db } from "@app/db";
+import { modules } from "@app/modules";
+import { getCurrentSession } from "@kenstack/auth/server/user";
+import { requiresCurrentPassword } from "@kenstack/auth/passwordChange";
+import Notice from "@kenstack/components/Notice";
 
-    const { passwordResetRequests: prr } = deps.tables;
+import Form from "./Form";
 
-    const now = new Date();
-    const [row] = await deps.db
-      .select({
-        id: prr.id,
-        invalidatedAt: prr.invalidatedAt,
-        expiresAt: prr.expiresAt,
-      })
-      .from(prr)
-      .where(eq(prr.tokenHash, tokenHash));
+const loginPath = "/login?returnTo=%2Freset-password";
 
-    if (!row) {
-      return errorRedirect(
-        "That password reset link isn't valid. Please request a new one below.",
-      );
-    } else if (row.invalidatedAt) {
-      return await errorRedirect(
-        "That password reset link has already been used. Please request a new one below.",
-      );
-    } else if (row.expiresAt <= now) {
-      return await errorRedirect(
-        "That password reset link has expired. Please request a new one below.",
-      );
-    }
-  } else {
-    const session = await deps.auth.getCurrentSession();
-    if (!session) {
-      const params = new URLSearchParams({
-        loginMessage:
-          "That page needs you to be logged in. Please log in and try again.",
-      });
+export default async function ResetPasswordFormLoader() {
+  const session = await getCurrentSession();
+  if (!session) {
+    redirect(loginPath);
+  }
 
-      return redirect(`/login?${params.toString()}`);
-    }
-
-    if (session.impersonatedBy !== null) {
-      return (
-        <Alert>
-          Password changes are unavailable while you are signed in as another
-          user. Return to your own account first.
-        </Alert>
-      );
-    }
-
+  if (session.impersonatedBy !== null) {
     return (
-      <Form
-        requiresCurrentPassword={!hasRecentPasswordAuthentication(session)}
-      />
+      <Notice>
+        Password changes are unavailable while impersonating a user. Choose
+        Logout to return to your administrator account, then open the user in
+        Users and select Send onboarding email.
+      </Notice>
     );
   }
 
-  return <Form token={token} />;
+  const users = modules.users.admin.table;
+  const [currentUser] = await db
+    .select({ passwordHash: users.passwordHash })
+    .from(users)
+    .where(eq(users.id, session.userId))
+    .limit(1);
+
+  if (!currentUser) {
+    redirect(loginPath);
+  }
+
+  return (
+    <Form
+      requiresCurrentPassword={requiresCurrentPassword(currentUser, session)}
+    />
+  );
 }
-
-const errorRedirect = (message: string) => {
-  const params = new URLSearchParams({
-    forgottenPasswordMessage: message,
-  });
-
-  return redirect(`/forgot-password?${params.toString()}`);
-};

@@ -1,7 +1,7 @@
 import { eq, getTableColumns } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
 
-import { deps } from "@app/deps";
+import { modules } from "@app/modules";
 import type {
   AnyAdminConfig,
   ModuleParentOptions,
@@ -58,7 +58,7 @@ async function loadCachedAdminRecord(
   cacheLife("max");
   cacheTag(adminLoadCacheTag(name, target), name);
 
-  const adminConfig = deps.modules[name]?.admin;
+  const adminConfig = modules[name]?.admin;
 
   if (!adminConfig) {
     return null;
@@ -78,7 +78,10 @@ async function loadCachedAdminRecord(
       fields: adminConfig.fields,
       defaults: adminConfig.defaultValues,
       id: target,
-      select: parentColumn ? { parentId: parentColumn } : undefined,
+      select: {
+        ...(adminConfig.select ?? {}),
+        ...(parentColumn ? { parentId: parentColumn } : {}),
+      },
     });
 
     // loadRecord always selects identity and timestamps, which serializeValues preserves by key.
@@ -91,6 +94,7 @@ async function loadCachedAdminRecord(
     table: adminConfig.table,
     fields: adminConfig.fields,
     defaults: adminConfig.defaultValues,
+    select: adminConfig.select,
     where: eq(adminConfig.table.key, name),
   });
 
@@ -112,7 +116,7 @@ export async function loadOneToOne({
   cacheLife("max");
   cacheTag(name, adminLoadCacheTag(name, parentId));
 
-  const binding = deps.modules[name]?.admin?.oneToOne?.relations[relationKey];
+  const binding = modules[name]?.admin?.oneToOne?.relations[relationKey];
   if (!binding) {
     return null;
   }

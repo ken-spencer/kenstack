@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { History } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 
-import Alert from "@kenstack/components/Alert";
+import Notice from "@kenstack/components/Notice";
 import { Skeleton } from "@kenstack/components/Skeleton";
 import Tooltip from "@kenstack/components/Tooltip";
 import { Button } from "@kenstack/components/Button";
@@ -15,6 +15,7 @@ import {
   PopoverTrigger,
 } from "@kenstack/components/Popover";
 import { dateFormat } from "@kenstack/lib/dateFormat";
+import { getReturnedErrorMessage } from "@kenstack/api/errors";
 import fetcher from "@kenstack/api/fetcher";
 import { useForm } from "@kenstack/forms/context";
 import { isRecord } from "@kenstack/lib/isRecord";
@@ -44,7 +45,7 @@ export default function RevisionHistoryButton() {
     selectedAt: number;
   } | null>(null);
   const { reset, setValue } = useFormContext<Record<string, unknown>>();
-  const { mutation, setStatusMessage } = useForm();
+  const { mutation, setStatusError, setStatusMessage } = useForm();
   const { apiPath, defaultValues, id, isNew, name, oneToOne, schema, single } =
     useAdminEdit();
   const revisionTarget = single ? name : id;
@@ -80,7 +81,7 @@ export default function RevisionHistoryButton() {
       });
     },
     onError: (error) => {
-      setStatusMessage(error);
+      setStatusError(getReturnedErrorMessage(error));
     },
     onSuccess: (data) => {
       if (data.status === "error") {
@@ -182,7 +183,7 @@ export default function RevisionHistoryButton() {
           </div>
         </div>
         {revisionsQuery.error ? (
-          <Alert className="m-2">{revisionsQuery.error.message}</Alert>
+          <Notice className="m-2">{revisionsQuery.error.message}</Notice>
         ) : revisionsQuery.isPending ? (
           <div className="space-y-2 p-2">
             <RevisionSkeleton />
@@ -190,7 +191,7 @@ export default function RevisionHistoryButton() {
             <RevisionSkeleton />
           </div>
         ) : revisionsQuery.data?.status === "error" ? (
-          <Alert className="m-2" {...revisionsQuery.data} />
+          <Notice className="m-2" {...revisionsQuery.data} />
         ) : !revisionsQuery.data?.revisions.length ? (
           <div className="text-muted-foreground p-3 text-sm">No revisions</div>
         ) : (

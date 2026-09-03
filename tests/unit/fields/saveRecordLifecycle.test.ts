@@ -4,23 +4,18 @@ import { integer, pgTable, text } from "drizzle-orm/pg-core";
 
 const mocks = vi.hoisted(() => ({
   audit: vi.fn(),
+  requireUser: vi.fn(async () => ({ id: 1 })),
   transaction: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
-vi.mock("@app/deps", () => ({
-  deps: {
-    auth: {
-      requireUser: vi.fn(async () => ({ id: 1 })),
-    },
-    db: {
-      transaction: mocks.transaction,
-    },
-    logger: {
-      audit: mocks.audit,
-    },
-  },
+vi.mock("@app/db", () => ({
+  db: { transaction: mocks.transaction },
 }));
+vi.mock("@kenstack/auth/server/user", () => ({
+  requireUser: mocks.requireUser,
+}));
+vi.mock("@kenstack/logger", () => ({ audit: mocks.audit }));
 
 import { field, textField } from "@kenstack/fields";
 import { defineFields } from "@kenstack/admin/fields";
@@ -36,6 +31,8 @@ const records = pgTable("save_record_lifecycle_records", {
 describe("record preparation lifecycle", () => {
   beforeEach(() => {
     mocks.audit.mockReset();
+    mocks.requireUser.mockReset();
+    mocks.requireUser.mockResolvedValue({ id: 1 });
     mocks.transaction.mockReset();
   });
 
@@ -225,10 +222,7 @@ describe("record preparation lifecycle", () => {
       throw new Error(related.message);
     }
 
-    const { deps } = await import("@app/deps");
-    vi.mocked(deps.auth.requireUser).mockRejectedValueOnce(
-      new Error("Session expired"),
-    );
+    mocks.requireUser.mockRejectedValueOnce(new Error("Session expired"));
 
     await expect(
       saveRecord({

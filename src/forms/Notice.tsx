@@ -1,6 +1,6 @@
 "use client";
 
-import Alert from "@kenstack/components/Alert";
+import Notice from "@kenstack/components/Notice";
 import { useForm } from "@kenstack/forms/context";
 import {
   getFormFieldErrors,
@@ -46,7 +46,7 @@ export default function NoticeList({
       statusMessage?.status === "error" ? statusMessage.message : null;
 
     return (
-      <Alert ref={ref} className="scroll-mt-12" role="alert">
+      <Notice ref={ref} className="scroll-mt-12" role="alert">
         <div>{responseMessage ?? validationMessage}</div>
         {unrenderedErrors.length ? (
           <ul className="mt-4 list-disc pl-8">
@@ -55,7 +55,7 @@ export default function NoticeList({
             ))}
           </ul>
         ) : null}
-      </Alert>
+      </Notice>
     );
   }
 
@@ -63,7 +63,12 @@ export default function NoticeList({
     return null;
   }
   return (
-    <Alert ref={ref} status={statusMessage.status} className="scroll-mt-12">
+    <Notice
+      ref={ref}
+      className="scroll-mt-12"
+      role={statusMessage.status === "error" ? "alert" : "status"}
+      status={statusMessage.status}
+    >
       <div className="flex items-center">
         <div className="grow">{statusMessage.message}</div>
         <Button
@@ -76,6 +81,6 @@ export default function NoticeList({
           <CircleX />
         </Button>
       </div>
-    </Alert>
+    </Notice>
   );
 }

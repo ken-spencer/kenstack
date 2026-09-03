@@ -275,7 +275,6 @@ export default function SquareCropEditor({
           onPointerUp={endPointer}
         >
           <SquareCropPreview
-            alt=""
             className="absolute inset-0 h-full w-full"
             crop={normalized}
             source={source}

@@ -4,7 +4,6 @@ import { getTableColumns, SQL } from "drizzle-orm";
 import { integer, pgTable, PgDialect } from "drizzle-orm/pg-core";
 
 vi.mock("server-only", () => ({}));
-vi.mock("@app/deps", () => ({ deps: {}, tables: {} }));
 
 import {
   booleanField,

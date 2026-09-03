@@ -16,6 +16,7 @@ import { twMerge } from "tailwind-merge";
 import Field, { FormControl, type FieldProps } from "@kenstack/forms/Field";
 import Button from "@kenstack/components/Button";
 import Help from "@kenstack/components/Help";
+import { getReturnedErrorMessage } from "@kenstack/api/errors";
 import { useForm } from "@kenstack/forms/context";
 import {
   mediaValueFromUpload,
@@ -77,12 +78,12 @@ function ImageFieldControl({
       label={label}
       help={help}
       description={description}
-      render={imageRender({ ...props, ImageDetails })}
+      render={createImageRender({ ...props, ImageDetails })}
     />
   );
 }
 
-const imageRender = ({
+const createImageRender = ({
   shape = "square",
   apiPath,
   data: extraData,
@@ -100,8 +101,13 @@ const imageRender = ({
   }: {
     field: ControllerRenderProps<FieldValues, string>;
   }) {
-    const { finishUploading, form, setStatusMessage, startUploading } =
-      useForm();
+    const {
+      finishUploading,
+      form,
+      setStatusError,
+      setStatusMessage,
+      startUploading,
+    } = useForm();
     const value = field.value as
       (ImageDetailsValue & SquareCropChangeValue) | null;
 
@@ -240,7 +246,7 @@ const imageRender = ({
           return;
         }
 
-        setStatusMessage(e instanceof Error ? e : String(e));
+        setStatusError(getReturnedErrorMessage(e));
         reset();
       } finally {
         uploadController.signal.removeEventListener("abort", abortReader);
@@ -358,7 +364,6 @@ const imageRender = ({
       const imagePreview =
         cropSource && form.getFieldState(field.name).isDirty ? (
           <SquareCropPreview
-            alt=""
             className={imgClass}
             crop={value.squareCrop}
             source={cropSource}
@@ -385,7 +390,6 @@ const imageRender = ({
           </Button>
           <label
             title="Upload image"
-            aria-label="Upload image"
             className={
               "absolute bottom-1 left-1 inline-flex cursor-pointer items-center justify-center " +
               buttonClass
@@ -395,7 +399,8 @@ const imageRender = ({
             }}
           >
             {input}
-            <UploadIcon />
+            <span className="sr-only">Upload image</span>
+            <UploadIcon aria-hidden="true" />
           </label>
           {ImageDetails ? (
             <button

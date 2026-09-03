@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 import * as z from "zod";
 
 vi.mock("server-only", () => ({}));
-vi.mock("@app/deps", () => ({ deps: {}, tables: {} }));
 
 import { defineFields } from "@kenstack/admin/fields";
 import { dateField } from "@kenstack/fields";

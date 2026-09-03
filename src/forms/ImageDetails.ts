@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 
-import type { SelectedMedia } from "@kenstack/db/tables/media";
+import type { SelectedMedia } from "@kenstack/db/queries";
 import type { CropSource, SquareCrop } from "@kenstack/db/tables/media/types";
 
 export type ImageDetailsValue = {

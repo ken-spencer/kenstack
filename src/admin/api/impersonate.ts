@@ -1,5 +1,5 @@
 import { pipelineStage } from "@kenstack/api";
-import { deps } from "@app/deps";
+import { impersonate } from "@kenstack/auth/server/auth";
 import * as z from "zod";
 
 const schema = z.object({
@@ -18,7 +18,7 @@ export const impersonateAction = () =>
         return response.error("You are already switched to another user.");
       }
 
-      await deps.auth.impersonate(userId);
+      await impersonate(userId);
 
       return response.success({});
     },

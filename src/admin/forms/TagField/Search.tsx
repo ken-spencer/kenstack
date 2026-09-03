@@ -3,7 +3,7 @@ import { useRef, useState } from "react";
 import { Tag as TagIcon } from "lucide-react";
 import { Skeleton } from "@kenstack/components/Skeleton";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import Alert from "@kenstack/components/Alert";
+import Notice from "@kenstack/components/Notice";
 import fetcher from "@kenstack/api/fetcher";
 import useDebounce from "@kenstack/hooks/useDebounce";
 import { useAdminEdit } from "@kenstack/admin/Edit/context";
@@ -132,7 +132,6 @@ export default function TagSearcht({ field }: { field: AnyField }) {
           placeholder="Enter tag"
           ref={inputRef}
           showChevron={false}
-          autoComplete="off"
           onKeyDown={(event) => {
             if (event.key === "Enter" && !highlightedTag && keywords.length) {
               event.preventDefault();
@@ -148,7 +147,7 @@ export default function TagSearcht({ field }: { field: AnyField }) {
       <ComboboxContent className="mt-0 p-0">
         {(() => {
           if (error) {
-            return <Alert>{error.message}</Alert>;
+            return <Notice>{error.message}</Notice>;
           }
 
           if (!focusing || isPending || !data) {
@@ -162,7 +161,7 @@ export default function TagSearcht({ field }: { field: AnyField }) {
           }
 
           if (data.status === "error") {
-            return <Alert>{data.message}</Alert>;
+            return <Notice>{data.message}</Notice>;
           }
 
           return (

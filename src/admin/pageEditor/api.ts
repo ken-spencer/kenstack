@@ -1,5 +1,5 @@
 import { pipelineStage } from "@kenstack/api";
-import { deps } from "@app/deps";
+import { content } from "@kenstack/db/tables/content";
 import { saveRecord } from "@kenstack/records/save";
 import * as z from "zod";
 
@@ -16,10 +16,6 @@ export const pageEditAction = () =>
   pipelineStage(
     { schema: apiSchema, access: "admin" },
     async ({ data, response }) => {
-      const {
-        tables: { content },
-      } = deps;
-
       const { slug } = data;
 
       const result = await saveRecord({

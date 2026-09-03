@@ -1,4 +1,5 @@
-import { deps } from "@app/deps";
+import { getCurrentUser } from "@kenstack/auth/server/user";
+import { reportError } from "@kenstack/lib/errorReporter";
 import type { NextRequest } from "next/server";
 import * as z from "zod";
 
@@ -25,7 +26,7 @@ export default async function recaptcha({
   threshold?: number;
   token?: string;
 }) {
-  if (await deps.auth.getCurrentUser()) {
+  if (await getCurrentUser()) {
     /** Skip recaptcha if logged in */
     return;
   }
@@ -38,7 +39,7 @@ export default async function recaptcha({
   }
 
   if (!siteKey || !secretKey) {
-    await deps.error(
+    await reportError(
       !siteKey
         ? "NEXT_PUBLIC_RECAPTCHA_SITE_KEY is required for recaptcha"
         : "RECAPTCHA_SECRET_KEY environment variable is not set",
@@ -62,7 +63,7 @@ export default async function recaptcha({
       signal: AbortSignal.timeout(5000),
     });
   } catch (error) {
-    await deps.error(
+    await reportError(
       `Recaptcha verification request failed: ${String(error)}`,
       { request },
     );
@@ -70,7 +71,7 @@ export default async function recaptcha({
   }
 
   if (!res.ok) {
-    await deps.error(`Recaptcha verification returned HTTP ${res.status}`, {
+    await reportError(`Recaptcha verification returned HTTP ${res.status}`, {
       request,
     });
     return;
@@ -80,7 +81,7 @@ export default async function recaptcha({
   try {
     json = await res.json();
   } catch (error) {
-    await deps.error(
+    await reportError(
       `Recaptcha verification returned invalid JSON: ${String(error)}`,
       { request },
     );
@@ -89,7 +90,7 @@ export default async function recaptcha({
 
   const parsed = schema.safeParse(json);
   if (!parsed.success) {
-    await deps.error(
+    await reportError(
       `Recaptcha returned an invalid response: ${parsed.error.message}`,
       { request },
     );
@@ -104,7 +105,7 @@ export default async function recaptcha({
     data["error-codes"].includes("invalid-input-secret") ||
     data["error-codes"].includes("bad-request")
   ) {
-    await deps.error(
+    await reportError(
       `Recaptcha assessment unavailable: ${data["error-codes"].join(", ")}`,
       { request },
     );
@@ -121,7 +122,7 @@ export default async function recaptcha({
         code !== "timeout-or-duplicate",
     )
   ) {
-    await deps.error(
+    await reportError(
       `Recaptcha returned an unrecognized assessment result: ${data["error-codes"].join(", ") || "no error code"}`,
       { request },
     );
@@ -133,7 +134,7 @@ export default async function recaptcha({
   }
 
   if (data.success && data.score === undefined) {
-    await deps.error(
+    await reportError(
       "Recaptcha returned a successful response without a score",
       { request },
     );

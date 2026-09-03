@@ -1,9 +1,9 @@
 import * as z from "zod";
-import { email } from "@kenstack/fields/email";
+import { emailSchema } from "@kenstack/auth/email/verification/schemas";
 import { password } from "./password";
 
 const loginSchema = z.object({
-  email,
+  email: emailSchema,
   password: password.min(1, "Password is required"),
   recaptchaToken: z.string().optional().catch(undefined),
   returnTo: z.string().optional(),
