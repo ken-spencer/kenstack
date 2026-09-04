@@ -6,12 +6,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   fetcher: vi.fn(),
+  loadPublicAuthState: vi.fn(),
   refresh: vi.fn(),
 }));
 // Next's router keeps one identity across renders.
 const router = vi.hoisted(() => ({ refresh: mocks.refresh }));
 
 vi.mock("server-only", () => ({}));
+vi.mock("@kenstack/auth/server/state", () => ({
+  loadPublicAuthState: mocks.loadPublicAuthState,
+}));
 vi.mock("next/navigation", () => ({
   usePathname: () =>
     useSyncExternalStore(
@@ -65,7 +69,7 @@ function LoginFlow() {
     basePath: "/flow",
     steps: {
       signin: {
-        ...createLoginStep(),
+        title: "Sign in",
         content: <StepLoginForm />,
       },
       done: { content: <p>All done</p>, title: "Done" },
@@ -87,7 +91,7 @@ function LoginLaterFlow() {
         title: "First",
       },
       signin: {
-        ...createLoginStep(),
+        title: "Sign in",
         content: <StepLoginForm />,
       },
     },
@@ -99,7 +103,7 @@ function EnrollmentFlow() {
     basePath: "/flow",
     steps: {
       account: {
-        ...createLoginStep({ title: "Your account" }),
+        title: "Your account",
         content: <StepLoginForm />,
       },
       details: { content: <p>Enter your details</p>, title: "Your details" },
@@ -112,6 +116,9 @@ describe("Login step", () => {
   let root: ReturnType<typeof createRoot>;
 
   beforeEach(() => {
+    mocks.loadPublicAuthState
+      .mockReset()
+      .mockResolvedValue({ state: "anonymous" });
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     Element.prototype.scrollIntoView = vi.fn();
     const replaceState = window.history.replaceState.bind(window.history);
@@ -128,6 +135,35 @@ describe("Login step", () => {
     vi.clearAllMocks();
     vi.restoreAllMocks();
   });
+
+  it.each(["authenticated", "proven"])(
+    "omits the step by default when auth state is %s",
+    async (state) => {
+      mocks.loadPublicAuthState.mockResolvedValue({ state });
+
+      expect(await createLoginStep()).toBeNull();
+    },
+  );
+
+  it.each(["anonymous", "code-sent"])(
+    "includes the step by default when auth state is %s",
+    async (state) => {
+      mocks.loadPublicAuthState.mockResolvedValue({ state });
+
+      expect(await createLoginStep()).toMatchObject({ title: "Sign in" });
+    },
+  );
+
+  it.each(["anonymous", "code-sent", "authenticated", "proven"])(
+    "always includes the step when auth state is %s and always is true",
+    async (state) => {
+      mocks.loadPublicAuthState.mockResolvedValue({ state });
+
+      expect(
+        await createLoginStep({ always: true, title: "Your account" }),
+      ).toMatchObject({ title: "Your account" });
+    },
+  );
 
   it("renders the verification submit through the flow action renderer", async () => {
     window.history.replaceState(null, "", "/flow/signin");
@@ -184,7 +220,7 @@ describe("Login step", () => {
       basePath: "/flow",
       steps: {
         signin: {
-          ...createLoginStep(),
+          title: "Sign in",
           content: <StepLoginForm method="password" />,
         },
         done: { content: <p>All done</p>, title: "Done" },

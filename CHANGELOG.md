@@ -708,6 +708,9 @@ New API:
 - `@kenstack/auth/components/Login` is a Server Component (default export only). It resolves the
   remembered-method cookie and active challenge from `loadAuthState()` inside its own Suspense
   boundary.
+- `createLoginStep(...)` now returns `Promise<Step | null>` instead of `Step`. It omits the step
+  for authenticated or email-proven visitors by default. Set `always: true` to include it regardless
+  of auth state.
 
 Migration steps:
 
@@ -715,6 +718,10 @@ Migration steps:
 - Move standalone login rendering out of Client Components and import the default Server Component.
 - A StepFlow uses `createLoginStep(...)` from
   `@kenstack/auth/components/Login/Step`, which owns its embedded behavior.
+- Pass the factory result directly into the StepFlow registry; StepFlow resolves it and omits `null`.
+  Other consumers must await the result and handle `null`. Remove host wrappers that duplicate this
+  auth-state check; pass any custom title directly. Use `always: true` where unconditional inclusion
+  is required.
 
 ### Object Roles Registry With Login-Provider Bestowal
 
