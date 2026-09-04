@@ -335,3 +335,16 @@ if (false) {
   // @ts-expect-error A nonempty registry type requires the matching value argument.
   resolveServerFields<typeof stockFields, typeof stockFieldKinds>(stockFields);
 }
+
+// A declared field keeps its own type in superRefine even when it shares a
+// name with a generated field; only undeclared generated values are optional.
+defineFields({
+  fields: {
+    visibility: booleanField(),
+    title: textField(),
+  },
+  superRefine(values) {
+    expectTypeOf(values.visibility).toEqualTypeOf<boolean>();
+    expectTypeOf(values.publishedAt).toEqualTypeOf<string | undefined>();
+  },
+});

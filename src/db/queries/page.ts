@@ -87,12 +87,14 @@ export async function resolveVisiblePage<
     return null;
   }
 
-  if (page.visibility === "unlisted") {
-    return page;
+  if (page.visibility === "draft") {
+    return null;
   }
 
-  if (page.visibility !== "published" || page.publishedAt === null) {
-    return null;
+  // A live status waits for its publication time. Only an unlisted record
+  // may lack one, in which case it is reachable at once.
+  if (page.publishedAt === null) {
+    return page.visibility === "unlisted" ? page : null;
   }
 
   await io();

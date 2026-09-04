@@ -51,8 +51,9 @@ pipeline schema work, or batch scripts.
 - Use Kenstack's table helpers for standard relationship tables: `defineTags({ table, prefix })` from
   `@kenstack/db/tables/tags` builds a tag relation table with its `tableId`/`tagId`/`createdAt` columns
   and indexes.
-- Define field maps with isomorphic `defineFields({ publish: true, seo: true, fields: { ... } })` from
-  `@kenstack/admin/fields`, keeping field-set options on that wrapper.
+- Define field maps with isomorphic `defineFields({ fields: { ... } })` from `@kenstack/admin/fields`.
+  The publication and SEO fields come from the table's `publish` and `seo` flags through
+  `defineModule(...)`, never from the field map; see `docs/admin.md#generated-fields`.
 - Kenstack field factories own field helper internals such as `__kenstackField`. Site modules use
   `field(...)` for custom field values or a convenience helper such as `textField(...)`,
   `dateField(...)`, or `tagField(...)` for standard inputs.

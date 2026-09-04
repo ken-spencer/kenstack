@@ -4,6 +4,7 @@ import { boolean, text } from "drizzle-orm/pg-core";
 vi.mock("server-only", () => ({}));
 
 import { defineFields } from "@kenstack/admin/fields";
+import { metaFieldOptions } from "@kenstack/admin/metaFields";
 import { defineModule } from "@kenstack/admin/module";
 import { defineTable } from "@kenstack/admin/table";
 import { checkboxField, textField, toggleField } from "@kenstack/fields";
@@ -19,44 +20,28 @@ const products = defineTable({
 });
 
 const fields = defineFields({
-  publish: true,
   fields: {
     name: textField(),
   },
 });
 
 describe("admin filter configuration", () => {
-  it("uses field visibility metadata before the generic fallback", () => {
-    const visibilityOptions = [
-      { label: "Unavailable", value: "draft" },
-      { label: "Available", value: "published" },
-      { label: "Unlisted", value: "unlisted" },
-    ];
-    const moduleConfig = defineModule({
-      name: "filter-config-products",
-      admin: {
-        fields: {
-          ...fields,
-          visibility: {
-            ...fields.visibility,
-            label: "Availability",
-            options: visibilityOptions,
-          },
+  it("rejects a module field that the table's publish flag generates", () => {
+    expect(() =>
+      defineModule({
+        name: "filter-config-products",
+        admin: {
+          fields: defineFields({
+            fields: {
+              name: textField(),
+              visibility: metaFieldOptions.visibility,
+            },
+          }),
+          table: products,
+          list: {},
         },
-        table: products,
-        list: {},
-      },
-    });
-    expect(moduleConfig.admin.list).toMatchObject({
-      filters: {
-        visibility: {
-          label: "Availability",
-          kind: "enum",
-          field: products.visibility,
-          options: visibilityOptions,
-        },
-      },
-    });
+      }),
+    ).toThrow(/generated from the table's publish flag/);
   });
 
   it("derives checked field filter choices from the two declared values", () => {
@@ -64,7 +49,6 @@ describe("admin filter configuration", () => {
       name: "checked-filter-config-products",
       admin: {
         fields: defineFields({
-          publish: true,
           fields: {
             name: textField(),
             kind: toggleField({
@@ -98,7 +82,6 @@ describe("admin filter configuration", () => {
       name: "boolean-filter-config-products",
       admin: {
         fields: defineFields({
-          publish: true,
           fields: {
             name: textField(),
             pos: checkboxField({

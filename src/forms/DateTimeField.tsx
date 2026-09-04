@@ -17,8 +17,9 @@ type InputProps = FieldProps &
     inputClass?: string;
   };
 
+// "at" survives a round trip through the parser; "@" made it drop the time.
 function formatDate(date: string | Date) {
-  return format(date, "MMMM d, yyyy '@' h:mm a");
+  return format(date, "MMMM d, yyyy 'at' h:mm a");
 }
 
 function formatFormValue(value: unknown) {
@@ -100,7 +101,11 @@ export default function DateTimeField({
                 }
               }}
               onBlur={() => {
-                handleDate(value);
+                // Only typed text needs parsing; leaving an untouched field
+                // must not rewrite its value or mark the form dirty.
+                if (value !== formatFormValue(getValues(name))) {
+                  handleDate(value);
+                }
               }}
             />
           </FormControl>

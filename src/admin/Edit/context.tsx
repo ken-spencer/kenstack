@@ -7,8 +7,10 @@ import { usePathname } from "next/navigation";
 
 import type { AdminClient } from "@kenstack/admin/client";
 import type { AdminClientRegistry } from "@kenstack/admin/clientLoaders";
+import { pickMetaFields } from "@kenstack/admin/metaFields";
 import type { PreviewPath } from "@kenstack/admin/module";
 import type { AdminEditItem } from "@kenstack/admin/queries/load";
+import { createSchemaFromFields } from "@kenstack/fields/createSchemaFromFields";
 
 type AdminEditProps = {
   name: string;
@@ -25,6 +27,9 @@ type AdminEditProps = {
   preview?: PreviewPath;
   childModuleLinks?: React.ReactNode;
   oneToOne?: OneToOneEdit;
+  // The table flags from defineTable({ publish, seo }).
+  publish: boolean;
+  seo: boolean;
 };
 
 export type OneToOneEdit = {
@@ -51,6 +56,8 @@ type AdminEditContext = {
   defaultValues: Record<string, unknown>;
   parentId?: number;
   schema: ZodObject;
+  hasPublicationControl: boolean;
+  hasSeoDialog: boolean;
   preview?: PreviewPath;
   childModuleLinks?: React.ReactNode;
   oneToOne?: OneToOneEdit;
@@ -72,6 +79,8 @@ export function AdminEditProvider({
   preview,
   childModuleLinks,
   oneToOne,
+  publish,
+  seo,
   children,
 }: AdminEditProps) {
   const loadClientConfig = clients[name];
@@ -97,6 +106,15 @@ export function AdminEditProvider({
     return "/" + parts.join("/");
   }, [name, parentId, pathname]);
 
+  const schema = useMemo(
+    () =>
+      createSchemaFromFields(
+        { ...client.fields, ...pickMetaFields({ publish, seo }) },
+        client.oneToOne,
+      ),
+    [client, publish, seo],
+  );
+
   const context: AdminEditContext = {
     name,
     client,
@@ -110,7 +128,9 @@ export function AdminEditProvider({
     item,
     defaultValues: item ?? defaultValues,
     parentId,
-    schema: client.schema,
+    schema,
+    hasPublicationControl: publish,
+    hasSeoDialog: seo,
     preview,
     childModuleLinks,
     oneToOne,

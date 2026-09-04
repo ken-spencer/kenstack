@@ -1,4 +1,5 @@
 import { defineFields } from "@kenstack/admin/fields";
+import { metaFieldOptions } from "@kenstack/admin/metaFields";
 import { getFieldNames } from "@kenstack/fields/getFieldNames";
 import {
   imageField,
@@ -17,10 +18,12 @@ export const pageEditorInlineFields = {
 export type PageEditorFieldName = keyof typeof pageEditorInlineFields;
 
 export const pageEditorFields = defineFields({
-  seo: true,
   fields: {
     ...pageEditorInlineFields,
     image: imageField({ selectVariant: "original" }),
+    seoTitle: metaFieldOptions.seoTitle,
+    seoDescription: metaFieldOptions.seoDescription,
+    ogImage: metaFieldOptions.ogImage,
   },
 });
 

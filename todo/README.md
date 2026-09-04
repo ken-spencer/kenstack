@@ -10,7 +10,7 @@ Deferred until the current work is reviewed and committed:
 
 3. **Admin post-mutation list freshness** — determine and correct the brief stale-list flash after save, trash, or restore navigation. See `03-admin-list-cache-freshness.md`.
 
-4. **Admin publication UX normalization** — `defineTable` ownership of the publish and SEO features, the shared publication header control, the header-triggered SEO dialog replacing `MetaFields`, and the pinned edit-header action row. Touch-safe drag activation landed 2026-09-03. Settled design; implementation gated on a working browser build. See `04-admin-publication-ux.md`.
+4. **Admin publication UX normalization** — table ownership of publish and SEO, the header publication control, the SEO dialog replacing `MetaFields`, the pinned edit-header action row with Cmd/Ctrl+S, and touch-safe drag activation landed 2026-09-03; record-wide draft isolation remains deferred. Settled design; implementation gated on a working browser build. See `04-admin-publication-ux.md`.
 
 Resolved review and bug lists are removed after their durable outcomes are retained in
 code, tests, migration notes, or active policy. Completed plans are archived only when

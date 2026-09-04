@@ -5,6 +5,63 @@ contract lives in `docs/upgrading.md`.
 
 ## Unreleased
 
+### Table-Owned Publication and SEO Fields
+
+Old API:
+
+- `defineFields({ publish, seo, fields })` generated the `visibility`, `publishedAt`, `seoTitle`,
+  `seoDescription`, and `ogImage` fields alongside the module's own, duplicating the flags already given
+  to `defineTable({ publish, seo })`.
+- Module edit forms rendered those fields through `MetaFields` from
+  `@kenstack/admin/components/MetaFields`.
+- `AdminClient.schema` was built by `defineClient(...)` from the module's declared fields.
+- The generated SEO fields were labelled "SEO Title (If different than Title)", "SEO Description (if
+  different than Description)", and "Open Graph Image (1200 x 630)".
+
+New API:
+
+- `defineTable({ publish, seo })` is the single owner. `defineModule(...)` adds the publication and SEO
+  fields to the resolved module fields, schema, defaults, list, and filters from the table's columns, and
+  the admin edit context builds the client schema the same way. `defineFields` takes only `fields` and
+  `superRefine`.
+- The edit header's Save button gains a status trigger beside it for tables with `publish`: its icon
+  shows Draft, Published, Unlisted, or Scheduled, and its menu stages a different status and holds
+  the publication date; nothing persists until Save. The generated
+  `visibility` field now defaults to `published`. The header also renders the "Search & sharing" dialog
+  for tables with `seo`.
+- The generated fields cannot be redeclared by a module: `defineModule(...)` throws when a module field
+  shares a generated name. A module whose records carry a different concept, such as sales
+  availability, declares its own field under its own name.
+- The generated fields follow the module's own fields in the resolved map, so list sort and filter
+  order is unchanged for declared fields.
+- `MetaFields` is removed. `AdminClient` no longer carries `schema`; the edit form's schema is
+  `useAdminEdit().schema`, built from the client fields plus the table's generated fields.
+- `defineFields` still types `superRefine` values from the declared fields, plus the generated
+  publication and SEO values as optional, since a table may or may not add them.
+- The SEO field labels are "Title", "Description", and "Image"; the dialog supplies the context.
+- `SeoDialog` and `SeoDialogSection` from `@kenstack/admin/components/SeoDialog` are the shared dialog
+  anatomy; it replaces the Composer's Meta tab.
+- `resolveVisiblePage` now withholds an unlisted record until its publication time, so unlisted records
+  schedule like published ones; an unlisted record with no publication time stays reachable at once.
+- The edit header's action row is pinned to the top of the viewport while the form scrolls, and
+  Cmd/Ctrl+S saves (module forms and the Composer), overriding the browser's own save shortcut.
+
+Migration steps:
+
+- Remove `publish` and `seo` from every `defineFields(...)` call; keep them on `defineTable(...)`.
+- Remove `MetaFields` from module edit forms. Nothing replaces it in the form body.
+- A module that overrode the generated field wording (availability labels, a different publish-date
+  label) moves that concept to its own field; Civic's concessions now carry an `available` flag
+  instead of the publication columns, with the sales-channel flags saying where.
+- A page-level form that used `defineFields({ seo: true })` declares the SEO fields it needs from
+  `metaFieldOptions` explicitly.
+- A `superRefine` that reads a generated value (`visibility`, `publishedAt`, `seoTitle`,
+  `seoDescription`, `ogImage`) now sees it as optional; guard for `undefined` where the table might
+  not generate it.
+- Code that read `client.admin.schema` reads `useAdminEdit().schema` inside the edit form instead.
+- `DateTimeField` displays dates as `June 25, 2026 at 2:00 PM`; the previous `@` separator did not
+  survive a round trip through the parser and could reset a time to noon on blur.
+
 ### Sortable Activation
 
 Old API:

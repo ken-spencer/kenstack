@@ -5,25 +5,23 @@ Kenstack work; Composer persistence and host page/content decisions stay with th
 
 ## Settled design
 
-- **`defineTable({ publish, seo })` becomes the single owner of both features.** It already provisions
+- **`defineTable({ publish, seo })` is the single owner of both features** (landed 2026-09-03). It already provisions
   the columns; the duplicate `defineFields` booleans and `MetaFields.tsx` are eliminated. The flags
   serialize server→client to toggle the optional admin UI. Client validation is unaffected because the
   SEO fields are a fixed Kenstack-owned set: the admin client statically imports those
   `metaFieldOptions` definitions and merges them into the form schema when the flag is present.
-- **Publication moves out of the form body into a shared header control with action semantics,**
-  rendered only when the module's table has `publish`. Publish and Publish unlisted save immediately
-  (honest for the single live row, where saves go live anyway); Unpublish keeps its confirmation;
-  Schedule expands inside the control's popover. The Composer shell already demonstrates the control.
-  Status wording stays honest per lifecycle: for a live row, Published means saves go live.
-- **SEO moves into a shared Kenstack Dialog opened from the header,** gated on the table's `seo` flag
+- **Publication moved out of the form body into the header's Save control** (landed 2026-09-03; revised the same day from a separate action menu to one Save button whose icon is the status the next save commits and whose chevron menu stages another without saving; the generated status defaults to published, the unpublish confirmation is gone because Save is the commit, and no module may redeclare the generated fields: concessions replaced its use of the publication columns with an `available` flag),
+  rendered only when the module's table has `publish`. Status wording stays honest per lifecycle: for
+  a live row, Published means saves go live.
+- **SEO moved into a shared Kenstack Dialog opened from the header** (landed 2026-09-03), gated on the table's `seo` flag
   and used identically by standard module forms and Composer (likely replacing Composer's Meta tab so
   both surfaces share one anatomy). Publish-time validation failures on hidden SEO fields badge and
   open the dialog, the same landing rule Composer uses for block errors.
-- **The edit header's action row is pinned.** Staff feedback (2026-08-28): forms are filled top to
+- **The edit header's action row is pinned** (landed 2026-09-03, with Cmd/Ctrl+S). Staff feedback (2026-08-28): forms are filled top to
   bottom and Save must stay reachable at the end. Sticky within the admin scroll container with an
   opaque background and the existing bottom border; breadcrumbs scroll away; the Composer shell gets
   the identical treatment; add a Cmd/Ctrl+S save shortcut alongside.
-- **Explicit Save everywhere; no admin auto-save.** Composer's prototype auto-save was removed
+- **Explicit Save everywhere; no admin auto-save** (unchanged by the 2026-09-03 pass). Composer's prototype auto-save was removed
   (2026-08-28). Auto-save may return once draft isolation exists: draft saves would overwrite the
   draft in place with revisions written at publish or coalesced per session, so revision pollution is
   not the blocker.

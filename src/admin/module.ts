@@ -15,7 +15,7 @@ import {
   getListSelect,
   resolveOneToOneList,
 } from "@kenstack/admin/queries/listRelations";
-import type { AnyPgTable } from "drizzle-orm/pg-core";
+import type { AnyPgColumn, AnyPgTable } from "drizzle-orm/pg-core";
 import type { SelectedFields } from "drizzle-orm/pg-core/query-builders/select.types";
 
 import type {
@@ -43,6 +43,7 @@ import {
 } from "@kenstack/fields/server";
 import type { ServerDefinedFields } from "@kenstack/fields/internal/serverResolution";
 import type { DefinedFields } from "@kenstack/admin/fields";
+import { metaFieldOptions, pickMetaFields } from "@kenstack/admin/metaFields";
 import type { AdminKeyTable, AdminTable } from "@kenstack/admin/table";
 import type { AdminClientRegistry } from "@kenstack/admin/clientLoaders";
 import type { RevalidateTagRule } from "@kenstack/lib/revalidate";
@@ -92,13 +93,31 @@ type ServerOneToOneDefinition<
 
 type ServerOneToOneConfig = Record<string, ServerOneToOneDefinition>;
 
+// The publication and SEO fields defineModule adds from the table flags, so
+// callbacks typed from the declared fields still see the columns the row has.
+type GeneratedFields<TTable extends AnyPgTable> = (TTable extends {
+  visibility: AnyPgColumn;
+  publishedAt: AnyPgColumn;
+}
+  ? Pick<typeof metaFieldOptions, "visibility" | "publishedAt">
+  : Record<never, never>) &
+  (TTable extends {
+    seoTitle: AnyPgColumn;
+    seoDescription: AnyPgColumn;
+    ogImage: AnyPgColumn;
+  }
+    ? Pick<typeof metaFieldOptions, "seoTitle" | "seoDescription" | "ogImage">
+    : Record<never, never>);
+
 type AdminConfigBase<
   TTable extends AdminManagedTable,
   TFields extends ServerDefinedFields,
 > = {
   table: TTable;
   fieldServers?: ServerFields<TFields>;
-  revalidate?: RevalidateTagRule<SelectedFieldValues<TTable, TFields>>[];
+  revalidate?: RevalidateTagRule<
+    SelectedFieldValues<TTable, TFields & GeneratedFields<TTable>>
+  >[];
   fields: TFields;
   oneToOne?: ServerOneToOneConfig;
   preview?: PreviewPath;
@@ -372,8 +391,26 @@ function resolveAdmin(
   >(
     config: AdminConfigBase<TTable, TFields>,
   ) => {
+    const publish =
+      "visibility" in config.table && "publishedAt" in config.table;
+    const seo =
+      "seoTitle" in config.table &&
+      "seoDescription" in config.table &&
+      "ogImage" in config.table;
+    const generatedFields = pickMetaFields({ publish, seo });
+    for (const key of Object.keys(generatedFields)) {
+      if (key in config.fields) {
+        const flag =
+          key === "visibility" || key === "publishedAt" ? "publish" : "seo";
+        throw new Error(
+          `Field "${key}" is generated from the table's ${flag} flag; remove it from the module fields.`,
+        );
+      }
+    }
+    // Generated fields follow the module's own, so declared fields keep their
+    // place in list sort and filter order.
     const resolvedFields = resolveModuleFields(
-      config.fields,
+      { ...config.fields, ...generatedFields },
       config.fieldServers,
     );
     const oneToOne = config.oneToOne
@@ -402,6 +439,8 @@ function resolveAdmin(
       ("slug" in fields ? `${basePath}/${"${slug}"}` : undefined);
     return {
       table: config.table,
+      publish,
+      seo,
       revalidate: config.revalidate,
       translateError: config.translateError,
       preview,

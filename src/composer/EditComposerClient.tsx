@@ -28,8 +28,12 @@ import {
   Trash2,
 } from "lucide-react";
 
+import SeoDialog, {
+  SeoDialogSection,
+} from "@kenstack/admin/components/SeoDialog";
 import type { VisibilityValue } from "@kenstack/admin/lib/visibility";
 import { draftModePath } from "@kenstack/admin/lib/searchParams";
+import { useSaveShortcut } from "@kenstack/admin/lib/useSaveShortcut";
 import { visibilityStatusOptions } from "@kenstack/admin/lib/visibilityStatus";
 import {
   AlertDialog,
@@ -90,9 +94,10 @@ type Definition = {
 
 type ComposerFormValues = { blocks: ComposerBlock[]; meta: ComposerMeta };
 
-type EditorView = "blocks" | "meta" | "preview";
+type EditorView = "blocks" | "preview";
 
 const MetaFields = defineFormFields(composerMetaFields);
+const seoFieldNames = ["meta.seoTitle", "meta.seoDescription"];
 
 const publicationDateFormat = new Intl.DateTimeFormat(undefined, {
   dateStyle: "medium",
@@ -260,8 +265,6 @@ export default function EditComposerClient({
         setSelectedId(target.id);
       }
       setView("blocks");
-    } else if (issues.some(({ path }) => path[0] === "meta")) {
-      setView("meta");
     }
   }
 
@@ -309,6 +312,13 @@ export default function EditComposerClient({
     });
   }
 
+  // Cmd/Ctrl+S saves the draft under the same conditions as the Save button.
+  useSaveShortcut(() => {
+    if (form.formState.isDirty && !isPending) {
+      submit();
+    }
+  });
+
   function publishNow(visibility: Exclude<VisibilityValue, "draft">) {
     setShowPublicationMenu(false);
     submit({
@@ -335,7 +345,7 @@ export default function EditComposerClient({
   return (
     <FormProvider {...form}>
       <div className="mx-auto grid w-full max-w-[1500px] gap-4">
-        <header className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-b border-b-[var(--admin-divider)]">
+        <header className="bg-background sticky top-0 z-20 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-b border-b-[var(--admin-divider)]">
           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 py-1">
             <Button
               disabled={!form.formState.isDirty || isPending}
@@ -450,7 +460,6 @@ export default function EditComposerClient({
               {(
                 [
                   ["blocks", "Blocks"],
-                  ["meta", "Meta"],
                   ["preview", "Preview"],
                 ] as const
               ).map(([value, label]) => (
@@ -479,6 +488,15 @@ export default function EditComposerClient({
             </div>
           </div>
           <div className="flex gap-1 justify-self-end">
+            <SeoDialog names={seoFieldNames}>
+              <SeoDialogSection
+                help="Shown in search results. Leave empty to use the page's own title and description."
+                title="Search results"
+              >
+                <MetaFields.seoTitle namePrefix="meta" />
+                <MetaFields.seoDescription namePrefix="meta" />
+              </SeoDialogSection>
+            </SeoDialog>
             <Button asChild size="icon" tooltip="View Content" variant="ghost">
               <a
                 aria-label="View Content"
@@ -507,15 +525,6 @@ export default function EditComposerClient({
               setView("blocks");
             }}
           />
-        ) : null}
-
-        {view === "meta" ? (
-          <div className="border-border bg-card border p-4">
-            <div className="grid max-w-2xl gap-5">
-              <MetaFields.seoTitle namePrefix="meta" />
-              <MetaFields.seoDescription namePrefix="meta" />
-            </div>
-          </div>
         ) : null}
 
         <div

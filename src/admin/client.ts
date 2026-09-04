@@ -167,7 +167,6 @@ export function defineClient<
             listItems: admin.listItems,
             EditForm: admin.EditForm,
             oneToOne,
-            schema: createSchemaFromFields(fields, oneToOne),
           };
         })()
       : undefined,
@@ -184,7 +183,6 @@ export type AdminClient = {
   listItems?: ListItems<DefinedFields>;
   EditForm: FC<PropsWithChildren>;
   oneToOne?: ClientOneToOne;
-  schema: ZodObject;
 };
 export type SettingsClient = {
   fields: DefinedFields;

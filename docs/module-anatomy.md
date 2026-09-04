@@ -354,8 +354,9 @@ The detail rules:
   production path calls it, such as an authoritative or draft read.
 - `resolveVisiblePage(row)` reads the current request's Draft Mode state, owns the complete gate, and
   returns the same row or `null`. In Draft Mode it requires an admin and accepts any non-null row. For a
-  public request it owns the current date, includes `unlisted`, excludes `draft`, and returns
-  `published` once its publication time arrives. Pass `{ draft: false }` only when a current caller
+  public request it owns the current date, excludes `draft`, and returns `published` and `unlisted`
+  once their publication time arrives; an unlisted record with no publication time is reachable at
+  once. Pass `{ draft: false }` only when a current caller
   deliberately requires public visibility during a Draft Mode request.
 - Resolve the cached row before applying the helper. The row cache is shared and contains no
   authorization state; the helper's authorization and visibility decision runs outside it before any

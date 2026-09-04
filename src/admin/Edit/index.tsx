@@ -139,6 +139,8 @@ export default async function AdminEdit({
         }
         oneToOne={oneToOne}
         clients={clients}
+        publish={adminConfig.publish}
+        seo={adminConfig.seo}
       >
         <EditForm>
           <div className="flex flex-col gap-2">

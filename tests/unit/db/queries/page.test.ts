@@ -97,10 +97,19 @@ describe("resolveVisiblePage", () => {
     }
   });
 
-  it("includes unlisted pages regardless of publication time", async () => {
+  it("includes unlisted pages that have no publication time", async () => {
     const page = { publishedAt: null, visibility: "unlisted" as const };
 
     await expect(resolveVisiblePage(page)).resolves.toBe(page);
+  });
+
+  it("withholds unlisted pages until their publication time", async () => {
+    const page = {
+      publishedAt: new Date(now.getTime() + 60_000),
+      visibility: "unlisted" as const,
+    };
+
+    await expect(resolveVisiblePage(page)).resolves.toBeNull();
   });
 
   it("includes published pages at their publication time", async () => {

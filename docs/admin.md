@@ -66,6 +66,12 @@ foreign keys, or generic CRUD support.
 - Module form-component generation, client registration, settings forms, and import direction follow
   `docs/module-anatomy.md`; reusable field and component boundaries follow
   `docs/kenstack-anatomy.md#field-library`.
+- `defineTable({ publish, seo })` owns the publication and SEO fields. `defineModule(...)` and the admin
+  edit context add `visibility`, `publishedAt`, `seoTitle`, `seoDescription`, and `ogImage` from the
+  table (a module field sharing one of those names is rejected at definition), the edit header's Save
+  control shows the status its next save commits and its menu stages another, the header renders
+  the Search & sharing dialog, and module edit forms render none of them. A module whose records carry a different concept, such as
+  sales availability, declares its own field under its own name instead of reusing these.
 - Put invariant control configuration on the field definition. Kind-specific options such as combobox
   choices and empty-state copy, or number bounds and step size, travel with the field and are not
   render-site overrides. Explicit labels and descriptions are field-owned too; generated controls
