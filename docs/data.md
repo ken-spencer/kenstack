@@ -75,6 +75,8 @@ pipeline schema work, or batch scripts.
 
 ## Record saves
 
+- For public-site writes to admin-managed records, follow `docs/admin.md#record-saving` for the
+  shared save helper, restricted field authority, and cache invalidation.
 - When a form updates an existing record through `saveRecord`, submit its top-level dirty field names
   as `changes`, validate them against the action's values schema, and pass them through; a custom form
   or action boundary that drops `changes` saves every submitted field. Full-field saves are for inserts

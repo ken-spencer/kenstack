@@ -7,7 +7,10 @@ import type {
   ModuleParentOptions,
 } from "@kenstack/admin/module";
 import { loadRecord } from "@kenstack/records";
+import { adminLoadCacheTag } from "@kenstack/admin/cache";
 import { serializeValues } from "./serialize";
+
+export { adminLoadCacheTag } from "@kenstack/admin/cache";
 
 type AdminLoadTarget = number | "single";
 
@@ -18,10 +21,6 @@ export type AdminEditItem = {
   deletedAt?: string | null;
   parentId?: number;
 } & Record<string, unknown>;
-
-export function adminLoadCacheTag(name: string, target: AdminLoadTarget) {
-  return `admin-load:${name}:${target}`;
-}
 
 export async function loadAdminEdit({
   adminConfig,

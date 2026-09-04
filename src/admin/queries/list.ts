@@ -22,14 +22,13 @@ import {
   resolveOneToOneList,
 } from "./listRelations";
 import { serializeValues } from "./serialize";
+import { adminListCacheTag } from "@kenstack/admin/cache";
+
+export { adminListCacheTag } from "@kenstack/admin/cache";
 
 export type AdminListQuery = ListQuery;
 
 export type AdminListConfig = Extract<AnyAdminConfig, { list: unknown }>;
-
-export function adminListCacheTag(name: string) {
-  return `admin-list:${name}`;
-}
 
 export async function loadAdminList({
   adminConfig,

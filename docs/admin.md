@@ -108,15 +108,30 @@ foreign keys, or generic CRUD support.
 ## Record Saving
 
 - Use `saveModuleRecord({ module, fields, id, changes, values })` for authenticated site actions that
-  update a module record and need the module's persistence and cache revalidation with restricted field
-  authority. Pass the action's restricted server field set so returned values cannot include admin-only
-  fields.
+  update records also managed in admin, such as a public profile or account-details form. Import it
+  from `@kenstack/admin/queries/save`. Authenticate and authorize the target record in the action;
+  for a self-service form, derive `id` from the authenticated user, never the submitted payload.
+  Pass only the action's permitted values and restricted server field set, preserving the relevant
+  field handlers. Return only permitted saved values, not the full admin record.
+- `saveModuleRecord` and `saveAdminRecord` share the module's persistence and `admin.revalidate`
+  rules. Their record and list tags expire after commit, before follow-up tasks and audit logging.
+  Declare additional content dependencies once in `admin.revalidate`; public forms do not duplicate
+  that tag list. Session snapshots also carry the users record tag, so module saves and removals need
+  no site-level session-invalidation callback.
+- Public cached reads of an individual module record can use `adminLoadCacheTag(module.name, id)`
+  from `@kenstack/admin/cache` to share that invalidation. This shares a tag, not the admin query's
+  payload or cache entry: select the public form's fields and keep authentication outside the cache.
+  `loadRecord` itself does not cache reads.
 - Use `saveAdminRecord({ module, id, changes, values })` for the standard admin module save path after
   the pipeline has enforced `access: "admin"`. It supplies admin-save authority to field handlers and
   never infers authority from the user's roles.
 - Use `saveRecord(...)` directly for custom persistence no module represents, such as settings or
   page-editor upserts. It is restricted by default; set `admin: true` only in a backend admin action,
   never from request data or user roles.
+- Keep direct writes when the module save cannot express a required transaction, unauthenticated
+  submission, or conflict-handling contract. They bypass module revalidation: expire the affected
+  module, record, and list dependencies explicitly after commit, before follow-up work. Do not split
+  an atomic operation just to use the module save helper.
 
 ## List Config
 

@@ -5,6 +5,18 @@ contract lives in `docs/upgrading.md`.
 
 ## Unreleased
 
+### Shared Module Cache Invalidation
+
+`saveModuleRecord` and `saveAdminRecord` now expire admin record and list caches before post-commit
+tasks and audit logging. User session snapshots share the users record tag, so hosts can remove
+`revalidate: [(user) => userSessionsCacheTag(user.id)]` when user edits use those helpers and removal
+uses the admin action. Direct writes still need explicit invalidation; session-only mutations retain
+their existing session tags.
+
+Public readers can import `adminLoadCacheTag` and `adminListCacheTag` from `@kenstack/admin/cache`.
+The existing query-file exports remain supported. Restricted record saves now exclude soft-deleted
+rows from their default update query; restoring records remains an admin operation.
+
 ### Table-Owned Publication and SEO Fields
 
 Old API:

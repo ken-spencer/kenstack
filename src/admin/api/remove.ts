@@ -11,8 +11,7 @@ import { revalidateTag } from "next/cache";
 
 import { pipelineStage } from "@kenstack/api";
 import type { DefinedAdminModule } from "@kenstack/admin/module";
-import { adminListCacheTag } from "@kenstack/admin/queries/list";
-import { adminLoadCacheTag } from "@kenstack/admin/queries/load";
+import { adminLoadCacheTag, adminListCacheTag } from "@kenstack/admin/cache";
 import { db } from "@app/db";
 import { audit } from "@kenstack/logger";
 import { revalidator } from "@kenstack/lib/revalidate";
@@ -123,13 +122,13 @@ export const removeAction = ({
 
       // Invalidate before auditing so a failed audit cannot leave stale
       // authorization or content cached.
-      for (const row of rows) {
-        revalidator(adminConfig.revalidate, row);
-      }
       rows.forEach((row) => {
         revalidateTag(adminLoadCacheTag(name, row.id), { expire: 0 });
       });
       revalidateTag(adminListCacheTag(name), { expire: 0 });
+      for (const row of rows) {
+        revalidator(adminConfig.revalidate, row);
+      }
 
       await audit({
         userId: user.id,

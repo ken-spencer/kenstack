@@ -107,6 +107,7 @@ describe("current-user loading", () => {
     expect(user?.id).toBe(12);
     expect(mocks.cacheTag).toHaveBeenCalledWith("auth-session:token-hash");
     expect(mocks.cacheTag).toHaveBeenCalledWith("auth-user-sessions:12");
+    expect(mocks.cacheTag).toHaveBeenCalledWith("admin-load:users:12");
     expect(mocks.select).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,4 +1,3 @@
-import { revalidateTag } from "next/cache";
 import { and, eq, getTableColumns, isNull, sql } from "drizzle-orm";
 import isEqual from "lodash-es/isEqual";
 
@@ -21,8 +20,7 @@ import type { AdminOneToOneBinding } from "@kenstack/admin/module";
 import type { DbTransaction } from "@kenstack/db/types";
 import { isRecord } from "@kenstack/lib/isRecord";
 import type { ServerDefinedFields } from "@kenstack/fields/internal/serverResolution";
-import { adminLoadCacheTag } from "./load";
-import { adminListCacheTag } from "./list";
+import { adminLoadCacheTag, adminListCacheTag } from "@kenstack/admin/cache";
 
 class OneToOneSaveError extends Error {
   constructor(readonly fetchError: FetchError) {
@@ -311,7 +309,15 @@ async function saveModule(
     values,
     changes: id ? changes : undefined,
     id,
-    revalidate: adminConfig.revalidate,
+    revalidate: [
+      ...("list" in adminConfig
+        ? [
+            (row: SavedRow) => adminLoadCacheTag(name, row.id),
+            adminListCacheTag(name),
+          ]
+        : [adminLoadCacheTag(name, "single")]),
+      ...(adminConfig.revalidate ?? []),
+    ],
     revisionRelations: adminConfig.oneToOne?.relations,
     translateError: admin ? adminConfig.translateError : undefined,
     ...extensions,
@@ -414,19 +420,6 @@ async function saveModule(
           return row;
         },
       });
-    }
-  }
-
-  if (result.status === "success") {
-    if ("list" in adminConfig) {
-      const savedId = result.row?.id ?? id;
-      if (savedId) {
-        revalidateTag(adminLoadCacheTag(name, savedId), { expire: 0 });
-      }
-
-      revalidateTag(adminListCacheTag(name), { expire: 0 });
-    } else {
-      revalidateTag(adminLoadCacheTag(name, "single"), { expire: 0 });
     }
   }
 

@@ -11,6 +11,7 @@ import type { AuthAccess } from "@kenstack/auth/server/auth";
 import { selectMediaSubquery } from "@kenstack/db/queries/media";
 import { sessions } from "@kenstack/db/tables/sessions";
 import { formatUserInitials, formatUserName } from "@kenstack/lib/user";
+import { adminLoadCacheTag } from "@kenstack/admin/cache";
 import type { User } from "@kenstack/types";
 
 import { hashToken } from "./token";
@@ -76,6 +77,7 @@ async function getCachedUserByTokenHash(tokenHash: string) {
   const expire = Math.min(maxSessionCacheSeconds, expiresInSeconds);
   cacheLife({ revalidate: Math.max(0, expire - 1), expire });
   cacheTag(userSessionsCacheTag(user.id));
+  cacheTag(adminLoadCacheTag("users", user.id));
 
   return user;
 }

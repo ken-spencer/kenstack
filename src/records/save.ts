@@ -14,9 +14,11 @@ import type { User } from "@kenstack/types";
 import { revalidator, type RevalidateTagRule } from "@kenstack/lib/revalidate";
 import type { FetchError } from "@kenstack/api/fetcher";
 import {
+  and,
   eq,
   getTableColumns,
   getTableName,
+  isNull,
   type InferInsertModel,
 } from "drizzle-orm";
 import type { SelectedFieldValues } from "./select";
@@ -139,18 +141,16 @@ export async function saveRecord<
     }
     committed = true;
 
+    // Invalidate before follow-up tasks or audit can fail or read stale data.
     try {
+      revalidator(revalidate, result.row);
+    } finally {
       await runSaveTasks([
         ...preparation.afterCommit,
         ...additionalPreparations.flatMap(
           (additional) => additional.afterCommit,
         ),
       ]);
-    } finally {
-      // The row is committed, so invalidate even when a follow-up task or the
-      // audit fails; otherwise a stale record, or stale authorization for the
-      // users module, would stay cached.
-      revalidator(revalidate, result.row);
     }
 
     await audit({
@@ -341,7 +341,12 @@ export async function savePreparedRecord<
         ...data,
         ...("updatedAt" in columns ? { updatedAt: new Date() } : {}),
       })
-      .where(eq(table.id, id))
+      .where(
+        and(
+          eq(table.id, id),
+          !admin && columns.deletedAt ? isNull(columns.deletedAt) : undefined,
+        ),
+      )
       .returning(select);
     savedRow = row;
   } else {
