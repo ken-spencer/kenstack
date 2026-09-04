@@ -144,6 +144,27 @@ function validatePostalCode(
   }
 }
 
+export function createAddressSchema({
+  required = false,
+  countries,
+}: {
+  required?: boolean;
+  countries?: readonly SupportedCountry[];
+} = {}) {
+  return z
+    .object({
+      countryCode: countryCodeSchema({ required, countries }),
+      addressLine1: addressTextSchema("Address", required),
+      addressLine2: addressTextSchema("Address 2", false),
+      locality: addressTextSchema("City / town", required),
+      regionCode: regionCodeSchema({ required }),
+      postalCode: addressTextSchema("Postal code", required).transform(
+        (value) => value.toUpperCase().replace(/\s+/g, " ").trim(),
+      ),
+    })
+    .superRefine(validatePostalCode);
+}
+
 export function defineAddressFields({
   countryCode,
   addressLine1,
@@ -153,6 +174,7 @@ export function defineAddressFields({
   postalCode,
   required = false,
 }: AddressFieldOptions = {}) {
+  const { shape } = createAddressSchema({ required });
   const { default: countryDefault = "", ...countryCodeOptions } =
     countryCode ?? {};
 
@@ -161,39 +183,37 @@ export function defineAddressFields({
       countryCode: field({
         ...addressTextDefinition,
         default: countryDefault.toUpperCase(),
-        zod: countryCodeSchema({ required }),
+        zod: shape.countryCode,
         ...countryCodeOptions,
       }),
       addressLine1: field({
         ...addressTextDefinition,
         label: "Address",
-        zod: addressTextSchema("Address", required),
+        zod: shape.addressLine1,
         ...addressLine1,
       }),
       addressLine2: field({
         ...addressTextDefinition,
         label: "Address 2",
-        zod: addressTextSchema("Address 2", false),
+        zod: shape.addressLine2,
         ...addressLine2,
       }),
       locality: field({
         ...addressTextDefinition,
         label: "City / Town",
-        zod: addressTextSchema("City / town", required),
+        zod: shape.locality,
         ...locality,
       }),
       regionCode: field({
         ...addressTextDefinition,
         label: "Region",
-        zod: regionCodeSchema({ required }),
+        zod: shape.regionCode,
         ...regionCode,
       }),
       postalCode: field({
         ...addressTextDefinition,
         label: "Postal Code",
-        zod: addressTextSchema("Postal code", required).transform((value) =>
-          value.toUpperCase().replace(/\s+/g, " ").trim(),
-        ),
+        zod: shape.postalCode,
         ...postalCode,
       }),
     },
