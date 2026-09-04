@@ -50,6 +50,12 @@ export async function saveAdminRecord({
   values,
 }: ModuleRecordSave) {
   const { admin: adminConfig } = module;
+  if (!id && "list" in adminConfig && !adminConfig.create) {
+    return {
+      status: "error" as const,
+      error: "New entries cannot be created in this module.",
+    };
+  }
   const oneToOne = adminConfig.oneToOne;
   if (!oneToOne) {
     return saveModule(

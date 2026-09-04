@@ -133,6 +133,7 @@ type AdminListConfig<
   TFields extends ServerDefinedFields,
   TListSelect extends SelectShape | undefined = undefined,
 > = AdminConfigBase<TTable, TFields> & {
+  create?: boolean;
   list: {
     filters?: AdminFilterOptions;
     limit?: number;
@@ -486,6 +487,7 @@ function resolveAdmin(
 
     return {
       ...resolvedAdmin,
+      create: admin.create !== false,
       list: {
         ...listOptions,
         ...(resolvedReorder?.scope

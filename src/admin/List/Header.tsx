@@ -12,7 +12,11 @@ import { useAdminList } from "./context";
 import DeleteButton, { RestoreButton } from "./DeleteButton";
 import TrashToggle from "./TrashToggle";
 
-export default function AdminListHeader() {
+export default function AdminListHeader({
+  canCreate = true,
+}: {
+  canCreate?: boolean;
+}) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { basePath, filter, filters, setFilters, sort } = useAdminList();
@@ -21,17 +25,19 @@ export default function AdminListHeader() {
     <header>
       <div className="flex items-center gap-1 sm:gap-2">
         <div className="flex-grow">
-          <Button asChild size="icon" tooltip="New Entry" variant="ghost">
-            <Link
-              href={
-                pathname +
-                "/new" +
-                (searchParams.size ? "?" + searchParams : "")
-              }
-            >
-              <Plus className="text-foreground size-6" />
-            </Link>
-          </Button>
+          {canCreate ? (
+            <Button asChild size="icon" tooltip="New Entry" variant="ghost">
+              <Link
+                href={
+                  pathname +
+                  "/new" +
+                  (searchParams.size ? "?" + searchParams : "")
+                }
+              >
+                <Plus className="text-foreground size-6" />
+              </Link>
+            </Button>
+          ) : null}
         </div>
         <SortControl filters={filters} setFilters={setFilters} sort={sort} />
         <KeywordSearch filters={filters} setFilters={setFilters} />

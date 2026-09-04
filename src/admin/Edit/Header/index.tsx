@@ -26,7 +26,7 @@ const metaFormFields = defineFormFields(
 );
 const seoFieldNames = Object.keys(metaFormFields);
 
-export default function AdminEditHeader() {
+export default function AdminEditHeader({ canCreate = true }) {
   const { hasSeoDialog } = useAdminEdit();
 
   // Pinned so Save stays reachable at the end of a long form; breadcrumbs
@@ -34,7 +34,7 @@ export default function AdminEditHeader() {
   return (
     <div className="bg-background sticky top-0 z-20 flex gap-4 border-b border-b-[var(--admin-divider)]">
       <div className="flex grow items-center gap-1">
-        <NewButton />
+        {canCreate ? <NewButton /> : null}
         <ListButton />
         <SaveButton />
       </div>

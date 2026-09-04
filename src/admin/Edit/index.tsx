@@ -49,6 +49,9 @@ export default async function AdminEdit({
   parentId?: number;
 }) {
   const { defaultValues, preview } = adminConfig;
+  if (isNew && "list" in adminConfig && !adminConfig.create) {
+    notFound();
+  }
   const item = await loadAdminEdit({
     adminConfig,
     id,
@@ -150,7 +153,7 @@ export default async function AdminEdit({
               moduleTitle={moduleTitle}
               parent={parentRecord}
             />
-            <Header />
+            <Header canCreate={"list" in adminConfig && adminConfig.create} />
             <OneToOneTabs />
             <Footer />
           </div>

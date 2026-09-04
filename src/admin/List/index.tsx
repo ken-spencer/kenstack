@@ -109,7 +109,7 @@ export default async function AdminListCont({
             moduleTitle={moduleTitle}
             parent={parentRecord}
           />
-          <Header />
+          <Header canCreate={adminConfig.create} />
           <List />
           <Footer />
         </section>
