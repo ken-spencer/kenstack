@@ -5,6 +5,8 @@ and client-side form validation in Kenstack and host sites.
 
 ## Form Construction
 
+- Align field labels and controls to the top by default. Descriptions and validation messages grow
+  below the controls without vertically centering or spreading shorter neighboring fields.
 - For submitted forms, start from Kenstack `Form` and the existing Kenstack field components. React
   Hook Form is the canonical client-side owner of user-editable submitted values.
 - A multi-step workflow is an aggregate of forms by default: each step that collects and validates

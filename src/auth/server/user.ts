@@ -17,7 +17,6 @@ import type { User } from "@kenstack/types";
 import { hashToken } from "./token";
 import type { Role } from "./types";
 
-const users = modules.users.admin.table;
 const maxSessionCacheSeconds = 15 * 60;
 
 export function sessionCacheTag(tokenHash: string) {
@@ -29,6 +28,7 @@ export function userSessionsCacheTag(userId: number) {
 }
 
 async function loadUserByTokenHash(tokenHash: string) {
+  const users = modules.users.admin.table;
   const [user] = await db
     .select({
       id: users.id,
@@ -145,6 +145,7 @@ export const getCurrentSession = cache(async () => {
     return;
   }
 
+  const users = modules.users.admin.table;
   const [session] = await db
     .select({
       createdAt: sessions.createdAt,
