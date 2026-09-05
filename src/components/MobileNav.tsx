@@ -37,6 +37,10 @@ export default function MobileNav({
       }
     }
 
+    function handlePopState() {
+      setOpen(false);
+    }
+
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setOpen(false);
@@ -57,10 +61,12 @@ export default function MobileNav({
 
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("resize", handleResize);
+    window.addEventListener("popstate", handlePopState);
     return () => {
       root.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("resize", handleResize);
+      window.removeEventListener("popstate", handlePopState);
     };
   }, [open]);
 
