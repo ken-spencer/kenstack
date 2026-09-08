@@ -270,7 +270,7 @@ function LoginLinkContent({
       }
     },
     onSuccess: ({ authState, path }) => completeLogin(path, authState),
-    returnTo: resolveReturnTo(continuation),
+    returnTo: () => resolveReturnTo(continuation),
   });
 
   if (failure === null || failure.code) {
@@ -321,16 +321,18 @@ function useEmailLoginLink(
   }: {
     onFailure: (failure: EmailLoginLinkFailure) => void;
     onSuccess: (result: FetchSuccess<EmailLoginVerificationResult>) => void;
-    returnTo: string;
+    returnTo: () => string;
   },
 ) {
   const verification = useMutation({
-    mutationFn: (activeToken: string) =>
-      fetcher<EmailLoginVerificationResult>("/api/auth", {
+    mutationFn: (activeToken: string) => {
+      const path = returnTo();
+      return fetcher<EmailLoginVerificationResult>("/api/auth", {
         action: "verify-email-login-link",
-        ...(returnTo ? { returnTo } : {}),
+        ...(path ? { returnTo: path } : {}),
         token: activeToken,
-      }),
+      });
+    },
   });
   const { mutateAsync } = verification;
   const startedTokenRef = useRef<string | null>(null);

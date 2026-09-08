@@ -56,7 +56,7 @@ function StepFlowContent({
   // settled by the ledger after hydration counts as the initial one.
   useEffect(() => {
     const region = regionRef.current;
-    if (!region || !isHydrated) {
+    if (!region || !isHydrated || activeStep === undefined) {
       return;
     }
 
@@ -102,13 +102,19 @@ function StepFlowContent({
           </StepScope>
         ) : null,
       )}
-      <StepScope stepId={activeStep}>
-        <Header
-          headingId={headingId}
-          summary={isFinalStep ? undefined : summary}
-          title={steps[activeStep].title}
-        />
-      </StepScope>
+      {activeStep === undefined ? (
+        <p id={headingId} role="status">
+          Loading…
+        </p>
+      ) : (
+        <StepScope stepId={activeStep}>
+          <Header
+            headingId={headingId}
+            summary={isFinalStep ? undefined : summary}
+            title={steps[activeStep].title}
+          />
+        </StepScope>
+      )}
       {/* Activity preserves each step's local state while pausing its effects.
           Hidden content still reaches the browser and is not an authorization boundary. */}
       {stepIds.map((stepId) => (

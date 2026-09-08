@@ -30,6 +30,8 @@ export type Step = {
   content: ReactNode;
   controller?: ReactElement;
   final?: true;
+  // A live prerequisite: false requires this step even after stored completion.
+  skipped?: boolean;
   title: string;
 };
 

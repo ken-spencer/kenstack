@@ -94,6 +94,148 @@ describe("StepFlow", () => {
     vi.useRealTimers();
   });
 
+  it("lets a controller recall its own step only from later steps", () => {
+    function Controller() {
+      const { activate, isBeforeActiveStep, isFinalStep } = useStep();
+      return (
+        <button
+          disabled={!isBeforeActiveStep || isFinalStep}
+          onClick={activate}
+        >
+          Recall selection
+        </button>
+      );
+    }
+
+    act(() =>
+      root.render(
+        <StepFlowClient
+          basePath="/flow"
+          steps={{
+            start: { content: <NextStep name="Start" />, title: "Start" },
+            selection: {
+              content: <NextStep name="Selection" />,
+              controller: <Controller />,
+              title: "Selection",
+            },
+            payment: { content: <NextStep name="Payment" />, title: "Payment" },
+            complete: {
+              content: <p>Thank you</p>,
+              final: true,
+              title: "Complete",
+            },
+          }}
+        />,
+      ),
+    );
+    expect(getButton(container, "Recall selection").disabled).toBe(true);
+    act(() => getButton(container, "Next from Start").click());
+    expect(getButton(container, "Recall selection").disabled).toBe(true);
+    act(() => getButton(container, "Next from Selection").click());
+    expect(getButton(container, "Recall selection").disabled).toBe(false);
+    act(() => getButton(container, "Recall selection").click());
+    expect(container.querySelector("h2")?.textContent).toBe("Selection");
+    act(() => getButton(container, "Next from Selection").click());
+    act(() => getButton(container, "Next from Payment").click());
+    expect(container.querySelector("h2")?.textContent).toBe("Complete");
+    expect(getButton(container, "Recall selection").disabled).toBe(true);
+  });
+
+  it("skips a prerequisite in both directions while keeping its controller and local state", () => {
+    act(() =>
+      root.render(
+        <StepFlowClient
+          basePath="/flow"
+          steps={{
+            first: { content: <NextStep name="First" />, title: "First" },
+            account: {
+              content: <p>Sign in</p>,
+              controller: <PrerequisiteController />,
+              skipped: true,
+              title: "Account",
+            },
+            last: {
+              content: <TestStep activeEffects={new Set()} name="Last" />,
+              title: "Last",
+            },
+          }}
+        />,
+      ),
+    );
+    act(() => getButton(container, "Next from First").click());
+    expect(container.querySelector("h2")?.textContent).toBe("Last");
+    act(() => getButton(container, "Increment Last").click());
+    act(() => getButton(container, "Require this step").click());
+    expect(container.querySelector("h2")?.textContent).toBe("Account");
+    expect(window.location.pathname).toBe("/flow/account");
+    act(() => getButton(container, "Skip this step").click());
+    expect(container.querySelector("h2")?.textContent).toBe("Last");
+    expect(getButton(container, "Increment Last").textContent).toContain("1");
+    act(() => getButton(container, "Back from Last").click());
+    expect(container.querySelector("h2")?.textContent).toBe("First");
+  });
+
+  it("requires a live prerequisite despite stored completion and before hydration", () => {
+    window.localStorage.setItem(
+      "stored-state:%2Fflow:$completedSteps",
+      JSON.stringify({ value: { account: true } }),
+    );
+    window.localStorage.setItem(
+      "stored-state:%2Fflow:$expiresAt",
+      String(Date.now() + 60_000),
+    );
+    const flow = (
+      <StepFlowClient
+        basePath="/flow"
+        routeStep="payment"
+        steps={{
+          account: {
+            content: <p>Sign in again</p>,
+            controller: <PrerequisiteController />,
+            skipped: false,
+            title: "Account",
+          },
+          payment: { content: <p>Payment form</p>, title: "Payment" },
+        }}
+      />
+    );
+    const html = renderToString(flow);
+    expect(html).toContain("Sign in again");
+    expect(html).not.toContain("Payment form");
+    act(() => root.render(flow));
+    expect(container.querySelector("h2")?.textContent).toBe("Account");
+    act(() => getButton(container, "Skip this step").click());
+    expect(container.querySelector("h2")?.textContent).toBe("Payment");
+    act(() => getButton(container, "Require this step").click());
+    expect(container.querySelector("h2")?.textContent).toBe("Account");
+  });
+
+  it("keeps controllers running when every step is skipped", () => {
+    act(() =>
+      root.render(
+        <StepFlowClient
+          basePath="/flow"
+          steps={{
+            account: {
+              content: <p>Sign in</p>,
+              controller: <PrerequisiteController />,
+              skipped: true,
+              title: "Account",
+            },
+          }}
+        />,
+      ),
+    );
+    expect(container.querySelector('[role="status"]')?.textContent).toBe(
+      "Loading…",
+    );
+    expect(container.querySelector("h2")).toBeNull();
+    expect(window.location.pathname).toBe("/flow");
+    act(() => getButton(container, "Require this step").click());
+    expect(container.querySelector("h2")?.textContent).toBe("Account");
+    expect(window.location.pathname).toBe("/flow/account");
+  });
+
   it("rejects an unknown server-requested step", async () => {
     await expect(
       StepFlow({
@@ -1349,4 +1491,14 @@ function getButton(container: HTMLElement, label: string) {
   }
 
   return match;
+}
+
+function PrerequisiteController() {
+  const { setSkipped } = useStep();
+  return (
+    <>
+      <button onClick={() => setSkipped(false)}>Require this step</button>
+      <button onClick={() => setSkipped(true)}>Skip this step</button>
+    </>
+  );
 }

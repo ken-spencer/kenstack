@@ -4,6 +4,7 @@ import Header from "./Header";
 import Footer from "./Footer";
 import OneToOneTabs from "./OneToOneTabs";
 import Breadcrumbs from "@kenstack/admin/components/Breadcrumbs";
+import ChildModuleLinks from "@kenstack/admin/components/ChildModuleLinks";
 import Button from "@kenstack/components/Button";
 import { uploadsConfigured } from "@kenstack/lib/mediaStorage";
 import { io } from "next/cache";
@@ -154,6 +155,7 @@ export default async function AdminEdit({
               parent={parentRecord}
             />
             <Header canCreate={"list" in adminConfig && adminConfig.create} />
+            <ChildModuleLinks />
             <OneToOneTabs />
             <Footer />
           </div>
@@ -180,7 +182,7 @@ function renderChildModuleLinks(
   return (
     <section className="space-y-2">
       <h2 className="text-sm font-medium">Manage</h2>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap gap-2">
         {childModules.map((moduleConfig) => {
           const Icon = moduleConfig.icon;
           const href = `/admin/${id}/${moduleConfig.name}`;
@@ -189,7 +191,6 @@ function renderChildModuleLinks(
             <Button
               key={href}
               asChild
-              className="w-full justify-start"
               variant="outline"
             >
               <GuardedLink href={href}>

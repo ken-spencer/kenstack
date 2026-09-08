@@ -5,6 +5,7 @@ import type { Step } from "@kenstack/components/StepFlow";
 import { loadLoginFormProps } from "../loadFormProps";
 
 import StepLoginForm from "./Form";
+import LoginController from "./Controller";
 
 export async function createLoginStep({
   always = false,
@@ -14,16 +15,22 @@ export async function createLoginStep({
   always?: boolean;
   title?: string;
 } = {}): Promise<Step | null> {
-  if (!always) {
-    const authState = await loadPublicAuthState();
-    if (authState.state === "authenticated" || authState.state === "proven") {
-      return null;
-    }
-  }
+  const authState = always ? undefined : await loadPublicAuthState();
+  const skipped = authState
+    ? authState.state === "authenticated" || authState.state === "proven"
+    : undefined;
 
   return {
+    controller: authState ? (
+      <LoginController authState={authState} />
+    ) : undefined,
+    skipped,
+    // A redeemed email challenge must not survive into the next login.
     content: (
-      <div className="mt-7 max-w-[560px]">
+      <div
+        className="mt-7 max-w-[560px]"
+        key={skipped ? "identified" : "signin"}
+      >
         <Suspense fallback={<div className="min-h-72 animate-pulse" />}>
           <RememberedStepLoginForm />
         </Suspense>

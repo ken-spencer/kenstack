@@ -5,6 +5,24 @@ contract lives in `docs/upgrading.md`.
 
 ## Unreleased
 
+### Login Steps Retain Their Controllers
+
+`createLoginStep()` now returns a skipped step for an authenticated or proven identity instead of
+`null`. Pass its complete definition to StepFlow so its controller can require login again when browser
+identity is lost. `always: true` retains the existing always-visible behavior. Host server checks for
+protected content and operations remain necessary.
+
+Steps may supply `skipped` and controllers may call `useStep().setSkipped(boolean)`: `true` bypasses
+that step in navigation; `false` requires it regardless of stored completion. Ordinary steps omit it.
+When every step is skipped, StepFlow keeps controllers mounted and displays a loading notice. Code
+reading `useFlowContext().activeStep` directly must handle `undefined` during that state.
+
+### Automatic Child-Module Navigation
+
+Kenstack now renders child-module links below the edit toolbar for saved parent records. Remove
+manual `ChildModuleLinks` placements from host edit forms to avoid duplicate navigation. The component
+remains available, and child lists and edit pages retain their breadcrumbs back to the parent record.
+
 ### Shared Module Cache Invalidation
 
 `saveModuleRecord` and `saveAdminRecord` now expire admin record and list caches before post-commit

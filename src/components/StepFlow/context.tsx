@@ -22,7 +22,7 @@ import type { Step, StepFlowProps } from "./types";
 
 type FlowContextValue = {
   Actions: NonNullable<StepFlowProps["Actions"]>;
-  activeStep: string;
+  activeStep: string | undefined;
   basePath: string;
   id: string;
   isFinalStep: boolean;
@@ -30,6 +30,8 @@ type FlowContextValue = {
   next: () => void;
   previous: () => void;
   setActiveStep: (stepId: string) => void;
+  setStepSkipped: (stepId: string, skipped: boolean) => void;
+  stepIds: string[];
 };
 
 const FlowContext = createContext<FlowContextValue | null>(null);
@@ -71,34 +73,48 @@ export function FlowProvider({
     completedStepsSchema,
   );
   // The flow owns its step, seeded from the route the server resolved; the
-  // URL only mirrors it. A server refresh can drop the step the flow navigated
-  // to (a sign-in removes its own step), and then the route's fresh resolution
-  // stands in for it.
+  // URL only mirrors it. If a server refresh omits the step the flow navigated
+  // to, the route's fresh resolution stands in for it.
   const [navigatedStep, setNavigatedStep] = useState(routeStep);
-  const requestedStep = Object.hasOwn(steps, navigatedStep)
+  const [skippedSteps, setSkippedSteps] = useState<Record<string, boolean>>({});
+  const setStepSkipped = useCallback((stepId: string, skipped: boolean) => {
+    setSkippedSteps((current) =>
+      current[stepId] === skipped ? current : { ...current, [stepId]: skipped },
+    );
+  }, []);
+  const configuredStepIds = Object.keys(steps);
+  const stepIds = configuredStepIds.filter(
+    (stepId) => !(skippedSteps[stepId] ?? steps[stepId].skipped),
+  );
+  const routeTarget = Object.hasOwn(steps, navigatedStep)
     ? navigatedStep
     : routeStep;
-  const stepIds = Object.keys(steps);
+  const requestedStep = stepIds.includes(routeTarget)
+    ? routeTarget
+    : (stepIds.find(
+        (stepId) =>
+          configuredStepIds.indexOf(stepId) >
+          configuredStepIds.indexOf(routeTarget),
+      ) ?? stepIds.at(-1));
   const firstIncompleteStepIndex = stepIds.findIndex(
-    (stepId) => completedSteps[stepId] !== true,
+    (stepId) =>
+      (skippedSteps[stepId] ?? steps[stepId].skipped) === false ||
+      (isHydrated && completedSteps[stepId] !== true),
   );
   const lastReachableStepIndex =
     firstIncompleteStepIndex === -1
       ? stepIds.length - 1
       : firstIncompleteStepIndex;
-  // Until hydration the ledger is unreadable, so the requested step stands;
-  // the ledger then decides whether it stays. A final step is always
-  // reachable: it only reports a result and clears the flow.
+  // Live prerequisites apply before hydration too. The browser ledger becomes
+  // readable after hydration; final result steps bypass both.
   const activeStep =
-    !isHydrated || steps[requestedStep].final
+    requestedStep === undefined || steps[requestedStep].final
       ? requestedStep
       : stepIds[
-          Math.min(
-            Math.max(0, stepIds.indexOf(requestedStep)),
-            lastReachableStepIndex,
-          )
+          Math.min(stepIds.indexOf(requestedStep), lastReachableStepIndex)
         ];
-  const activeStepIndex = stepIds.indexOf(activeStep);
+  const activeStepIndex =
+    activeStep === undefined ? -1 : stepIds.indexOf(activeStep);
   const setRouteStep = useCallback(
     (stepId: string) => {
       setNavigatedStep(stepId);
@@ -121,7 +137,7 @@ export function FlowProvider({
     [lastReachableStepIndex, setRouteStep, stepIds],
   );
   useEffect(() => {
-    if (!steps[activeStep].final) {
+    if (activeStep === undefined || !steps[activeStep].final) {
       return;
     }
 
@@ -131,7 +147,7 @@ export function FlowProvider({
   // The URL follows the settled step: the base path gains its segment, and a
   // requested step the ledger refused is replaced by the one presented.
   useEffect(() => {
-    if (!isHydrated || !isStorageAvailable) {
+    if (activeStep === undefined || !isHydrated || !isStorageAvailable) {
       return;
     }
 
@@ -148,7 +164,10 @@ export function FlowProvider({
 
   // A final step needs no storage, so a result page still renders when the
   // ledger cannot be written.
-  if (!isStorageAvailable && !steps[activeStep].final) {
+  if (
+    !isStorageAvailable &&
+    (activeStep === undefined || !steps[activeStep].final)
+  ) {
     return (
       <div className="step-flow" id={id}>
         <Notice
@@ -166,24 +185,29 @@ export function FlowProvider({
         activeStep,
         basePath,
         id,
-        isFinalStep: steps[activeStep].final === true,
-        isFirstStep: activeStepIndex === 0,
+        isFinalStep:
+          activeStep !== undefined && steps[activeStep].final === true,
+        isFirstStep: activeStepIndex <= 0,
         next: () => {
-          const nextStepId = stepIds[activeStepIndex + 1];
-          if (nextStepId !== undefined) {
-            // The ledger is read back at write time so an expired flow
-            // cleared by this write cannot resurrect the old ledger.
-            if (
-              !steps[nextStepId].final &&
-              !setCompletedSteps((current) => ({
-                ...current,
-                [activeStep]: true,
-              }))
-            ) {
-              return;
-            }
-            setRouteStep(nextStepId);
+          if (activeStep === undefined) {
+            return;
           }
+          const nextStepId = stepIds[activeStepIndex + 1];
+          if (nextStepId === undefined) {
+            return;
+          }
+          // The ledger is read back at write time so an expired flow
+          // cleared by this write cannot resurrect the old ledger.
+          if (
+            !steps[nextStepId].final &&
+            !setCompletedSteps((current) => ({
+              ...current,
+              [activeStep]: true,
+            }))
+          ) {
+            return;
+          }
+          setRouteStep(nextStepId);
         },
         previous: () => {
           const previousStepId = stepIds[activeStepIndex - 1];
@@ -192,6 +216,8 @@ export function FlowProvider({
           }
         },
         setActiveStep,
+        setStepSkipped,
+        stepIds,
       }}
     >
       {children}
@@ -216,23 +242,32 @@ export function StepScope({
 export function useStep() {
   const context = useContext(FlowContext);
   const stepId = useContext(StepScopeContext);
-  const setActiveStep = context?.setActiveStep;
-  const activate = useCallback(() => {
-    if (stepId !== null) {
-      setActiveStep?.(stepId);
-    }
-  }, [setActiveStep, stepId]);
   if (!context || stepId === null) {
     throw new Error("A StepFlow step is required.");
   }
+
+  const { setActiveStep, setStepSkipped } = context;
+  const activate = useCallback(
+    () => setActiveStep(stepId),
+    [setActiveStep, stepId],
+  );
+  const setSkipped = useCallback(
+    (skipped: boolean) => setStepSkipped(stepId, skipped),
+    [setStepSkipped, stepId],
+  );
+  const stepIndex = context.stepIds.indexOf(stepId);
 
   return {
     activate,
     id: context.id,
     isActive: context.activeStep === stepId,
+    isBeforeActiveStep:
+      stepIndex !== -1 &&
+      stepIndex < context.stepIds.indexOf(context.activeStep ?? ""),
     isFinalStep: context.isFinalStep,
     isFirstStep: context.isFirstStep,
     next: context.next,
     previous: context.previous,
+    setSkipped,
   };
 }

@@ -38,8 +38,7 @@ summaries, and browser persistence in Kenstack and host sites.
   running summary. The workflow owner retains only the live result the final screen needs and keeps
   completed payment content unavailable.
 - A server step factory may return `null` when the step does not belong in the current flow. This is a
-  composition decision made before StepFlow reaches the browser, not a completion rule. Once included,
-  a step remains in the flow so Back navigation does not unexpectedly lose it. If refreshed server
+  composition decision made before StepFlow reaches the browser, not a completion rule. If refreshed server
   state omits the route currently in the URL, StepFlow continues to the next retained configured step
   (or the preceding retained step when none follows) and normalizes the URL. StepFlow filters omitted
   factories before it evaluates navigation progress, so an omitted step never blocks a retained one.
@@ -60,20 +59,26 @@ summaries, and browser persistence in Kenstack and host sites.
   `resetOrder` when one action coordinates several changes, so no step has to know which downstream
   values a raw setter would invalidate.
 - Calling `next()` records the active step as completed and advances to the following retained step.
-  This explicit navigation event is the only StepFlow completion signal: StepFlow does not infer
-  completion from current field values or maintain a parallel condition callback. A form calls `next()`
+  StepFlow does not infer completion from current field values. A form calls `next()`
   from its successful submit path, a selection step enables its own action only when its value is valid,
   and a payment integration calls it from its successful completion callback.
+- A step with a live prerequisite supplies `skipped` initially and updates it through its controller
+  with `useStep().setSkipped(boolean)`. `true` skips its content in forward and Back navigation while
+  retaining its controller; `false` requires the step even if the browser ledger records it completed.
+  Omit `skipped` for ordinary steps governed by `next()`. Live prerequisite state is never persisted.
+  If every step is skipped, controllers remain mounted with a loading notice until a step becomes
+  available or the owning route redirects; `useFlowContext().activeStep` is then `undefined`.
 - A requested configured route is reachable only when every preceding retained step is recorded as
-  completed. Otherwise StepFlow presents the first incomplete step and normalizes the URL. Previously
+  completed and no preceding live prerequisite requires attention. Otherwise StepFlow presents the first incomplete step and normalizes the URL. Previously
   reached steps remain revisitable. This browser ledger protects the intended navigation sequence, but
   browser state is mutable: authorization and authoritative transaction prerequisites remain server
   concerns and must be checked by the operation that needs them.
 - Use a step `controller` only for behavior that must remain mounted while its content is hidden, such
   as retaining a seat hold or handling an authentication return. A controller is not the way to copy a
-  stored slice into a flow context; the flow owner reads its slices directly. Controllers do not
-  report completion or validity. Until the browser hydrates, StepFlow presents the step the server
-  resolved with every slice absent, so the step is its own placeholder; once hydrated it applies the
+  stored slice into a flow context; the flow owner reads its slices directly. Login uses its controller to
+  observe browser identity and update its live prerequisite, while server checks still govern protected
+  content and operations. Until the browser hydrates, StepFlow applies server-supplied live prerequisites
+  with every stored slice absent; once hydrated it also applies the
   completion ledger and the URL follows. A form whose defaults come from a restored slice reads the
   slice itself, not a context value a controller fills in later, since a form keeps the defaults it
   mounted with.

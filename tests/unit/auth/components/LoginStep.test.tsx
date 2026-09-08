@@ -40,7 +40,6 @@ vi.mock("next/navigation", () => ({
   },
 }));
 vi.mock("@kenstack/api/fetcher", () => ({ default: mocks.fetcher }));
-vi.mock("@kenstack/auth/useUserInfo", () => ({ setUserInfo: vi.fn() }));
 vi.mock("react-google-recaptcha-v3", () => ({
   useGoogleReCaptcha: () => ({ executeRecaptcha: undefined }),
 }));
@@ -49,6 +48,7 @@ import StepFlow from "@kenstack/components/StepFlow";
 import { StepActions } from "@kenstack/components/StepFlow/StepActions";
 import { createLoginStep } from "@kenstack/auth/components/Login/Step";
 import StepLoginForm from "@kenstack/auth/components/Login/Step/Form";
+import { logoutUser, setUserInfo } from "@kenstack/auth/useUserInfo";
 
 const token = "a".repeat(43);
 const linkFailureMessage =
@@ -116,6 +116,8 @@ describe("Login step", () => {
   let root: ReturnType<typeof createRoot>;
 
   beforeEach(() => {
+    window.localStorage.clear();
+    setUserInfo({ state: "anonymous" });
     mocks.loadPublicAuthState
       .mockReset()
       .mockResolvedValue({ state: "anonymous" });
@@ -137,11 +139,14 @@ describe("Login step", () => {
   });
 
   it.each(["authenticated", "proven"])(
-    "omits the step by default when auth state is %s",
+    "skips the step but retains its controller when auth state is %s",
     async (state) => {
       mocks.loadPublicAuthState.mockResolvedValue({ state });
 
-      expect(await createLoginStep()).toBeNull();
+      expect(await createLoginStep()).toMatchObject({
+        skipped: true,
+        controller: expect.anything(),
+      });
     },
   );
 
@@ -162,6 +167,115 @@ describe("Login step", () => {
       expect(
         await createLoginStep({ always: true, title: "Your account" }),
       ).toMatchObject({ title: "Your account" });
+    },
+  );
+
+  it("returns to a skipped login step when identity is lost, without trusting old completion", async () => {
+    const authState = { state: "proven", email: "patron@example.com" } as const;
+    mocks.loadPublicAuthState.mockResolvedValue(authState);
+    setUserInfo(authState);
+    window.localStorage.setItem(
+      "stored-state:%2Fflow:$completedSteps",
+      JSON.stringify({ value: { signin: true } }),
+    );
+    window.localStorage.setItem(
+      "stored-state:%2Fflow:$expiresAt",
+      String(Date.now() + 60_000),
+    );
+    const flow = await StepFlow({
+      basePath: "/flow",
+      params: Promise.resolve({ step: "details" }),
+      steps: {
+        signin: {
+          ...(await createLoginStep()),
+          content: <p>Sign in again</p>,
+          title: "Sign in",
+        },
+        details: { content: <p>Enter your details</p>, title: "Details" },
+      },
+    });
+    await act(async () => root.render(<StrictMode>{flow}</StrictMode>));
+    expect(container.querySelector("h2")?.textContent).toBe("Details");
+    await act(async () => setUserInfo({ state: "anonymous" }));
+    expect(container.querySelector("h2")?.textContent).toBe("Sign in");
+    expect(window.location.pathname).toBe("/flow/signin");
+    expect(mocks.refresh).not.toHaveBeenCalled();
+  });
+
+  it("waits for server-confirmed identity before skipping login", async () => {
+    const renderFlow = async () =>
+      StepFlow({
+        basePath: "/flow",
+        params: Promise.resolve({ step: "signin" }),
+        steps: {
+          signin: {
+            ...(await createLoginStep()),
+            content: <p>Sign in</p>,
+            title: "Sign in",
+          },
+          details: { content: <p>Enter your details</p>, title: "Details" },
+        },
+      });
+    await act(async () => root.render(await renderFlow()));
+    expect(mocks.refresh).not.toHaveBeenCalled();
+    await act(async () =>
+      setUserInfo({ state: "proven", email: "patron@example.com" }),
+    );
+    expect(container.querySelector("h2")?.textContent).toBe("Sign in");
+    expect(mocks.refresh).not.toHaveBeenCalled();
+    mocks.loadPublicAuthState.mockResolvedValue({
+      state: "proven",
+      email: "patron@example.com",
+    });
+    await act(async () => root.render(await renderFlow()));
+    expect(container.querySelector("h2")?.textContent).toBe("Details");
+    expect(mocks.refresh).not.toHaveBeenCalled();
+  });
+
+  it.each(["success", "error"])(
+    "requires sign-in immediately and restores identity if logout fails (%s)",
+    async (status) => {
+      const authState = {
+        state: "proven",
+        email: "patron@example.com",
+      } as const;
+      mocks.loadPublicAuthState.mockResolvedValue(authState);
+      setUserInfo(authState);
+      const flow = await StepFlow({
+        basePath: "/flow",
+        params: Promise.resolve({ step: "details" }),
+        steps: {
+          signin: {
+            ...(await createLoginStep()),
+            content: <p>Sign in again</p>,
+            title: "Sign in",
+          },
+          details: { content: <p>Enter your details</p>, title: "Details" },
+        },
+      });
+      await act(async () => root.render(flow));
+      const response = Promise.withResolvers<Record<string, unknown>>();
+      mocks.fetcher.mockReturnValueOnce(response.promise);
+      let logout: Promise<void>;
+      await act(async () => {
+        logout = logoutUser();
+      });
+      const refreshesWhilePending = mocks.refresh.mock.calls.length;
+      const headingWhilePending = container.querySelector("h2")?.textContent;
+      await act(async () => {
+        response.resolve({ status, authState: { state: "anonymous" } });
+        if (status === "success") {
+          await logout;
+        } else {
+          await expect(logout).rejects.toThrow("Unable to log out.");
+        }
+      });
+      expect(refreshesWhilePending).toBe(0);
+      expect(headingWhilePending).toBe("Sign in");
+      expect(container.querySelector("h2")?.textContent).toBe(
+        status === "success" ? "Sign in" : "Details",
+      );
+      expect(mocks.refresh).not.toHaveBeenCalled();
     },
   );
 
@@ -216,19 +330,21 @@ describe("Login step", () => {
       path: "/flow/signin",
       status: "success",
     });
-    const flow = await StepFlow({
-      basePath: "/flow",
-      steps: {
-        signin: {
-          title: "Sign in",
-          content: <StepLoginForm method="password" />,
+    const flow = async () =>
+      StepFlow({
+        basePath: "/flow",
+        steps: {
+          signin: {
+            ...(await createLoginStep()),
+            title: "Sign in",
+            content: <StepLoginForm method="password" />,
+          },
+          done: { content: <p>All done</p>, title: "Done" },
         },
-        done: { content: <p>All done</p>, title: "Done" },
-      },
-    });
+      });
 
     await act(async () => {
-      root.render(<StrictMode>{flow}</StrictMode>);
+      root.render(<StrictMode>{await flow()}</StrictMode>);
     });
 
     const emailInput = container.querySelector<HTMLInputElement>(
@@ -245,8 +361,19 @@ describe("Login step", () => {
       );
     });
 
-    await vi.waitFor(() => expect(container.textContent).toContain("All done"));
+    await vi.waitFor(() => expect(mocks.refresh).toHaveBeenCalled());
     expect(mocks.fetcher).toHaveBeenCalledOnce();
+    expect(mocks.refresh).toHaveBeenCalledOnce();
+    expect(container.querySelector("h2")?.textContent).toBe("Sign in");
+
+    mocks.loadPublicAuthState.mockResolvedValue({
+      email: "patron@example.com",
+      state: "authenticated",
+    });
+    await act(async () => {
+      root.render(<StrictMode>{await flow()}</StrictMode>);
+    });
+    expect(container.textContent).toContain("All done");
     expect(mocks.refresh).toHaveBeenCalledOnce();
   });
 
