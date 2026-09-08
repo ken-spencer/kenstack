@@ -9,11 +9,20 @@ procedures that apply these rules live in `docs/cleanup.md` and `docs/review.md`
 
 ## Unit ownership
 
+When checking ownership, trace each affected capability through its callers, routes, schemas, queries,
+and handlers, including string-based API connections. Report owned pieces scattered outside the
+capability with their owner and the concrete maintenance cost.
+
 - A definition belongs to the unit whose behavior or schema it configures, decided by what it defines
   and who consumes it, never by what it references: a product's `categoryId` field belongs to the
-  product module even though it points at the category table.
-- A consumer that displays another owner's data derives or references it. Aggregators and registries
-  assemble owners without taking ownership from them.
+  product module even though it points at the category table. Keep an identifiable capability's UI,
+  schemas, defaults, queries, handlers, and supporting logic together where they serve its behavior.
+  Server/client boundaries determine separate files, not separate owners. Independently owned domain
+  contracts and infrastructure remain with their owners.
+- Consumers and specialized variants reuse the capability's owned pieces; additional consumers do not
+  automatically promote those pieces into general shared areas. A consumer that displays another
+  owner's data derives or references it. Routes and registries delegate to or assemble owners without
+  taking ownership from them.
 - Resolving misplacement moves definitions across existing boundaries; the units themselves stay as
   they are. Merging, splitting, or dissolving a unit is a product decision that needs explicit
   authorization.

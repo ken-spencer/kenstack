@@ -5,6 +5,16 @@ contract lives in `docs/upgrading.md`.
 
 ## Unreleased
 
+### Automatic Admin Style-Guide Route
+
+`createAdminPage()` now serves `/admin/style-guide` for administrators in development, including
+the base, admin, and site context selector. `style-guide` is a reserved admin route name and returns
+not found outside development or with additional path segments.
+
+Hosts must serve `/style-guide/[context]` for `base`, `admin`, and `site`, restricted to administrators
+in development. This route renders the guide with the host's theme styles for the isolated comparison.
+The host-route contract is documented in [Admin Reference](docs/admin.md#style-guide).
+
 ### Login Steps Retain Their Controllers
 
 `createLoginStep()` now returns a skipped step for an authenticated or proven identity instead of
@@ -16,6 +26,20 @@ Steps may supply `skipped` and controllers may call `useStep().setSkipped(boolea
 that step in navigation; `false` requires it regardless of stored completion. Ordinary steps omit it.
 When every step is skipped, StepFlow keeps controllers mounted and displays a loading notice. Code
 reading `useFlowContext().activeStep` directly must handle `undefined` during that state.
+
+`useStep().isBeforeActiveStep` tells a mounted controller whether its retained step precedes the active
+step. It is false when its step is skipped or no step is active.
+
+### Index Steps and Email Login Destinations
+
+The first configured step may set `index: true` to use the flow's base URL without its step segment.
+`createLoginStep({ index: true })` opts into this behavior when mounting login first. Other steps keep
+their existing URLs, and skipping the index step does not promote another step to the base URL.
+
+`getSafeReturnToPath(value, { allowLogin: true })` now permits the exact `/login` path, including its
+query and hash; the default still rejects it, and all other safety checks remain unchanged. Email login
+uses this option when `linkToReturnTo` is enabled so the email link can return directly to an embedded
+login flow at `/login`. Final post-login redirects retain the default check to avoid returning to login.
 
 ### Automatic Child-Module Navigation
 

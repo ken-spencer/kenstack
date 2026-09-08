@@ -188,11 +188,7 @@ function renderChildModuleLinks(
           const href = `/admin/${id}/${moduleConfig.name}`;
 
           return (
-            <Button
-              key={href}
-              asChild
-              variant="outline"
-            >
+            <Button key={href} asChild variant="outline">
               <GuardedLink href={href}>
                 {Icon ? <Icon className="size-4" /> : null}
                 {moduleConfig.title}

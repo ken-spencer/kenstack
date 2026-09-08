@@ -25,8 +25,9 @@ change is correct, necessary, and ready for handoff; it does not authorize imple
    concrete current value. A branch, case, or fallback that is unreachable or equivalent to another is
    a concrete maintenance cost, not a preference: report it with the equivalence that removes it.
 4. Check the applicable ownership, import-organization, public-surface, and technical contracts routed by
-   `AGENTS.md`. For an affected reusable owner, inspect every new or changed configuration branch and its
-   production call sites far enough to verify cleanup's ownership and configuration ruling. One product
+   `AGENTS.md`, including the ownership trace in `docs/code-organization.md#unit-ownership`.
+   For an affected reusable owner, inspect every new or changed configuration branch
+   and its production call sites far enough to verify cleanup's ownership and configuration ruling. One product
    capability stays behind one option unless a current caller requires each partial configuration;
    reject a surface that permits contradictory, incomplete, or drifting combinations. For an affected
    multi-step workflow, apply `docs/step-flow.md`. For a new or changed site component, rule on

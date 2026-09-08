@@ -4,6 +4,18 @@ Consult this reference for Kenstack admin modules, lists, edit forms, admin-spec
 ownership, record saving, list configuration, relationship interfaces, and visual structure. Shared form
 construction, controls, and state follow `docs/forms.md`.
 
+## Style guide
+
+`createAdminPage()` owns `/admin/style-guide`, with `?context=base`, `admin`, or `site` selecting the
+theme. `style-guide` is a reserved admin route name; modules cannot use it. The page requires an
+administrator and returns not found outside development or with additional path segments.
+
+The host serves `/style-guide/[context]` for the iframe, validates `context` as `base`, `admin`, or
+`site`, and renders `StyleGuide` from `@kenstack/admin/style-guide/StyleGuide`. This route must also
+require an administrator and return not found outside development, because visitors can open it
+directly. Load Kenstack's admin and style-guide theme styles alongside the host's site theme so each
+context renders in isolation. Both pages should use noindex metadata.
+
 ## One-to-Many Relationships
 
 Before implementing a new one-to-many admin relationship, decide whether staff should manage it as a

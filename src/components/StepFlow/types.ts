@@ -30,6 +30,8 @@ export type Step = {
   content: ReactNode;
   controller?: ReactElement;
   final?: true;
+  // Only the first configured step may use basePath without a step segment.
+  index?: true;
   // A live prerequisite: false requires this step even after stored completion.
   skipped?: boolean;
   title: string;

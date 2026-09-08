@@ -42,6 +42,10 @@ export default async function StepFlow({
     notFound();
   }
 
+  if (stepEntries.slice(1).some(([, step]) => step?.index)) {
+    throw new Error("Only the first configured step may be an index step.");
+  }
+
   const step = Array.isArray(routeParam) ? routeParam[0] : routeParam;
 
   if (Object.keys(resolvedSteps).length === 0) {

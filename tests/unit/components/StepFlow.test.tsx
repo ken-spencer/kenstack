@@ -246,6 +246,89 @@ describe("StepFlow", () => {
     ).rejects.toThrow("Not found");
   });
 
+  it("uses the base URL for the configured index step during forward and Back navigation", async () => {
+    window.history.replaceState(null, "", "/flow?returnTo=%2Fcheckout#steps");
+    const flow = await StepFlow({
+      basePath: "/flow",
+      steps: {
+        account: {
+          content: <NextStep name="Account" />,
+          index: true,
+          title: "Account",
+        },
+        details: {
+          content: <TestStep activeEffects={new Set()} name="Details" />,
+          title: "Details",
+        },
+      },
+    });
+
+    await act(async () => root.render(flow));
+    expect(window.location.pathname).toBe("/flow");
+    act(() => getButton(container, "Next from Account").click());
+    expect(window.location.pathname).toBe("/flow/details");
+    act(() => getButton(container, "Back from Details").click());
+    expect(window.location.pathname).toBe("/flow");
+    expect(window.location.search).toBe("?returnTo=%2Fcheckout");
+    expect(window.location.hash).toBe("#steps");
+  });
+
+  it("normalizes an unreachable details URL to the index step", async () => {
+    window.history.replaceState(null, "", "/flow/details?returnTo=%2Fcheckout");
+    const flow = await StepFlow({
+      basePath: "/flow",
+      params: Promise.resolve({ step: "details" }),
+      steps: {
+        account: {
+          content: <p>Sign in</p>,
+          index: true,
+          skipped: false,
+          title: "Account",
+        },
+        details: { content: <p>Details</p>, title: "Details" },
+      },
+    });
+
+    await act(async () => root.render(flow));
+    expect(container.querySelector("h2")?.textContent).toBe("Account");
+    expect(window.location.pathname).toBe("/flow");
+    expect(window.location.search).toBe("?returnTo=%2Fcheckout");
+  });
+
+  it("keeps the next step's named URL when the index step is skipped", async () => {
+    const flow = await StepFlow({
+      basePath: "/flow",
+      steps: {
+        account: {
+          content: null,
+          index: true,
+          skipped: true,
+          title: "Account",
+        },
+        details: { content: <p>Details</p>, title: "Details" },
+      },
+    });
+
+    await act(async () => root.render(flow));
+    expect(container.querySelector("h2")?.textContent).toBe("Details");
+    expect(window.location.pathname).toBe("/flow/details");
+  });
+
+  it.each([false, true])(
+    "rejects a later index step when the first step is skipped: %s",
+    async (skipped) => {
+      await expect(
+        StepFlow({
+          basePath: "/flow",
+          steps: {
+            first: { content: null, skipped, title: "First" },
+            second: { content: null, index: true, title: "Second" },
+          },
+        }),
+      ).rejects.toThrow("Only the first configured step may be an index step.");
+    },
+  );
+
   it("continues past configured steps omitted by refreshed server state", async () => {
     window.localStorage.setItem(
       "stored-state:%2Fflow:$completedSteps",

@@ -9,11 +9,16 @@ import Edit from "@kenstack/admin/Edit";
 import { modules } from "@app/modules";
 import { pageRoute } from "@kenstack/pageRoute";
 import { parseAdminRouteSegments } from "@kenstack/admin/lib/route";
+import StyleGuidePage from "@kenstack/admin/style-guide/Page";
 
 const adminRouteSchema = z.array(z.string()).transform((segments, ctx) => {
   const route = parseAdminRouteSegments(segments);
 
-  if (!route) {
+  if (
+    !route ||
+    (route.name === "style-guide" &&
+      (process.env.NODE_ENV !== "development" || segments.length !== 1))
+  ) {
     ctx.addIssue({
       code: "custom",
       message: "Invalid admin route.",
@@ -31,6 +36,17 @@ export async function generateMetadata({
   params: Promise<{ admin: string[] }>;
 }): Promise<Metadata> {
   const { admin } = await params;
+  if (
+    process.env.NODE_ENV === "development" &&
+    admin.length === 1 &&
+    admin[0] === "style-guide"
+  ) {
+    return {
+      title: { absolute: "Style guide · Admin" },
+      robots: { index: false, follow: false },
+    };
+  }
+
   const route = parseAdminRouteSegments(admin);
   const moduleConfig = route ? modules[route.name] : undefined;
 
@@ -54,6 +70,19 @@ export function createAdminPage() {
     },
     async ({ params, searchIn, user }) => {
       const { name, id, isNew = false, parentId } = params;
+      if (name === "style-guide") {
+        const requestedContext = searchIn.context;
+        return (
+          <StyleGuidePage
+            context={
+              requestedContext === "admin" || requestedContext === "site"
+                ? requestedContext
+                : "base"
+            }
+          />
+        );
+      }
+
       const moduleConfig = modules[name];
 
       if (!moduleConfig?.admin) {

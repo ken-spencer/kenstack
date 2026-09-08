@@ -165,6 +165,32 @@ describe("requestEmailLogin", () => {
       },
     );
   });
+
+  it.each([
+    ["/login?returnTo=%2Fcheckout#steps", "/login?returnTo=%2Fcheckout#steps"],
+    ["https://evil.example/", "/login"],
+    ["//evil.example/", "/login"],
+    ["/\\evil.example/", "/login"],
+  ])(
+    "sends embedded verification to a safe page: %s",
+    async (returnTo, linkPath) => {
+      mocks.loadAuthState.mockResolvedValue({ state: "anonymous" });
+      mocks.sendCode.mockResolvedValue({
+        challengeKey,
+        email: "person@example.com",
+      });
+      await createEmailLogin().request({
+        ...requestContext(),
+        data: {
+          email: "person@example.com",
+          returnTo,
+          linkToReturnTo: true,
+        },
+      });
+
+      expect(mocks.sendCode.mock.lastCall?.[0]).toMatchObject({ linkPath });
+    },
+  );
 });
 
 describe("verifyEmailLoginCode", () => {
@@ -208,6 +234,11 @@ describe("verifyEmailLoginCode", () => {
     await expect(
       createEmailLogin().verifyCode(stageContext("/membership")),
     ).resolves.toEqual({ authState: signedInState, path: "/membership" });
+    await expect(
+      createEmailLogin().verifyCode(
+        stageContext("/login?returnTo=%2Fcheckout"),
+      ),
+    ).resolves.toEqual({ authState: signedInState, path: "/" });
   });
 
   it("returns proven state for enrollment when no account exists", async () => {

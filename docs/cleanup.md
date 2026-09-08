@@ -24,8 +24,10 @@ task's scope.
 ## Checklist
 
 - **Ownership and duplication:** Apply the canonical-ownership and direct-expression rules in
-  `docs/code-organization.md` and the component-reuse rules in `docs/components.md`. Compare every new or
-  changed site component with Kenstack and with existing site components across `app`, `components`,
+  `docs/code-organization.md` and the component-reuse rules in `docs/components.md`. Follow the ownership
+  trace in `docs/code-organization.md#unit-ownership`; report ownership moves for implementation without
+  changing unrelated code or existing domain boundaries. Compare every
+  new or changed site component with Kenstack and with existing site components across `app`, `components`,
   `features`, modules, and shared domains; during a requested site-wide cleanup, inventory all
   production site components and compare them with one another, including components outside the
   dirty-file set. Rule on each comparison from behavior and ownership: when ownership is duplicated,

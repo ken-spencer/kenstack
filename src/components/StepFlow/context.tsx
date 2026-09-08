@@ -121,10 +121,10 @@ export function FlowProvider({
       window.history.replaceState(
         null,
         "",
-        `${basePath}/${encodeURIComponent(stepId)}${window.location.search}${window.location.hash}`,
+        `${steps[stepId].index ? basePath : `${basePath}/${encodeURIComponent(stepId)}`}${window.location.search}${window.location.hash}`,
       );
     },
-    [basePath],
+    [basePath, steps],
   );
   const setActiveStep = useCallback(
     (stepId: string) => {
@@ -144,14 +144,16 @@ export function FlowProvider({
     clearStoredState(basePath);
   }, [activeStep, basePath, steps]);
 
-  // The URL follows the settled step: the base path gains its segment, and a
-  // requested step the ledger refused is replaced by the one presented.
+  // The URL follows the settled step, including when the ledger refused the
+  // requested step.
   useEffect(() => {
     if (activeStep === undefined || !isHydrated || !isStorageAvailable) {
       return;
     }
 
-    const path = `${basePath}/${encodeURIComponent(activeStep)}`;
+    const path = steps[activeStep].index
+      ? basePath
+      : `${basePath}/${encodeURIComponent(activeStep)}`;
 
     if (window.location.pathname !== path) {
       window.history.replaceState(
@@ -160,7 +162,7 @@ export function FlowProvider({
         `${path}${window.location.search}${window.location.hash}`,
       );
     }
-  }, [activeStep, basePath, isHydrated, isStorageAvailable]);
+  }, [activeStep, basePath, isHydrated, isStorageAvailable, steps]);
 
   // A final step needs no storage, so a result page still renders when the
   // ledger cannot be written.
@@ -190,6 +192,14 @@ export function FlowProvider({
         isFirstStep: activeStepIndex <= 0,
         next: () => {
           if (activeStep === undefined) {
+            return;
+          }
+          // A recalled prerequisite releases the existing destination when its
+          // controller skips it again; it does not complete a ledger step.
+          if (
+            activeStep !== requestedStep &&
+            (skippedSteps[activeStep] ?? steps[activeStep].skipped) === false
+          ) {
             return;
           }
           const nextStepId = stepIds[activeStepIndex + 1];

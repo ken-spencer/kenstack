@@ -5,9 +5,11 @@ summaries, and browser persistence in Kenstack and host sites.
 
 ## Step ownership
 
-- A reusable step owns its title, content, form or action behavior, and optional always-mounted
-  controller, and exports one complete step definition or factory. A flow assembles and orders those
-  definitions; the step's content and controller travel together.
+- A reusable step is a capability bundle that owns its title, content, form or action behavior,
+  supporting server loaders and save handlers, and optional always-mounted controller. Keep these
+  pieces in one unit under the owning module or feature; a step does not have to live in `components/`.
+  It exports one complete step definition or factory. A flow assembles and orders those definitions;
+  the step's content and controller travel together. Framework routes delegate to the unit's handlers.
 - In a server-composed application, keep complete step factories in a server-safe module and
   interactive step implementations in client modules. The server route invokes only server-safe
   factories, which may include client components in their step definitions; client hooks live in those
@@ -17,7 +19,13 @@ summaries, and browser persistence in Kenstack and host sites.
   the flow assembler stays server-side.
 - A step owns its form, schema, defaults, validation, and transient interface state. Apply the
   form-state rules in `docs/forms.md`; a workflow is an aggregate of forms unless its steps deliberately
-  edit one atomic submitted value.
+  edit one atomic submitted value. A specialized step composes the default step's owned pieces and
+  behavior, adding only its required differences. Reuse by that specialization does not itself move
+  ownership into a broader shared area. A schema used by the step's own API remains step-owned:
+  crossing a server/client boundary does not establish a separate domain owner. General record fields,
+  tables, and contracts with an independent domain purpose stay with their domain owner. Runtime
+  boundaries still apply within the bundle: server loaders and handlers stay in server-only files,
+  and schemas shared with the form stay isomorphic.
 - Pass a step only the current inputs its own behavior requires, such as available options or a
   server-loaded seating layout. Owner-known defaults, sibling configuration, and derived flow metadata
   stay with their owners, and an input reaches either the flow provider or each step, never both
@@ -37,6 +45,11 @@ summaries, and browser persistence in Kenstack and host sites.
   mutations succeed, and omits Back and the
   running summary. The workflow owner retains only the live result the final screen needs and keeps
   completed payment content unavailable.
+- The first configured step may set `index: true` to use the flow's base URL without a step segment.
+  Set it when composing the flow unless it is intrinsic to the step. Skipping or omitting that step
+  does not make a later step the index. Without an index, every step keeps its named URL.
+  `createLoginStep({ index: true })` supports standalone login without
+  making login the index in other flows.
 - A server step factory may return `null` when the step does not belong in the current flow. This is a
   composition decision made before StepFlow reaches the browser, not a completion rule. If refreshed server
   state omits the route currently in the URL, StepFlow continues to the next retained configured step
@@ -54,11 +67,15 @@ summaries, and browser persistence in Kenstack and host sites.
   assembler, never in reusable step content, and needs a concrete workflow reason.
 - A step summary may understand aggregate workflow state through scoped facts from `useStep()`, such
   as whether the first step is active; it never compares route-name strings.
+  `useStep().isBeforeActiveStep` reports whether the calling step is retained and precedes the active
+  step. It is false when that step is skipped or no step is active.
 - State shared because summaries or later steps consume a validated result belongs to the
   closest workflow owner. Expose domain operations such as `chooseBlock`, `commitDetails`, or
   `resetOrder` when one action coordinates several changes, so no step has to know which downstream
   values a raw setter would invalidate.
 - Calling `next()` records the active step as completed and advances to the following retained step.
+  If a live prerequisite interrupts a later destination, `next()` preserves that destination without
+  writing completion; the controller releases it by skipping the prerequisite again.
   StepFlow does not infer completion from current field values. A form calls `next()`
   from its successful submit path, a selection step enables its own action only when its value is valid,
   and a payment integration calls it from its successful completion callback.

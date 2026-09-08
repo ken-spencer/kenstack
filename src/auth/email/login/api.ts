@@ -54,7 +54,7 @@ export function createEmailLogin(options: EmailLoginOptions = {}) {
       actionLabel: "Sign in",
       heading: "Sign in",
       introduction:
-        "Use the button below or enter the six-digit code to sign in.",
+        "Use the button below or enter the six-digit code to continue.",
       subject: "Sign in",
       ...options.email,
     },
@@ -116,11 +116,12 @@ export function createEmailLogin(options: EmailLoginOptions = {}) {
             challengeKey: data.challengeKey,
             email: data.email,
             linkPath:
-              returnTo && data.linkToReturnTo
-                ? returnTo
-                : returnTo
-                  ? `${config.linkPath}?returnTo=${encodeURIComponent(returnTo)}`
-                  : config.linkPath,
+              (data.linkToReturnTo
+                ? getSafeReturnToPath(data.returnTo, { allowLogin: true })
+                : undefined) ??
+              (returnTo
+                ? `${config.linkPath}?returnTo=${encodeURIComponent(returnTo)}`
+                : config.linkPath),
             request,
           },
           createVerificationEmail(config.email),

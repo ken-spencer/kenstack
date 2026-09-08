@@ -4,13 +4,13 @@ import { twMerge } from "tailwind-merge";
 import Button from "@kenstack/components/Button";
 import { LinkButton } from "@kenstack/components/LinkButton";
 
-export type StyleGuideContext = "base" | "admin" | "site";
-
-const contextLabels = {
+export const contextLabels = {
   base: "Kenstack base",
   admin: "Admin",
   site: "Site",
-} satisfies Record<StyleGuideContext, string>;
+};
+
+export type StyleGuideContext = keyof typeof contextLabels;
 
 export default function StyleGuide({
   context,

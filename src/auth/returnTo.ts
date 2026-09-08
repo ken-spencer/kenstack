@@ -1,5 +1,6 @@
 export function getSafeReturnToPath(
   value?: string | null,
+  { allowLogin = false }: { allowLogin?: boolean } = {},
 ): `/${string}` | undefined {
   const path = value?.trim();
 
@@ -15,7 +16,7 @@ export function getSafeReturnToPath(
 
   const pathname = path.split(/[?#]/, 1)[0];
 
-  if (pathname === "/login") {
+  if (pathname === "/login" && !allowLogin) {
     return;
   }
 

@@ -20,10 +20,14 @@ export default function LoginController({
     userInfo.state === "authenticated" || userInfo.state === "proven";
 
   useLayoutEffect(() => {
+    if (userInfo.state === "loading") {
+      return;
+    }
+
     // Losing browser identity blocks immediately; gaining it waits for the
     // server refresh that supplies the dependent steps.
     setSkipped(serverHasIdentity && hasIdentity);
-  }, [serverHasIdentity, hasIdentity, setSkipped]);
+  }, [serverHasIdentity, hasIdentity, setSkipped, userInfo.state]);
 
   return null;
 }

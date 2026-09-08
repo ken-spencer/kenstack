@@ -33,6 +33,10 @@ narrower consumer are support mechanisms even when their filenames are nouns; th
 ladder into their consuming kind. Unit boundaries remain product decisions: this vocabulary governs
 framework-integration surfaces and support code, never the existence of domain units.
 
+A reusable step can be one of these named units, with its supporting server and client code together
+under the module root. Apply `docs/step-flow.md#step-ownership` before assigning its files to the module's
+general `components`, `queries`, or `api` kinds.
+
 A standard kind is one kind-named file while small and the same-named folder when grown; the name
 belongs to the kind at either volume, so the address never changes meaning. Custom names live inside
 kind homes (`queries/comboAvailability.ts`). Support code follows the helper ladder: inline it with its
