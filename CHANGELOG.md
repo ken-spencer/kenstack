@@ -5,6 +5,21 @@ contract lives in `docs/upgrading.md`.
 
 ## Unreleased
 
+### Query Store Updates URLs Without Server Navigation
+
+`useQueryStore` now writes filters with the native History API. Previously, each URL change used
+Next.js router navigation and could request another Server Component render. The existing `routerMode`
+option still chooses `replace` (default) or `push`; there is no separate navigation-mode option.
+Filter writes retain the current page hash. Back/Forward restore the store, and an external URL
+change cancels pending debounced input.
+
+Hosts must load changing list results through `useQuery`, keyed by the debounced filter state, with
+server-loaded initial results seeding the same query cache. Keep authentication and database access
+in the server loader and authenticated API handler, and invalidate affected browser queries after
+successful writes. A list that only reads server `searchParams` will otherwise stop updating when its
+filters change. Migrate those consumers when adopting this revision; do not restore router navigation
+inside the store to compensate. Kenstack admin lists already use server hydration and `useQuery`.
+
 ### Automatic Admin Style-Guide Route
 
 `createAdminPage()` now serves `/admin/style-guide` for administrators in development, including
@@ -548,7 +563,8 @@ New API:
 - `listQuery(table, { draft, select, joins?, where?, orderBy?, limit? })` owns both the standard list
   query and its earliest-future-publication query, using one publication time for both. It returns
   `[rows, publicationCacheLife]`; the second value is `undefined` when no scheduled publication can
-  change that list.
+  change that list. `rows` carry the selection's inferred type; remove casts or annotations that
+  widened them from `any[]`.
 
 Migration steps:
 

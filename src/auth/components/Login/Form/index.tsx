@@ -189,6 +189,9 @@ function LoginFormContent({
           continuation={continuation}
           token={token}
           onShowEmailLogin={showEmailLogin}
+          onSuccess={({ path, authState }) => {
+            completeLogin(path, authState);
+          }}
         />
       </QueryProvider>
     );
@@ -257,19 +260,20 @@ function LoginLinkContent({
   continuation,
   token,
   onShowEmailLogin,
+  onSuccess,
 }: {
   continuation: Continuation;
   token: string;
   onShowEmailLogin: (message?: string) => void;
+  onSuccess: (result: FetchSuccess<EmailLoginVerificationResult>) => void;
 }) {
-  const completeLogin = useCompleteLogin(continuation);
   const failure = useEmailLoginLink(token, {
     onFailure: ({ code, message }) => {
       if (code) {
         onShowEmailLogin(message);
       }
     },
-    onSuccess: ({ authState, path }) => completeLogin(path, authState),
+    onSuccess,
     returnTo: () => resolveReturnTo(continuation),
   });
 

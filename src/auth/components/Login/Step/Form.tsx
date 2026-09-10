@@ -1,6 +1,7 @@
 "use client";
 
-import type { ComponentProps } from "react";
+import { useState, type ComponentProps } from "react";
+import { useUserInfo } from "@kenstack/auth/useUserInfo";
 
 import { useStep } from "@kenstack/components/StepFlow/context";
 
@@ -15,15 +16,28 @@ export default function StepLoginForm({
   "challengeKey" | "email" | "method"
 >) {
   const { id, next } = useStep();
+  const userInfo = useUserInfo();
+  const [completed, setCompleted] = useState<{ challengeKey?: string }>();
+  const hasCompleted = completed && completed.challengeKey === challengeKey;
+
+  if (
+    hasCompleted &&
+    (userInfo.state === "authenticated" || userInfo.state === "proven")
+  ) {
+    return <p aria-live="polite">Signing you in…</p>;
+  }
 
   return (
     <LoginForm
       anchor={id}
-      challengeKey={challengeKey}
+      challengeKey={hasCompleted ? undefined : challengeKey}
       email={email}
       method={method}
       mode="embedded"
-      onComplete={next}
+      onComplete={() => {
+        setCompleted({ challengeKey });
+        next();
+      }}
     />
   );
 }

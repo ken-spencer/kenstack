@@ -41,27 +41,29 @@ export async function listQuery<TSelection extends SelectedFields>(
   const now = new Date();
   const baseRowQuery = db.select(select).from(table);
   joins?.(baseRowQuery);
-  let rowQuery = baseRowQuery
-    .where(
-      and(
-        draft
-          ? isNull(table.deletedAt)
-          : and(
-              isNull(table.deletedAt),
-              eq(table.visibility, "published"),
-              lte(table.publishedAt, now),
-            ),
-        where,
-      ),
-    )
-    .$dynamic();
+  // Call `$dynamic()` before `where` and discard each clause's return: with the
+  // selection still generic, the non-dynamic `where` type resolves callers' rows
+  // to `any[]`, and reassigning the dynamic builder fails to compile.
+  const rowQuery = baseRowQuery.$dynamic();
+  rowQuery.where(
+    and(
+      draft
+        ? isNull(table.deletedAt)
+        : and(
+            isNull(table.deletedAt),
+            eq(table.visibility, "published"),
+            lte(table.publishedAt, now),
+          ),
+      where,
+    ),
+  );
 
   if (orderBy) {
-    rowQuery = rowQuery.orderBy(...orderBy);
+    rowQuery.orderBy(...orderBy);
   }
 
   if (typeof limit === "number") {
-    rowQuery = rowQuery.limit(limit);
+    rowQuery.limit(limit);
   }
 
   if (draft) {

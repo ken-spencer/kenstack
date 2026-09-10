@@ -4,22 +4,41 @@ import { Search, X } from "lucide-react";
 import type { ListQueryStoreState } from "@kenstack/list/querySchema";
 import type { SetQueryStore } from "@kenstack/list/useQueryStore";
 
-export default function KeywordSearch({
+export default function KeywordSearch<
+  T extends Pick<ListQueryStoreState, "keywords">,
+>({
   className,
   filters,
+  id,
+  maxLength,
   placeholder = "Enter keywords",
   setFilters,
 }: {
   className?: string;
-  filters: Pick<ListQueryStoreState, "keywords">;
+  filters: Pick<T, "keywords">;
+  id?: string;
+  maxLength?: number;
   placeholder?: string;
-  setFilters: SetQueryStore<ListQueryStoreState>;
+  setFilters: SetQueryStore<T>;
 }) {
   return (
     <div className={cn("flex max-w-sm items-center p-1", className)}>
-      <Search className="-mr-7 ml-1 size-6" />
       <Input
-        className="pl-9"
+        id={id}
+        maxLength={maxLength}
+        startAdornment={<Search className="pointer-events-none size-4" />}
+        endAdornment={
+          filters.keywords.length ? (
+            <button
+              aria-label="Clear search"
+              type="button"
+              className="bg-foreground text-background flex size-4 items-center justify-center rounded-full"
+              onClick={() => setFilters((prev) => ({ ...prev, keywords: "" }))}
+            >
+              <X className="size-3" />
+            </button>
+          ) : null
+        }
         placeholder={placeholder}
         value={filters.keywords}
         name="search"
@@ -28,17 +47,6 @@ export default function KeywordSearch({
           setFilters((prev) => ({ ...prev, keywords: evt.target.value }));
         }}
       />
-      <button
-        aria-label="Clear search"
-        type="button"
-        className={cn(
-          "bg-foreground text-background -ml-5 size-4 shrink-0 items-center justify-center rounded-full",
-          filters.keywords.length ? "flex" : "hidden",
-        )}
-        onClick={() => setFilters((prev) => ({ ...prev, keywords: "" }))}
-      >
-        <X className="size-3" />
-      </button>
     </div>
   );
 }

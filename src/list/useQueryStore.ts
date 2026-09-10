@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import isEqual from "lodash-es/isEqual";
 import type { z } from "zod";
 
@@ -30,8 +30,6 @@ export default function useQueryStore<T extends Record<string, unknown>>(
     serialize: (state: T) => URLSearchParams;
   },
 ) {
-  const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const importSearchParams = () => {
@@ -51,6 +49,7 @@ export default function useQueryStore<T extends Record<string, unknown>>(
   const valueRef = useRef(value);
   const initialSearchParams = useRef(searchParams);
   const skipRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (initialSearchParams.current === searchParams) {
@@ -61,6 +60,10 @@ export default function useQueryStore<T extends Record<string, unknown>>(
       return;
     }
     const params = importSearchParams();
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
     valueRef.current = params;
     setValue(params);
     setDebouncedValue(params);
@@ -69,8 +72,6 @@ export default function useQueryStore<T extends Record<string, unknown>>(
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
-
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
@@ -84,19 +85,19 @@ export default function useQueryStore<T extends Record<string, unknown>>(
     const params = serialize(v);
 
     const nextSearch = params.toString();
-    const href = pathname + (nextSearch ? `?${nextSearch}` : "");
-    const currentSearch = searchParams.toString();
-    const currentHref = pathname + (currentSearch ? `?${currentSearch}` : "");
-
-    if (href === currentHref) {
+    const href =
+      window.location.pathname +
+      (nextSearch ? `?${nextSearch}` : "") +
+      window.location.hash;
+    if (nextSearch === new URLSearchParams(window.location.search).toString()) {
       return;
     }
 
     skipRef.current = true;
     if (routerMode === "push") {
-      router.push(href, { scroll: false });
+      window.history.pushState(null, "", href);
     } else {
-      router.replace(href, { scroll: false });
+      window.history.replaceState(null, "", href);
     }
   };
 
