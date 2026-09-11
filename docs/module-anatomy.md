@@ -74,11 +74,12 @@ never created. At volume, `queries/` members keep their own names (`queries/list
   same configured map has multiple production consumers; a one-use call stays in its consuming form.
   Client-owned; it never imports `client.ts(x)` or the components that consume it, so forms never import
   the client entry.
-- `tables.ts` — named-exports the module's parent-owned tables and re-exports tables owned by its
-  one-to-one kind units. Imported by queries, the module definition, and the site's schema registry.
-  Parent-owned tables live here (`tables/` at volume); a qualifier-named sibling such as
-  `stocktakeTables.ts` is misplaced. The site registers this parent entry point and never a one-to-one
-  kind's table entry point directly.
+- `tables.ts` — named-exports the module's parent-owned tables and re-exports table entry points
+  from its nested modules and one-to-one kind units. Child table definitions stay with their owning
+  units; each parent aggregates its children for schema registration. Imported by queries, the module
+  definition, and the site's schema registry. Parent-owned tables live here (`tables/` at volume); a
+  qualifier-named sibling such as `stocktakeTables.ts` is misplaced. The site registers only the
+  top-level module's table entry point. Internal consumers may still import child tables directly.
 - `fields.ts` / `fields/` — the primary record field configuration at the stable `./fields` address:
   one canonical field map consumed by `index.ts`, plus field-owned contracts such as form-value types,
   defaults, schemas, and named subsets. Keep the complete implementation in `fields.ts` while one file

@@ -48,8 +48,9 @@ unsupported top-level directories are transitional and set no precedent.
 - `modules/clients.ts` assembles module client registries through lazy client-safe loaders when the site
   has client module configuration.
 - `db/tables.ts` exports Kenstack tables, feature and integration table entry points, and registered
-  parent-module table entry points for the database schema registry; parent modules re-export their
-  nested one-to-one table entry points, so it imports none directly. `db/setup.ts` is the site's single
+  top-level module table entry points for the database schema registry. Each module, feature, or
+  integration aggregates its child table entry points; the site registry imports only the parent.
+  Child definitions and internal imports stay with their owners. `db/setup.ts` is the site's single
   database-setup executable. `db/index.ts` creates the schema-aware database with
   `createDb({ schema: tables })` and supplies the `@app/db` binding; query modules import that owner
   directly.
