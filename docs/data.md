@@ -5,10 +5,12 @@ pipeline schema work, or batch scripts.
 
 ## Database
 
-- During development, generate and apply additional migrations as schema work evolves. Before
-  committing, compress every migration from that uncommitted work into one consolidated migration; a
+- Before editing database schemas or generating migrations, present only the proposed table, column
+  and relationship changes, with a brief reason for each. Obtain explicit approval of that proposal.
+  Applying a migration also requires authorization for the target database.
+- Before committing, compress migrations from approved, uncommitted private work into one consolidated migration; a
   commit introduces only that one, so a later fix from the same commit updates or regenerates the
-  private migration.
+  private migration. Follow the migration-history rules below before rewriting consumed artifacts.
 - Leave generated files under `drizzle/` exactly as Drizzle emits them and review the generated SQL
   diff directly; the formatter runs only on handwritten schema and source files.
 - A Drizzle migration never durably owns a database object or invariant the Drizzle schema cannot

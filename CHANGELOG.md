@@ -154,7 +154,7 @@ Migration steps:
   `<SortableHandle />` inside each `SortableItem`.
 - Whole-item drags need no change; touch users now hold briefly before a drag starts.
 
-### React 19.2 Floor
+### React 19.3 Floor
 
 Old API:
 
@@ -162,12 +162,12 @@ Old API:
 
 New API:
 
-- `StepFlow` and the form provider rely on React 19.2's `Activity`, so `react`, `react-dom`, and
-  `@types/react` require 19.2 or later.
+- `react` and `react-dom` peer dependencies require 19.3 or later. `StepFlow` and the form provider
+  rely on React's `Activity`; `@types/react` continues to require 19.2 or later.
 
 Migration steps:
 
-- Upgrade the host to React 19.2 or later before taking this version.
+- Upgrade the host's `react` and `react-dom` together to 19.3 or later before taking this version.
 
 ### Access Type Owner
 
