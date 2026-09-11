@@ -41,6 +41,13 @@ describe("money", () => {
     expect(formatMoney(1234)).toBe("$12.34");
     expect(formatMoney(1200)).toBe("$12.00");
   });
+
+  it("formats compact headline figures", () => {
+    expect(formatMoney(750_000_000, { notation: "compact" })).toBe("$7.5M");
+    expect(formatMoney(500_000_000, { notation: "compact" })).toBe("$5M");
+    expect(formatMoney(75_000_00, { notation: "compact" })).toBe("$75K");
+    expect(formatMoney(0, { notation: "compact" })).toBe("$0");
+  });
 });
 
 describe("cash rounding", () => {
