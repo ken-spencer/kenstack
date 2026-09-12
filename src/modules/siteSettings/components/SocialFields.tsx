@@ -2,6 +2,7 @@
 
 import type { ComponentType, ReactNode } from "react";
 
+import Section from "@kenstack/admin/Edit/Section";
 import FacebookIcon from "@kenstack/icons/Facebook";
 import InstagramIcon from "@kenstack/icons/Instagram";
 import LinkedInIcon from "@kenstack/icons/LinkedIn";
@@ -18,8 +19,7 @@ export default function SocialFields({
   fields: SocialFieldComponents;
 }) {
   return (
-    <section className="space-y-4">
-      <h2 className="text-lg font-semibold">Social media</h2>
+    <Section title="Social media">
       <FacebookUrlField
         startAdornment={<FacebookIcon className="text-[#0866ff]" />}
       />
@@ -32,7 +32,7 @@ export default function SocialFields({
       <YouTubeUrlField
         startAdornment={<YouTubeIcon className="text-[#ff0000]" />}
       />
-    </section>
+    </Section>
   );
 }
 
