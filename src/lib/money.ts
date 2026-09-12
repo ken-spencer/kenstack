@@ -5,23 +5,30 @@ const formatterCache = new Map<string, Intl.NumberFormat>();
 export type FormatMoneyOptions = {
   currency?: string;
   locale?: string;
+  /** "compact" rounds to a headline figure such as "$7.5M" or "$750K". */
+  notation?: "standard" | "compact";
 };
 
 // Formats integer cents using the configured Canadian currency defaults.
 export function formatMoney(
   cents: number,
-  { currency = "CAD", locale = "en-CA" }: FormatMoneyOptions = {},
+  {
+    currency = "CAD",
+    locale = "en-CA",
+    notation = "standard",
+  }: FormatMoneyOptions = {},
 ) {
   assertCents(cents);
 
-  const key = `${locale}:${currency}`;
+  const key = `${locale}:${currency}:${notation}`;
   let formatter = formatterCache.get(key);
 
   if (!formatter) {
     formatter = new Intl.NumberFormat(locale, {
       currency,
-      maximumFractionDigits: 2,
-      minimumFractionDigits: 2,
+      maximumFractionDigits: notation === "compact" ? 1 : 2,
+      minimumFractionDigits: notation === "compact" ? 0 : 2,
+      notation,
       style: "currency",
     });
     formatterCache.set(key, formatter);

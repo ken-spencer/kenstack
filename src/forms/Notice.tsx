@@ -19,7 +19,7 @@ export default function NoticeList({
   const { statusMessage, setStatusMessage } = useForm();
   const {
     control,
-    formState: { errors, isSubmitted },
+    formState: { errors, isSubmitted, submitCount },
   } = useFormContext();
   const ref = useRef<HTMLDivElement | null>(null);
   const fieldErrors = getFormFieldErrors(errors);
@@ -32,6 +32,8 @@ export default function NoticeList({
   const showValidation =
     unrenderedErrors.length > 0 || (isSubmitted && fieldErrors.length > 0);
 
+  // Scroll to a submission outcome, never to the validation state changing
+  // under the user's edits.
   useEffect(() => {
     if (ref.current) {
       ref.current.scrollIntoView({
@@ -39,47 +41,49 @@ export default function NoticeList({
         block: "nearest", // Scroll only as much as needed vertically
       });
     }
-  }, [showValidation, statusMessage]);
+  }, [statusMessage, submitCount]);
 
-  if (showValidation) {
-    const responseMessage =
-      statusMessage?.status === "error" ? statusMessage.message : null;
-
-    return (
-      <Notice ref={ref} className="scroll-mt-12" role="alert">
-        <div>{responseMessage ?? validationMessage}</div>
-        {unrenderedErrors.length ? (
-          <ul className="mt-4 list-disc pl-8">
-            {unrenderedErrors.map(({ message, name }, index) => (
-              <li key={`${name}-${index}`}>{message}</li>
-            ))}
-          </ul>
-        ) : null}
-      </Notice>
-    );
-  }
-
-  if (statusMessage === null) {
+  if (!showValidation && statusMessage === null) {
     return null;
   }
+
+  const isError = showValidation || statusMessage?.status === "error";
   return (
     <Notice
       ref={ref}
       className="scroll-mt-12"
-      role={statusMessage.status === "error" ? "alert" : "status"}
-      status={statusMessage.status}
+      role={isError ? "alert" : "status"}
+      status={isError ? "error" : statusMessage?.status}
     >
       <div className="flex items-center">
-        <div className="grow">{statusMessage.message}</div>
-        <Button
-          size="icon"
-          className="flex-0"
-          variant="ghost"
-          type="button"
-          onClick={() => setStatusMessage(null)}
-        >
-          <CircleX />
-        </Button>
+        <div className="grow">
+          {showValidation
+            ? statusMessage?.status === "error"
+              ? statusMessage.message
+              : validationMessage
+            : statusMessage?.message}
+          {unrenderedErrors.length ? (
+            <ul className="mt-4 list-disc pl-8">
+              {unrenderedErrors.map(
+                ({ message: errorMessage, name }, index) => (
+                  <li key={`${name}-${index}`}>{errorMessage}</li>
+                ),
+              )}
+            </ul>
+          ) : null}
+        </div>
+        {statusMessage ? (
+          <Button
+            aria-label="Dismiss message"
+            size="icon"
+            className="flex-0"
+            variant="ghost"
+            type="button"
+            onClick={() => setStatusMessage(null)}
+          >
+            <CircleX />
+          </Button>
+        ) : null}
       </div>
     </Notice>
   );

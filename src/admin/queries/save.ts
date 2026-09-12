@@ -324,27 +324,33 @@ async function saveModule(
   };
   let result;
   if (!("list" in adminConfig)) {
+    // A known id updates only the changed columns through the default path.
+    // The first save inserts the full row; the upsert only covers a client
+    // that saves again before it learns the id. A partial upsert cannot
+    // work: Postgres checks NOT NULL on the proposed row before the conflict.
     result = await saveRecord({
       ...saveOptions,
-      query: async ({ tx, data, select, user }) => {
-        const [row] = await tx
-          .insert(adminConfig.table)
-          .values({
-            key: name,
-            createdBy: user.id,
-            ...data,
-          })
-          .onConflictDoUpdate({
-            target: adminConfig.table.key,
-            set: {
-              ...data,
-              updatedAt: new Date(),
-            },
-          })
-          .returning(select);
+      query: id
+        ? undefined
+        : async ({ tx, data, select, user }) => {
+            const [row] = await tx
+              .insert(adminConfig.table)
+              .values({
+                key: name,
+                createdBy: user.id,
+                ...data,
+              })
+              .onConflictDoUpdate({
+                target: adminConfig.table.key,
+                set: {
+                  ...data,
+                  updatedAt: new Date(),
+                },
+              })
+              .returning(select);
 
-        return row;
-      },
+            return row;
+          },
     });
   } else {
     const reorder = adminConfig.list.reorder;
