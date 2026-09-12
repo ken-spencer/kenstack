@@ -6,6 +6,7 @@ vi.mock("@kenstack/lib/errorReporter", () => ({ reportError: vi.fn() }));
 import {
   createStripeWebhook,
   loadStripeConfig,
+  readPayment,
   setInstallmentSchedule,
 } from "@kenstack/payments/server";
 
@@ -27,7 +28,7 @@ describe("Stripe payment configuration", () => {
 });
 
 describe("finite monthly payments", () => {
-  it("counts the initial Checkout payment and ends after the adjusted twelfth instalment", async () => {
+  it("counts the initial payment and cancels after twelve months at the existing monthly price", async () => {
     const stripe = new Stripe("sk_test_fixture");
     vi.spyOn(stripe.subscriptions, "retrieve").mockResolvedValue({
       schedule: null,
@@ -55,7 +56,6 @@ describe("finite monthly payments", () => {
     await setInstallmentSchedule(stripe, {
       subscriptionId: "sub_seat",
       paymentCount: 12,
-      finalPaymentCents: 8337,
       idempotencyKey: "order-1",
     });
     expect(update).toHaveBeenCalledWith(
@@ -66,23 +66,8 @@ describe("finite monthly payments", () => {
         phases: [
           {
             start_date: 1_800_000_000,
-            duration: { interval: "month", interval_count: 11 },
+            duration: { interval: "month", interval_count: 12 },
             items: [{ price: "price_monthly", quantity: 1 }],
-            proration_behavior: "none",
-          },
-          {
-            duration: { interval: "month", interval_count: 1 },
-            items: [
-              {
-                price_data: {
-                  currency: "cad",
-                  product: "prod_seat",
-                  recurring: { interval: "month" },
-                  unit_amount: 8337,
-                },
-                quantity: 1,
-              },
-            ],
             proration_behavior: "none",
           },
         ],
@@ -107,7 +92,6 @@ describe("finite monthly payments", () => {
         await setInstallmentSchedule(stripe, {
           subscriptionId: "sub_seat",
           paymentCount: 12,
-          finalPaymentCents: 8337,
           idempotencyKey: "order-1",
         })
       ).id,
@@ -159,4 +143,99 @@ describe("Stripe webhook boundary", () => {
       ).status,
     ).toBe(500);
   });
+});
+
+describe("provider collection evidence", () => {
+  it.each([
+    ["requires_confirmation", null, "pending"],
+    ["requires_payment_method", null, "pending"],
+    ["requires_payment_method", { code: "card_declined" }, "failed"],
+    ["requires_action", null, "requires_action"],
+    ["processing", null, "processing"],
+    ["succeeded", null, "succeeded"],
+  ])("maps %s from provider evidence", async (status, error, expected) => {
+    const stripe = new Stripe("sk_test_fixture");
+    vi.spyOn(stripe.paymentIntents, "retrieve").mockResolvedValue({
+      id: "pi_test",
+      status,
+      last_payment_error: error,
+      latest_charge: null,
+    } as never);
+    const before = Date.now();
+    const evidence = await readPayment(stripe, "pi_test");
+    expect(evidence.status).toBe(expected);
+    expect(evidence.values.feeCents).toBeNull();
+    if (expected === "succeeded" || expected === "failed") {
+      expect(evidence.values.finishedAt?.getTime()).toBeGreaterThanOrEqual(
+        before,
+      );
+    } else expect(evidence.values.finishedAt).toBeNull();
+  });
+  it("rejects settlement evidence in another currency", async () => {
+    const stripe = new Stripe("sk_test_fixture");
+    vi.spyOn(stripe.paymentIntents, "retrieve").mockResolvedValue({
+      currency: "cad",
+      latest_charge: {
+        amount: 1000,
+        balance_transaction: { currency: "usd", amount: 1000, fee: 30 },
+      },
+    } as never);
+    await expect(readPayment(stripe, "pi_test")).rejects.toThrow(
+      "settlement currency",
+    );
+  });
+  it("uses the provider cancellation time instead of intent creation", async () => {
+    const stripe = new Stripe("sk_test_fixture");
+    vi.spyOn(stripe.paymentIntents, "retrieve").mockResolvedValue({
+      status: "canceled",
+      created: 1000,
+      canceled_at: 2000,
+      latest_charge: null,
+    } as never);
+    expect((await readPayment(stripe, "pi_test")).values.finishedAt).toEqual(
+      new Date(2000000),
+    );
+  });
+});
+
+it("uses the matching payment event's completion time after delayed delivery", async () => {
+  const stripe = new Stripe("sk_test_fixture");
+  const intent = {
+    object: "payment_intent",
+    id: "pi_test",
+    status: "succeeded",
+    latest_charge: null,
+  };
+  vi.spyOn(stripe.paymentIntents, "retrieve").mockResolvedValue(
+    intent as never,
+  );
+  const evidence = await readPayment(stripe, "pi_test", {
+    type: "payment_intent.succeeded",
+    created: 2000,
+    data: { object: intent },
+  } as never);
+  expect(evidence.values.finishedAt).toEqual(new Date(2000000));
+  expect(evidence.finishedAtVerified).toBe(true);
+});
+it("does not timestamp a new charge with an older charge's event", async () => {
+  const stripe = new Stripe("sk_test_fixture");
+  vi.spyOn(stripe.paymentIntents, "retrieve").mockResolvedValue({
+    id: "pi_test",
+    status: "succeeded",
+    latest_charge: { id: "ch_new" },
+  } as never);
+  const evidence = await readPayment(stripe, "pi_test", {
+    type: "payment_intent.succeeded",
+    created: 2000,
+    data: {
+      object: {
+        object: "payment_intent",
+        id: "pi_test",
+        status: "succeeded",
+        latest_charge: "ch_old",
+      },
+    },
+  } as never);
+  expect(evidence.finishedAtVerified).toBe(false);
+  expect(evidence.values.finishedAt?.getTime()).toBeGreaterThan(2000000);
 });

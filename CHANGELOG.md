@@ -5,6 +5,23 @@ contract lives in `docs/upgrading.md`.
 
 ## Unreleased
 
+### Payments Use Server Confirmation
+
+`Payment` now uses deferred Stripe Elements with `amountCents`, `currency`, `recurring`, and
+`onConfirm(confirmationTokenId)`. Replace Checkout Session creation and its client secret with a
+side-effect-free quote. In `onConfirm`, persist the accepted order and collection, confirm the
+payment on the server, and return its `sessionId`, `paymentStatus`, and optional `clientSecret`.
+`onComplete(sessionId)` routes to the host's server-verified confirmation view after any required
+authentication. Reconcile PaymentIntent and invoice webhooks against the same stored collection.
+
+Commerce tables remain opt-in through `@kenstack/payments/tables`. Hosts that need a Stripe
+customer link compose `paymentUserColumns` into their own user table.
+
+`setInstallmentSchedule` now uses the subscription's existing monthly price for one phase covering
+`paymentCount` months, including the initial payment's period. Remove `finalPaymentCents` from calls.
+Put any rounding adjustment on the first invoice when creating the subscription; the helper no longer
+creates a separate final-price phase. Already configured schedules retain their existing terms.
+
 ### Query Store Updates URLs Without Server Navigation
 
 `useQueryStore` now writes filters with the native History API. Previously, each URL change used

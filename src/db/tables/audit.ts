@@ -35,6 +35,7 @@ export const auditLogs = pgTable(
     data: jsonb("data").$type<Record<string, unknown>>(),
   },
   (t) => [
+    index("audit_logs_table_row_created_idx").on(t.table, t.rowId, t.createdAt),
     index("audit_logs_org_id_idx").on(t.orgId),
     index("audit_logs_user_id_idx").on(t.userId),
     index("audit_logs_created_at_idx").on(t.createdAt),
