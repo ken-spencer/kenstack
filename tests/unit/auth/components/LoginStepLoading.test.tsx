@@ -5,6 +5,9 @@ import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => new URLSearchParams(window.location.search),
+}));
 vi.mock("@kenstack/auth/server/state", () => ({
   loadPublicAuthState: async () => ({
     state: "proven",
@@ -30,7 +33,6 @@ it("keeps the server-selected step while browser identity is being seeded", asyn
   try {
     const flow = await StepFlow({
       basePath: "/flow",
-      params: Promise.resolve({ step: "payment" }),
       steps: {
         signin: {
           ...(await createLoginStep()),

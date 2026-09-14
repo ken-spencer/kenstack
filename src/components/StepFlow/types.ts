@@ -35,8 +35,6 @@ export type Step = {
   title: string;
 };
 
-export type StepFlowParams = Promise<{ step?: string | string[] }>;
-
 export type StepFlowProps = {
   // Requested: a site replaces the action and header markup to restyle or
   // extend a flow. No Civic flow overrides them yet; the next site will.
@@ -48,7 +46,6 @@ export type StepFlowProps = {
   // Requested: distinguishes the region and fragment target when a page
   // hosts more than one flow.
   id?: string;
-  params?: StepFlowParams;
   steps: Record<string, Step | null | Promise<Step | null>>;
   summary?: ReactNode;
 };

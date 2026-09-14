@@ -15,7 +15,7 @@ export default function StepLoginForm({
   ComponentProps<typeof LoginForm>,
   "challengeKey" | "email" | "method"
 >) {
-  const { entryPath, id, next } = useStep();
+  const { id, next } = useStep();
   const userInfo = useUserInfo();
   const [completed, setCompleted] = useState<{ challengeKey?: string }>();
   const hasCompleted = completed && completed.challengeKey === challengeKey;
@@ -32,7 +32,6 @@ export default function StepLoginForm({
       anchor={id}
       challengeKey={hasCompleted ? undefined : challengeKey}
       email={email}
-      entryPath={entryPath}
       method={method}
       mode="embedded"
       onComplete={() => {

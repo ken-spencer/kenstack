@@ -5,32 +5,30 @@ contract lives in `docs/upgrading.md`.
 
 ## Unreleased
 
-### Step URLs Are Entry Points Only
+### Flow URLs Never Name a Step
 
-StepFlow no longer writes the browser URL while a visitor moves between steps. A step URL such as
-`/membership/signin` still enters the flow at that step when the completion ledger allows it, and the
-base URL enters at the first step; in-flow navigation, Back, and completion keep whatever URL opened
-the flow. Previously each step change called `history.replaceState`, which Next intercepts under
-`cacheComponents`: it could fetch the route again and keep the earlier page instance alive, so a later
-visit surfaced a stale instance of the flow. When Next keeps an instance alive and shows it again, the
-flow now returns to its entry step.
+StepFlow no longer reads or writes a step in the URL. Every visit enters at the first step, a refresh
+included, and in-flow navigation, Back, and completion keep the URL that opened the flow. Previously each
+step change called `history.replaceState`, which Next intercepts under `cacheComponents`: it could fetch
+the route again and keep the earlier page instance alive, so a later visit surfaced a stale instance of
+the flow. When Next keeps an instance alive and shows it again, the flow now returns to its first step.
 
-A `final` step is reached through `next()` like any other step. It records the preceding step in the
-ledger and no longer bypasses the ledger on a direct visit. Arriving records the result itself, and the
-next visit that finds a result recorded (a reload, a later visit, or a link to the flow's own URL, which
-re-renders the flow on the server) clears the stored values, so the result step reads the flow's values
-like any other step and a finished transaction is never restored.
+A `final` step is reached through `next()` like any other step. Arriving records the result itself, and
+the next visit that finds a result recorded (a reload, a later visit, or a link to the flow's own URL,
+which re-renders the flow on the server) clears the stored values, so the result step reads the flow's
+values like any other step and a finished transaction is never restored.
+
+An emailed sign-in link returns to the flow's URL. `LoginController` requires its step and brings it
+forward, as far as the ledger allows, while a `token` is in the URL, so the form verifies the link
+wherever the visitor lands.
 
 Migration steps:
 
-- Remove `index: true` from step compositions and `createLoginStep({ index })`; the base URL always
-  enters at the first configured step.
-- Embedded login takes `entryPath` in its continuation, which the login step supplies from the new
-  `useStep().entryPath`; emailed sign-in links return there instead of to the page path.
+- Remove `params` from `StepFlow` and the `StepFlowParams` type; a flow's route takes no step segment,
+  so move `[[...step]]/page.tsx` to `page.tsx` and drop any route that existed only to name a step.
+- Remove `index: true` from step compositions and `createLoginStep({ index })`.
 - A flow that kept a live copy of a result for its final step, because entering it cleared the store,
   reads the stored value directly instead.
-- Every step id must resolve as a route under `basePath`, since `entryPath` names it; a flow whose base
-  URL used the removed `index` option needs a catch-all route for its steps.
 - `StepFlow` stamps each server render with `crypto.randomUUID()`, so it must render after a dynamic
   read such as `connection()`, `cookies()`, or the auth state; under Cache Components a prerenderable
   scope fails the build.

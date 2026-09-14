@@ -32,41 +32,26 @@ type Steps = Parameters<typeof StepFlow>[0]["steps"];
 const storedBooleanSchema = z.boolean();
 const storedCountSchema = z.number();
 
-// Mirrors the server entry's route resolution so fixtures can preset the URL.
+// Supplies the server entry's defaults so fixtures compose only their steps.
 function StepFlowClient({
   Actions = DefaultActions,
   Header = StepHeading,
   id = "steps",
-  routeStep,
   ...props
 }: Omit<
   ComponentProps<typeof StepFlowClientImplementation>,
-  "Actions" | "Header" | "id" | "routeStep"
+  "Actions" | "Header" | "id"
 > & {
   Actions?: ComponentProps<typeof StepFlowClientImplementation>["Actions"];
   Header?: ComponentProps<typeof StepFlowClientImplementation>["Header"];
   id?: ComponentProps<typeof StepFlowClientImplementation>["id"];
-  routeStep?: string;
 }) {
-  const stepIds = Object.keys(props.steps);
-  const pathStep = window.location.pathname.startsWith(`${props.basePath}/`)
-    ? decodeURIComponent(
-        window.location.pathname.slice(props.basePath.length + 1),
-      )
-    : undefined;
-
   return (
     <StepFlowClientImplementation
       {...props}
       Actions={Actions}
       Header={Header}
       id={id}
-      routeStep={
-        routeStep ??
-        (pathStep !== undefined && stepIds.includes(pathStep)
-          ? pathStep
-          : stepIds[0])
-      }
     />
   );
 }
@@ -186,7 +171,6 @@ describe("StepFlow", () => {
     const flow = (
       <StepFlowClient
         basePath="/flow"
-        routeStep="payment"
         steps={{
           account: {
             content: <p>Sign in again</p>,
@@ -233,16 +217,6 @@ describe("StepFlow", () => {
     expect(container.querySelector("h2")?.textContent).toBe("Account");
   });
 
-  it("rejects an unknown server-requested step", async () => {
-    await expect(
-      StepFlow({
-        basePath: "/flow",
-        params: Promise.resolve({ step: "missing" }),
-        steps: { first: { content: null, title: "First" } },
-      }),
-    ).rejects.toThrow("Not found");
-  });
-
   it("keeps the entry URL untouched while stepping", async () => {
     window.history.replaceState(null, "", "/flow?returnTo=%2Fcheckout#steps");
     const flow = await StepFlow({
@@ -267,23 +241,6 @@ describe("StepFlow", () => {
     expect(window.location.hash).toBe("#steps");
   });
 
-  it("clamps an unreachable entry step without rewriting the URL", async () => {
-    window.history.replaceState(null, "", "/flow/details?returnTo=%2Fcheckout");
-    const flow = await StepFlow({
-      basePath: "/flow",
-      params: Promise.resolve({ step: "details" }),
-      steps: {
-        account: { content: <p>Sign in</p>, skipped: false, title: "Account" },
-        details: { content: <p>Details</p>, title: "Details" },
-      },
-    });
-
-    await act(async () => root.render(flow));
-    expect(container.querySelector("h2")?.textContent).toBe("Account");
-    expect(window.location.pathname).toBe("/flow/details");
-    expect(window.location.search).toBe("?returnTo=%2Fcheckout");
-  });
-
   it("enters at the next retained step when the first step is skipped", async () => {
     const flow = await StepFlow({
       basePath: "/flow",
@@ -297,52 +254,7 @@ describe("StepFlow", () => {
     expect(container.querySelector("h2")?.textContent).toBe("Details");
   });
 
-  it("exposes a step's entry URL", () => {
-    function EntryStep() {
-      return <output>{useStep().entryPath}</output>;
-    }
-
-    act(() =>
-      root.render(
-        <StepFlowClient
-          basePath="/flow"
-          steps={{ "sign in": { content: <EntryStep />, title: "Sign in" } }}
-        />,
-      ),
-    );
-
-    expect(container.querySelector("output")?.textContent).toBe(
-      "/flow/sign%20in",
-    );
-  });
-
-  it("continues past configured steps omitted by refreshed server state", async () => {
-    window.localStorage.setItem(
-      "stored-state:%2Fflow:$completedSteps",
-      JSON.stringify({ value: { first: true } }),
-    );
-    window.localStorage.setItem(
-      "stored-state:%2Fflow:$expiresAt",
-      String(Date.now() + 60_000),
-    );
-    window.history.replaceState(null, "", "/flow/account?plan=standard");
-    const flow = await StepFlow({
-      basePath: "/flow",
-      params: Promise.resolve({ step: "account" }),
-      steps: {
-        first: { content: <p>Choose</p>, title: "First" },
-        signin: null,
-        account: null,
-        payment: { content: <p>Pay now</p>, title: "Payment" },
-      },
-    });
-
-    await act(async () => root.render(flow));
-
-    expect(container.querySelector("h2")?.textContent).toBe("Payment");
-  });
-
-  it("follows the route's resolution when a refresh drops the navigated step", () => {
+  it("returns to the first step when a refresh drops the navigated step", () => {
     const steps = {
       first: { content: <NextStep name="First" />, title: "First" },
       signin: { content: <NextStep name="Sign in" />, title: "Sign in" },
@@ -353,19 +265,18 @@ describe("StepFlow", () => {
     act(() => getButton(container, "Next from First").click());
     expect(container.querySelector("h2")?.textContent).toBe("Sign in");
 
-    // A server refresh after signing in omits the sign-in step and resolves
-    // the route to the step that follows it.
+    // A server refresh that omits the step the flow is on leaves it with the
+    // fresh first step, never a guess further along.
     act(() =>
       root.render(
         <StepFlowClient
           basePath="/flow"
-          routeStep="payment"
           steps={{ first: steps.first, payment: steps.payment }}
         />,
       ),
     );
 
-    expect(container.querySelector("h2")?.textContent).toBe("Payment");
+    expect(container.querySelector("h2")?.textContent).toBe("First");
   });
 
   it("rejects an empty step registry", async () => {
@@ -547,30 +458,6 @@ describe("StepFlow", () => {
     expect(container.textContent).toContain("Only secondary");
   });
 
-  it("resolves an optional catch-all route step", async () => {
-    const flow = await StepFlow({
-      basePath: "/flow",
-      params: Promise.resolve({ step: ["payment"] }),
-      steps: { payment: { content: null, title: "Payment" } },
-    });
-
-    await act(async () => {
-      root.render(flow);
-    });
-
-    expect(container.querySelector("h2")?.textContent).toBe("Payment");
-  });
-
-  it("rejects extra optional catch-all route segments", async () => {
-    await expect(
-      StepFlow({
-        basePath: "/flow",
-        params: Promise.resolve({ step: ["payment", "extra"] }),
-        steps: { payment: { content: null, title: "Payment" } },
-      }),
-    ).rejects.toThrow("Not found");
-  });
-
   it("preserves hidden state while keeping controller and visible effects active", () => {
     const activeEffects = new Set<string>();
 
@@ -620,17 +507,7 @@ describe("StepFlow", () => {
     expect(focus).toHaveBeenCalledOnce();
   });
 
-  it("reaches a final step only through next and presents it as a result", () => {
-    window.history.replaceState(null, "", "/flow/complete");
-    window.localStorage.setItem(
-      "stored-state:%2Fflow:$completedSteps",
-      JSON.stringify({ value: { first: true } }),
-    );
-    window.localStorage.setItem(
-      "stored-state:%2Fflow:$expiresAt",
-      String(Date.now() + 60_000),
-    );
-
+  it("reaches a final step through next and presents it as a result", () => {
     act(() => {
       root.render(
         <StepFlowClient
@@ -652,8 +529,7 @@ describe("StepFlow", () => {
       );
     });
 
-    // The entry URL names the result, but the ledger stops at the first
-    // incomplete step like any other request.
+    act(() => getButton(container, "Next from First").click());
     expect(container.querySelector("h2")?.textContent).toBe("Second");
     expect(container.querySelector(".step-flow .back")).not.toBeNull();
     expect(container.querySelector("[data-summary]")).not.toBeNull();
@@ -663,7 +539,7 @@ describe("StepFlow", () => {
     expect(container.textContent).toContain("Done");
     expect(container.querySelector(".step-flow .back")).toBeNull();
     expect(container.querySelector("[data-summary]")).toBeNull();
-    expect(window.location.pathname).toBe("/flow/complete");
+    expect(window.location.pathname).toBe("/flow");
     expect(
       JSON.parse(
         window.localStorage.getItem("stored-state:%2Fflow:$completedSteps") ??
@@ -796,16 +672,18 @@ describe("StepFlow", () => {
     expect(container.querySelector("h2")?.textContent).toBe("Seats");
   });
 
-  it("prevents a requested later step from skipping an incomplete step", () => {
-    window.history.replaceState(null, "", "/flow/signin");
-
+  it("clamps a controller's activation to the first incomplete step", () => {
     act(() => {
       root.render(
         <StepFlowClient
           basePath="/flow"
           steps={{
             tickets: { content: null, title: "Tickets" },
-            signin: { content: null, title: "Sign in" },
+            signin: {
+              content: null,
+              controller: <ActivateOnMountController />,
+              title: "Sign in",
+            },
           }}
         />,
       );
@@ -814,8 +692,7 @@ describe("StepFlow", () => {
     expect(container.querySelector("h2")?.textContent).toBe("Tickets");
   });
 
-  it("restores a requested step after its preceding steps were completed", () => {
-    window.history.replaceState(null, "", "/flow/signin");
+  it("lets a controller activate its step once the preceding steps are complete", () => {
     window.localStorage.setItem(
       "stored-state:%2Fflow:$completedSteps",
       JSON.stringify({ value: { tickets: true } }),
@@ -831,7 +708,11 @@ describe("StepFlow", () => {
           basePath="/flow"
           steps={{
             tickets: { content: null, title: "Tickets" },
-            signin: { content: null, title: "Sign in" },
+            signin: {
+              content: null,
+              controller: <ActivateOnMountController />,
+              title: "Sign in",
+            },
           }}
         />,
       );
@@ -1200,7 +1081,6 @@ describe("StepFlow", () => {
   });
 
   it("does not publish expired stored values to workflow owners", () => {
-    window.history.replaceState(null, "", "/expired-restore/second");
     window.localStorage.setItem(
       "stored-state:%2Fexpired-restore:selection",
       JSON.stringify({ value: true }),
@@ -1220,7 +1100,6 @@ describe("StepFlow", () => {
 
   it("restores controller state before showing a hydrated route", async () => {
     act(() => root.unmount());
-    window.history.replaceState(null, "", "/expired-restore/second");
     window.localStorage.setItem(
       "stored-state:%2Fexpired-restore:selection",
       JSON.stringify({ value: true }),
@@ -1242,7 +1121,7 @@ describe("StepFlow", () => {
     expect(container.querySelector("[data-restored]")?.textContent).toBe(
       "Restored",
     );
-    expect(container.querySelector("h2")?.textContent).toBe("Second");
+    expect(container.querySelector("h2")?.textContent).toBe("First");
   });
 });
 
@@ -1534,6 +1413,16 @@ function ExpiredRestoreFlow() {
       />
     </>
   );
+}
+
+function ActivateOnMountController() {
+  const { activate } = useStep();
+
+  useEffect(() => {
+    activate();
+  }, [activate]);
+
+  return null;
 }
 
 function ExpiredRestoreController({ restore }: { restore: () => void }) {

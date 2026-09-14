@@ -122,12 +122,7 @@ it("completes an embedded link in its owner without assigning a location or reme
   window.history.replaceState(null, "", `/flow/signin?token=${"b".repeat(43)}`);
   await act(async () =>
     root.render(
-      <LoginForm
-        anchor="steps"
-        entryPath="/flow/signin"
-        mode="embedded"
-        onComplete={onComplete}
-      />,
+      <LoginForm anchor="steps" mode="embedded" onComplete={onComplete} />,
     ),
   );
   await act(async () => {

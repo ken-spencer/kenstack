@@ -12,7 +12,6 @@ export default function StepFlowClient({
   basePath,
   Header,
   id,
-  routeStep,
   summary,
   steps,
   visitKey,
@@ -20,7 +19,6 @@ export default function StepFlowClient({
   Actions: NonNullable<StepFlowProps["Actions"]>;
   Header: NonNullable<StepFlowProps["Header"]>;
   id: NonNullable<StepFlowProps["id"]>;
-  routeStep: string;
   steps: Record<string, Step>;
   visitKey?: string;
 }) {
@@ -29,7 +27,6 @@ export default function StepFlowClient({
       Actions={Actions}
       basePath={basePath}
       id={id}
-      routeStep={routeStep}
       steps={steps}
       visitKey={visitKey}
     >

@@ -61,7 +61,6 @@ export function FlowProvider({
   basePath,
   children,
   id,
-  routeStep,
   steps,
   visitKey,
 }: {
@@ -69,7 +68,6 @@ export function FlowProvider({
   basePath: string;
   children: ReactNode;
   id: string;
-  routeStep: string;
   steps: Record<string, Step>;
   visitKey?: string;
 }) {
@@ -80,20 +78,20 @@ export function FlowProvider({
     "$completedSteps",
     completedStepsSchema,
   );
-  // The flow owns its step, seeded from the route the server resolved on
-  // entry; later steps live here and never rewrite the URL. If a server
-  // refresh omits the step the flow navigated to, the route's fresh
-  // resolution stands in for it.
-  const [navigatedStep, setNavigatedStep] = useState(routeStep);
+  // The flow owns its step, seeded from the first step the server composed;
+  // later steps live here and never touch the URL. If a server refresh omits
+  // the step the flow navigated to, the fresh first step stands in for it.
+  const firstStep = Object.keys(steps)[0];
+  const [navigatedStep, setNavigatedStep] = useState(firstStep);
   const [skippedSteps, setSkippedSteps] = useState<Record<string, boolean>>({});
   // Next may keep a left instance alive and show it again on a later visit.
-  // Hiding the instance returns it to its entry step, so a visit never
+  // Hiding the instance returns it to the first step, so a visit never
   // resumes where an earlier one stopped.
-  const routeStepRef = useRef(routeStep);
+  const firstStepRef = useRef(firstStep);
   useEffect(() => {
-    routeStepRef.current = routeStep;
-  }, [routeStep]);
-  useEffect(() => () => setNavigatedStep(routeStepRef.current), []);
+    firstStepRef.current = firstStep;
+  }, [firstStep]);
+  useEffect(() => () => setNavigatedStep(firstStepRef.current), []);
   const setStepSkipped = useCallback((stepId: string, skipped: boolean) => {
     setSkippedSteps((current) =>
       current[stepId] === skipped ? current : { ...current, [stepId]: skipped },
@@ -105,7 +103,7 @@ export function FlowProvider({
   );
   const routeTarget = Object.hasOwn(steps, navigatedStep)
     ? navigatedStep
-    : routeStep;
+    : firstStep;
   const requestedStep = stepIds.includes(routeTarget)
     ? routeTarget
     : (stepIds.find(
@@ -261,9 +259,6 @@ export function useStep() {
 
   return {
     activate,
-    // The URL that re-enters the flow at this step, for a return after
-    // leaving the page such as an emailed sign-in link.
-    entryPath: `${context.basePath}/${encodeURIComponent(stepId)}`,
     id: context.id,
     isActive: context.activeStep === stepId,
     isBeforeActiveStep:

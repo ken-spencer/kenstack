@@ -73,7 +73,6 @@ function LoginFormContent({
   anchor,
   challengeKey: initialChallengeKey,
   email,
-  entryPath,
   loginMessage: initialLoginMessage,
   method: initialMethod,
   mode,
@@ -117,7 +116,7 @@ function LoginFormContent({
   );
 
   const continuation: Continuation =
-    mode === "embedded" ? { anchor, entryPath, mode, onComplete } : {};
+    mode === "embedded" ? { anchor, mode, onComplete } : {};
   const completeLogin = useCompleteLogin(continuation);
 
   // The code page shows while the email is sent; a code cannot arrive before
