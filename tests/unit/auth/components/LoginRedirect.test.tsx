@@ -122,14 +122,14 @@ it("completes an embedded link in its owner without assigning a location or reme
   window.history.replaceState(null, "", `/flow/signin?token=${"b".repeat(43)}`);
   await act(async () =>
     root.render(
-      <LoginForm mode="embedded" anchor="steps" onComplete={onComplete} />,
+      <LoginForm anchor="steps" mode="embedded" onComplete={onComplete} />,
     ),
   );
   await act(async () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
   expect(onComplete).toHaveBeenCalledOnce();
-  expect(mocks.refresh).toHaveBeenCalledOnce();
+  expect(mocks.refresh).not.toHaveBeenCalled();
   expect(mocks.assign).not.toHaveBeenCalled();
   expect(container.querySelector('input[name="email"]')).toBeNull();
   expect(document.cookie).toContain("loginMethod=password");

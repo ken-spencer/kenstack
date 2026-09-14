@@ -1,14 +1,14 @@
 "use client";
 
 import { useCallback } from "react";
-import { useRouter } from "next/navigation";
 
 import { getSafeReturnToPath } from "@kenstack/auth/returnTo";
 import type { PublicAuthState } from "@kenstack/auth/server/state";
 import { setUserInfo } from "@kenstack/auth/useUserInfo";
 
 // Embedded login stays in its owning flow, including across emailed-link
-// verification. Standalone login leaves for the server-selected destination.
+// verification, which returns to the flow's URL. Standalone login leaves for
+// the server-selected destination.
 export type Continuation =
   | { anchor: string; mode: "embedded"; onComplete: () => void }
   | { anchor?: never; mode?: never; onComplete?: never };
@@ -23,7 +23,7 @@ export function resolveReturnTo({ anchor, mode }: Continuation) {
     return (
       window.location.pathname +
       (params.size ? `?${params}` : "") +
-      (anchor ? `#${anchor}` : window.location.hash)
+      `#${anchor}`
     );
   }
 
@@ -35,17 +35,15 @@ export function resolveReturnTo({ anchor, mode }: Continuation) {
 }
 
 export function useCompleteLogin({ mode, onComplete }: Continuation) {
-  const router = useRouter();
   return useCallback(
     (path: string, authState: PublicAuthState) => {
       if (mode === "embedded") {
         setUserInfo(authState);
         onComplete();
-        router.refresh();
         return;
       }
       window.location.assign(path);
     },
-    [mode, onComplete, router],
+    [mode, onComplete],
   );
 }

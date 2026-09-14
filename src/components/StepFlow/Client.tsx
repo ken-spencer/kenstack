@@ -12,23 +12,23 @@ export default function StepFlowClient({
   basePath,
   Header,
   id,
-  routeStep,
   summary,
   steps,
+  visitKey,
 }: Omit<StepFlowProps, "Actions" | "Header" | "id" | "params" | "steps"> & {
   Actions: NonNullable<StepFlowProps["Actions"]>;
   Header: NonNullable<StepFlowProps["Header"]>;
   id: NonNullable<StepFlowProps["id"]>;
-  routeStep: string;
   steps: Record<string, Step>;
+  visitKey?: string;
 }) {
   return (
     <FlowProvider
       Actions={Actions}
       basePath={basePath}
       id={id}
-      routeStep={routeStep}
       steps={steps}
+      visitKey={visitKey}
     >
       <StepFlowContent Header={Header} steps={steps} summary={summary} />
     </FlowProvider>

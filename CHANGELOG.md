@@ -22,6 +22,54 @@ customer link compose `paymentUserColumns` into their own user table.
 Put any rounding adjustment on the first invoice when creating the subscription; the helper no longer
 creates a separate final-price phase. Already configured schedules retain their existing terms.
 
+### Login No Longer Waits for a Server Refresh
+
+`createLoginStep()` still reads the server auth state and starts skipped for a signed-in visit, but its
+controller now follows browser identity alone: losing identity brings the step forward, and signing in
+again skips it and resumes the flow. The `always` option is gone. Signing in inside a flow updates
+browser identity in place and advances; the embedded continuation no longer calls `router.refresh()`,
+and the step shows "Signed in as …" with Continue and "Use a different account" when revisited.
+Previously the flow waited for a server refresh to compose the steps that depend on identity, and a
+retained page instance could resurface around that refresh.
+
+Migration steps:
+
+- Compose `signin: createLoginStep({ title })` and every other step unconditionally; the ledger and
+  the login step's live prerequisite gate progress.
+- Anything a step took from the server because it needed identity, such as the account's saved
+  details, must reach the browser through a client query keyed by user id, hydrated from the server for
+  a signed-in visit and written back on save. Civic's `AccountDetailsStep` is the reference.
+- A standalone login page that relied on the refresh to redirect needs a final step that leaves for
+  the destination.
+
+### Flow URLs Never Name a Step
+
+StepFlow no longer reads or writes a step in the URL. Every visit enters at the first step, a refresh
+included, and in-flow navigation, Back, and completion keep the URL that opened the flow. Previously each
+step change called `history.replaceState`, which Next intercepts under `cacheComponents`: it could fetch
+the route again and keep the earlier page instance alive, so a later visit surfaced a stale instance of
+the flow. When Next keeps an instance alive and shows it again, the flow now returns to its first step.
+
+A `final` step is reached through `next()` like any other step. Arriving records the result itself, and
+the next visit that finds a result recorded (a reload, a later visit, or a link to the flow's own URL,
+which re-renders the flow on the server) clears the stored values, so the result step reads the flow's
+values like any other step and a finished transaction is never restored.
+
+An emailed sign-in link returns to the flow's URL. `LoginController` requires its step and brings it
+forward, as far as the ledger allows, while a `token` is in the URL, so the form verifies the link
+wherever the visitor lands.
+
+Migration steps:
+
+- Remove `params` from `StepFlow` and the `StepFlowParams` type; a flow's route takes no step segment,
+  so move `[[...step]]/page.tsx` to `page.tsx` and drop any route that existed only to name a step.
+- Remove `index: true` from step compositions and `createLoginStep({ index })`.
+- A flow that kept a live copy of a result for its final step, because entering it cleared the store,
+  reads the stored value directly instead.
+- `StepFlow` stamps each server render with `crypto.randomUUID()`, so it must render after a dynamic
+  read such as `connection()`, `cookies()`, or the auth state; under Cache Components a prerenderable
+  scope fails the build.
+
 ### Query Store Updates URLs Without Server Navigation
 
 `useQueryStore` now writes filters with the native History API. Previously, each URL change used

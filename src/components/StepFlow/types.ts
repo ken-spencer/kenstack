@@ -30,14 +30,10 @@ export type Step = {
   content: ReactNode;
   controller?: ReactElement;
   final?: true;
-  // Only the first configured step may use basePath without a step segment.
-  index?: true;
   // A live prerequisite: false requires this step even after stored completion.
   skipped?: boolean;
   title: string;
 };
-
-export type StepFlowParams = Promise<{ step?: string | string[] }>;
 
 export type StepFlowProps = {
   // Requested: a site replaces the action and header markup to restyle or
@@ -50,7 +46,6 @@ export type StepFlowProps = {
   // Requested: distinguishes the region and fragment target when a page
   // hosts more than one flow.
   id?: string;
-  params?: StepFlowParams;
   steps: Record<string, Step | null | Promise<Step | null>>;
   summary?: ReactNode;
 };

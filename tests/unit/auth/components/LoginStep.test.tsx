@@ -48,7 +48,6 @@ import StepFlow from "@kenstack/components/StepFlow";
 import { StepActions } from "@kenstack/components/StepFlow/StepActions";
 import { createLoginStep } from "@kenstack/auth/components/Login/Step";
 import StepLoginForm from "@kenstack/auth/components/Login/Step/Form";
-import type { PublicAuthState } from "@kenstack/auth/server/state";
 import { logoutUser, setUserInfo } from "@kenstack/auth/useUserInfo";
 
 const token = "a".repeat(43);
@@ -139,155 +138,75 @@ describe("Login step", () => {
     vi.restoreAllMocks();
   });
 
+  it.each(["anonymous", "code-sent"])(
+    "composes an ordinary step with its controller when auth state is %s",
+    async (state) => {
+      mocks.loadPublicAuthState.mockResolvedValue({ state });
+
+      const step = await createLoginStep({ title: "Your account" });
+
+      expect(step).toMatchObject({
+        controller: expect.anything(),
+        title: "Your account",
+      });
+      expect(step.skipped).toBeUndefined();
+    },
+  );
+
   it.each(["authenticated", "proven"])(
-    "skips the step but retains its controller when auth state is %s",
+    "starts skipped but keeps its controller when auth state is %s",
     async (state) => {
       mocks.loadPublicAuthState.mockResolvedValue({ state });
 
       expect(await createLoginStep()).toMatchObject({
-        skipped: true,
         controller: expect.anything(),
+        skipped: true,
       });
     },
   );
 
-  it.each(["anonymous", "code-sent"])(
-    "includes the step by default when auth state is %s",
-    async (state) => {
-      mocks.loadPublicAuthState.mockResolvedValue({ state });
-
-      expect(await createLoginStep()).toMatchObject({ title: "Sign in" });
-    },
-  );
-
-  it.each(["anonymous", "code-sent", "authenticated", "proven"])(
-    "always includes the step when auth state is %s and always is true",
-    async (state) => {
-      mocks.loadPublicAuthState.mockResolvedValue({ state });
-
-      expect(
-        await createLoginStep({ always: true, title: "Your account" }),
-      ).toMatchObject({ title: "Your account" });
-    },
-  );
-
-  it("uses the base URL only when its composition opts in", async () => {
-    mocks.loadPublicAuthState.mockResolvedValue({ state: "anonymous" });
-    expect(await createLoginStep()).not.toHaveProperty("index", true);
-    expect(await createLoginStep({ index: true })).toHaveProperty(
-      "index",
-      true,
-    );
-  });
-
-  it("returns to a skipped login step when identity is lost, without trusting old completion", async () => {
+  it("brings a skipped login step forward when identity is lost and skips it again on sign-in", async () => {
     const authState = { state: "proven", email: "patron@example.com" } as const;
     mocks.loadPublicAuthState.mockResolvedValue(authState);
     setUserInfo(authState);
-    window.localStorage.setItem(
-      "stored-state:%2Fflow:$completedSteps",
-      JSON.stringify({ value: { signin: true } }),
-    );
-    window.localStorage.setItem(
-      "stored-state:%2Fflow:$expiresAt",
-      String(Date.now() + 60_000),
-    );
     const flow = await StepFlow({
       basePath: "/flow",
-      params: Promise.resolve({ step: "details" }),
       steps: {
         signin: {
           ...(await createLoginStep()),
           content: <p>Sign in again</p>,
           title: "Sign in",
         },
-        details: { content: <p>Enter your details</p>, title: "Details" },
+        details: {
+          content: (
+            <>
+              <p>Enter your details</p>
+              <StepActions next="Continue" />
+            </>
+          ),
+          title: "Details",
+        },
+        payment: { content: <p>Payment</p>, title: "Payment" },
       },
     });
     await act(async () => root.render(<StrictMode>{flow}</StrictMode>));
     expect(container.querySelector("h2")?.textContent).toBe("Details");
+    await act(async () => {
+      [...container.querySelectorAll<HTMLButtonElement>("button.next")]
+        .at(-1)
+        ?.click();
+    });
+    expect(container.querySelector("h2")?.textContent).toBe("Payment");
+
+    // Signed out elsewhere: the step comes forward in place of Payment.
     await act(async () => setUserInfo({ state: "anonymous" }));
     expect(container.querySelector("h2")?.textContent).toBe("Sign in");
-    expect(window.location.pathname).toBe("/flow/signin");
+
+    // Signed in again: the step skips and the flow resumes where it was.
+    await act(async () => setUserInfo(authState));
+    expect(container.querySelector("h2")?.textContent).toBe("Payment");
     expect(mocks.refresh).not.toHaveBeenCalled();
   });
-
-  it("waits for server-confirmed identity before skipping login", async () => {
-    const renderFlow = async () =>
-      StepFlow({
-        basePath: "/flow",
-        params: Promise.resolve({ step: "signin" }),
-        steps: {
-          signin: {
-            ...(await createLoginStep()),
-            content: <p>Sign in</p>,
-            title: "Sign in",
-          },
-          details: { content: <p>Enter your details</p>, title: "Details" },
-        },
-      });
-    await act(async () => root.render(await renderFlow()));
-    expect(mocks.refresh).not.toHaveBeenCalled();
-    await act(async () =>
-      setUserInfo({ state: "proven", email: "patron@example.com" }),
-    );
-    expect(container.querySelector("h2")?.textContent).toBe("Sign in");
-    expect(mocks.refresh).not.toHaveBeenCalled();
-    mocks.loadPublicAuthState.mockResolvedValue({
-      state: "proven",
-      email: "patron@example.com",
-    });
-    await act(async () => root.render(await renderFlow()));
-    expect(container.querySelector("h2")?.textContent).toBe("Details");
-    expect(mocks.refresh).not.toHaveBeenCalled();
-  });
-
-  it.each(["success", "error"])(
-    "requires sign-in immediately and restores identity if logout fails (%s)",
-    async (status) => {
-      const authState = {
-        state: "proven",
-        email: "patron@example.com",
-      } as const;
-      mocks.loadPublicAuthState.mockResolvedValue(authState);
-      setUserInfo(authState);
-      const flow = await StepFlow({
-        basePath: "/flow",
-        params: Promise.resolve({ step: "details" }),
-        steps: {
-          signin: {
-            ...(await createLoginStep()),
-            content: <p>Sign in again</p>,
-            title: "Sign in",
-          },
-          details: { content: <p>Enter your details</p>, title: "Details" },
-        },
-      });
-      await act(async () => root.render(flow));
-      const response = Promise.withResolvers<Record<string, unknown>>();
-      mocks.fetcher.mockReturnValueOnce(response.promise);
-      let logout: Promise<void>;
-      await act(async () => {
-        logout = logoutUser();
-      });
-      const refreshesWhilePending = mocks.refresh.mock.calls.length;
-      const headingWhilePending = container.querySelector("h2")?.textContent;
-      await act(async () => {
-        response.resolve({ status, authState: { state: "anonymous" } });
-        if (status === "success") {
-          await logout;
-        } else {
-          await expect(logout).rejects.toThrow("Unable to log out.");
-        }
-      });
-      expect(refreshesWhilePending).toBe(0);
-      expect(headingWhilePending).toBe("Sign in");
-      expect(container.querySelector("h2")?.textContent).toBe(
-        status === "success" ? "Sign in" : "Details",
-      );
-      expect(mocks.refresh).not.toHaveBeenCalled();
-    },
-  );
 
   it("renders the verification submit through the flow action renderer", async () => {
     window.history.replaceState(null, "", "/flow/signin");
@@ -318,7 +237,7 @@ describe("Login step", () => {
   });
 
   it.each(["code", "link", "already-verified"])(
-    "holds a completed terminal %s login until refresh and resets after logout",
+    "shows the signed-in state after a terminal %s login and resets after logout",
     async (method) => {
       window.history.replaceState(
         null,
@@ -336,7 +255,6 @@ describe("Login step", () => {
       });
       const flow = await StepFlow({
         basePath: "/flow",
-        params: Promise.resolve({ step: "signin" }),
         steps: {
           signin: {
             title: "Sign in",
@@ -370,10 +288,12 @@ describe("Login step", () => {
             );
         });
       await vi.waitFor(() =>
-        expect(container.textContent).toContain("Signing you in"),
+        expect(container.textContent).toContain(
+          "Signed in as patron@example.com",
+        ),
       );
       expect(container.querySelector("form")).toBeNull();
-      expect(mocks.refresh).toHaveBeenCalled();
+      expect(mocks.refresh).not.toHaveBeenCalled();
       mocks.fetcher.mockResolvedValueOnce({
         status: "success",
         authState: { state: "anonymous" },
@@ -383,7 +303,6 @@ describe("Login step", () => {
       expect(container.querySelector('input[name="code"]')).toBeNull();
       const replacement = await StepFlow({
         basePath: "/flow",
-        params: Promise.resolve({ step: "signin" }),
         steps: {
           signin: {
             title: "Sign in",
@@ -418,7 +337,6 @@ describe("Login step", () => {
       mocks.fetcher.mockReturnValueOnce(verification.promise);
       const flow = await StepFlow({
         basePath: "/flow",
-        params: Promise.resolve({ step: "signin" }),
         steps: {
           signin: {
             ...(await createLoginStep()),
@@ -456,11 +374,13 @@ describe("Login step", () => {
       });
       await act(async () => logoutUser());
 
+      // Losing identity brings the step forward, offering a fresh email entry
+      // rather than the redeemed code.
       expect(container.querySelector("h2")?.textContent).toBe("Sign in");
       expect(container.querySelector('input[name="code"]')).toBeNull();
       expect(container.querySelector('input[name="email"]')).not.toBeNull();
       expect(container.textContent).not.toContain("We sent an email");
-      expect(container.textContent).not.toContain("Signing you in");
+      expect(container.textContent).not.toContain("Signed in as");
       expect(mocks.fetcher).toHaveBeenCalledTimes(2);
     },
   );
@@ -482,10 +402,14 @@ describe("Login step", () => {
 
   it("advances after an embedded password login from the returned auth state", async () => {
     window.history.replaceState(null, "", "/flow/signin");
-    mocks.fetcher.mockResolvedValue({
+    mocks.fetcher.mockResolvedValueOnce({
       authenticated: true,
-      authState: { email: "patron@example.com", state: "authenticated" },
-      path: "/flow/signin",
+      authState: {
+        email: "patron@example.com",
+        name: "Patron Example",
+        state: "authenticated",
+      },
+      path: "/flow",
       status: "success",
     });
     const flow = async () =>
@@ -519,113 +443,57 @@ describe("Login step", () => {
       );
     });
 
-    await vi.waitFor(() => expect(mocks.refresh).toHaveBeenCalled());
+    await vi.waitFor(() =>
+      expect(container.querySelector("h2")?.textContent).toBe("Done"),
+    );
     expect(mocks.fetcher).toHaveBeenCalledOnce();
-    expect(mocks.refresh).toHaveBeenCalledOnce();
-    expect(container.querySelector("h2")?.textContent).toBe("Sign in");
+    expect(mocks.refresh).not.toHaveBeenCalled();
 
-    mocks.loadPublicAuthState.mockResolvedValue({
-      email: "patron@example.com",
-      state: "authenticated",
-    });
+    // Back shows who is signed in; switching accounts waits for the sign-out
+    // and reports a failure before offering the form.
     await act(async () => {
-      root.render(<StrictMode>{await flow()}</StrictMode>);
+      container.querySelector<HTMLButtonElement>("button.back")?.click();
     });
-    expect(container.textContent).toContain("All done");
-    expect(mocks.refresh).toHaveBeenCalledOnce();
+    expect(container.querySelector("h2")?.textContent).toBe("Sign in");
+    expect(container.textContent).toContain("Signed in as Patron Example");
+    const switchAccount = () =>
+      act(async () => {
+        Array.from(container.querySelectorAll("button"))
+          .find((button) => button.textContent === "Use a different account")
+          ?.click();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+
+    const logout = Promise.withResolvers<Record<string, unknown>>();
+    mocks.fetcher.mockReturnValueOnce(logout.promise);
+    await switchAccount();
+    expect(container.textContent).toContain("Signing out");
+    expect(container.querySelector('input[name="email"]')).toBeNull();
+    expect(
+      container.querySelector<HTMLButtonElement>("button.next")?.disabled,
+    ).toBe(true);
+    await act(async () => {
+      logout.resolve({ status: "error", authState: { state: "anonymous" } });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(container.textContent).toContain("Unable to log out.");
+    expect(container.textContent).toContain("Signed in as Patron Example");
+    expect(container.querySelector('input[name="email"]')).toBeNull();
+
+    mocks.fetcher.mockResolvedValueOnce({
+      status: "success",
+      authState: { state: "anonymous" },
+    });
+    await switchAccount();
+    expect(container.querySelector('input[name="email"]')).not.toBeNull();
+    expect(container.textContent).not.toContain("Signed in as");
   });
 
-  it.each([false, true])(
-    "resumes payment after re-login without recording login completion (server refreshed during lapse: %s)",
-    async (refreshDuringLapse) => {
-      const authState = {
-        state: "authenticated",
-        email: "patron@example.com",
-        userId: 1,
-        avatar: null,
-        givenName: "Patron",
-        familyName: "Example",
-        name: "Patron Example",
-        initials: "PE",
-        roles: [],
-      } satisfies PublicAuthState;
-      mocks.loadPublicAuthState.mockResolvedValue(authState);
-      setUserInfo(authState);
-      window.history.replaceState(null, "", "/flow/payment");
-      window.localStorage.setItem(
-        "stored-state:%2Fflow:$completedSteps",
-        JSON.stringify({ value: { details: true } }),
-      );
-      window.localStorage.setItem(
-        "stored-state:%2Fflow:$expiresAt",
-        String(Date.now() + 60_000),
-      );
-      const flow = async (step: string) =>
-        StepFlow({
-          basePath: "/flow",
-          params: Promise.resolve({ step }),
-          steps: {
-            signin: {
-              ...(await createLoginStep()),
-              content: <StepLoginForm method="password" />,
-              title: "Sign in",
-            },
-            details: { content: <p>Details</p>, title: "Details" },
-            payment: { content: <p>Payment</p>, title: "Payment" },
-          },
-        });
-      await act(async () => root.render(await flow("payment")));
-      expect(container.querySelector("h2")?.textContent).toBe("Payment");
-      await act(async () => setUserInfo({ state: "anonymous" }));
-      expect(container.querySelector("h2")?.textContent).toBe("Sign in");
-
-      if (refreshDuringLapse) {
-        mocks.loadPublicAuthState.mockResolvedValue({ state: "anonymous" });
-        await act(async () => root.render(await flow("signin")));
-      }
-
-      mocks.fetcher.mockResolvedValue({
-        status: "success",
-        authenticated: true,
-        authState,
-        path: "/flow/signin",
-      });
-      const emailInput = container.querySelector<HTMLInputElement>(
-        'input[name="email"]',
-      );
-      await act(async () => {
-        setInputValue(emailInput, "patron@example.com");
-        setInputValue(
-          container.querySelector<HTMLInputElement>('input[name="password"]'),
-          "Password1",
-        );
-        emailInput?.form?.dispatchEvent(
-          new Event("submit", { bubbles: true, cancelable: true }),
-        );
-      });
-      await vi.waitFor(() => expect(mocks.refresh).toHaveBeenCalledOnce());
-      expect(
-        JSON.parse(
-          window.localStorage.getItem("stored-state:%2Fflow:$completedSteps")!,
-        ),
-      ).toEqual({ value: { details: true } });
-
-      if (refreshDuringLapse) {
-        expect(container.querySelector("h2")?.textContent).toBe("Sign in");
-        mocks.loadPublicAuthState.mockResolvedValue(authState);
-        await act(async () => root.render(await flow("signin")));
-      }
-
-      expect(container.querySelector("h2")?.textContent).toBe("Payment");
-      expect(window.location.pathname).toBe("/flow/payment");
-    },
-  );
-
   it("verifies the link once on the flow page and advances on success", async () => {
-    window.history.replaceState(null, "", `/flow/signin?token=${token}`);
+    window.history.replaceState(null, "", `/flow?token=${token}`);
     mocks.fetcher.mockResolvedValue({
       authState: { state: "authenticated" },
-      path: "/flow/signin",
+      path: "/flow",
       status: "success",
     });
     const flow = await LoginFlow();
@@ -634,23 +502,25 @@ describe("Login step", () => {
       root.render(<StrictMode>{flow}</StrictMode>);
     });
 
-    await vi.waitFor(() => expect(mocks.refresh).toHaveBeenCalled());
+    await vi.waitFor(() =>
+      expect(container.querySelector("h2")?.textContent).toBe("Done"),
+    );
 
     expect(mocks.fetcher).toHaveBeenCalledOnce();
     expect(mocks.fetcher).toHaveBeenCalledWith("/api/auth", {
       action: "verify-email-login-link",
-      returnTo: "/flow/signin#steps",
+      returnTo: "/flow#steps",
       token,
     });
     expect(window.location.search).toBe("");
-    expect(container.textContent).toContain("All done");
+    expect(container.querySelector("h2")?.textContent).toBe("Done");
   });
 
   it("advances enrollment after proving an unregistered email", async () => {
-    window.history.replaceState(null, "", `/flow/account?token=${token}`);
+    window.history.replaceState(null, "", `/flow?token=${token}`);
     mocks.fetcher.mockResolvedValue({
       authState: { email: "patron@example.com", state: "proven" },
-      path: "/flow/account",
+      path: "/flow",
       status: "success",
     });
     const flow = await EnrollmentFlow();
@@ -666,7 +536,7 @@ describe("Login step", () => {
   });
 
   it("waits for the sign-in step before verifying a link opened on another step", async () => {
-    window.history.replaceState(null, "", `/flow/first?token=${token}`);
+    window.history.replaceState(null, "", `/flow?token=${token}`);
     mocks.fetcher.mockResolvedValue({
       code: "expired",
       message: linkFailureMessage,
@@ -697,8 +567,102 @@ describe("Login step", () => {
     expect(mocks.refresh).not.toHaveBeenCalled();
   });
 
+  it("brings a controlled sign-in step forward to verify a link opened on another step", async () => {
+    window.history.replaceState(null, "", `/flow?token=${token}`);
+    window.localStorage.setItem(
+      "stored-state:%2Fflow:$completedSteps",
+      JSON.stringify({ value: { first: true } }),
+    );
+    window.localStorage.setItem(
+      "stored-state:%2Fflow:$expiresAt",
+      String(Date.now() + 60_000),
+    );
+    mocks.loadPublicAuthState.mockResolvedValue({ state: "anonymous" });
+    mocks.fetcher.mockResolvedValue({
+      authState: { state: "authenticated" },
+      path: "/flow",
+      status: "success",
+    });
+    const flow = await StepFlow({
+      basePath: "/flow",
+      steps: {
+        first: { content: <p>Pick something</p>, title: "First" },
+        signin: {
+          ...(await createLoginStep()),
+          content: <StepLoginForm />,
+          title: "Sign in",
+        },
+        done: { content: <p>All done</p>, title: "Done" },
+      },
+    });
+
+    await act(async () => {
+      root.render(<StrictMode>{flow}</StrictMode>);
+    });
+
+    await vi.waitFor(() =>
+      expect(container.querySelector("h2")?.textContent).toBe("Done"),
+    );
+    expect(mocks.fetcher).toHaveBeenCalledOnce();
+    expect(mocks.fetcher).toHaveBeenCalledWith("/api/auth", {
+      action: "verify-email-login-link",
+      returnTo: "/flow#steps",
+      token,
+    });
+    expect(window.location.search).toBe("");
+    expect(container.querySelector("h2")?.textContent).toBe("Done");
+  });
+
+  it("releases Back once a pending link's sign-in step has been shown", async () => {
+    window.history.replaceState(null, "", `/flow?token=${token}`);
+    mocks.loadPublicAuthState.mockResolvedValue({ state: "anonymous" });
+    mocks.fetcher.mockResolvedValue({
+      code: "expired",
+      message: linkFailureMessage,
+      status: "error",
+    });
+    const flow = await StepFlow({
+      basePath: "/flow",
+      steps: {
+        first: {
+          content: (
+            <>
+              <p>Pick something</p>
+              <StepActions next="Continue" />
+            </>
+          ),
+          title: "First",
+        },
+        signin: {
+          ...(await createLoginStep()),
+          content: <StepLoginForm />,
+          title: "Sign in",
+        },
+      },
+    });
+
+    await act(async () => {
+      root.render(<StrictMode>{flow}</StrictMode>);
+    });
+
+    // A fresh browser has no completed steps, so the link waits on step one.
+    expect(container.querySelector("h2")?.textContent).toBe("First");
+    await act(async () => {
+      container.querySelector<HTMLButtonElement>("button.next")?.click();
+    });
+    expect(container.querySelector("h2")?.textContent).toBe("Sign in");
+    await vi.waitFor(() =>
+      expect(container.textContent).toContain(linkFailureMessage),
+    );
+
+    await act(async () => {
+      container.querySelector<HTMLButtonElement>("button.back")?.click();
+    });
+    expect(container.querySelector("h2")?.textContent).toBe("First");
+  });
+
   it("returns a failed link to the email form with its message", async () => {
-    window.history.replaceState(null, "", `/flow/signin?token=${token}`);
+    window.history.replaceState(null, "", `/flow?token=${token}`);
     mocks.fetcher
       .mockResolvedValueOnce({
         code: "expired",
@@ -749,7 +713,7 @@ describe("Login step", () => {
         status: "error",
       })
       .mockReturnValueOnce(nextLinkPromise);
-    window.history.replaceState(null, "", `/flow/signin?token=${token}`);
+    window.history.replaceState(null, "", `/flow?token=${token}`);
 
     await act(async () => {
       root.render(<StrictMode>{await LoginFlow()}</StrictMode>);
@@ -758,7 +722,7 @@ describe("Login step", () => {
       expect(container.textContent).toContain(linkFailureMessage),
     );
 
-    window.history.replaceState(null, "", `/flow/signin?token=${nextToken}`);
+    window.history.replaceState(null, "", `/flow?token=${nextToken}`);
     await act(async () => {
       root.render(<StrictMode>{await LoginFlow()}</StrictMode>);
     });
