@@ -171,15 +171,6 @@ describe("Login step", () => {
     },
   );
 
-  it("uses the base URL only when its composition opts in", async () => {
-    mocks.loadPublicAuthState.mockResolvedValue({ state: "anonymous" });
-    expect(await createLoginStep()).not.toHaveProperty("index", true);
-    expect(await createLoginStep({ index: true })).toHaveProperty(
-      "index",
-      true,
-    );
-  });
-
   it("returns to a skipped login step when identity is lost, without trusting old completion", async () => {
     const authState = { state: "proven", email: "patron@example.com" } as const;
     mocks.loadPublicAuthState.mockResolvedValue(authState);
@@ -208,7 +199,6 @@ describe("Login step", () => {
     expect(container.querySelector("h2")?.textContent).toBe("Details");
     await act(async () => setUserInfo({ state: "anonymous" }));
     expect(container.querySelector("h2")?.textContent).toBe("Sign in");
-    expect(window.location.pathname).toBe("/flow/signin");
     expect(mocks.refresh).not.toHaveBeenCalled();
   });
 
@@ -617,7 +607,6 @@ describe("Login step", () => {
       }
 
       expect(container.querySelector("h2")?.textContent).toBe("Payment");
-      expect(window.location.pathname).toBe("/flow/payment");
     },
   );
 

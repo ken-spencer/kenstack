@@ -5,6 +5,8 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useEffectEvent,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -39,6 +41,10 @@ const FlowContext = createContext<FlowContextValue | null>(null);
 const StepScopeContext = createContext<string | null>(null);
 
 const completedStepsSchema = z.record(z.string().min(1), z.literal(true));
+// Recorded alongside completed steps when a result is reached; a fixed key,
+// so a later visit finds it even when server state no longer composes the
+// final step.
+const finishedKey = "$finished";
 
 export function useFlowContext() {
   const context = useContext(FlowContext);
@@ -57,6 +63,7 @@ export function FlowProvider({
   id,
   routeStep,
   steps,
+  visitKey,
 }: {
   Actions: NonNullable<StepFlowProps["Actions"]>;
   basePath: string;
@@ -64,6 +71,7 @@ export function FlowProvider({
   id: string;
   routeStep: string;
   steps: Record<string, Step>;
+  visitKey?: string;
 }) {
   const isHydrated = useIsHydrated();
   const isStorageAvailable = useStorageAvailability();
@@ -72,11 +80,20 @@ export function FlowProvider({
     "$completedSteps",
     completedStepsSchema,
   );
-  // The flow owns its step, seeded from the route the server resolved; the
-  // URL only mirrors it. If a server refresh omits the step the flow navigated
-  // to, the route's fresh resolution stands in for it.
+  // The flow owns its step, seeded from the route the server resolved on
+  // entry; later steps live here and never rewrite the URL. If a server
+  // refresh omits the step the flow navigated to, the route's fresh
+  // resolution stands in for it.
   const [navigatedStep, setNavigatedStep] = useState(routeStep);
   const [skippedSteps, setSkippedSteps] = useState<Record<string, boolean>>({});
+  // Next may keep a left instance alive and show it again on a later visit.
+  // Hiding the instance returns it to its entry step, so a visit never
+  // resumes where an earlier one stopped.
+  const routeStepRef = useRef(routeStep);
+  useEffect(() => {
+    routeStepRef.current = routeStep;
+  }, [routeStep]);
+  useEffect(() => () => setNavigatedStep(routeStepRef.current), []);
   const setStepSkipped = useCallback((stepId: string, skipped: boolean) => {
     setSkippedSteps((current) =>
       current[stepId] === skipped ? current : { ...current, [stepId]: skipped },
@@ -106,70 +123,45 @@ export function FlowProvider({
       ? stepIds.length - 1
       : firstIncompleteStepIndex;
   // Live prerequisites apply before hydration too. The browser ledger becomes
-  // readable after hydration; final result steps bypass both.
+  // readable after hydration.
   const activeStep =
-    requestedStep === undefined || steps[requestedStep].final
-      ? requestedStep
+    requestedStep === undefined
+      ? undefined
       : stepIds[
           Math.min(stepIds.indexOf(requestedStep), lastReachableStepIndex)
         ];
   const activeStepIndex =
     activeStep === undefined ? -1 : stepIds.indexOf(activeStep);
-  const setRouteStep = useCallback(
-    (stepId: string) => {
-      setNavigatedStep(stepId);
-      window.history.replaceState(
-        null,
-        "",
-        `${steps[stepId].index ? basePath : `${basePath}/${encodeURIComponent(stepId)}`}${window.location.search}${window.location.hash}`,
-      );
-    },
-    [basePath, steps],
-  );
+  // Arriving at a result records it in the ledger. The next visit that finds
+  // a result recorded clears the flow's stored values and starts afresh, so
+  // no visit restores a finished transaction. A visit is a mount, an Activity
+  // reveal, or a new server render (a link to the flow's own URL). A bfcache
+  // restore is none of these, so a result stays on screen through browser
+  // Back.
+  const clearFinishedFlow = useEffectEvent(() => {
+    if (completedSteps[finishedKey] === true) {
+      clearStoredState(basePath);
+    }
+  });
+  useEffect(() => {
+    if (isHydrated) {
+      clearFinishedFlow();
+    }
+  }, [isHydrated, visitKey]);
   const setActiveStep = useCallback(
     (stepId: string) => {
       const requestedIndex = stepIds.indexOf(stepId);
 
       if (requestedIndex !== -1) {
-        setRouteStep(stepIds[Math.min(requestedIndex, lastReachableStepIndex)]);
+        setNavigatedStep(
+          stepIds[Math.min(requestedIndex, lastReachableStepIndex)],
+        );
       }
     },
-    [lastReachableStepIndex, setRouteStep, stepIds],
+    [lastReachableStepIndex, stepIds],
   );
-  useEffect(() => {
-    if (activeStep === undefined || !steps[activeStep].final) {
-      return;
-    }
 
-    clearStoredState(basePath);
-  }, [activeStep, basePath, steps]);
-
-  // The URL follows the settled step, including when the ledger refused the
-  // requested step.
-  useEffect(() => {
-    if (activeStep === undefined || !isHydrated || !isStorageAvailable) {
-      return;
-    }
-
-    const path = steps[activeStep].index
-      ? basePath
-      : `${basePath}/${encodeURIComponent(activeStep)}`;
-
-    if (window.location.pathname !== path) {
-      window.history.replaceState(
-        null,
-        "",
-        `${path}${window.location.search}${window.location.hash}`,
-      );
-    }
-  }, [activeStep, basePath, isHydrated, isStorageAvailable, steps]);
-
-  // A final step needs no storage, so a result page still renders when the
-  // ledger cannot be written.
-  if (
-    !isStorageAvailable &&
-    (activeStep === undefined || !steps[activeStep].final)
-  ) {
+  if (!isStorageAvailable) {
     return (
       <div className="step-flow" id={id}>
         <Notice
@@ -209,20 +201,20 @@ export function FlowProvider({
           // The ledger is read back at write time so an expired flow
           // cleared by this write cannot resurrect the old ledger.
           if (
-            !steps[nextStepId].final &&
             !setCompletedSteps((current) => ({
               ...current,
               [activeStep]: true,
+              ...(steps[nextStepId].final ? { [finishedKey]: true } : {}),
             }))
           ) {
             return;
           }
-          setRouteStep(nextStepId);
+          setNavigatedStep(nextStepId);
         },
         previous: () => {
           const previousStepId = stepIds[activeStepIndex - 1];
           if (previousStepId !== undefined) {
-            setRouteStep(previousStepId);
+            setNavigatedStep(previousStepId);
           }
         },
         setActiveStep,
@@ -269,6 +261,9 @@ export function useStep() {
 
   return {
     activate,
+    // The URL that re-enters the flow at this step, for a return after
+    // leaving the page such as an emailed sign-in link.
+    entryPath: `${context.basePath}/${encodeURIComponent(stepId)}`,
     id: context.id,
     isActive: context.activeStep === stepId,
     isBeforeActiveStep:

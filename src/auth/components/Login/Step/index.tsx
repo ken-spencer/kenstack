@@ -9,12 +9,10 @@ import LoginController from "./Controller";
 
 export async function createLoginStep({
   always = false,
-  index,
   title = "Sign in",
 }: {
   // Requested for flows that always include sign-in.
   always?: boolean;
-  index?: Step["index"];
   title?: string;
 } = {}): Promise<Step> {
   const authState = always ? undefined : await loadPublicAuthState();
@@ -23,7 +21,6 @@ export async function createLoginStep({
     : undefined;
 
   return {
-    index,
     controller: authState ? (
       <LoginController authState={authState} />
     ) : undefined,

@@ -18,7 +18,12 @@ describe("LoginForm server rendering", () => {
     (mode) => {
       const markup = renderToStaticMarkup(
         mode === "embedded" ? (
-          <LoginForm anchor="steps" mode="embedded" onComplete={vi.fn()} />
+          <LoginForm
+            anchor="steps"
+            entryPath="/flow/signin"
+            mode="embedded"
+            onComplete={vi.fn()}
+          />
         ) : (
           <LoginForm />
         ),

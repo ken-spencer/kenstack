@@ -5,6 +5,36 @@ contract lives in `docs/upgrading.md`.
 
 ## Unreleased
 
+### Step URLs Are Entry Points Only
+
+StepFlow no longer writes the browser URL while a visitor moves between steps. A step URL such as
+`/membership/signin` still enters the flow at that step when the completion ledger allows it, and the
+base URL enters at the first step; in-flow navigation, Back, and completion keep whatever URL opened
+the flow. Previously each step change called `history.replaceState`, which Next intercepts under
+`cacheComponents`: it could fetch the route again and keep the earlier page instance alive, so a later
+visit surfaced a stale instance of the flow. When Next keeps an instance alive and shows it again, the
+flow now returns to its entry step.
+
+A `final` step is reached through `next()` like any other step. It records the preceding step in the
+ledger and no longer bypasses the ledger on a direct visit. Arriving records the result itself, and the
+next visit that finds a result recorded (a reload, a later visit, or a link to the flow's own URL, which
+re-renders the flow on the server) clears the stored values, so the result step reads the flow's values
+like any other step and a finished transaction is never restored.
+
+Migration steps:
+
+- Remove `index: true` from step compositions and `createLoginStep({ index })`; the base URL always
+  enters at the first configured step.
+- Embedded login takes `entryPath` in its continuation, which the login step supplies from the new
+  `useStep().entryPath`; emailed sign-in links return there instead of to the page path.
+- A flow that kept a live copy of a result for its final step, because entering it cleared the store,
+  reads the stored value directly instead.
+- Every step id must resolve as a route under `basePath`, since `entryPath` names it; a flow whose base
+  URL used the removed `index` option needs a catch-all route for its steps.
+- `StepFlow` stamps each server render with `crypto.randomUUID()`, so it must render after a dynamic
+  read such as `connection()`, `cookies()`, or the auth state; under Cache Components a prerenderable
+  scope fails the build.
+
 ### Query Store Updates URLs Without Server Navigation
 
 `useQueryStore` now writes filters with the native History API. Previously, each URL change used

@@ -2,6 +2,7 @@
 
 import {
   act,
+  Activity,
   type ComponentProps,
   useEffect,
   useLayoutEffect,
@@ -138,7 +139,6 @@ describe("StepFlow", () => {
     act(() => getButton(container, "Next from Selection").click());
     act(() => getButton(container, "Next from Payment").click());
     expect(container.querySelector("h2")?.textContent).toBe("Complete");
-    expect(getButton(container, "Recall selection").disabled).toBe(true);
   });
 
   it("skips a prerequisite in both directions while keeping its controller and local state", () => {
@@ -167,7 +167,6 @@ describe("StepFlow", () => {
     act(() => getButton(container, "Increment Last").click());
     act(() => getButton(container, "Require this step").click());
     expect(container.querySelector("h2")?.textContent).toBe("Account");
-    expect(window.location.pathname).toBe("/flow/account");
     act(() => getButton(container, "Skip this step").click());
     expect(container.querySelector("h2")?.textContent).toBe("Last");
     expect(getButton(container, "Increment Last").textContent).toContain("1");
@@ -230,10 +229,8 @@ describe("StepFlow", () => {
       "Loading…",
     );
     expect(container.querySelector("h2")).toBeNull();
-    expect(window.location.pathname).toBe("/flow");
     act(() => getButton(container, "Require this step").click());
     expect(container.querySelector("h2")?.textContent).toBe("Account");
-    expect(window.location.pathname).toBe("/flow/account");
   });
 
   it("rejects an unknown server-requested step", async () => {
@@ -246,16 +243,12 @@ describe("StepFlow", () => {
     ).rejects.toThrow("Not found");
   });
 
-  it("uses the base URL for the configured index step during forward and Back navigation", async () => {
+  it("keeps the entry URL untouched while stepping", async () => {
     window.history.replaceState(null, "", "/flow?returnTo=%2Fcheckout#steps");
     const flow = await StepFlow({
       basePath: "/flow",
       steps: {
-        account: {
-          content: <NextStep name="Account" />,
-          index: true,
-          title: "Account",
-        },
+        account: { content: <NextStep name="Account" />, title: "Account" },
         details: {
           content: <TestStep activeEffects={new Set()} name="Details" />,
           title: "Details",
@@ -264,70 +257,64 @@ describe("StepFlow", () => {
     });
 
     await act(async () => root.render(flow));
-    expect(window.location.pathname).toBe("/flow");
+    expect(container.querySelector("h2")?.textContent).toBe("Account");
     act(() => getButton(container, "Next from Account").click());
-    expect(window.location.pathname).toBe("/flow/details");
+    expect(container.querySelector("h2")?.textContent).toBe("Details");
     act(() => getButton(container, "Back from Details").click());
+    expect(container.querySelector("h2")?.textContent).toBe("Account");
     expect(window.location.pathname).toBe("/flow");
     expect(window.location.search).toBe("?returnTo=%2Fcheckout");
     expect(window.location.hash).toBe("#steps");
   });
 
-  it("normalizes an unreachable details URL to the index step", async () => {
+  it("clamps an unreachable entry step without rewriting the URL", async () => {
     window.history.replaceState(null, "", "/flow/details?returnTo=%2Fcheckout");
     const flow = await StepFlow({
       basePath: "/flow",
       params: Promise.resolve({ step: "details" }),
       steps: {
-        account: {
-          content: <p>Sign in</p>,
-          index: true,
-          skipped: false,
-          title: "Account",
-        },
+        account: { content: <p>Sign in</p>, skipped: false, title: "Account" },
         details: { content: <p>Details</p>, title: "Details" },
       },
     });
 
     await act(async () => root.render(flow));
     expect(container.querySelector("h2")?.textContent).toBe("Account");
-    expect(window.location.pathname).toBe("/flow");
+    expect(window.location.pathname).toBe("/flow/details");
     expect(window.location.search).toBe("?returnTo=%2Fcheckout");
   });
 
-  it("keeps the next step's named URL when the index step is skipped", async () => {
+  it("enters at the next retained step when the first step is skipped", async () => {
     const flow = await StepFlow({
       basePath: "/flow",
       steps: {
-        account: {
-          content: null,
-          index: true,
-          skipped: true,
-          title: "Account",
-        },
+        account: { content: null, skipped: true, title: "Account" },
         details: { content: <p>Details</p>, title: "Details" },
       },
     });
 
     await act(async () => root.render(flow));
     expect(container.querySelector("h2")?.textContent).toBe("Details");
-    expect(window.location.pathname).toBe("/flow/details");
   });
 
-  it.each([false, true])(
-    "rejects a later index step when the first step is skipped: %s",
-    async (skipped) => {
-      await expect(
-        StepFlow({
-          basePath: "/flow",
-          steps: {
-            first: { content: null, skipped, title: "First" },
-            second: { content: null, index: true, title: "Second" },
-          },
-        }),
-      ).rejects.toThrow("Only the first configured step may be an index step.");
-    },
-  );
+  it("exposes a step's entry URL", () => {
+    function EntryStep() {
+      return <output>{useStep().entryPath}</output>;
+    }
+
+    act(() =>
+      root.render(
+        <StepFlowClient
+          basePath="/flow"
+          steps={{ "sign in": { content: <EntryStep />, title: "Sign in" } }}
+        />,
+      ),
+    );
+
+    expect(container.querySelector("output")?.textContent).toBe(
+      "/flow/sign%20in",
+    );
+  });
 
   it("continues past configured steps omitted by refreshed server state", async () => {
     window.localStorage.setItem(
@@ -353,8 +340,6 @@ describe("StepFlow", () => {
     await act(async () => root.render(flow));
 
     expect(container.querySelector("h2")?.textContent).toBe("Payment");
-    expect(window.location.pathname).toBe("/flow/payment");
-    expect(window.location.search).toBe("?plan=standard");
   });
 
   it("follows the route's resolution when a refresh drops the navigated step", () => {
@@ -381,7 +366,6 @@ describe("StepFlow", () => {
     );
 
     expect(container.querySelector("h2")?.textContent).toBe("Payment");
-    expect(window.location.pathname).toBe("/flow/payment");
   });
 
   it("rejects an empty step registry", async () => {
@@ -608,7 +592,6 @@ describe("StepFlow", () => {
     act(() => getButton(container, "Next from First").click());
     expect(activeEffects).toEqual(new Set(["Controller", "Second"]));
     expect(container.querySelector("output")?.textContent).toBe("second");
-    expect(window.location.pathname).toBe("/flow/second");
     expect(
       JSON.parse(
         window.localStorage.getItem("stored-state:%2Fflow:$completedSteps") ??
@@ -621,7 +604,6 @@ describe("StepFlow", () => {
     expect(getButton(container, "Increment First").textContent).toBe(
       "Increment First: 1",
     );
-    expect(window.location.pathname).toBe("/flow/first");
   });
 
   it("moves focus after a step change, not on initial load", () => {
@@ -638,10 +620,11 @@ describe("StepFlow", () => {
     expect(focus).toHaveBeenCalledOnce();
   });
 
-  it("keeps one history entry and clears stored state on a final step", () => {
+  it("reaches a final step only through next and presents it as a result", () => {
+    window.history.replaceState(null, "", "/flow/complete");
     window.localStorage.setItem(
-      "stored-state:%2Fflow:selection",
-      JSON.stringify({ value: true }),
+      "stored-state:%2Fflow:$completedSteps",
+      JSON.stringify({ value: { first: true } }),
     );
     window.localStorage.setItem(
       "stored-state:%2Fflow:$expiresAt",
@@ -654,10 +637,7 @@ describe("StepFlow", () => {
           basePath="/flow"
           summary={<span data-summary>Summary</span>}
           steps={{
-            first: {
-              content: <TestStep activeEffects={new Set()} name="First" />,
-              title: "First",
-            },
+            first: { content: <NextStep name="First" />, title: "First" },
             second: {
               content: <TestStep activeEffects={new Set()} name="Second" />,
               title: "Second",
@@ -672,48 +652,122 @@ describe("StepFlow", () => {
       );
     });
 
-    const historyLength = window.history.length;
-
-    act(() => getButton(container, "Next from First").click());
+    // The entry URL names the result, but the ledger stops at the first
+    // incomplete step like any other request.
+    expect(container.querySelector("h2")?.textContent).toBe("Second");
     expect(container.querySelector(".step-flow .back")).not.toBeNull();
+    expect(container.querySelector("[data-summary]")).not.toBeNull();
+
     act(() => getButton(container, "Next from Second").click());
+    expect(container.querySelector("h2")?.textContent).toBe("Complete");
+    expect(container.textContent).toContain("Done");
     expect(container.querySelector(".step-flow .back")).toBeNull();
     expect(container.querySelector("[data-summary]")).toBeNull();
-    expect(window.localStorage).toHaveLength(0);
-    expect(window.history).toHaveLength(historyLength);
     expect(window.location.pathname).toBe("/flow/complete");
+    expect(
+      JSON.parse(
+        window.localStorage.getItem("stored-state:%2Fflow:$completedSteps") ??
+          "null",
+      ),
+    ).toEqual({ value: { first: true, second: true, $finished: true } });
   });
 
-  it("shows a final step on a direct visit and clears stored state", () => {
-    window.localStorage.setItem(
-      "stored-state:%2Fflow:selection",
-      JSON.stringify({ value: true }),
-    );
-    window.localStorage.setItem(
-      "stored-state:%2Fflow:$expiresAt",
-      String(Date.now() + 60_000),
-    );
-    window.history.replaceState(null, "", "/flow/complete");
+  it("starts afresh on the visit after a result, but keeps a live result through Back", () => {
+    const steps = {
+      first: { content: <NextStep name="First" />, title: "First" },
+      complete: { content: <FinalStep />, final: true, title: "Complete" },
+    } satisfies Steps;
+    function RetainedFlow({
+      mode,
+      visitKey,
+    }: {
+      mode: "hidden" | "visible";
+      visitKey?: string;
+    }) {
+      return (
+        <Activity mode={mode}>
+          <StepFlowClient basePath="/flow" steps={steps} visitKey={visitKey} />
+        </Activity>
+      );
+    }
 
     act(() => {
+      root.render(<RetainedFlow mode="visible" />);
+    });
+    act(() => getButton(container, "Next from First").click());
+    expect(container.querySelector("h2")?.textContent).toBe("Complete");
+    expect(
+      JSON.parse(
+        window.localStorage.getItem("stored-state:%2Fflow:$completedSteps") ??
+          "null",
+      ),
+    ).toEqual({ value: { first: true, $finished: true } });
+
+    // A bfcache restore mounts nothing, so the result survives it.
+    act(() => {
+      window.dispatchEvent(new Event("pagehide"));
+    });
+    expect(container.querySelector("h2")?.textContent).toBe("Complete");
+
+    // Next showing the retained instance again is a new visit.
+    act(() => {
+      root.render(<RetainedFlow mode="hidden" />);
+    });
+    act(() => {
+      root.render(<RetainedFlow mode="visible" />);
+    });
+    expect(container.querySelector("h2")?.textContent).toBe("First");
+    expect(window.localStorage).toHaveLength(0);
+
+    // So is a new server render of the same mounted instance, such as a link
+    // to the flow's own URL.
+    act(() => getButton(container, "Next from First").click());
+    expect(container.querySelector("h2")?.textContent).toBe("Complete");
+    act(() => {
+      root.render(<RetainedFlow mode="visible" visitKey="second" />);
+    });
+    expect(container.querySelector("h2")?.textContent).toBe("First");
+    expect(window.localStorage).toHaveLength(0);
+
+    // So is a reload that finds the result recorded, even when refreshed
+    // server state no longer composes the final step.
+    act(() => getButton(container, "Next from First").click());
+    expect(container.querySelector("h2")?.textContent).toBe("Complete");
+    act(() => root.unmount());
+    root = createRoot(container);
+    act(() => {
       root.render(
-        <StepFlowClient
-          basePath="/flow"
-          steps={{
-            first: { content: <NextStep name="First" />, title: "First" },
-            complete: {
-              content: <FinalStep />,
-              final: true,
-              title: "Complete",
-            },
-          }}
-        />,
+        <StepFlowClient basePath="/flow" steps={{ first: steps.first }} />,
       );
     });
-
-    expect(container.querySelector("h2")?.textContent).toBe("Complete");
-    expect(window.location.pathname).toBe("/flow/complete");
+    expect(container.querySelector("h2")?.textContent).toBe("First");
     expect(window.localStorage).toHaveLength(0);
+  });
+
+  it("returns to its entry step when hidden and shown again", () => {
+    function RetainedFlow({ mode }: { mode: "hidden" | "visible" }) {
+      return (
+        <Activity mode={mode}>
+          <Flow activeEffects={new Set()} />
+        </Activity>
+      );
+    }
+
+    act(() => {
+      root.render(<RetainedFlow mode="visible" />);
+    });
+    act(() => getButton(container, "Next from First").click());
+    expect(container.querySelector("h2")?.textContent).toBe("Second");
+
+    // Next keeps a left route instance alive and may show it again on a
+    // later visit; that visit starts at the entry step.
+    act(() => {
+      root.render(<RetainedFlow mode="hidden" />);
+    });
+    act(() => {
+      root.render(<RetainedFlow mode="visible" />);
+    });
+    expect(container.querySelector("h2")?.textContent).toBe("First");
   });
 
   it("preserves a step-owned form while the step is hidden", () => {
@@ -758,7 +812,6 @@ describe("StepFlow", () => {
     });
 
     expect(container.querySelector("h2")?.textContent).toBe("Tickets");
-    expect(window.location.pathname).toBe("/flow/tickets");
   });
 
   it("restores a requested step after its preceding steps were completed", () => {
@@ -785,7 +838,6 @@ describe("StepFlow", () => {
     });
 
     expect(container.querySelector("h2")?.textContent).toBe("Sign in");
-    expect(window.location.pathname).toBe("/flow/signin");
   });
 
   it("blocks the flow when browser storage is unavailable", () => {
@@ -804,7 +856,6 @@ describe("StepFlow", () => {
       "Browser storage is required to continue",
     );
     expect(container.querySelector("button")).toBeNull();
-    expect(window.location.pathname).toBe("/flow/first");
   });
 
   it("does not advance when the completion ledger cannot be written", () => {
@@ -828,7 +879,6 @@ describe("StepFlow", () => {
     expect(container.querySelector('[role="alert"]')?.textContent).toContain(
       "Browser storage is required to continue",
     );
-    expect(window.location.pathname).toBe("/flow/first");
   });
 
   it("does not advance after an earlier stored-state write fails", () => {
@@ -851,49 +901,6 @@ describe("StepFlow", () => {
     expect(container.querySelector('[role="alert"]')?.textContent).toContain(
       "Browser storage is required to continue",
     );
-    expect(window.location.pathname).toBe("/expiring-flow/first");
-  });
-
-  it("shows a final step even when stored state cannot be cleared", () => {
-    window.localStorage.setItem(
-      "stored-state:%2Fflow:selection",
-      JSON.stringify({ value: true }),
-    );
-    window.localStorage.setItem(
-      "stored-state:%2Fflow:$expiresAt",
-      String(Date.now() + 60_000),
-    );
-
-    act(() => {
-      root.render(
-        <StepFlowClient
-          basePath="/flow"
-          steps={{
-            first: {
-              content: <TestStep activeEffects={new Set()} name="First" />,
-              title: "First",
-            },
-            complete: { content: null, final: true, title: "Complete" },
-          }}
-        />,
-      );
-    });
-
-    const removeItem = Storage.prototype.removeItem;
-    vi.spyOn(Storage.prototype, "removeItem").mockImplementation(function (
-      this: Storage,
-      key,
-    ) {
-      if (key.startsWith("stored-state:%2Fflow:")) {
-        throw new Error("The flow state is read-only");
-      }
-      removeItem.call(this, key);
-    });
-    act(() => getButton(container, "Next from First").click());
-
-    expect(container.querySelector('[role="alert"]')).toBeNull();
-    expect(container.querySelector("h2")?.textContent).toBe("Complete");
-    expect(window.location.pathname).toBe("/flow/complete");
   });
 
   it("resets in-memory progress when another tab clears the flow", () => {
@@ -919,7 +926,6 @@ describe("StepFlow", () => {
     });
 
     expect(container.querySelector("h2")?.textContent).toBe("First");
-    expect(window.location.pathname).toBe("/flow/first");
   });
 
   it("does not reset progress when another tab clears session storage", () => {
@@ -938,7 +944,6 @@ describe("StepFlow", () => {
     });
 
     expect(container.querySelector("h2")?.textContent).toBe("Second");
-    expect(window.location.pathname).toBe("/flow/second");
   });
 
   it("restores step-scoped state", () => {
@@ -1100,15 +1105,18 @@ describe("StepFlow", () => {
     expect(container.querySelector("[data-owner]")?.textContent).toBe("Empty");
 
     act(() => getButton(container, "Store first value").click());
-    expect(window.location.pathname).toBe("/owner-flow/second");
+    expect(container.querySelector("h2")?.textContent).toBe("Second");
     expect(container.querySelector("[data-owner]")?.textContent).toBe("Stored");
 
+    // A remount re-enters at the entry step; the stored slice is unaffected.
     act(() => root.render(<OwnerReadFlow key="remounted" />));
     expect(container.querySelector("[data-owner]")?.textContent).toBe("Stored");
+    expect(container.querySelector("h2")?.textContent).toBe("First");
 
+    act(() => getButton(container, "Store first value").click());
     act(() => getButton(container, "Next from Second").click());
-    expect(window.location.pathname).toBe("/owner-flow/complete");
-    expect(container.querySelector("[data-owner]")?.textContent).toBe("Empty");
+    expect(container.querySelector("h2")?.textContent).toBe("Complete");
+    expect(container.querySelector("[data-owner]")?.textContent).toBe("Stored");
   });
 
   it("returns to the first step when a write follows the flow's 24-hour lifetime", () => {
@@ -1118,7 +1126,7 @@ describe("StepFlow", () => {
 
     act(() => root.render(<ExpiringStoredStateFlow />));
     act(() => getButton(container, "Store first value").click());
-    expect(window.location.pathname).toBe("/expiring-flow/second");
+    expect(container.querySelector("h2")?.textContent).toBe("Second");
 
     const deadlineKey = "stored-state:%2Fexpiring-flow:$expiresAt";
     const firstDeadline = window.localStorage.getItem(deadlineKey);
@@ -1130,10 +1138,10 @@ describe("StepFlow", () => {
     );
 
     act(() => vi.advanceTimersByTime(24 * 60 * 60 * 1000));
-    expect(window.location.pathname).toBe("/expiring-flow/second");
+    expect(container.querySelector("h2")?.textContent).toBe("Second");
 
     act(() => getButton(container, "Store second value").click());
-    expect(window.location.pathname).toBe("/expiring-flow/first");
+    expect(container.querySelector("h2")?.textContent).toBe("First");
     expect(
       window.localStorage.getItem("stored-state:%2Fexpiring-flow:selection"),
     ).toBeNull();
@@ -1160,11 +1168,11 @@ describe("StepFlow", () => {
     );
 
     act(() => root.render(<ExpiringStoredStateFlow />));
-    expect(window.location.pathname).toBe("/expiring-flow/first");
+    expect(container.querySelector("h2")?.textContent).toBe("First");
 
     act(() => getButton(container, "Store first value").click());
 
-    expect(window.location.pathname).toBe("/expiring-flow/second");
+    expect(container.querySelector("h2")?.textContent).toBe("Second");
     expect(
       window.localStorage.getItem("stored-state:%2Fexpiring-flow:selection"),
     ).toBe(JSON.stringify({ value: true }));
@@ -1180,12 +1188,12 @@ describe("StepFlow", () => {
 
     act(() => root.render(<ExpiringStoredStateFlow />));
     act(() => getButton(container, "Store first value").click());
-    expect(window.location.pathname).toBe("/expiring-flow/second");
+    expect(container.querySelector("h2")?.textContent).toBe("Second");
 
     act(() => vi.advanceTimersByTime(25 * 60 * 60 * 1000));
     act(() => getButton(container, "Continue with second value").click());
 
-    expect(window.location.pathname).toBe("/expiring-flow/first");
+    expect(container.querySelector("h2")?.textContent).toBe("First");
     expect(
       window.localStorage.getItem("stored-state:%2Fexpiring-flow:selection"),
     ).toBeNull();
@@ -1207,7 +1215,7 @@ describe("StepFlow", () => {
     expect(container.querySelector("[data-restored]")?.textContent).toBe(
       "Empty",
     );
-    expect(window.location.pathname).toBe("/expired-restore/first");
+    expect(container.querySelector("h2")?.textContent).toBe("First");
   });
 
   it("restores controller state before showing a hydrated route", async () => {
@@ -1234,7 +1242,6 @@ describe("StepFlow", () => {
     expect(container.querySelector("[data-restored]")?.textContent).toBe(
       "Restored",
     );
-    expect(window.location.pathname).toBe("/expired-restore/second");
     expect(container.querySelector("h2")?.textContent).toBe("Second");
   });
 });
@@ -1259,7 +1266,7 @@ function TestActions({ children, next }: StepActionsProps) {
       ) : null}
       {children}
       {next !== null ? (
-        <button className="site-next" onClick={advance} type="button">
+        <button className="site-next" onClick={() => advance()} type="button">
           Site {typeof next === "string" ? next : "Continue"}
         </button>
       ) : null}
@@ -1333,7 +1340,7 @@ function FormStep() {
     <>
       <output>{name}</output>
       <button onClick={() => form.setValue("name", "Ada")}>Set name</button>
-      <button onClick={next}>Next from Form</button>
+      <button onClick={() => next()}>Next from Form</button>
     </>
   );
 }
@@ -1341,7 +1348,7 @@ function FormStep() {
 function NextStep({ name }: { name: string }) {
   const { next } = useStep();
 
-  return <button onClick={next}>Next from {name}</button>;
+  return <button onClick={() => next()}>Next from {name}</button>;
 }
 
 function PersistentController({
@@ -1386,7 +1393,7 @@ function TestStep({
       <button onClick={() => setCount((current) => current + 1)}>
         Increment {name}: {count}
       </button>
-      <button onClick={next}>Next from {name}</button>
+      <button onClick={() => next()}>Next from {name}</button>
     </>
   );
 }

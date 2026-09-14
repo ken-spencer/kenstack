@@ -33,7 +33,7 @@ it("keeps the server-selected step while browser identity is being seeded", asyn
       params: Promise.resolve({ step: "payment" }),
       steps: {
         signin: {
-          ...(await createLoginStep({ index: true })),
+          ...(await createLoginStep()),
           content: <p>Sign in</p>,
           title: "Sign in",
         },
@@ -44,7 +44,6 @@ it("keeps the server-selected step while browser identity is being seeded", asyn
     await act(async () => root.render(flow));
 
     expect(container.querySelector("h2")?.textContent).toBe("Payment");
-    expect(window.location.pathname).toBe("/flow/payment");
     expect(replace).not.toHaveBeenCalled();
     expect(focus).not.toHaveBeenCalled();
   } finally {

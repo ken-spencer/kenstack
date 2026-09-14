@@ -38,30 +38,34 @@ summaries, and browser persistence in Kenstack and host sites.
 - StepFlow renders no progress bar, step tracker, or completed/remaining-step list. Its current
   heading, relative Back control, and optional transaction summary provide the workflow context, and a
   host flow does not reconstruct progress presentation.
-- Step navigation replaces the flow's current browser-history entry. StepFlow's Back control moves to
-  the preceding step; browser Back leaves the transaction, so no restorable checkout states accumulate.
-- A terminal result step sets `final`. It is reachable directly whatever the completion ledger records,
-  because it only presents a result. Entering it clears the flow's stored values, when storage
-  mutations succeed, and omits Back and the
-  running summary. The workflow owner retains only the live result the final screen needs and keeps
-  completed payment content unavailable.
-- The first configured step may set `index: true` to use the flow's base URL without a step segment.
-  Set it when composing the flow unless it is intrinsic to the step. Skipping or omitting that step
-  does not make a later step the index. Without an index, every step keeps its named URL.
-  `createLoginStep({ index: true })` supports standalone login without
-  making login the index in other flows.
+- Step navigation never writes the browser URL or history. The URL that entered the flow stays as it
+  is while steps change, so a refresh re-enters there. StepFlow's Back control moves to the preceding
+  step; browser Back leaves the transaction, so no restorable checkout states accumulate.
+- A step URL such as `/membership/signin` is an entry point: the server resolves the requested step and
+  the client presents it when the ledger records every preceding retained step complete, otherwise the
+  first incomplete step. The base URL enters at the first step. A visit never resumes where an earlier
+  one stopped: when Next keeps a left route instance alive and shows it again, the flow returns to its
+  entry step. A flow that must bring a visitor back to a step after leaving the page, such as an
+  emailed sign-in link, uses `useStep().entryPath` as the return URL.
+- A terminal result step sets `final`. It is reached through `next()` like any step, which records the
+  preceding step in the ledger; it omits Back and the running summary and reads the flow's values as
+  any step does. Arriving there also records the result in the ledger, and the next visit that finds a
+  result recorded clears the flow's stored values and starts at the first step, so no visit restores a
+  finished transaction. A visit is a mount, an Activity reveal, or a new server render of the flow,
+  which a link to the flow's own URL produces; a bfcache restore is none of these, so a result stays
+  on screen through browser Back.
 - A server step factory may return `null` when the step does not belong in the current flow. This is a
   composition decision made before StepFlow reaches the browser, not a completion rule. If refreshed server
-  state omits the route currently in the URL, StepFlow continues to the next retained configured step
-  (or the preceding retained step when none follows) and normalizes the URL. StepFlow filters omitted
+  state omits the requested step, StepFlow continues to the next retained configured step (or the
+  preceding retained step when none follows). StepFlow filters omitted
   factories before it evaluates navigation progress, so an omitted step never blocks a retained one.
 
 ## Flow ownership
 
-- The flow owns ordering, the URL route segment, and aggregate presentation such as a cross-step
+- The flow owns ordering, its entry URLs, and aggregate presentation such as a cross-step
   summary. Back means the preceding configured step, so the first step has no Back control. A
   cancel or exit action belongs explicitly to the flow that needs it. Route names are registry keys
-  owned by the flow, never navigation values exposed to step implementations.
+  owned by the flow; a step learns only its own entry URL, through `useStep().entryPath`.
 - Steps move relatively with `previous` and `next`. A controller that must return to its visible
   owning step uses its scoped activation operation. An exceptional named jump lives in the flow
   assembler, never in reusable step content, and needs a concrete workflow reason.
@@ -86,7 +90,7 @@ summaries, and browser persistence in Kenstack and host sites.
   If every step is skipped, controllers remain mounted with a loading notice until a step becomes
   available or the owning route redirects; `useFlowContext().activeStep` is then `undefined`.
 - A requested configured route is reachable only when every preceding retained step is recorded as
-  completed and no preceding live prerequisite requires attention. Otherwise StepFlow presents the first incomplete step and normalizes the URL. Previously
+  completed and no preceding live prerequisite requires attention. Otherwise StepFlow presents the first incomplete step. Previously
   reached steps remain revisitable. This browser ledger protects the intended navigation sequence, but
   browser state is mutable: authorization and authoritative transaction prerequisites remain server
   concerns and must be checked by the operation that needs them.
@@ -96,7 +100,7 @@ summaries, and browser persistence in Kenstack and host sites.
   observe browser identity and update its live prerequisite, while server checks still govern protected
   content and operations. Until the browser hydrates, StepFlow applies server-supplied live prerequisites
   with every stored slice absent; once hydrated it also applies the
-  completion ledger and the URL follows. A form whose defaults come from a restored slice reads the
+  completion ledger. A form whose defaults come from a restored slice reads the
   slice itself, not a context value a controller fills in later, since a form keeps the defaults it
   mounted with.
 - Keep step-only data and behavior out of a broad flow context. A flow owner holds a cross-step result,
@@ -209,8 +213,8 @@ parallel API for that component.
 
 ## State and persistence
 
-- The flow owns the requested step, seeded from the route segment the server resolves; the URL only
-  mirrors it, so nothing inside a flow reads the path back. StepFlow stores only the sparse ledger of
+- The flow owns the requested step, seeded from the route segment the server resolves on entry; later
+  steps live in memory and the URL is never rewritten. StepFlow stores only the sparse ledger of
   steps completed through `next()` so it can decide whether that request is reachable.
 - React Hook Form owns live edits. Persist only validated, committed workflow results needed after a
   refresh or an authentication round trip.
@@ -236,13 +240,12 @@ parallel API for that component.
   state before it is applied, so a tab left open past the lifetime starts a fresh flow: a later step
   returns to the first step, and the first step keeps its new value and continues. Stored values
   without a valid shared deadline read as absent and are cleared by the next write.
-- Coordinate restoration before StepFlow presents the requested step. A flow with a
-  separate terminal result marks that step `final`; entering it clears stored values, when storage
-  mutations succeed, without resetting
-  the live result its UI needs, so a refresh cannot restore a finished transaction.
+- Coordinate restoration before StepFlow presents the requested step. A finished transaction is never
+  restored: the visit after a recorded result clears the store, the base URL enters at the first step,
+  and a step URL is honoured only as far as the ledger allows.
 - Browser storage is required for StepFlow's route-authorization ledger. When a stored-state mutation
-  fails, the flow stops and asks the visitor to enable cookies and site data, then reload; a final step
-  still renders, since it needs no storage. It does not advance with an in-memory completion fallback.
+  fails, the flow stops and asks the visitor to enable cookies and site data, then reload. It does not
+  advance with an in-memory completion fallback.
 - Authentication, account records, inventory, reservations, holds, completed bookings, payment
   authority, and query data remain with their server or library owner. A value already written to the
   database is never mirrored in browser storage. Browser storage may retain a recoverable selection or

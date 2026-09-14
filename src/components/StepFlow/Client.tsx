@@ -15,12 +15,14 @@ export default function StepFlowClient({
   routeStep,
   summary,
   steps,
+  visitKey,
 }: Omit<StepFlowProps, "Actions" | "Header" | "id" | "params" | "steps"> & {
   Actions: NonNullable<StepFlowProps["Actions"]>;
   Header: NonNullable<StepFlowProps["Header"]>;
   id: NonNullable<StepFlowProps["id"]>;
   routeStep: string;
   steps: Record<string, Step>;
+  visitKey?: string;
 }) {
   return (
     <FlowProvider
@@ -29,6 +31,7 @@ export default function StepFlowClient({
       id={id}
       routeStep={routeStep}
       steps={steps}
+      visitKey={visitKey}
     >
       <StepFlowContent Header={Header} steps={steps} summary={summary} />
     </FlowProvider>
