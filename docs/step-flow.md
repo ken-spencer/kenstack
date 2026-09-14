@@ -44,8 +44,18 @@ summaries, and browser persistence in Kenstack and host sites.
   visit never resumes where an earlier one stopped: when Next keeps a left route instance alive and
   shows it again, the flow returns to its first step.
 - A return to the flow after leaving the page arrives at its URL like any visit. An emailed sign-in
-  link carries its token there; the login controller requires its step and brings it forward, as far
-  as the ledger allows, until the form has consumed the token.
+  link carries its token there; the login controller brings its step forward, as far as the ledger
+  allows, until the link has signed the visitor in.
+- Every flow composes the login step and every other step for every visit. `createLoginStep()` reads
+  the server auth state: a visit that starts signed in skips the step, and its controller brings it
+  back if identity is lost during the visit, in this tab or another, then skips it again once the
+  visitor signs in so the flow resumes where it was. A visit that starts signed out keeps it as an
+  ordinary step, completed by signing in and continuing; if identity is lost later in that visit the
+  step is not recalled automatically, but the steps that need an account require themselves and Back
+  reaches the sign-in form. Signing in updates browser identity in place, with no server refresh, and
+  the step then shows who is signed in with Continue and a way to switch accounts. Data a step needs
+  from the account, such as its saved details, reaches the browser through a query keyed by user,
+  hydrated from the server when the visit starts signed in.
 - A terminal result step sets `final`. It is reached through `next()` like any step, which records the
   preceding step in the ledger; it omits Back and the running summary and reads the flow's values as
   any step does. Arriving there also records the result in the ledger, and the next visit that finds a
@@ -96,8 +106,8 @@ summaries, and browser persistence in Kenstack and host sites.
 - Use a step `controller` only for behavior that must remain mounted while its content is hidden, such
   as retaining a seat hold or handling an authentication return. A controller is not the way to copy a
   stored slice into a flow context; the flow owner reads its slices directly. Login uses its controller to
-  observe browser identity and update its live prerequisite, while server checks still govern protected
-  content and operations. Until the browser hydrates, StepFlow applies server-supplied live prerequisites
+  follow browser identity and to bring its step forward for an emailed link, while server checks still
+  govern protected content and operations. Until the browser hydrates, StepFlow applies server-supplied live prerequisites
   with every stored slice absent; once hydrated it also applies the
   completion ledger. A form whose defaults come from a restored slice reads the
   slice itself, not a context value a controller fills in later, since a form keeps the defaults it

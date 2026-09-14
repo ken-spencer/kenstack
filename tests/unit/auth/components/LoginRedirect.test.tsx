@@ -129,7 +129,7 @@ it("completes an embedded link in its owner without assigning a location or reme
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
   expect(onComplete).toHaveBeenCalledOnce();
-  expect(mocks.refresh).toHaveBeenCalledOnce();
+  expect(mocks.refresh).not.toHaveBeenCalled();
   expect(mocks.assign).not.toHaveBeenCalled();
   expect(container.querySelector('input[name="email"]')).toBeNull();
   expect(document.cookie).toContain("loginMethod=password");

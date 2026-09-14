@@ -5,6 +5,26 @@ contract lives in `docs/upgrading.md`.
 
 ## Unreleased
 
+### Login No Longer Waits for a Server Refresh
+
+`createLoginStep()` still reads the server auth state and starts skipped for a signed-in visit, but its
+controller now follows browser identity alone: losing identity brings the step forward, and signing in
+again skips it and resumes the flow. The `always` option is gone. Signing in inside a flow updates
+browser identity in place and advances; the embedded continuation no longer calls `router.refresh()`,
+and the step shows "Signed in as …" with Continue and "Use a different account" when revisited.
+Previously the flow waited for a server refresh to compose the steps that depend on identity, and a
+retained page instance could resurface around that refresh.
+
+Migration steps:
+
+- Compose `signin: createLoginStep({ title })` and every other step unconditionally; the ledger and
+  the login step's live prerequisite gate progress.
+- Anything a step took from the server because it needed identity, such as the account's saved
+  details, must reach the browser through a client query keyed by user id, hydrated from the server for
+  a signed-in visit and written back on save. Civic's `AccountDetailsStep` is the reference.
+- A standalone login page that relied on the refresh to redirect needs a final step that leaves for
+  the destination.
+
 ### Flow URLs Never Name a Step
 
 StepFlow no longer reads or writes a step in the URL. Every visit enters at the first step, a refresh

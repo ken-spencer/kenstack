@@ -7,35 +7,32 @@ import { loadLoginFormProps } from "../loadFormProps";
 import StepLoginForm from "./Form";
 import LoginController from "./Controller";
 
+// Composed for every visit. A visit that starts signed in skips the step and
+// its controller brings it back only if identity is lost; a visit that starts
+// signed out keeps it as an ordinary step. Signing in updates browser
+// identity in place; nothing here refreshes the server.
 export async function createLoginStep({
-  always = false,
   title = "Sign in",
 }: {
-  // Requested for flows that always include sign-in.
-  always?: boolean;
   title?: string;
 } = {}): Promise<Step> {
-  const authState = always ? undefined : await loadPublicAuthState();
-  const skipped = authState
-    ? authState.state === "authenticated" || authState.state === "proven"
-    : undefined;
+  const authState = await loadPublicAuthState();
 
   return {
-    controller: authState ? (
-      <LoginController authState={authState} />
-    ) : undefined,
-    skipped,
-    // A redeemed email challenge must not survive into the next login.
+    controller: <LoginController authState={authState} />,
     content: (
-      <div
-        className="mt-7 max-w-[560px]"
-        key={skipped ? "identified" : "signin"}
-      >
+      <div className="mt-7 max-w-[560px]">
         <Suspense fallback={<div className="min-h-72 animate-pulse" />}>
           <RememberedStepLoginForm />
         </Suspense>
       </div>
     ),
+    // A signed-in visit starts skipped; a signed-out visit gets an ordinary
+    // step, not a live prerequisite, so signing in and continuing completes it.
+    skipped:
+      authState.state === "authenticated" || authState.state === "proven"
+        ? true
+        : undefined,
     title,
   };
 }

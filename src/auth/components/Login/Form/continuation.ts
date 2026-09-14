@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback } from "react";
-import { useRouter } from "next/navigation";
 
 import { getSafeReturnToPath } from "@kenstack/auth/returnTo";
 import type { PublicAuthState } from "@kenstack/auth/server/state";
@@ -36,17 +35,15 @@ export function resolveReturnTo({ anchor, mode }: Continuation) {
 }
 
 export function useCompleteLogin({ mode, onComplete }: Continuation) {
-  const router = useRouter();
   return useCallback(
     (path: string, authState: PublicAuthState) => {
       if (mode === "embedded") {
         setUserInfo(authState);
         onComplete();
-        router.refresh();
         return;
       }
       window.location.assign(path);
     },
-    [mode, onComplete, router],
+    [mode, onComplete],
   );
 }
