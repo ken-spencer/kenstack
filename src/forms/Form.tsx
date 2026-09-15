@@ -85,6 +85,7 @@ export default function FormContainer<
   mutationFn,
   onError,
   onSuccess,
+  recaptchaAction,
   schema,
   validationMessage,
   ...props
@@ -100,6 +101,7 @@ export default function FormContainer<
       defaultValues={defaultValues}
       onError={onError}
       onSuccess={onSuccess}
+      recaptchaAction={recaptchaAction}
     >
       <Form
         onSubmit={onSubmit}

@@ -5,6 +5,34 @@ contract lives in `docs/upgrading.md`.
 
 ## Unreleased
 
+### GroupField Owns Grouped Controls
+
+`GroupField` renders a field whose control is a set of buttons sharing one value. Its fieldset
+receives the field's ref, id, `aria-describedby` and `aria-invalid`, so focus-on-error reaches the
+group and its message is announced. Previously each host rendered a `Field` with a custom fieldset and
+registered a hidden input, which could neither take focus nor carry the message.
+
+Migration steps:
+
+- Replace a `Field` whose render contains a hidden input plus buttons with `GroupField`; pass the
+  legend as `label`, keep the buttons in `render`, and drop the hidden input.
+
+### Forms Request Their Own reCAPTCHA Token
+
+`Form` and `FormProvider` accept `recaptchaAction`. When set, the mutation requests a token under that
+action and sends it as `recaptchaToken` with the variables; a rejected token request surfaces in the
+form's status outlet. Previously each submit handler called `useGoogleReCaptcha` and merged the token
+into the mutation variables itself, and a rejected request left the form silent.
+
+Migration steps:
+
+- Mount `RecaptchaProvider` from `@kenstack/context/RecaptchaProvider` once, above every form that
+  names an action; a form with `recaptchaAction` and no provider fails every submission.
+- Add `recaptchaAction="<action>"` to each `Form` whose API calls `recaptcha()`, and remove the
+  `useGoogleReCaptcha` hook and the `recaptchaToken` merge from its submit handler.
+- A request made outside a form mutation, such as the email login's direct `fetcher` call, keeps its
+  own `executeRecaptcha` call.
+
 ### Login No Longer Waits for a Server Refresh
 
 `createLoginStep()` still reads the server auth state and starts skipped for a signed-in visit, but its
@@ -322,7 +350,7 @@ New API:
   - `@app/roles`: the role registry as the default export (`@kenstack/auth/roles` unless the host
     overrides it).
   - `@app/email`: the named `EmailContainer`, `attachments`, and `loadEmailFrom`.
-  `mocks/app/*` in Kenstack is the reference shape for each binding.
+    `mocks/app/*` in Kenstack is the reference shape for each binding.
 - Auth exports named functions directly from `@kenstack/auth/server`; Kenstack features may import the
   narrower `auth/server/auth`, `auth/server/state`, or `auth/server/user` owner.
 - Audit callers, including auth, import `audit(...)` from `@kenstack/logger`.
@@ -419,6 +447,7 @@ Migration steps:
   ```
 
   Ordinary nested `QueryProvider` calls now share the owning client.
+
 - Remove assumptions that `user-info` survives a reload for up to 12 hours. The current authentication
   state is loaded from the server and may be fetched again on the client.
 - A site that deliberately requires persisted queries must own and configure a TanStack
