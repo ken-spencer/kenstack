@@ -296,7 +296,8 @@ class MentionPluginView {
       this.repositionFrame = null;
     }
     this.clearRequest();
-    this.root.unmount();
+    // Editor destruction can run during the parent React root's commit.
+    queueMicrotask(() => this.root.unmount());
     mentionPluginViews.delete(this.view);
     this.element.remove();
   }

@@ -5,8 +5,7 @@ import Submit from "@kenstack/forms/Submit";
 
 import type { Continuation } from "./continuation";
 
-// An embedded form submits through its flow's action renderer; its secondary
-// link follows the action bar in both modes.
+// An embedded form submits through its flow's action renderer.
 export default function LoginSubmit({
   children,
   continuation,
@@ -16,14 +15,15 @@ export default function LoginSubmit({
   continuation: Continuation;
   label: string;
 }) {
-  return (
+  return continuation.mode === "embedded" ? (
     <>
-      {continuation.mode === "embedded" ? (
-        <StepActions next={label} />
-      ) : (
-        <Submit>{label}</Submit>
-      )}
+      <StepActions next={label} />
       {children}
     </>
+  ) : (
+    <div className="login-actions">
+      <Submit>{label}</Submit>
+      {children}
+    </div>
   );
 }

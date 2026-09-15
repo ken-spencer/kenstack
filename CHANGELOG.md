@@ -5,6 +5,13 @@ contract lives in `docs/upgrading.md`.
 
 ## Unreleased
 
+### Relationships Without A Discriminator Column
+
+`defineRelationships` accepts a through table without a `relationship` column. The resolved
+relationship then has no `relationship` value, and the filter, load, and save queries omit the
+discriminator clause, so a plain join table can use `relationshipField(...)` and `filter: true`.
+Existing definitions are unchanged.
+
 ### Payments Use Server Confirmation
 
 `Payment` now uses deferred Stripe Elements with `amountCents`, `currency`, `recurring`, and
@@ -104,10 +111,15 @@ Migration steps:
 Next.js router navigation and could request another Server Component render. The existing `routerMode`
 option still chooses `replace` (default) or `push`; there is no separate navigation-mode option.
 Filter writes retain the current page hash. Back/Forward restore the store, and an external URL
-change cancels pending debounced input.
+change cancels pending debounced input. The hook returns a fourth element: the search params as the
+store last wrote them, until Next's `useSearchParams` delivers the same URL one render later. Read
+parameters the store does not own (`page`) from it instead of `useSearchParams()`; otherwise a filter
+change from page 2 or later queries the new filters with the stale page once before the reset arrives.
 
 Hosts must load changing list results through `useQuery`, keyed by the debounced filter state, with
-server-loaded initial results seeding the same query cache. Keep authentication and database access
+server-loaded initial results seeding the same query cache; `HydratedQuery` from
+`@kenstack/context/HydratedQuery` seeds one query (`queryKey`, `data`) for the client tree it wraps,
+including the `io()` prerender boundary. Keep authentication and database access
 in the server loader and authenticated API handler, and invalidate affected browser queries after
 successful writes. A list that only reads server `searchParams` will otherwise stop updating when its
 filters change. Migrate those consumers when adopting this revision; do not restore router navigation
@@ -654,11 +666,13 @@ New API:
 
 - `resolveListDraft()` from `@kenstack/db/queries` reads Draft Mode and requires an admin when it is
   enabled. Pass the returned serializable boolean into the cached function.
-- `listQuery(table, { draft, select, joins?, where?, orderBy?, limit? })` owns both the standard list
-  query and its earliest-future-publication query, using one publication time for both. It returns
-  `[rows, publicationCacheLife]`; the second value is `undefined` when no scheduled publication can
-  change that list. `rows` carry the selection's inferred type; remove casts or annotations that
-  widened them from `any[]`.
+- `listQuery(table, { draft, select, cacheTags?, cacheLife?, joins?, where?, orderBy?, limit? })`
+  owns both the standard list query and its earliest-future-publication query, using one publication
+  time for both. With `cacheTags` it tags the caller's `"use cache"` entry and applies its lifetime:
+  the `cacheLife` option, default `"max"`, shortened to the earliest future publication; Next keeps
+  the shortest, which also covers a function that loads more than one list. Without `cacheTags` it
+  returns the rows alone. Rows are typed by the selection; remove casts or annotations that widened
+  them from `any[]`.
 
 Migration steps:
 
@@ -669,9 +683,12 @@ Migration steps:
 - For a list that must remain public during Draft Mode, pass `draft: false` directly and keep a
   single cached loader. Purchase options and other public choice lists must not change because an admin
   has a preview cookie; validate submitted choices against authoritative uncached state.
-- In the cached function, call `listQuery(...)`, then call
-  `cacheLife(publicationCacheLife ?? "max")`. Keep the module's ordinary cache tags; scheduled expiry
-  does not replace invalidation for edits, deletions, or newly scheduled records.
+- In the cached function, move the module's cache tags into `listQuery(...)`'s `cacheTags`, return
+  its result, and delete the `cacheTag` and per-list `cacheLife` calls, including any manual merge of
+  several lists' lifetimes. Scheduled expiry does not replace invalidation for edits, deletions, or
+  newly scheduled records.
+- A call outside a `"use cache"` scope, such as a command validating a submitted choice or an uncached
+  search, passes no `cacheTags`.
 - For a bounded filtered variant, construct one SQL predicate inside the cached function from its
   serializable arguments and pass it once as `where`. Remove one-use predicate wrappers. The helper
   applies the predicate to both queries and applies publication visibility before row limits.
@@ -827,24 +844,21 @@ Migration steps:
 
 Old API:
 
-- `formatUserInitials(...)` accepted an `email` input and fell back to the email's first two letters,
-  then to a `fallback` defaulting to empty text. `Avatar` with empty initials rendered an empty
-  colored circle.
+- `Avatar` with empty initials rendered an empty colored circle.
 
 New API:
 
-- `formatUserInitials(...)` derives initials from names only; two letters of an email were noise and
-  the input is removed. The `fallback` default remains empty text.
 - `Avatar` owns the empty state: with no image and no initials it renders a muted circle with a
-  person silhouette, so nameless accounts read as "account without a name" everywhere (header menu,
-  admin lists, form placeholders) instead of fabricated letters.
+  person silhouette. `formatUserInitials(...)` is unchanged: names first, then two letters of the
+  `email` when the caller supplies one, then `fallback`, so only an account with neither reaches the
+  silhouette.
 - The users table's `given_name` and `family_name` columns default to empty text, matching
   `middle_name`, so an account can exist before its holder supplies a name.
 
 Migration steps:
 
-- Remove `email` from `formatUserInitials(...)` call sites; rely on `Avatar`'s silhouette for
-  nameless users, or pass an explicit `fallback` where different presentation is required.
+- Pass `email` to `formatUserInitials(...)` wherever the caller has it, so a nameless account keeps
+  a distinct avatar; pass an explicit `fallback` where different presentation is required.
 - Generate the append-only host migration that sets `DEFAULT ''` on `users.given_name` and
   `users.family_name`.
 
@@ -1101,6 +1115,7 @@ Migration steps:
   - `@kenstack/fields/records` → `@kenstack/records`
   - `@kenstack/fields/records/loadRecord` → `@kenstack/records/load`
   - `@kenstack/fields/records/saveRecord` → `@kenstack/records/save`
+  - `@kenstack/fields/records/mediaUpload` → `@kenstack/fields/mediaUpload`
   - `@kenstack/fields/select` → `@kenstack/records/select`
   - `@kenstack/fields/supportedCountries` → `@kenstack/fields/address/countries`
   - `@kenstack/fields/countryRegionSchemas` → `@kenstack/fields/address`

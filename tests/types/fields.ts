@@ -140,6 +140,21 @@ if (false) {
   // @ts-expect-error Single relationships do not accept many-valued defaults.
   relationshipField({ mode: "single", default: [] });
 
+  const customRelationshipSchema = z.array(
+    z.object({
+      id: z.number(),
+      label: z.string(),
+      relationship: z.enum(["parent", "spouse"]),
+    }),
+  );
+  const customRelationship = relationshipField({
+    zod: customRelationshipSchema,
+  });
+  expectTypeOf<z.output<typeof customRelationship.zod>>().toEqualTypeOf<
+    z.output<typeof customRelationshipSchema>
+  >();
+  void customRelationship;
+
   const toggle = toggleField({ checked: "combo", unchecked: "item" });
   const checkbox = checkboxField({ checked: 1, default: 1, unchecked: 0 });
   expectTypeOf(toggle.default).toEqualTypeOf<"combo" | "item">();
@@ -293,6 +308,22 @@ if (false) {
     name: "relationship_type_article_topics",
     from: { name: "article", table: articles },
     to: { name: "topic", table: topics },
+  });
+  defineRelationships({
+    topics: {
+      from: articles,
+      through: articleTopics,
+      to: topics,
+      fromColumn: articleTopics.articleId,
+      toColumn: articleTopics.topicId,
+    },
+  });
+  const plainArticleTopics = pgTable("relationship_type_plain_links", {
+    articleId: integer("article_id").notNull(),
+    topicId: integer("topic_id").notNull(),
+  });
+  defineRelationships({
+    topics: { from: articles, through: plainArticleTopics, to: topics },
   });
   const unrelatedThroughTable = defineTable({
     name: "relationship_type_unrelated",

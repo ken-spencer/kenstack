@@ -244,6 +244,54 @@ describe("module field servers", () => {
     expect(moduleConfig.admin.fields.categoryId).not.toHaveProperty("save");
   });
 
+  it("filters a through table without a discriminator by its columns alone", () => {
+    const articles = Object.assign(
+      defineTable({ name: "relationship_plain_articles", columns: {} }),
+      { [relationshipName]: "article" as const },
+    );
+    const topics = Object.assign(
+      defineTable({ name: "relationship_plain_topics", columns: {} }),
+      { [relationshipName]: "topic" as const },
+    );
+    const through = pgTable("relationship_plain_links", {
+      articleId: integer("article_id").notNull(),
+      topicId: integer("topic_id").notNull(),
+    });
+    const relationships = defineRelationships({
+      topics: { from: articles, through, to: topics },
+    });
+    const moduleConfig = defineModule({
+      name: "relationship-plain-articles",
+      admin: {
+        fields: defineFields({
+          fields: { topics: defineRelationshipField({ filter: true }) },
+        }),
+        fieldServers: { topics: relationshipField(relationships.topics) },
+        table: articles,
+        list: {},
+      },
+    });
+
+    if (
+      !("list" in moduleConfig.admin) ||
+      !("filters" in moduleConfig.admin.list)
+    ) {
+      throw new Error("Expected a list module.");
+    }
+
+    expect(relationships.topics.relationship).toBeUndefined();
+    expect(() =>
+      defineRelationships({
+        topics: { from: articles, through, to: topics, relationship: "topic" },
+      }),
+    ).toThrow("no relationship column");
+    const query = new PgDialect().sqlToQuery(
+      sql`${moduleConfig.admin.list.filters.topics.field}`,
+    );
+    expect(query.sql).toContain('from "relationship_plain_links"');
+    expect(query.sql).not.toContain('"relationship" =');
+  });
+
   it("derives persistence keys from relationship column overrides", () => {
     const articles = Object.assign(
       defineTable({ name: "relationship_override_articles", columns: {} }),

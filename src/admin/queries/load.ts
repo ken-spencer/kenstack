@@ -53,7 +53,7 @@ async function loadCachedAdminRecord(
   target: AdminLoadTarget,
   parentForeignKey?: string,
 ): Promise<AdminEditItem | null> {
-  "use cache";
+  "use cache: remote";
   cacheLife("max");
   cacheTag(adminLoadCacheTag(name, target), name);
 
@@ -111,7 +111,7 @@ export async function loadOneToOne({
   parentId: number;
   relationKey: string;
 }) {
-  "use cache";
+  "use cache: remote";
   cacheLife("max");
   cacheTag(name, adminLoadCacheTag(name, parentId));
 

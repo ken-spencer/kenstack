@@ -20,13 +20,8 @@ if (false) {
       tags: sql<string[]>`'{}'::text[]`,
     },
   });
-  expectTypeOf<Awaited<typeof listed>[0]>().toEqualTypeOf<
+  expectTypeOf<Awaited<typeof listed>>().toEqualTypeOf<
     { id: number; title: string; tags: string[] }[]
   >();
-  expectTypeOf(listed).resolves.toExtend<
-    readonly [
-      unknown[],
-      { stale: number; revalidate: number; expire: number } | undefined,
-    ]
-  >();
+  void listed;
 }

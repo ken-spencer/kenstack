@@ -21,7 +21,7 @@ type RuntimeRelationshipTable<TRelationshipName extends string = string> =
   AnyPgTable & RelationshipTable<string, TRelationshipName>;
 
 type RelationshipInput = {
-  through: AnyPgTable & { relationship: RelationshipColumn };
+  through: AnyPgTable & { relationship?: RelationshipColumn };
   from: RuntimeRelationshipTable;
   to: RuntimeRelationshipTable;
   fromColumn?: RelationshipColumn;
@@ -83,10 +83,19 @@ export function defineRelationships<
             toColumnName as keyof typeof relationship.through
           ] as RelationshipColumn);
         const throughColumns = getTableColumns(relationship.through);
+        // A through table without the column holds one relationship.
+        const hasDiscriminator = "relationship" in throughColumns;
+        if (relationship.relationship !== undefined && !hasDiscriminator) {
+          throw new Error(
+            `Relationship "${key}" names a discriminator but its through table has no relationship column.`,
+          );
+        }
         const resolved = {
           ...relationship,
           kind: "manyToMany",
-          relationship: relationship.relationship ?? pluralize.singular(key),
+          relationship: hasDiscriminator
+            ? (relationship.relationship ?? pluralize.singular(key))
+            : undefined,
           fromColumnKey: relationship.fromColumn
             ? getRelationshipColumnKey(throughColumns, fromColumn, "from")
             : fromColumnName,
@@ -127,14 +136,14 @@ function getRelationshipColumnKey(
 
 export type Relationship = {
   kind: "manyToMany";
-  through: AnyPgTable & { relationship: RelationshipColumn };
+  through: AnyPgTable & { relationship?: RelationshipColumn };
   from: RuntimeRelationshipTable;
   to: RuntimeRelationshipTable;
   fromColumn: RelationshipColumn;
   toColumn: RelationshipColumn;
   fromColumnKey: string;
   toColumnKey: string;
-  relationship: string;
+  relationship?: string;
   fromPrimaryKey: RelationshipColumn;
   toPrimaryKey: RelationshipColumn;
   label?: RelationshipColumn | SQL;

@@ -3,6 +3,8 @@ import * as z from "zod";
 import { integer, pgTable, text } from "drizzle-orm/pg-core";
 import type { ComponentProps } from "react";
 
+import { defineModule } from "@kenstack/admin/module";
+import { defineKeyTable } from "@kenstack/admin/table";
 import { defineClient, defineOneToOneClient } from "@kenstack/admin/client";
 import { defineFields } from "@kenstack/admin/fields";
 import {
@@ -252,4 +254,22 @@ if (false) {
     table: records,
     values: { title: "Saved" },
   });
+}
+
+if (false) {
+  const settingsModule = defineModule({
+    name: "type_test_settings",
+    settings: {
+      table: defineKeyTable({
+        name: "type_test_settings",
+        columns: { title: text("title").notNull() },
+      }),
+      fields: defineFields({ fields: { title: textField() } }),
+      cacheTag: "type_test_settings",
+    },
+  });
+  expectTypeOf(
+    settingsModule.settings.defaultValues.title,
+  ).toEqualTypeOf<string>();
+  expectTypeOf(settingsModule.settings.table.title.getSQL).toBeFunction();
 }

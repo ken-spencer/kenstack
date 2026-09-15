@@ -61,7 +61,9 @@ type ConfiguredRelationshipField<
     default: "default" extends keyof TConfig
       ? z.output<TSchema>
       : TBase["default"];
-    zod: TSchema;
+    zod: TConfig extends { zod: infer TConfiguredSchema extends z.ZodType }
+      ? TConfiguredSchema
+      : TSchema;
   };
 
 // One public factory keeps cardinality definition-owned while preserving the

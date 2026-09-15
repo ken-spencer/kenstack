@@ -61,7 +61,7 @@ export function isRelationshipField(
 export function relationshipFilterField(relationship: Relationship) {
   const where = [
     eq(relationship.fromColumn, relationship.fromPrimaryKey),
-    eq(relationship.through.relationship, relationship.relationship),
+    ...discriminatorWhere(relationship),
   ];
 
   if (hasSoftDelete(relationship.through)) {
@@ -92,6 +92,12 @@ function hasSoftDelete(table: object): table is SoftDeleteTable {
   return "deletedAt" in table;
 }
 
+function discriminatorWhere({ relationship, through }: Relationship) {
+  return through.relationship && relationship !== undefined
+    ? [eq(through.relationship, relationship)]
+    : [];
+}
+
 async function loadRelationship({
   db,
   tableId,
@@ -104,7 +110,7 @@ async function loadRelationship({
   const label = relationship.label ?? relationship.toPrimaryKey;
   const where = [
     eq(relationship.fromColumn, tableId),
-    eq(relationship.through.relationship, relationship.relationship),
+    ...discriminatorWhere(relationship),
   ];
 
   if (hasSoftDelete(relationship.through)) {
@@ -142,7 +148,7 @@ async function saveRelationship({
 }) {
   const where = [
     eq(relationship.fromColumn, tableId),
-    eq(relationship.through.relationship, relationship.relationship),
+    ...discriminatorWhere(relationship),
   ];
   const currentWhere = [...where];
 
@@ -211,7 +217,9 @@ async function saveRelationship({
         addedIds.map((id) => ({
           [relationship.fromColumnKey]: tableId,
           [relationship.toColumnKey]: id,
-          relationship: relationship.relationship,
+          ...(relationship.relationship === undefined
+            ? {}
+            : { relationship: relationship.relationship }),
         })),
       )
       .onConflictDoNothing();

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { createContext, use, useContext, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import type {
   AdminFilterMeta,
   AdminSortMeta,
@@ -92,7 +91,7 @@ export function AdminListProvider({
 
   const [selected, setSelected] = useState<number[]>([]);
   const defaultFilterState = createDefaultListQueryState(sort);
-  const [filters, debouncedFilters, setFilters] = useQueryStore(
+  const [filters, debouncedFilters, setFilters, searchParams] = useQueryStore(
     defaultFilterState,
     {
       schema: createListSearchSchema({
@@ -108,7 +107,6 @@ export function AdminListProvider({
     },
   );
 
-  const searchParams = useSearchParams();
   const isReorderSort =
     !filters.trash &&
     sort.find((option) => option.name === filters.sort)?.direction === false;

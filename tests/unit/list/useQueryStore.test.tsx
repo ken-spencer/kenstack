@@ -32,7 +32,7 @@ import useQueryStore from "@kenstack/list/useQueryStore";
 const schema = z.object({ q: z.string().default("") });
 const onPopState = vi.fn();
 function Search() {
-  const [value, debounced, setValue] = useQueryStore(
+  const [value, debounced, setValue, searchParams] = useQueryStore(
     { q: "" },
     {
       schema,
@@ -50,10 +50,12 @@ function Search() {
         onChange={(event) => setValue({ q: event.target.value })}
       />
       <output>{debounced.q}</output>
+      <span data-page>{searchParams.get("page") ?? "none"}</span>
       <button onClick={() => setValue({ q: "Horror" }, false)}>Horror</button>
     </>
   );
 }
+const pushState = window.history.pushState.bind(window.history);
 const replaceState = window.history.replaceState.bind(window.history);
 let container: HTMLDivElement;
 let root: ReturnType<typeof createRoot>;
@@ -162,4 +164,23 @@ it("does not add history for equivalent query encodings", async () => {
     window.dispatchEvent(new PopStateEvent("popstate"));
   });
   expect(container.querySelector("input")!.value).toBe("drama");
+});
+
+it("drops the page param as soon as the store writes the URL", async () => {
+  replaceState(null, "", "/base/catalogue?q=drama&page=3#collection");
+  navigation.search = window.location.search;
+  // Next delivers its search-parameter update a render after the write.
+  vi.mocked(window.history.pushState).mockImplementation((...args) => {
+    pushState(...args);
+    setTimeout(() => window.dispatchEvent(new Event("next-search")), 0);
+  });
+  await act(async () => root.render(<Search />));
+  const page = () => container.querySelector("[data-page]")?.textContent;
+  expect(page()).toBe("3");
+  await act(async () => container.querySelector("button")!.click());
+  expect(navigation.search).toBe("?q=drama&page=3");
+  expect(page()).toBe("none");
+  await act(async () => vi.advanceTimersByTime(0));
+  expect(navigation.search).toBe("?q=horror");
+  expect(page()).toBe("none");
 });

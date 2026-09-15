@@ -46,6 +46,11 @@ export default function useQueryStore<T extends Record<string, unknown>>(
 
   const [value, setValue] = useState<T>(() => importSearchParams());
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  // Next delivers the store's own URL write through useSearchParams one render
+  // later; until then, readers of params the store does not own (page) see
+  // what was written.
+  const [writtenSearchParams, setWrittenSearchParams] =
+    useState<URLSearchParams | null>(null);
   const valueRef = useRef(value);
   const initialSearchParams = useRef(searchParams);
   const skipRef = useRef(false);
@@ -55,6 +60,7 @@ export default function useQueryStore<T extends Record<string, unknown>>(
     if (initialSearchParams.current === searchParams) {
       return;
     }
+    setWrittenSearchParams(null);
     if (skipRef.current === true) {
       skipRef.current = false;
       return;
@@ -99,6 +105,7 @@ export default function useQueryStore<T extends Record<string, unknown>>(
     } else {
       window.history.replaceState(null, "", href);
     }
+    setWrittenSearchParams(params);
   };
 
   const set: SetQueryStore<T> = (next, debounce = true) => {
@@ -133,5 +140,10 @@ export default function useQueryStore<T extends Record<string, unknown>>(
     }
   };
 
-  return [value, debouncedValue, set] as const;
+  return [
+    value,
+    debouncedValue,
+    set,
+    writtenSearchParams ?? searchParams,
+  ] as const;
 }

@@ -255,7 +255,6 @@ reconstruct it around them.
 import "server-only";
 
 import { asc } from "drizzle-orm";
-import { cacheLife, cacheTag } from "next/cache";
 
 import { listQuery, resolveListDraft } from "@kenstack/db/queries";
 import { faq } from "./tables";
@@ -266,17 +265,13 @@ export async function loadFaqList() {
 
 async function loadCachedFaqList(draft: boolean) {
   "use cache: remote";
-  cacheTag("faq");
 
-  const [rows, publicationCacheLife] = await listQuery(faq, {
+  return listQuery(faq, {
+    cacheTags: ["faq"],
     draft,
     select: { id: faq.id, title: faq.title, slug: faq.slug },
     orderBy: [asc(faq.sortOrder), asc(faq.id)],
   });
-
-  cacheLife(publicationCacheLife ?? "max");
-
-  return rows;
 }
 ```
 
@@ -293,18 +288,22 @@ The rules the shape encodes:
 - A loader whose contract must remain public during Draft Mode passes `draft: false` directly and can
   keep the cache directive on its exported function. Use this for purchase options and other public
   choice lists, which an admin preview cookie must never change; the command still validates a
-  submitted choice against authoritative uncached state.
+  submitted choice against authoritative uncached state with a `listQuery(...)` call that passes no
+  `cacheTags`.
 - The cache wrapper tags the cache with the module's `revalidate` tags plus every joined dependency
-  whose changes can alter the result. A dependency with no reliable invalidation tag stays uncached or
-  is split from the cached content. Filtered lists may add parameterized tags, for example
-  `cacheTag("news", "news:tag:" + tag)`, but these enable narrow invalidation only for mutation paths
+  whose changes can alter the result; a list passes them as `cacheTags`. A dependency with no reliable
+  invalidation tag stays uncached or is split from the cached content. Filtered lists may add
+  parameterized tags, for example `cacheTags: ["news", "news:tag:" + tag]`, but these enable narrow
+  invalidation only for mutation paths
   that invalidate the narrow tag alone; standard module saves invalidate the broad module tag, and with
   it every entry.
 - `listQuery(...)` owns the row query and the earliest-future-publication query. It applies the same
   table, publication time, optional `innerJoin(...)` calls, and optional `where` predicate to both,
-  applies visibility before row ordering and limits, and returns the rows with an inline cache profile
-  or `undefined`. The cached function still calls `cacheLife(publicationCacheLife ?? "max")` itself so
-  cache policy stays beside `"use cache"`.
+  applies visibility before row ordering and limits, and, when `cacheTags` is passed, tags the entry
+  and applies its lifetime: the `cacheLife` option, default `"max"`, shortened to the earliest future
+  publication. Next keeps the shortest lifetime, which also covers a function that loads more than one
+  list. A call without `cacheTags`, such as a command's authoritative read or an uncached search,
+  returns the rows alone.
 - For a filtered cached variant, build its SQL predicate inside the cached function from serializable
   arguments and pass it once as `where`; a Drizzle `SQL` object never crosses the cache boundary. Use
   `joins` when an inner join is required and keep the related predicate in `where`. The joined

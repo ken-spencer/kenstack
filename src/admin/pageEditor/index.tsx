@@ -35,7 +35,7 @@ export const PageEditorAsync = async ({
   defaultValues = {},
   children,
 }: Props) => {
-  "use cache";
+  "use cache: remote";
   const content = await loadContent(slug, { tenant, defaultValues });
 
   return (

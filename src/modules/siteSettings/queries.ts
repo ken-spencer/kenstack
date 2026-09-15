@@ -10,7 +10,7 @@ import { fields } from "./fields";
 import { siteSettings } from "./tables";
 
 export async function loadSiteSettings() {
-  "use cache";
+  "use cache: remote";
   cacheLife("max");
   cacheTag("site-settings");
 
