@@ -12,6 +12,23 @@ relationship then has no `relationship` value, and the filter, load, and save qu
 discriminator clause, so a plain join table can use `relationshipField(...)` and `filter: true`.
 Existing definitions are unchanged.
 
+### Payments Use Server Confirmation
+
+`Payment` now uses deferred Stripe Elements with `amountCents`, `currency`, `recurring`, and
+`onConfirm(confirmationTokenId)`. Replace Checkout Session creation and its client secret with a
+side-effect-free quote. In `onConfirm`, persist the accepted order and collection, confirm the
+payment on the server, and return its `sessionId`, `paymentStatus`, and optional `clientSecret`.
+`onComplete(sessionId)` routes to the host's server-verified confirmation view after any required
+authentication. Reconcile PaymentIntent and invoice webhooks against the same stored collection.
+
+Commerce tables remain opt-in through `@kenstack/payments/tables`. Hosts that need a Stripe
+customer link compose `paymentUserColumns` into their own user table.
+
+`setInstallmentSchedule` now uses the subscription's existing monthly price for one phase covering
+`paymentCount` months, including the initial payment's period. Remove `finalPaymentCents` from calls.
+Put any rounding adjustment on the first invoice when creating the subscription; the helper no longer
+creates a separate final-price phase. Already configured schedules retain their existing terms.
+
 ### GroupField Owns Grouped Controls
 
 `GroupField` renders a field whose control is a set of buttons sharing one value. Its fieldset

@@ -3,6 +3,7 @@
 import type { createDb } from "@kenstack/db";
 
 type Tables = typeof import("@kenstack/db/tables") &
+  typeof import("@kenstack/payments/tables") &
   typeof import("@kenstack/db/tables/verification") &
   typeof import("@kenstack/modules/users/tables");
 
