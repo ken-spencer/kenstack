@@ -38,7 +38,7 @@ export const loadContent = cache(
       defaultValues = {},
     }: { tenant?: string; defaultValues?: DefaultValues } = {},
   ) => {
-    "use cache";
+    "use cache: remote";
     cacheLife("max");
     cacheTag("content:" + slug);
 
@@ -75,7 +75,7 @@ export const loadMeta = async (
   slug: string,
   options: { tenant?: string; defaultValues?: DefaultValues } = {},
 ) => {
-  "use cache";
+  "use cache: remote";
   cacheLife("max");
   cacheTag("content:" + slug);
 

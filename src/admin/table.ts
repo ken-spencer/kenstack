@@ -341,8 +341,12 @@ type RelationshipEntity<TName extends string, TTable extends AdminTable> = {
   table: TTable;
 };
 
-type RelationshipColumns<TFromName extends string, TToName extends string> = {
-  [K in `${TFromName}Id` | `${TToName}Id` | "relationship"]: AnyPgColumn;
+type RelationshipColumns<
+  TFromName extends string,
+  TToName extends string,
+  TColumn,
+> = {
+  [K in `${TFromName}Id` | `${TToName}Id` | "relationship"]: TColumn;
 };
 
 export function defineRelationship<
@@ -385,5 +389,10 @@ export function defineRelationship<
     ],
   });
 
-  return table as typeof table & RelationshipColumns<TFromName, TToName>;
+  return table as typeof table &
+    RelationshipColumns<
+      TFromName,
+      TToName,
+      (typeof table)["_"]["columns"][keyof (typeof table)["_"]["columns"]]
+    >;
 }

@@ -35,7 +35,10 @@ import type {
   FieldCheckedValue,
   FieldInputOption,
 } from "@kenstack/fields/field";
-import { createDefaultValues } from "@kenstack/fields/createDefaultValues";
+import {
+  type DefaultValuesFromFields,
+  createDefaultValues,
+} from "@kenstack/fields/createDefaultValues";
 import { createSchemaFromFields } from "@kenstack/fields/createSchemaFromFields";
 import {
   resolveServerFields,
@@ -208,7 +211,14 @@ type ResolvedModule<
   admin: TModule extends { admin: infer TAdmin }
     ? Omit<TAdmin, keyof AnyAdminConfig> & AnyAdminConfig & { table: TTable }
     : undefined;
-  settings: ResolvedModuleSettings | undefined;
+  settings: TModule extends {
+    settings: infer TSettings extends ModuleSettingsConfig;
+  }
+    ? Omit<ResolvedModuleSettings, "table" | "defaultValues"> & {
+        table: TSettings["table"];
+        defaultValues: DefaultValuesFromFields<TSettings["fields"]>;
+      }
+    : undefined;
   parent: ModuleParentOptions | undefined;
 };
 

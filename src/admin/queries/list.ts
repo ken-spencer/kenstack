@@ -66,7 +66,7 @@ export async function loadAdminList({
 }
 
 async function loadCachedList(name: string) {
-  "use cache";
+  "use cache: remote";
   cacheLife("max");
   cacheTag("admin", adminListCacheTag(name));
 

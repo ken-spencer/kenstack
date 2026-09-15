@@ -18,13 +18,8 @@ import {
 } from "@kenstack/list/querySchema";
 import { loadAdminList } from "@kenstack/admin/queries/list";
 import { loadAdminParentRecord } from "@kenstack/admin/queries/parent";
-import { io } from "next/cache";
+import HydratedQuery from "@kenstack/context/HydratedQuery";
 import { notFound } from "next/navigation";
-import {
-  dehydrate,
-  HydrationBoundary,
-  QueryClient,
-} from "@tanstack/react-query";
 
 type AdminListProps = {
   adminConfig: AnyAdminConfig;
@@ -78,22 +73,11 @@ export default async function AdminListCont({
     notFound();
   }
 
-  // The list load is cached, so nothing above suspends prerendering; the
-  // query cache stamps the current time when it stores the data.
-  await io();
-  const queryClient = new QueryClient();
-
-  queryClient.setQueryData(
-    getAdminListQueryKey({
-      name,
-      parentId,
-      query: initialQuery,
-    }),
-    initialData,
-  );
-
   return (
-    <HydrationBoundary state={dehydrate(queryClient)}>
+    <HydratedQuery
+      data={initialData}
+      queryKey={getAdminListQueryKey({ name, parentId, query: initialQuery })}
+    >
       <AdminListProvider
         name={name}
         parentId={parentId}
@@ -114,6 +98,6 @@ export default async function AdminListCont({
           <Footer />
         </section>
       </AdminListProvider>
-    </HydrationBoundary>
+    </HydratedQuery>
   );
 }

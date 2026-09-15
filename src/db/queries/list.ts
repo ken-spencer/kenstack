@@ -4,6 +4,7 @@ import type {
   PgColumn,
   SelectedFields,
 } from "drizzle-orm/pg-core";
+import { cacheLife, cacheTag } from "next/cache";
 import { draftMode } from "next/headers";
 
 import { db } from "@app/db";
@@ -23,6 +24,8 @@ export async function resolveListDraft() {
 export async function listQuery<TSelection extends SelectedFields>(
   table: AdminContentTable,
   {
+    cacheLife: lifetime = "max",
+    cacheTags,
     draft,
     joins,
     limit,
@@ -30,6 +33,10 @@ export async function listQuery<TSelection extends SelectedFields>(
     select,
     where,
   }: {
+    // A cache profile name; the next scheduled publication shortens it. A
+    // call outside a "use cache" function passes no tags.
+    cacheLife?: string;
+    cacheTags?: string[];
     draft: boolean;
     joins?: (query: Pick<AnyPgSelectQueryBuilder, "innerJoin">) => void;
     limit?: number;
@@ -66,45 +73,47 @@ export async function listQuery<TSelection extends SelectedFields>(
     rowQuery.limit(limit);
   }
 
-  if (draft) {
-    return [await rowQuery, undefined] as const;
-  }
-
   const nextPublicationQuery = db
     .select({ publishedAt: table.publishedAt })
     .from(table);
   joins?.(nextPublicationQuery);
   const [rows, [nextPublication]] = await Promise.all([
     rowQuery,
-    nextPublicationQuery
-      .where(
-        and(
-          isNull(table.deletedAt),
-          eq(table.visibility, "published"),
-          gt(table.publishedAt, now),
-          where,
-        ),
-      )
-      .orderBy(asc(table.publishedAt))
-      .limit(1),
+    cacheTags && !draft
+      ? nextPublicationQuery
+          .where(
+            and(
+              isNull(table.deletedAt),
+              eq(table.visibility, "published"),
+              gt(table.publishedAt, now),
+              where,
+            ),
+          )
+          .orderBy(asc(table.publishedAt))
+          .limit(1)
+      : [],
   ]);
 
-  if (!nextPublication?.publishedAt) {
-    return [rows, undefined] as const;
+  if (!cacheTags) {
+    return rows;
   }
 
-  const secondsUntilNextPublication =
-    (nextPublication.publishedAt.getTime() - now.getTime()) / 1000;
+  cacheTag(...cacheTags);
+  cacheLife(lifetime);
 
-  return [
-    rows,
-    {
+  if (nextPublication?.publishedAt) {
+    const secondsUntilNextPublication =
+      (nextPublication.publishedAt.getTime() - now.getTime()) / 1000;
+
+    cacheLife({
       stale: 30,
       revalidate: Math.min(
         Math.max(0, secondsUntilNextPublication - 1),
         30 * 24 * 60 * 60,
       ),
       expire: Math.min(secondsUntilNextPublication, 365 * 24 * 60 * 60),
-    },
-  ] as const;
+    });
+  }
+
+  return rows;
 }

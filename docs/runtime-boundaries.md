@@ -88,7 +88,8 @@ barrel's runtime boundary is determined by its consumers, not only by its direct
 ## Caching and Suspense
 
 - In cached functions or components, place `cacheTag(...)` as high as it can go without changing
-  behavior, beside `"use cache"` and `cacheLife(...)`, so cache identity is visible with the other cache
+  behavior, beside `"use cache"` and `cacheLife(...)` (for a list, the `cacheTags` option of
+  `listQuery(...)`), so cache identity is visible with the other cache
   setup.
 - Kenstack applications deploy to serverless infrastructure. Use `"use cache: remote"` when caching
   database or API query results so every server instance shares the cached read; regular `"use cache"`

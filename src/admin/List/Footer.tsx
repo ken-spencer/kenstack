@@ -10,6 +10,7 @@ import {
 } from "@kenstack/components/pagination";
 
 import { usePathname, useSearchParams } from "next/navigation";
+import { searchParamsToRecord } from "@kenstack/list/querySchema";
 import { useAdminList } from "./context";
 
 import omit from "lodash-es/omit";
@@ -47,7 +48,7 @@ function PaginationCont({
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const params = omit(Object.fromEntries(searchParams.entries()), "page");
+  const params = omit(searchParamsToRecord(searchParams), "page");
   const isFirst = page <= 1;
   const isLast = totalPages < 1 || page >= totalPages;
   const firstPages = Array.from(

@@ -2,11 +2,14 @@ import { eq } from "drizzle-orm";
 import { integer, pgTable, text } from "drizzle-orm/pg-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { nextPublication, queries, requireUser } = vi.hoisted(() => ({
-  nextPublication: { value: null as Date | null },
-  queries: [] as string[],
-  requireUser: vi.fn(),
-}));
+const { cacheLife, cacheTag, nextPublication, queries, requireUser } =
+  vi.hoisted(() => ({
+    cacheLife: vi.fn(),
+    cacheTag: vi.fn(),
+    nextPublication: { value: null as Date | null },
+    queries: [] as string[],
+    requireUser: vi.fn(),
+  }));
 
 vi.mock("@app/db", async () => {
   return {
@@ -22,6 +25,7 @@ vi.mock("@app/db", async () => {
   };
 });
 vi.mock("@kenstack/auth/server/user", () => ({ requireUser }));
+vi.mock("next/cache", () => ({ cacheLife, cacheTag }));
 vi.mock("next/headers", () => ({ draftMode: vi.fn() }));
 vi.mock("server-only", () => ({}));
 
@@ -42,6 +46,8 @@ const categories = pgTable("categories", {
 
 describe("listQuery", () => {
   afterEach(() => {
+    cacheLife.mockClear();
+    cacheTag.mockClear();
     nextPublication.value = null;
     queries.length = 0;
     vi.useRealTimers();
@@ -49,6 +55,7 @@ describe("listQuery", () => {
 
   it("applies joins to row and publication-expiry queries", async () => {
     await listQuery(articles, {
+      cacheTags: ["articles"],
       draft: false,
       joins: (query) => {
         query.innerJoin(categories, eq(categories.id, articles.categoryId));
@@ -72,13 +79,53 @@ describe("listQuery", () => {
     vi.setSystemTime(now);
     nextPublication.value = new Date(now.getTime() + 500);
 
-    expect(
-      (
-        await listQuery(articles, {
-          draft: false,
-          select: { id: articles.id },
-        })
-      )[1],
-    ).toEqual({ stale: 30, revalidate: 0, expire: 0.5 });
+    await listQuery(articles, {
+      cacheTags: ["articles"],
+      draft: false,
+      select: { id: articles.id },
+    });
+
+    expect(cacheLife).toHaveBeenLastCalledWith({
+      stale: 30,
+      revalidate: 0,
+      expire: 0.5,
+    });
+  });
+
+  it("tags the entry and keeps it for max when nothing is scheduled", async () => {
+    await listQuery(articles, {
+      cacheTags: ["articles", "articles:featured"],
+      draft: false,
+      select: { id: articles.id },
+    });
+
+    expect(cacheTag).toHaveBeenCalledWith("articles", "articles:featured");
+    expect(cacheLife).toHaveBeenCalledTimes(1);
+    expect(cacheLife).toHaveBeenLastCalledWith("max");
+  });
+
+  it("applies a caller's shorter lifetime beside the publication one", async () => {
+    nextPublication.value = new Date(Date.now() + 10 * 60 * 1000);
+
+    await listQuery(articles, {
+      cacheLife: "hours",
+      cacheTags: ["articles"],
+      draft: false,
+      select: { id: articles.id },
+    });
+
+    expect(cacheLife).toHaveBeenNthCalledWith(1, "hours");
+    expect(cacheLife).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ stale: 30 }),
+    );
+  });
+
+  it("reads rows alone without cache tags", async () => {
+    await listQuery(articles, { draft: false, select: { id: articles.id } });
+
+    expect(queries).toHaveLength(1);
+    expect(cacheTag).not.toHaveBeenCalled();
+    expect(cacheLife).not.toHaveBeenCalled();
   });
 });
