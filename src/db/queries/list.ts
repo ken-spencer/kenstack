@@ -99,7 +99,9 @@ export async function listQuery<TSelection extends SelectedFields>(
   }
 
   cacheTag(...cacheTags);
-  cacheLife(lifetime);
+  // Next generates cacheLife overloads from the host's configured profile
+  // names, so a caller-chosen profile goes through the plain signature.
+  (cacheLife as (profile: string) => void)(lifetime);
 
   if (nextPublication?.publishedAt) {
     const secondsUntilNextPublication =
