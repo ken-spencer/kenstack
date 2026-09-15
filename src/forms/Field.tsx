@@ -15,7 +15,7 @@ import {
 import { cn } from "@kenstack/lib/utils";
 import { getFormFieldErrors } from "./internal/fieldErrors";
 
-type RenderProps = {
+export type RenderProps = {
   field: ControllerRenderProps<FieldValues, Path<FieldValues>>;
   fieldState: ControllerFieldState;
 };

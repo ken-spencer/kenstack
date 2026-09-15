@@ -1,5 +1,3 @@
-import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
-
 import type { LoginActionResult } from "@kenstack/auth/api";
 import loginSchema from "@kenstack/auth/schemas/login";
 import type { StatusMessage } from "@kenstack/forms/context";
@@ -29,24 +27,21 @@ export default function PasswordLoginForm({
   onShowEmailLogin: (form: HTMLFormElement | null) => void;
   statusMessage?: StatusMessage;
 }) {
-  const { executeRecaptcha } = useGoogleReCaptcha();
   const completeLogin = useCompleteLogin(continuation);
 
   return (
     <Form<LoginActionResult, Record<string, unknown>, typeof loginSchema>
       className="w-full space-y-4"
       apiPath="/api/auth"
+      recaptchaAction="login"
       schema={loginSchema}
       defaultValues={{ email: emailDefaultValue, password: "" }}
       initialStatusMessage={statusMessage}
-      onSubmit={async ({ data, mutation, form }) => {
+      onSubmit={({ data, mutation, form }) => {
         mutation.mutate(
           {
             ...data,
             returnTo: resolveReturnTo(continuation),
-            recaptchaToken: executeRecaptcha
-              ? await executeRecaptcha("login")
-              : null,
             action: "login",
           },
           {

@@ -18,13 +18,14 @@ import {
 } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useMutation, type UseMutationResult } from "@tanstack/react-query";
+import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 import type * as z from "zod";
 
 import fetcher, {
   type FetchResult,
   type FetchSuccess,
 } from "@kenstack/api/fetcher";
-import { getReturnedErrorMessage } from "@kenstack/api/errors";
+import { getReturnedErrorMessage, ReturnedError } from "@kenstack/api/errors";
 import { formErrorName, moveRootFormError } from "./internal/fieldErrors";
 import { useNavigationBlocker } from "./NavigationBlocker";
 
@@ -105,6 +106,10 @@ export type FormProviderProps<
   /** Also used internally by some fields */
   apiPath?: string;
   mutationFn?: MutationFn<TResult, TVariables>;
+  // Names the reCAPTCHA action this form protects. Each submission requests
+  // a token under that name and sends it as `recaptchaToken`; the site-wide
+  // RecaptchaProvider supplies the script.
+  recaptchaAction?: string;
   schema: TSchema;
   defaultValues: DefaultValues<z.input<TSchema>>;
   guardUnsaved?: boolean;
@@ -172,8 +177,10 @@ function FormContextProvider<
   mutationFn,
   onError,
   onSuccess,
+  recaptchaAction,
   children,
 }: FormProviderProps<TResult, TVariables, TSchema>) {
+  const { executeRecaptcha } = useGoogleReCaptcha();
   const [statusMessage, setStatusMessageState] = useState<StatusMessage | null>(
     initialStatusMessage ?? null,
   );
@@ -237,6 +244,25 @@ function FormContextProvider<
 
   const mutation = useMutation({
     mutationFn: async (variables: TVariables, context) => {
+      // Without a configured site key the provider supplies no
+      // executeRecaptcha, and the server skips the check. With no provider
+      // mounted at all the library's default throws, so the cause is kept
+      // for the console.
+      if (recaptchaAction && executeRecaptcha) {
+        let recaptchaToken;
+        try {
+          recaptchaToken = await executeRecaptcha(recaptchaAction);
+        } catch (error) {
+          throw Object.assign(
+            new ReturnedError(
+              "reCAPTCHA didn’t complete. Refresh the page and try again.",
+            ),
+            { cause: error },
+          );
+        }
+        variables = { ...variables, recaptchaToken };
+      }
+
       if (mutationFn) {
         return await mutationFn(variables, context);
       }

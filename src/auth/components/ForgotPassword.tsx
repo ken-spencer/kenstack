@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 
 import schema from "@kenstack/auth/schemas/forgotPassword";
 import RecaptchaTerms from "@kenstack/components/RecaptchaTerms";
@@ -14,23 +13,18 @@ const defaultValues = {
 };
 
 export function ForgotPasswordForm() {
-  const { executeRecaptcha } = useGoogleReCaptcha();
-
   return (
     <Form
       className="w-full max-w-lg space-y-4"
       apiPath="/api/auth"
+      recaptchaAction="forgottenPassword"
       schema={schema}
       defaultValues={defaultValues}
       onSubmit={async ({ data, mutation, form }) => {
-        const recaptchaToken = executeRecaptcha
-          ? await executeRecaptcha("forgottenPassword")
-          : null;
         if (
           (
             await mutation.mutateAsync({
               ...data,
-              recaptchaToken,
               action: "forgot-password",
             })
           ).status === "success"
