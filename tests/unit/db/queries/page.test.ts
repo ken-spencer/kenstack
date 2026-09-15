@@ -10,11 +10,15 @@ import {
   vi,
 } from "vitest";
 
-const { draftMode, queries, requireUser } = vi.hoisted(() => ({
-  draftMode: vi.fn(),
-  queries: [] as string[],
-  requireUser: vi.fn(),
-}));
+const { cacheLife, cacheTag, draftMode, queries, requireUser } = vi.hoisted(
+  () => ({
+    cacheLife: vi.fn(),
+    cacheTag: vi.fn(),
+    draftMode: vi.fn(),
+    queries: [] as string[],
+    requireUser: vi.fn(),
+  }),
+);
 
 vi.mock("@app/db", async () => {
   return {
@@ -25,6 +29,7 @@ vi.mock("@app/db", async () => {
   };
 });
 vi.mock("@kenstack/auth/server/user", () => ({ requireUser }));
+vi.mock("next/cache", () => ({ cacheLife, cacheTag, io: vi.fn() }));
 vi.mock("next/headers", () => ({ draftMode }));
 vi.mock("server-only", () => ({}));
 
@@ -43,8 +48,33 @@ describe("resolveVisiblePage", () => {
   });
 
   afterEach(() => {
+    cacheLife.mockClear();
+    cacheTag.mockClear();
     queries.length = 0;
     vi.useRealTimers();
+  });
+
+  it("tags the entry and keeps it for max only when cache tags are passed", async () => {
+    const articles = defineTable({
+      name: "articles",
+      publish: true,
+      columns: { slug: text("slug").notNull() },
+    });
+
+    await pageQuery(articles, {
+      select: { id: articles.id },
+      where: eq(articles.slug, "news"),
+    });
+    expect(cacheTag).not.toHaveBeenCalled();
+    expect(cacheLife).not.toHaveBeenCalled();
+
+    await pageQuery(articles, {
+      cacheTags: ["articles", "articles:news"],
+      select: { id: articles.id },
+      where: eq(articles.slug, "news"),
+    });
+    expect(cacheTag).toHaveBeenCalledWith("articles", "articles:news");
+    expect(cacheLife).toHaveBeenLastCalledWith("max");
   });
 
   it("owns active-row and configured page metadata selection", async () => {

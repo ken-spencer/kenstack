@@ -1,6 +1,6 @@
 import { and, isNull, type SQL } from "drizzle-orm";
 import type { SelectedFields } from "drizzle-orm/pg-core";
-import { io } from "next/cache";
+import { cacheLife, cacheTag, io } from "next/cache";
 import { draftMode } from "next/headers";
 
 import { db } from "@app/db";
@@ -10,6 +10,11 @@ import type { AdminContentTable, AdminSeoTable } from "@kenstack/admin/table";
 import { selectImageSubquery } from "./media";
 
 type PageQueryOptions<TSelection extends SelectedFields> = {
+  // A cache profile name; a call outside a "use cache" function passes no
+  // tags. The row is cached raw because resolveVisiblePage applies
+  // publication at request time.
+  cacheLife?: string;
+  cacheTags?: string[];
   select: TSelection;
   where: SQL;
 };
@@ -24,8 +29,17 @@ export function pageQuery<TSelection extends SelectedFields>(
 ): ReturnType<typeof queryPage<TSelection>>;
 export function pageQuery(
   table: AdminContentTable,
-  options: PageQueryOptions<SelectedFields>,
+  {
+    cacheLife: lifetime = "max",
+    cacheTags,
+    ...options
+  }: PageQueryOptions<SelectedFields>,
 ) {
+  if (cacheTags) {
+    cacheTag(...cacheTags);
+    cacheLife(lifetime);
+  }
+
   return isSeoTable(table)
     ? querySeoPage(table, options)
     : queryPage(table, options);

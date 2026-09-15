@@ -612,9 +612,10 @@ New pattern:
   records when `publishedAt <= now`.
 - A detail loader uses `pageQuery(...)` to cache one active row by its stable route key without a
   time-dependent publication predicate. The helper includes `visibility` and `publishedAt`; when the
-  table has `seo: true`, it also includes `seoTitle`, `seoDescription`, and the resolved `ogImage`. The
-  cache uses the ordinary record tags and may use `cacheLife("max")`. Both public and authorized draft
-  requests reuse that row.
+  table has `seo: true`, it also includes `seoTitle`, `seoDescription`, and the resolved `ogImage`.
+  With `cacheTags` it tags the caller's `"use cache"` entry and applies the `cacheLife` option, default
+  `"max"`, mirroring `listQuery(...)`; without `cacheTags` it returns the row alone. Both public and
+  authorized draft requests reuse that row.
 
 Migration steps:
 
@@ -631,9 +632,9 @@ Migration steps:
   to the caller.
 - Do not pass `new Date()` or add `io()`. The helper owns the clock, and the awaited row read is
   already the request-time suspension point.
-- Change the row cache to `cacheLife("max")` and retain all record and dependency tags. Creation,
-  edits, deletion, slug changes, and rescheduling still require tag invalidation; the request-time gate
-  alone owns the passage of publication time.
+- Move the record and dependency tags into `pageQuery(...)`'s `cacheTags` and delete the `cacheTag`
+  and `cacheLife("max")` calls. Creation, edits, deletion, slug changes, and rescheduling still require
+  tag invalidation; the request-time gate alone owns the passage of publication time.
 - For uncached direct public-record checks, call `pageQuery(...)` and then
   `resolveVisiblePage(..., { draft: false })`.
 

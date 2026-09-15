@@ -324,7 +324,6 @@ visibility, and schedule.
 import "server-only";
 
 import { eq } from "drizzle-orm";
-import { cacheLife, cacheTag } from "next/cache";
 
 import { pageQuery, resolveVisiblePage } from "@kenstack/db/queries";
 import { faq } from "./tables";
@@ -335,10 +334,9 @@ export async function loadFaqPage(slug: string) {
 
 async function loadCachedRow(slug: string) {
   "use cache: remote";
-  cacheLife("max");
-  cacheTag("faq", `faq:${slug}`);
 
   return pageQuery(faq, {
+    cacheTags: ["faq", `faq:${slug}`],
     select: {
       id: faq.id,
       slug: faq.slug,
@@ -352,10 +350,12 @@ async function loadCachedRow(slug: string) {
 The detail rules:
 
 - Keep two boundaries: the exported request-time loader and the private cached row query. Call
-  `pageQuery(...)` directly in the cached function. It always excludes deleted rows and selects
-  `visibility` and `publishedAt`; for `seo: true` tables it also selects the SEO fields and resolved OG
-  image configured by `defineTable(...)`. Add a third uncached query helper only when another
-  production path calls it, such as an authoritative or draft read.
+  `pageQuery(...)` directly in the cached function with the record and dependency tags as
+  `cacheTags`; it tags the entry and applies the `cacheLife` option, default `"max"`. It always
+  excludes deleted rows and selects `visibility` and `publishedAt`; for `seo: true` tables it also
+  selects the SEO fields and resolved OG image configured by `defineTable(...)`. Add a third uncached
+  query helper only when another production path calls it, such as an authoritative or draft read; a
+  call without `cacheTags` returns the row alone.
 - `resolveVisiblePage(row)` reads the current request's Draft Mode state, owns the complete gate, and
   returns the same row or `null`. In Draft Mode it requires an admin and accepts any non-null row. For a
   public request it owns the current date, excludes `draft`, and returns `published` and `unlisted`
