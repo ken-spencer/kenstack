@@ -9,9 +9,12 @@ import Notice from "@kenstack/components/Notice";
 
 import Form from "./Form";
 
-const loginPath = "/login?returnTo=%2Freset-password";
-
-export default async function ResetPasswordFormLoader() {
+export default async function ResetPasswordFormLoader({
+  path,
+}: {
+  path: `/${string}`;
+}) {
+  const loginPath = `/login?returnTo=${encodeURIComponent(path)}`;
   const session = await getCurrentSession();
   if (!session) {
     redirect(loginPath);

@@ -30,6 +30,9 @@ export type ForgotPasswordProps = {
   Email?: React.FC<ForgotPasswordEmailProps>;
   attachments?: Attachment[];
   from?: EmailAddress;
+  // The page that hosts ResetPasswordForm, where the emailed link lands
+  // after sign-in.
+  resetPath?: `/${string}`;
 };
 
 export const forgotPasswordPipeline =
@@ -132,7 +135,7 @@ export const forgotPasswordPipeline =
               email,
               from,
               isDecoy: !user,
-              linkPath: "/login?returnTo=%2Freset-password",
+              linkPath: `/login?returnTo=${encodeURIComponent(props.resetPath ?? "/reset-password")}`,
               request,
             },
             async ({ expiresInMinutes, url }) => ({

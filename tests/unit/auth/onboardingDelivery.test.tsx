@@ -48,7 +48,9 @@ vi.mock("drizzle-orm", () => ({
 
 import { sendOnboardingEmailAction } from "@kenstack/auth/handlers/sendOnboarding";
 
-const request = new NextRequest("https://example.com/api/auth");
+const request = new NextRequest("https://example.com/api/auth", {
+  headers: { host: "example.com", "x-forwarded-proto": "https" },
+});
 
 async function runPipeline(
   options: { json?: Record<string, unknown>; request: NextRequest },

@@ -8,6 +8,13 @@ import type { DbTransaction } from "@kenstack/db/types";
 import { isVerificationCodeMatch, type createChallengeSecrets } from "./crypto";
 import { calculateProofExpiresAt, resolveCodeOutcome } from "./policy";
 
+// What a row may prove and for whom. An email change belongs to the account
+// that asked for it; a login belongs to nobody yet.
+export type VerificationBinding = Pick<
+  typeof verifications.$inferSelect,
+  "kind" | "userId"
+>;
+
 type VerificationRecord = Awaited<
   ReturnType<typeof loadVerificationsForUpdate>
 >[number];
@@ -41,9 +48,11 @@ export async function createVerification(
     expiresAt,
     failedAttempts = 0,
     isDecoy,
+    kind,
+    userId,
     verificationKeyHash,
     secrets,
-  }: {
+  }: VerificationBinding & {
     email: string;
     expiresAt: Date;
     failedAttempts?: number;
@@ -63,6 +72,8 @@ export async function createVerification(
         expiresAt,
         failedAttempts,
         isDecoy,
+        kind,
+        userId,
         verificationKeyHash,
         tokenHash: secrets.tokenHash,
       })
@@ -101,7 +112,9 @@ export async function loadVerificationsForUpdate(
       expiresAt: verifications.expiresAt,
       failedAttempts: verifications.failedAttempts,
       id: verifications.id,
+      kind: verifications.kind,
       provenAt: verifications.provenAt,
+      userId: verifications.userId,
     })
     .from(verifications)
     .where(eq(verifications.verificationKeyHash, verificationKeyHash))
@@ -109,14 +122,17 @@ export async function loadVerificationsForUpdate(
     .for("update");
 }
 
-// Ends a verification so it cannot sign in again. Returns nothing when another
-// request already ended it. Callers have just read it as proven and unexpired.
+// Ends a verification so it cannot be redeemed again. Returns nothing when
+// another request already ended it. Callers have just read it as proven and
+// unexpired.
 export async function consumeVerification(
   verificationId: number,
   email: string,
+  tx: Pick<DbTransaction, "update"> = db,
+  binding: VerificationBinding = { kind: "login", userId: null },
 ) {
   return (
-    await db
+    await tx
       .update(verifications)
       .set({ endedAt: new Date() })
       .where(
@@ -124,6 +140,10 @@ export async function consumeVerification(
           eq(verifications.id, verificationId),
           eq(verifications.email, email),
           eq(verifications.isDecoy, false),
+          eq(verifications.kind, binding.kind),
+          binding.userId === null
+            ? isNull(verifications.userId)
+            : eq(verifications.userId, binding.userId),
           gt(verifications.expiresAt, new Date()),
           isNull(verifications.endedAt),
           isNotNull(verifications.provenAt),

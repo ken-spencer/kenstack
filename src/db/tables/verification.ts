@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import { users } from "@kenstack/modules/users/tables";
 import {
   boolean,
   check,
@@ -26,6 +27,12 @@ export const verifications = pgTable(
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     failedAttempts: integer("failed_attempts").notNull().default(0),
     isDecoy: boolean("is_decoy").notNull().default(false),
+    kind: text("kind", { enum: ["login", "email-change"] })
+      .notNull()
+      .default("login"),
+    userId: integer("user_id").references(() => users.id, {
+      onDelete: "cascade",
+    }),
     verificationKeyHash: text("verification_key_hash").notNull(),
     provenAt: timestamp("proven_at", { withTimezone: true }),
     tokenHash: text("token_hash").notNull(),
@@ -38,5 +45,9 @@ export const verifications = pgTable(
     ),
     uniqueIndex("verifications_token_unique").on(t.tokenHash),
     check("verifications_failed_attempts_check", sql`${t.failedAttempts} >= 0`),
+    check(
+      "verifications_kind_check",
+      sql`${t.kind} in ('login', 'email-change')`,
+    ),
   ],
 );

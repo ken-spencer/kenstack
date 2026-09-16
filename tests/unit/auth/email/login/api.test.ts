@@ -241,6 +241,25 @@ describe("verifyEmailLoginCode", () => {
     ).resolves.toEqual({ authState: signedInState, path: "/" });
   });
 
+  it("asks the host for a destination only without a return path", async () => {
+    mocks.verifyCode.mockResolvedValue(provenState);
+    mocks.loadFreshPublicAuthState.mockResolvedValue(signedInState);
+    const loginDestination = vi.fn().mockResolvedValue("/account");
+
+    await expect(
+      createEmailLogin({ loginDestination }).verifyCode(stageContext()),
+    ).resolves.toEqual({ authState: signedInState, path: "/account" });
+    expect(loginDestination).toHaveBeenCalledWith(signedInState);
+
+    loginDestination.mockClear();
+    await expect(
+      createEmailLogin({ loginDestination }).verifyCode(
+        stageContext("/membership"),
+      ),
+    ).resolves.toEqual({ authState: signedInState, path: "/membership" });
+    expect(loginDestination).not.toHaveBeenCalled();
+  });
+
   it("returns proven state for enrollment when no account exists", async () => {
     mocks.verifyCode.mockResolvedValue(provenState);
     mocks.loadFreshPublicAuthState.mockResolvedValue(provenState);
@@ -342,20 +361,6 @@ describe("verifyEmailLoginLink", () => {
       code: "wrong-browser",
       message:
         "This link was opened in a different browser. Open it in the browser where you requested it, or request a new email here. The link is still valid.",
-      status: 409,
-    });
-    expect(mocks.redeemEmailProof).not.toHaveBeenCalled();
-  });
-
-  it("directs a signed-in user to sign out without invalidating the link", async () => {
-    mocks.verifyLink.mockResolvedValue({ state: "wrong-account" });
-
-    await expect(
-      createEmailLogin().verifyLink(createLinkContext()),
-    ).rejects.toMatchObject({
-      code: "wrong-account",
-      message:
-        "Sign out of the current account, then open this link again. The link is still valid.",
       status: 409,
     });
     expect(mocks.redeemEmailProof).not.toHaveBeenCalled();

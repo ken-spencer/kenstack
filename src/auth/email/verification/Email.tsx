@@ -43,7 +43,7 @@ export function createVerificationEmail(
             textAlign: "center",
           }}
         >
-          This link expires in {expiresInMinutes}{" "}
+          Valid for {expiresInMinutes}{" "}
           {expiresInMinutes === 1 ? "minute" : "minutes"}.
         </Text>
         <Section

@@ -10,7 +10,6 @@ import {
 export const emailLoginLinkFailureCodeSchema = z.enum([
   "expired",
   "invalid",
-  "wrong-account",
   "wrong-browser",
 ]);
 

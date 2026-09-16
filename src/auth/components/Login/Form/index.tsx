@@ -1,7 +1,7 @@
 "use client";
 
 // Hosts and the Step adapter import this client entry point; sibling files are
-// internal to the Login form.
+// internal to the Login form, except LinkButton, which EmailChange shares.
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
@@ -20,6 +20,7 @@ import {
   requestEmailLoginSchema,
   type EmailLoginLinkFailureCode,
 } from "@kenstack/auth/email/login/schemas";
+import { verificationEndedCode } from "@kenstack/auth/email/verification/internal/policy";
 import { setUserInfo } from "@kenstack/auth/useUserInfo";
 
 import QueryProvider from "@kenstack/context/QueryProvider";
@@ -157,6 +158,12 @@ function LoginFormContent({
         return;
       }
       if (result.status === "error") {
+        // A request the server no longer knows cannot continue from the code
+        // page; the email page is the only place a new one starts.
+        if (result.code === verificationEndedCode) {
+          showEmailLogin(result.message ?? failureMessage);
+          return;
+        }
         showSendFailure(result.message ?? failureMessage);
         return;
       }
@@ -226,10 +233,12 @@ function LoginFormContent({
           onResend={(activeChallengeKey) =>
             sendEmailCode(emailAddress, activeChallengeKey)
           }
-          onShowEmailLogin={() => {
+          onShowEmailLogin={(message) => {
             requestIdRef.current += 1;
             setChallengeKey(undefined);
-            setStatusMessage(undefined);
+            setStatusMessage(
+              message ? { message, status: "error" } : undefined,
+            );
           }}
         />
       ) : loginMethod === "password" ? (

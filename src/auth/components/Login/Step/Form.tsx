@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ComponentProps } from "react";
+import { useSearchParams } from "next/navigation";
 import { logoutUser, useUserInfo } from "@kenstack/auth/useUserInfo";
 
 import Button from "@kenstack/components/Button";
@@ -9,6 +10,7 @@ import { StepActions } from "@kenstack/components/StepFlow/StepActions";
 import { useStep } from "@kenstack/components/StepFlow/context";
 
 import LoginForm from "../Form";
+import { markLinkHandled, useHandledLinkToken } from "./linkVerification";
 
 export default function StepLoginForm({
   challengeKey,
@@ -20,6 +22,13 @@ export default function StepLoginForm({
 >) {
   const { id, next } = useStep();
   const userInfo = useUserInfo();
+  // A visit that arrived with an emailed link's token shows the form even
+  // when signed in, so the link can sign in another account. The form
+  // removes the token from the URL, so only its presence on arrival counts;
+  // completing the step reports it handled, which also releases the step.
+  const [linkToken] = useState(useSearchParams().get("token"));
+  const handledToken = useHandledLinkToken();
+  const hadLinkToken = linkToken !== null && handledToken !== linkToken;
   // A redeemed email challenge must not survive into the next login.
   const [redeemedChallengeKey, setRedeemedChallengeKey] = useState<string>();
   // The form waits for the sign-out to finish, so a late response cannot
@@ -36,7 +45,7 @@ export default function StepLoginForm({
         ? userInfo.email
         : null;
 
-  if (accountSwitch.isPending || signedInAs !== null) {
+  if (!hadLinkToken && (accountSwitch.isPending || signedInAs !== null)) {
     return (
       <>
         {accountSwitch.isPending ? (
@@ -90,6 +99,9 @@ export default function StepLoginForm({
       mode="embedded"
       onComplete={() => {
         setRedeemedChallengeKey(challengeKey);
+        if (linkToken !== null) {
+          markLinkHandled(linkToken);
+        }
         next();
       }}
     />

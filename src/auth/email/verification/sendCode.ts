@@ -7,7 +7,6 @@ import { waitUntil } from "@vercel/functions";
 import { attachments as defaultAttachments, loadEmailFrom } from "@app/email";
 import { db } from "@app/db";
 import { claimQuota, ReturnedError } from "@kenstack/api";
-import { getCurrentUser } from "@kenstack/auth/server/user";
 import { verifications } from "@kenstack/db/tables/verification";
 import errorLog from "@kenstack/lib/errorLog";
 import getIp from "@kenstack/lib/ip";
@@ -25,21 +24,24 @@ import {
 } from "./internal/crypto";
 import {
   calculateChallengeExpiresAt,
-  endImpersonationBeforeVerificationMessage,
   getCurrentVerificationHistory,
   hasChallengeReachedSendLimit,
   isChallengeInResendCooldown,
   resendCooldownMessage,
-  signOutBeforeVerificationMessage,
-  verificationEndedMessage,
+  selectBoundHistory,
+  verificationEndedCode,
+  verificationReplacedMessage,
+  verificationSendLimitMessage,
 } from "./internal/policy";
 import {
+  type VerificationBinding,
   endVerification,
   createVerification,
   deleteVerification,
   loadVerificationsForUpdate,
   markVerificationDecoy,
 } from "./internal/repository";
+import siteOrigin from "@kenstack/lib/siteOrigin";
 import { emailSchema } from "./schemas";
 import { setVerificationCookie, verificationCookie } from "./internal/cookie";
 
@@ -56,34 +58,32 @@ export async function sendCode(
   {
     challengeKey,
     email: unparsedEmail,
+    isDecoy = false,
+    kind = "login",
     linkPath,
     request,
-  }: {
+    userId = null,
+  }: Partial<VerificationBinding> & {
     challengeKey?: string;
     email: string;
+    // A decoy keeps the code screen identical for an address the caller
+    // must not confirm or deny; no code is sent and none can prove it.
+    isDecoy?: boolean;
     linkPath: `/${string}`;
     request: NextRequest;
   },
   createVerificationEmail: CreateVerificationEmail,
 ) {
-  const currentUser = await getCurrentUser();
-  if (currentUser?.impersonatedBy) {
-    throw new ReturnedError(endImpersonationBeforeVerificationMessage, {
-      status: 403,
-    });
-  }
-  if (currentUser) {
-    throw new ReturnedError(signOutBeforeVerificationMessage, { status: 409 });
-  }
-
   const challenge = await sendVerification(
     {
       challengeKey,
       concealDeliveryFailure: false,
       email: unparsedEmail,
-      isDecoy: false,
+      isDecoy,
+      kind,
       linkPath,
       request,
+      userId,
     },
     createVerificationEmail,
   );
@@ -131,9 +131,11 @@ async function sendVerification(
     email: unparsedEmail,
     from: configuredFrom,
     isDecoy,
+    kind = "login",
     linkPath,
     request,
-  }: {
+    userId = null,
+  }: Partial<VerificationBinding> & {
     attachments?: Attachment[];
     challengeKey?: string;
     concealDeliveryFailure: boolean;
@@ -165,8 +167,9 @@ async function sendVerification(
 
   const email = emailSchema.parse(unparsedEmail);
   // The link carries the token, so a misconfigured path must never leave the site.
-  const url = new URL(linkPath, request.url);
-  if (url.origin !== new URL(request.url).origin) {
+  const origin = await siteOrigin(request);
+  const url = new URL(linkPath, origin);
+  if (url.origin !== origin) {
     throw new Error("Verification link must stay on this site");
   }
   const verificationKeyHash = hashVerificationKey(verificationKey);
@@ -177,7 +180,10 @@ async function sendVerification(
       sql`select pg_advisory_xact_lock(hashtext(${verificationKeyHash}))`,
     );
     const now = new Date();
-    const history = await loadVerificationsForUpdate(tx, verificationKeyHash);
+    const history = selectBoundHistory(
+      await loadVerificationsForUpdate(tx, verificationKeyHash),
+      { kind, userId },
+    );
     const currentHistory = getCurrentVerificationHistory(history);
     const current = history[0];
     const isActive = current && !current.endedAt && current.expiresAt > now;
@@ -195,7 +201,10 @@ async function sendVerification(
       challengeKey &&
       (!isResending || current.challengeKey !== challengeKey)
     ) {
-      throw new ReturnedError(verificationEndedMessage, { status: 409 });
+      throw new ReturnedError(verificationReplacedMessage, {
+        code: verificationEndedCode,
+        status: 409,
+      });
     }
 
     if (isResending) {
@@ -244,6 +253,8 @@ async function sendVerification(
           expiresAt,
           failedAttempts: isResending ? current.failedAttempts : 0,
           isDecoy,
+          kind,
+          userId,
           verificationKeyHash,
           secrets,
         })
@@ -252,7 +263,10 @@ async function sendVerification(
   });
 
   if (prepared.status === "ended") {
-    throw new ReturnedError(verificationEndedMessage, { status: 409 });
+    throw new ReturnedError(verificationSendLimitMessage, {
+      code: verificationEndedCode,
+      status: 409,
+    });
   }
 
   try {

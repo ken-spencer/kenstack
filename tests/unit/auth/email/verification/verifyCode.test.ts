@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   endVerification: vi.fn(),
-  getCurrentUser: vi.fn(),
   getKey: vi.fn(),
   loadVerification: vi.fn(),
   prove: vi.fn(),
@@ -27,12 +26,17 @@ vi.mock("@kenstack/api", () => {
 vi.mock("@app/db", () => ({
   db: { transaction: mocks.transaction },
 }));
-vi.mock("@kenstack/auth/server/user", () => ({
-  getCurrentUser: mocks.getCurrentUser,
-}));
 vi.mock("@kenstack/auth/email/verification/internal/repository", () => ({
   endVerification: mocks.endVerification,
-  loadVerificationsForUpdate: mocks.loadVerification,
+  // Rows default to a login challenge; a test names another kind explicitly.
+  loadVerificationsForUpdate: async (...args: unknown[]) =>
+    (await mocks.loadVerification(...args)).map(
+      (row: Record<string, unknown>) => ({
+        kind: "login",
+        userId: null,
+        ...row,
+      }),
+    ),
   proveVerification: mocks.prove,
   resolveCodeAttempt: mocks.resolveAttempt,
 }));
@@ -67,7 +71,6 @@ describe("verifyCode", () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
     vi.setSystemTime(now);
-    mocks.getCurrentUser.mockResolvedValue(undefined);
     mocks.getKey.mockResolvedValue("verification-key");
     mocks.transaction.mockImplementation((callback) =>
       callback({ execute: vi.fn() }),
@@ -83,6 +86,20 @@ describe("verifyCode", () => {
 
     await expect(
       verifyCode({ challengeKey: staleChallengeKey, code: "123456" }),
+    ).rejects.toMatchObject({ status: 409 });
+    expect(mocks.endVerification).not.toHaveBeenCalled();
+  });
+
+  it("refuses a code for a challenge of another kind or account", async () => {
+    mocks.loadVerification.mockResolvedValue([activeRecord()]);
+
+    await expect(
+      verifyCode({
+        challengeKey: activeChallengeKey,
+        code: "123456",
+        kind: "email-change",
+        userId: 12,
+      }),
     ).rejects.toMatchObject({ status: 409 });
     expect(mocks.endVerification).not.toHaveBeenCalled();
   });

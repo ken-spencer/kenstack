@@ -12,8 +12,14 @@ import LoginController from "./Controller";
 // signed out keeps it as an ordinary step. Signing in updates browser
 // identity in place; nothing here refreshes the server.
 export async function createLoginStep({
+  hasLinkToken = false,
   title = "Sign in",
 }: {
+  // The visit arrived with an emailed link's token. A signed-in visit then
+  // keeps the step from the first render, since the link may sign in
+  // another account; the controller does the same once in the browser, so
+  // a flow that cannot pass this still verifies the link, one step later.
+  hasLinkToken?: boolean;
   title?: string;
 } = {}): Promise<Step> {
   const authState = await loadPublicAuthState();
@@ -30,7 +36,8 @@ export async function createLoginStep({
     // A signed-in visit starts skipped; a signed-out visit gets an ordinary
     // step, not a live prerequisite, so signing in and continuing completes it.
     skipped:
-      authState.state === "authenticated" || authState.state === "proven"
+      !hasLinkToken &&
+      (authState.state === "authenticated" || authState.state === "proven")
         ? true
         : undefined,
     title,

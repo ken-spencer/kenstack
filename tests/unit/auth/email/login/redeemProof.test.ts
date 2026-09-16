@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   getVerificationKey: vi.fn(),
   loadFreshAuthState: vi.fn(),
   login: vi.fn(),
+  logout: vi.fn(),
   restoreConsumed: vi.fn(),
   setVerificationCookie: vi.fn(),
 }));
@@ -24,9 +25,21 @@ vi.mock("@kenstack/api", () => {
   return { ReturnedError };
 });
 vi.mock("@app/db", () => ({
-  db: { query: { users: { findFirst: mocks.findUser } } },
+  db: {
+    query: { users: { findFirst: mocks.findUser } },
+    select: () => ({
+      from: () => ({
+        where: () => ({
+          limit: async () => [{ expiresAt: new Date("2026-09-16T13:00:00Z") }],
+        }),
+      }),
+    }),
+  },
 }));
-vi.mock("@kenstack/auth/server/auth", () => ({ login: mocks.login }));
+vi.mock("@kenstack/auth/server/auth", () => ({
+  login: mocks.login,
+  logout: mocks.logout,
+}));
 vi.mock("@kenstack/auth/server/state", () => ({
   loadFreshAuthState: mocks.loadFreshAuthState,
 }));
@@ -95,6 +108,40 @@ describe("redeemEmailProof", () => {
     expect(mocks.login).not.toHaveBeenCalled();
   });
 
+  it("ends the current session before an unregistered address goes on to account creation", async () => {
+    mocks.findUser.mockResolvedValue(undefined);
+    mocks.getVerificationKey.mockResolvedValue("browser-key");
+    mocks.loadFreshAuthState.mockResolvedValue({
+      email: "other@example.com",
+      state: "authenticated",
+      userId: 7,
+    });
+
+    await expect(
+      redeemEmailProof(verification, { allowUnregistered: true }),
+    ).resolves.toBeUndefined();
+    expect(mocks.logout).toHaveBeenCalledOnce();
+    expect(mocks.setVerificationCookie).toHaveBeenCalledWith(
+      "browser-key",
+      new Date("2026-09-16T13:00:00Z"),
+    );
+    expect(mocks.login).not.toHaveBeenCalled();
+  });
+
+  it("also ends an impersonation before account creation", async () => {
+    mocks.findUser.mockResolvedValue(undefined);
+    mocks.getVerificationKey.mockResolvedValue("browser-key");
+    mocks.loadFreshAuthState.mockResolvedValue({
+      email: "other@example.com",
+      impersonatedBy: 1,
+      state: "authenticated",
+      userId: 7,
+    });
+
+    await redeemEmailProof(verification, { allowUnregistered: true });
+    expect(mocks.logout).toHaveBeenCalledTimes(2);
+  });
+
   it("returns a conflict when the proven request was replaced", async () => {
     mocks.loadFreshAuthState.mockResolvedValue({
       challengeKey: "replacement",
@@ -141,7 +188,22 @@ describe("redeemEmailProof", () => {
     expect(mocks.login).toHaveBeenCalledWith(12, "email");
   });
 
-  it("does not consume proof for another authenticated account", async () => {
+  it("switches a signed-in user to the proven email's account", async () => {
+    mocks.findUser.mockResolvedValue({ id: 12 });
+    mocks.loadFreshAuthState.mockResolvedValue({
+      email: "other@example.com",
+      roles: [],
+      state: "authenticated",
+      userId: 24,
+    });
+
+    await expect(redeemEmailProof(verification)).resolves.toBe(12);
+    expect(mocks.consume).toHaveBeenCalledWith(3, "person@example.com");
+    expect(mocks.login).toHaveBeenCalledWith(12, "email");
+  });
+
+  it("does not switch a signed-in user to an email without an account", async () => {
+    mocks.findUser.mockResolvedValue(undefined);
     mocks.loadFreshAuthState.mockResolvedValue({
       email: "other@example.com",
       roles: [],
@@ -156,19 +218,17 @@ describe("redeemEmailProof", () => {
     expect(mocks.login).not.toHaveBeenCalled();
   });
 
-  it("does not refresh an impersonated session", async () => {
+  it("switches an impersonating administrator to the proven account", async () => {
+    mocks.findUser.mockResolvedValue({ id: 12 });
     mocks.loadFreshAuthState.mockResolvedValue({
-      email: "person@example.com",
+      email: "customer@example.com",
       impersonatedBy: 42,
       roles: [],
       state: "authenticated",
-      userId: 12,
+      userId: 24,
     });
 
-    await expect(redeemEmailProof(verification)).rejects.toMatchObject({
-      status: 409,
-    });
-    expect(mocks.consume).not.toHaveBeenCalled();
-    expect(mocks.login).not.toHaveBeenCalled();
+    await expect(redeemEmailProof(verification)).resolves.toBe(12);
+    expect(mocks.login).toHaveBeenCalledWith(12, "email");
   });
 });

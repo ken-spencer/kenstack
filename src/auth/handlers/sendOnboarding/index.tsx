@@ -7,6 +7,7 @@ import { loadEmailFrom } from "@app/email";
 import { modules } from "@app/modules";
 import { pipeline, type PipelineOptions, pipelineStage } from "@kenstack/api";
 import mailer from "@kenstack/lib/mailer";
+import siteOrigin from "@kenstack/lib/siteOrigin";
 import { formatUserName } from "@kenstack/lib/user";
 import { audit } from "@kenstack/logger";
 import OnboardingEmail, { attachments } from "./Email";
@@ -44,7 +45,7 @@ export const sendOnboardingEmailAction = (options: PipelineOptions) =>
           );
         }
 
-        const url = new URL("/login", request.url);
+        const url = new URL("/login", await siteOrigin(request));
         url.searchParams.set("email", email);
         url.searchParams.set("notice", "onboarding");
         const delivery = await mailer({

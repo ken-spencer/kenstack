@@ -1,6 +1,6 @@
 import "server-only";
 
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { cache } from "react";
 
 import { db } from "@app/db";
@@ -87,9 +87,14 @@ async function resolveAuthState(
     })
     .from(verifications)
     .where(
-      eq(
-        verifications.verificationKeyHash,
-        hashVerificationKey(verificationKey),
+      and(
+        eq(
+          verifications.verificationKeyHash,
+          hashVerificationKey(verificationKey),
+        ),
+        // Only a login proof makes a browser "proven"; an email change's
+        // proof belongs to its signed-in account.
+        eq(verifications.kind, "login"),
       ),
     )
     .orderBy(desc(verifications.createdAt), desc(verifications.id))

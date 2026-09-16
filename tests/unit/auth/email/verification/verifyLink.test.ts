@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  getCurrentUser: vi.fn(),
   getKey: vi.fn(),
   prove: vi.fn(),
   setCookie: vi.fn(),
@@ -10,15 +9,14 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("server-only", () => ({}));
 vi.mock("drizzle-orm", () => ({
+  and: vi.fn(() => ({})),
   desc: vi.fn(() => ({})),
   eq: vi.fn(() => ({})),
+  isNull: vi.fn(() => ({})),
   sql: vi.fn(() => ({})),
 }));
 vi.mock("@app/db", () => ({
   db: { transaction: mocks.transaction },
-}));
-vi.mock("@kenstack/auth/server/user", () => ({
-  getCurrentUser: mocks.getCurrentUser,
 }));
 vi.mock("@kenstack/db/tables/verification", () => ({ verifications: {} }));
 vi.mock("@kenstack/auth/email/verification/internal/repository", () => ({
@@ -79,6 +77,8 @@ function verificationRecord(overrides: Record<string, unknown> = {}) {
     email: "person@example.com",
     expiresAt: new Date("2030-01-01T00:15:00.000Z"),
     isDecoy: false,
+    kind: "login",
+    userId: null,
     verificationId: 3,
     verificationKeyHash: hashVerificationKey("verification-key"),
     provenAt: null,
@@ -91,7 +91,6 @@ describe("verifyLink", () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2030-01-01T00:00:00.000Z"));
-    mocks.getCurrentUser.mockResolvedValue(undefined);
     mocks.getKey.mockResolvedValue(undefined);
     mocks.prove.mockResolvedValue(proofExpiresAt);
   });
@@ -108,6 +107,28 @@ describe("verifyLink", () => {
     });
     expect(mocks.prove).not.toHaveBeenCalled();
     expect(mocks.setCookie).not.toHaveBeenCalled();
+  });
+
+  it("proves an email-change link for its account from any browser", async () => {
+    transactionWith(verificationRecord({ kind: "email-change", userId: 12 }));
+    mocks.prove.mockResolvedValue(new Date("2030-01-01T01:00:00.000Z"));
+
+    await expect(
+      verifyLink(token, { kind: "email-change", userId: 12 }),
+    ).resolves.toMatchObject({ state: "proven", verificationId: 3 });
+    expect(mocks.setCookie).not.toHaveBeenCalled();
+  });
+
+  it("rejects a link of another kind or account", async () => {
+    transactionWith(verificationRecord({ kind: "email-change", userId: 12 }));
+    mocks.getKey.mockResolvedValue("verification-key");
+
+    await expect(verifyLink(token)).resolves.toEqual({ state: "invalid" });
+    transactionWith(verificationRecord({ kind: "email-change", userId: 12 }));
+    await expect(
+      verifyLink(token, { kind: "email-change", userId: 13 }),
+    ).resolves.toEqual({ state: "invalid" });
+    expect(mocks.prove).not.toHaveBeenCalled();
   });
 
   it("proves a browser-bound link in the requesting browser", async () => {
@@ -133,53 +154,12 @@ describe("verifyLink", () => {
     expect(mocks.setCookie).not.toHaveBeenCalled();
   });
 
-  it("proves a signed-in user's link for their own email", async () => {
-    transactionWith(verificationRecord());
-    mocks.getCurrentUser.mockResolvedValue({
-      email: " Person@Example.com ",
-    });
-    mocks.getKey.mockResolvedValue("verification-key");
-
-    await expect(verifyLink(token)).resolves.toMatchObject({
-      email: "person@example.com",
-      state: "proven",
-    });
-    expect(mocks.prove).toHaveBeenCalledOnce();
-  });
-
-  it("leaves another account's link active for the signed-in user", async () => {
-    transactionWith(verificationRecord());
-    mocks.getCurrentUser.mockResolvedValue({ email: "other@example.com" });
-    mocks.getKey.mockResolvedValue("verification-key");
-
-    await expect(verifyLink(token)).resolves.toEqual({
-      state: "wrong-account",
-    });
-    expect(mocks.prove).not.toHaveBeenCalled();
-    expect(mocks.setCookie).not.toHaveBeenCalled();
-  });
-
-  it("leaves email proof active while impersonating another user", async () => {
-    transactionWith(verificationRecord());
-    mocks.getCurrentUser.mockResolvedValue({
-      email: "person@example.com",
-      impersonatedBy: 42,
-    });
-    mocks.getKey.mockResolvedValue("verification-key");
-
-    await expect(verifyLink(token)).resolves.toEqual({
-      state: "wrong-account",
-    });
-    expect(mocks.prove).not.toHaveBeenCalled();
-  });
-
-  it("does not describe an expired link as active for another account", async () => {
+  it("reports an expired link before checking the browser", async () => {
     transactionWith(
       verificationRecord({
         expiresAt: new Date("2029-12-31T23:59:00.000Z"),
       }),
     );
-    mocks.getCurrentUser.mockResolvedValue({ email: "other@example.com" });
 
     await expect(verifyLink(token)).resolves.toEqual({ state: "expired" });
   });

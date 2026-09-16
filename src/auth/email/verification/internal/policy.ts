@@ -1,5 +1,18 @@
-export const verificationEndedMessage =
-  "That verification request has ended. Enter your email to start again.";
+const challengeLifetimeMinutes = 15;
+const challengeSendLimit = 3;
+
+// Every message below travels with this code so a code screen can return to
+// the email form instead of waiting on a request that no longer exists. Each
+// one names the reason, since the visitor cannot see it otherwise.
+export const verificationEndedCode = "ended";
+export const verificationMissingMessage =
+  "This browser has no open request for that email. It may have been cleared or started somewhere else. Enter your email to start again.";
+export const verificationReplacedMessage =
+  "That request was replaced or cancelled. Enter your email to start again.";
+export const verificationExpiredMessage = `That request expired after ${challengeLifetimeMinutes} minutes. Enter your email to get a new code.`;
+export const verificationAttemptsMessage =
+  "Too many incorrect codes. Enter your email to get a new one.";
+export const verificationSendLimitMessage = `That email has already been sent ${challengeSendLimit} times. Enter your email to start again.`;
 export const resendCooldownMessage =
   "Please wait a moment before resending the email.";
 export const supersededCodeMessage =
@@ -8,10 +21,6 @@ export const expiredCodeMessage =
   "That code is from an earlier request and no longer works. Enter the code from the newest email, or resend it.";
 export const incorrectCodeMessage =
   "That code isn’t right or has expired. Enter the code from the newest email, or resend it.";
-export const endImpersonationBeforeVerificationMessage =
-  "End impersonation before verifying an email address.";
-export const signOutBeforeVerificationMessage =
-  "Sign out before verifying an email address.";
 
 type CodeOutcome =
   | { status: "exhausted" }
@@ -30,7 +39,7 @@ export function calculateChallengeExpiresAt({
   verificationExpiresAt?: Date;
   now: Date;
 }) {
-  const expiry = now.getTime() + 15 * 60 * 1000;
+  const expiry = now.getTime() + challengeLifetimeMinutes * 60 * 1000;
 
   return new Date(
     verificationExpiresAt
@@ -44,7 +53,7 @@ function hasChallengeReachedAttemptLimit(failedAttempts: number) {
 }
 
 export function hasChallengeReachedSendLimit(sentCount: number) {
-  return sentCount >= 3;
+  return sentCount >= challengeSendLimit;
 }
 
 export function getCurrentVerificationHistory<
@@ -94,4 +103,18 @@ export function resolveCodeOutcome({
   }
 
   return { status: "incorrect", failedAttempts: nextFailedAttempts };
+}
+
+// A browser's chain holds every kind of request it made. Each kind, and each
+// account for an email change, is read and replaced as its own stack, so a
+// login code sent while a change is pending leaves that change in place.
+export function selectBoundHistory<
+  TRecord extends { kind: string; userId: number | null },
+>(
+  history: readonly TRecord[],
+  { kind, userId }: { kind: string; userId: number | null },
+) {
+  return history.filter(
+    (record) => record.kind === kind && record.userId === userId,
+  );
 }

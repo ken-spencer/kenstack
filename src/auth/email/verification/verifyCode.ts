@@ -2,19 +2,22 @@ import "server-only";
 
 import { sql } from "drizzle-orm";
 import { db } from "@app/db";
-import { getCurrentUser } from "@kenstack/auth/server/user";
 import { ReturnedError } from "@kenstack/api";
 
 import {
-  endImpersonationBeforeVerificationMessage,
   getCurrentVerificationHistory,
   expiredCodeMessage,
-  verificationEndedMessage,
+  selectBoundHistory,
+  verificationAttemptsMessage,
+  verificationEndedCode,
+  verificationExpiredMessage,
+  verificationMissingMessage,
+  verificationReplacedMessage,
   incorrectCodeMessage,
-  signOutBeforeVerificationMessage,
   supersededCodeMessage,
 } from "./internal/policy";
 import {
+  type VerificationBinding,
   endVerification,
   loadVerificationsForUpdate,
   proveVerification,
@@ -27,26 +30,21 @@ import { hashVerificationKey } from "./internal/crypto";
 export async function verifyCode({
   challengeKey: unparsedChallengeKey,
   code: unparsedCode,
-}: {
+  kind = "login",
+  userId = null,
+}: Partial<VerificationBinding> & {
   challengeKey: string;
   code: string;
 }) {
-  const currentUser = await getCurrentUser();
-  if (currentUser?.impersonatedBy) {
-    throw new ReturnedError(endImpersonationBeforeVerificationMessage, {
-      status: 403,
-    });
-  }
-  if (currentUser) {
-    throw new ReturnedError(signOutBeforeVerificationMessage, { status: 409 });
-  }
-
   const challengeKey = challengeKeySchema.parse(unparsedChallengeKey);
   const code = codeSchema.parse(unparsedCode);
   const verificationKey = await getVerificationKey();
 
   if (!verificationKey) {
-    throw new ReturnedError(verificationEndedMessage, { status: 409 });
+    throw new ReturnedError(verificationMissingMessage, {
+      code: verificationEndedCode,
+      status: 409,
+    });
   }
   const verificationKeyHash = hashVerificationKey(verificationKey);
 
@@ -55,18 +53,21 @@ export async function verifyCode({
       sql`select pg_advisory_xact_lock(hashtext(${verificationKeyHash}))`,
     );
     const history = getCurrentVerificationHistory(
-      await loadVerificationsForUpdate(tx, verificationKeyHash),
+      selectBoundHistory(
+        await loadVerificationsForUpdate(tx, verificationKeyHash),
+        { kind, userId },
+      ),
     );
     const current = history[0];
     const now = new Date();
 
     if (!current || current.challengeKey !== challengeKey || current.endedAt) {
-      return { status: "ended" as const };
+      return { status: "replaced" as const };
     }
 
     if (current.expiresAt <= now) {
       await endVerification(tx, current.id, now);
-      return { status: "ended" as const };
+      return { status: "expired-request" as const };
     }
 
     if (current.provenAt) {
@@ -86,7 +87,7 @@ export async function verifyCode({
 
     if (codeOutcome === "exhausted") {
       await endVerification(tx, current.id, now);
-      return { status: "ended" as const };
+      return { status: "exhausted" as const };
     }
     if (codeOutcome !== "proven") {
       return { status: codeOutcome };
@@ -98,7 +99,7 @@ export async function verifyCode({
     });
 
     if (!expiresAt) {
-      return { status: "ended" as const };
+      return { status: "replaced" as const };
     }
 
     return {
@@ -110,8 +111,21 @@ export async function verifyCode({
   });
 
   switch (outcome.status) {
-    case "ended":
-      throw new ReturnedError(verificationEndedMessage, { status: 409 });
+    case "replaced":
+      throw new ReturnedError(verificationReplacedMessage, {
+        code: verificationEndedCode,
+        status: 409,
+      });
+    case "expired-request":
+      throw new ReturnedError(verificationExpiredMessage, {
+        code: verificationEndedCode,
+        status: 409,
+      });
+    case "exhausted":
+      throw new ReturnedError(verificationAttemptsMessage, {
+        code: verificationEndedCode,
+        status: 409,
+      });
     case "superseded":
       throw new ReturnedError(supersededCodeMessage, { status: 409 });
     case "expired":

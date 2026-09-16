@@ -1,8 +1,9 @@
 import "server-only";
 
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@app/db";
-import { login } from "@kenstack/auth/server/auth";
+import { login, logout } from "@kenstack/auth/server/auth";
+import { verifications } from "@kenstack/db/tables/verification";
 import { loadFreshAuthState } from "@kenstack/auth/server/state";
 import { ReturnedError } from "@kenstack/api";
 import { normalizeEmail } from "@kenstack/fields/email";
@@ -15,11 +16,16 @@ import {
   getVerificationKey,
   setVerificationCookie,
 } from "@kenstack/auth/email/verification/internal/cookie";
-import { verificationEndedMessage } from "@kenstack/auth/email/verification/internal/policy";
+import {
+  verificationEndedCode,
+  verificationReplacedMessage,
+} from "@kenstack/auth/email/verification/internal/policy";
 
 // Public entry point for host account flows and Kenstack email login. Converts
 // a proven email into an ordinary session, consuming the proof only once the
-// account exists.
+// account exists. A signed-in user, impersonating or not, who proves another
+// address switches to that address's account; login() ends the current
+// session first.
 export async function redeemEmailProof(
   {
     email,
@@ -33,21 +39,19 @@ export async function redeemEmailProof(
   const authState = await loadFreshAuthState();
   let userId: number | undefined;
 
-  if (authState.state === "authenticated") {
-    if (authState.impersonatedBy || authState.email !== email) {
-      throw new ReturnedError(
-        "That sign-in link is not valid for the current account.",
-        { status: 409 },
-      );
-    }
+  if (authState.state === "authenticated" && authState.email === email) {
     userId = authState.userId;
   } else {
     if (
-      authState.state !== "proven" ||
-      authState.email !== email ||
-      authState.verificationId !== verificationId
+      authState.state !== "authenticated" &&
+      (authState.state !== "proven" ||
+        authState.email !== email ||
+        authState.verificationId !== verificationId)
     ) {
-      throw new ReturnedError(verificationEndedMessage, { status: 409 });
+      throw new ReturnedError(verificationReplacedMessage, {
+        code: verificationEndedCode,
+        status: 409,
+      });
     }
 
     userId = (
@@ -62,6 +66,28 @@ export async function redeemEmailProof(
     )?.id;
     if (userId === undefined) {
       if (allowUnregistered) {
+        // The proven address has no account, so the host's flow goes on to
+        // create one. A signed-in visitor leaves their current account first,
+        // or that flow would edit it; logout drops the verification cookie,
+        // so the proof is put back for the new account's creation.
+        if (authState.state === "authenticated") {
+          const verificationKey = await getVerificationKey();
+          const [verification] = await db
+            .select({ expiresAt: verifications.expiresAt })
+            .from(verifications)
+            .where(eq(verifications.id, verificationId))
+            .limit(1);
+          await logout();
+          if (authState.impersonatedBy) {
+            await logout();
+          }
+          if (verificationKey && verification) {
+            await setVerificationCookie(
+              verificationKey,
+              verification.expiresAt,
+            );
+          }
+        }
         return;
       }
       throw new ReturnedError("No account was found for that email address.", {

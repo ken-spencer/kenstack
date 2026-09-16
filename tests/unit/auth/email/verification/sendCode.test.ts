@@ -11,7 +11,6 @@ const mocks = vi.hoisted(() => ({
   deleteExpired: vi.fn(),
   deleteVerification: vi.fn(),
   error: vi.fn(),
-  getCurrentUser: vi.fn(),
   hashKey: vi.fn(),
   loadFrom: vi.fn(),
   loadVerification: vi.fn(),
@@ -53,9 +52,6 @@ vi.mock("@app/email", () => ({
   attachments: [],
   loadEmailFrom: mocks.loadFrom,
 }));
-vi.mock("@kenstack/auth/server/user", () => ({
-  getCurrentUser: mocks.getCurrentUser,
-}));
 vi.mock("@kenstack/db/tables/verification", () => ({
   verifications: { expiresAt: {} },
 }));
@@ -75,7 +71,15 @@ vi.mock("@kenstack/auth/email/verification/internal/repository", () => ({
   endVerification: mocks.endVerification,
   createVerification: mocks.createVerification,
   deleteVerification: mocks.deleteVerification,
-  loadVerificationsForUpdate: mocks.loadVerification,
+  // Rows default to a login challenge; a test names another kind explicitly.
+  loadVerificationsForUpdate: async (...args: unknown[]) =>
+    (await mocks.loadVerification(...args)).map(
+      (row: Record<string, unknown>) => ({
+        kind: "login",
+        userId: null,
+        ...row,
+      }),
+    ),
   markVerificationDecoy: mocks.markVerificationDecoy,
 }));
 vi.mock("@kenstack/auth/email/verification/internal/cookie", () => ({
@@ -99,6 +103,7 @@ const secrets = {
 function request(cookie?: string) {
   return {
     cookies: { get: () => (cookie ? { value: cookie } : undefined) },
+    headers: new Headers(),
     url: "https://example.com/request",
   };
 }
@@ -113,7 +118,6 @@ describe("sendCode", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-08-17T18:00:00.000Z"));
     vi.spyOn(Math, "random").mockReturnValue(1);
-    mocks.getCurrentUser.mockResolvedValue(undefined);
     mocks.claimQuota.mockResolvedValue(null);
     mocks.hashKey.mockReturnValue("verification-key-hash");
     mocks.createSecrets.mockReturnValue(secrets);
@@ -361,6 +365,70 @@ describe("sendCode", () => {
     expect(mocks.sendEmail).not.toHaveBeenCalled();
   });
 
+  it("leaves a pending email change in place when a login code is sent", async () => {
+    mocks.loadVerification.mockResolvedValue([
+      {
+        challengeKey: "change-challenge",
+        codeHash: "change-hash",
+        codeSalt: "change-salt",
+        createdAt: new Date("2026-08-17T17:59:00.000Z"),
+        email: "new@example.com",
+        endedAt: null,
+        expiresAt: new Date("2026-08-17T18:10:00.000Z"),
+        failedAttempts: 0,
+        id: 9,
+        kind: "email-change",
+        provenAt: null,
+        userId: 12,
+      },
+    ]);
+
+    await sendCode(
+      {
+        email: "person@example.com",
+        linkPath: "/verify",
+        request: request("current-verification") as never,
+      },
+      createEmail(),
+    );
+    expect(mocks.endVerification).not.toHaveBeenCalled();
+    expect(mocks.createVerification).toHaveBeenCalledOnce();
+  });
+
+  it("refuses to resend a login challenge as an email change", async () => {
+    mocks.loadVerification.mockResolvedValue([
+      {
+        challengeKey: "current-challenge",
+        codeHash: "old-hash",
+        codeSalt: "old-salt",
+        createdAt: new Date("2026-08-17T17:59:00.000Z"),
+        email: "person@example.com",
+        endedAt: null,
+        expiresAt: new Date("2026-08-17T18:10:00.000Z"),
+        failedAttempts: 0,
+        id: 1,
+        kind: "login",
+        provenAt: null,
+        userId: null,
+      },
+    ]);
+
+    await expect(
+      sendCode(
+        {
+          challengeKey: "current-challenge",
+          email: "person@example.com",
+          kind: "email-change",
+          linkPath: "/verify",
+          request: request("current-verification") as never,
+          userId: 12,
+        },
+        createEmail(),
+      ),
+    ).rejects.toMatchObject({ status: 409 });
+    expect(mocks.createVerification).not.toHaveBeenCalled();
+  });
+
   it("claims no quota for a resend inside the cooldown", async () => {
     mocks.loadVerification.mockResolvedValue([
       {
@@ -403,7 +471,9 @@ describe("sendCode", () => {
       expiresAt: new Date("2026-08-17T18:10:00.000Z"),
       failedAttempts: 1,
       id: 1,
+      kind: "login",
       provenAt: null,
+      userId: null,
     };
     mocks.loadVerification.mockResolvedValue([current]);
     mocks.createFreshSecrets.mockReturnValue(secrets);
@@ -442,7 +512,9 @@ describe("sendCode", () => {
       expiresAt: new Date("2026-08-17T18:10:00.000Z"),
       failedAttempts: 0,
       id: 1,
+      kind: "login",
       provenAt: null,
+      userId: null,
     };
     mocks.loadVerification.mockResolvedValue([current]);
     mocks.sendEmail.mockResolvedValue({ status: "operational-failure" });

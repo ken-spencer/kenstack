@@ -5,6 +5,59 @@ contract lives in `docs/upgrading.md`.
 
 ## Unreleased
 
+### Email Verification While Signed In
+
+`sendCode`, `verifyCode` and `verifyLink` no longer refuse a signed-in or impersonated session, and
+`verifyLink` no longer returns `wrong-account`; `emailLoginLinkFailureCodeSchema` drops that code.
+A signed-in user who proves another address through email login now switches to that address's
+account: `redeemEmailProof` looks the account up as it does for an anonymous browser and `login()`
+ends the current session, including an impersonation, first. The only remaining refusal for a
+signed-in user is the email-login request stage's short circuit for the address they are already
+signed in as, which still returns success.
+
+### Sign-In Email Changes
+
+The `verifications` table adds `kind` (`login` by default, or `email-change`) and
+nullable `userId`, referencing the requesting account. Generate and apply the host's
+database migration before deploying this schema. Existing rows become `login` with
+no requesting account; these columns alone do not enforce email-change authorization.
+
+`authPipeline({ emailChange })` registers `email-change`, `verify-email-change-code`,
+`verify-email-change-link` and `cancel-email-change`, implemented by `createEmailChange` in
+`@kenstack/auth/email/change/api`. `emailChange.email` overrides the confirmation email copy like
+`emailLogin.email`; `emailChange.linkPath` (default `/account/profile`) is the page hosting the
+`EmailChange` component from `@kenstack/auth/components/EmailChange`, where the emailed
+confirmation (`?token=`) and cancellation (`?cancelEmailChange=`) links land. Requesting a change
+also notifies the current address. Result types `EmailChangeRequestResult`,
+`EmailChangeVerificationResult` and `EmailChangeCancelResult` are exported from
+`@kenstack/auth/api`.
+Verification rows carry `kind` (`login` or `email-change`) and `user_id`; `sendCode`, `verifyCode`,
+`verifyLink` and `consumeVerification` take that binding and refuse a row of another kind or account,
+so a login proof can never confirm a change. An email-change link is bound to its account instead of
+the requesting browser, so it still works after a sign-in in between.
+An address that already has an account gets a decoy challenge and an "account already exists"
+email instead of a code, so the requester's screen never reveals it. `sendCode` accepts `isDecoy`
+for that purpose.
+
+### Login Destination
+
+`authPipeline({ loginDestination })` chooses where password and email sign-ins land when the request
+carries no safe `returnTo`; a safe `returnTo` always wins, and the callback's result passes
+`getSafeReturnToPath` with `/` as the fallback. `createEmailLogin` and `loginPipeline` accept the
+same option. Without it, sign-ins land on `/` as before.
+
+### Emailed Links Follow The Visitor's Host
+
+Sign-in, onboarding, and email-change links are built through `@kenstack/lib/siteOrigin`: the
+`SITE_URL` variable when set, else Vercel's `VERCEL_PROJECT_PRODUCTION_URL` in production or
+`VERCEL_URL` in previews, else the request's Host header. `request.url` is not used,
+since Next fills it with the hostname the server started on.
+
+### Reset Password Path
+
+`ResetPasswordForm` accepts `path` and `forgotPassword.resetPath` names the page hosting it; both
+default to `/reset-password`, so existing hosts are unchanged.
+
 ### Relationships Without A Discriminator Column
 
 `defineRelationships` accepts a through table without a `relationship` column. The resolved

@@ -15,7 +15,11 @@ import type {
   EmailLoginRequestResult,
   EmailLoginVerificationResult,
 } from "@kenstack/auth/api";
-import { getSafeReturnToPath } from "@kenstack/auth/returnTo";
+import {
+  getSafeReturnToPath,
+  resolveLoginDestination,
+  type LoginDestination,
+} from "@kenstack/auth/returnTo";
 import getIp from "@kenstack/lib/ip";
 
 import {
@@ -37,8 +41,6 @@ const emailLoginLinkFailureMessages = {
   expired: "This sign-in link has expired. Request a new email to continue.",
   invalid:
     "This sign-in link is no longer valid. Request a new email to continue.",
-  "wrong-account":
-    "Sign out of the current account, then open this link again. The link is still valid.",
   "wrong-browser":
     "This link was opened in a different browser. Open it in the browser where you requested it, or request a new email here. The link is still valid.",
 } satisfies Record<EmailLoginLinkFailureCode, string>;
@@ -46,6 +48,7 @@ const emailLoginLinkFailureMessages = {
 export type EmailLoginOptions = {
   allowUnregistered?: boolean;
   email?: Partial<VerificationEmailCopy>;
+  loginDestination?: LoginDestination;
 };
 
 export function createEmailLogin(options: EmailLoginOptions = {}) {
@@ -71,10 +74,15 @@ export function createEmailLogin(options: EmailLoginOptions = {}) {
           authState.state === "authenticated" &&
           authState.email === data.email
         ) {
+          const publicAuthState = await loadPublicAuthState();
           response.headers.set("Cache-Control", "no-store");
           return response.success<EmailLoginRequestResult>({
-            authState: await loadPublicAuthState(),
-            path: returnTo ?? "/",
+            authState: publicAuthState,
+            path: await resolveLoginDestination(
+              returnTo,
+              publicAuthState,
+              options.loginDestination,
+            ),
           });
         }
         if (authState.state === "proven" && authState.email === data.email) {
@@ -82,12 +90,17 @@ export function createEmailLogin(options: EmailLoginOptions = {}) {
             allowUnregistered: options.allowUnregistered,
           });
 
-          response.headers.set("Cache-Control", "no-store");
           // Authentication may have established a session, so the state is
           // reloaded rather than read from the request cache.
+          const publicAuthState = await loadFreshPublicAuthState();
+          response.headers.set("Cache-Control", "no-store");
           return response.success<EmailLoginRequestResult>({
-            authState: await loadFreshPublicAuthState(),
-            path: returnTo ?? "/",
+            authState: publicAuthState,
+            path: await resolveLoginDestination(
+              returnTo,
+              publicAuthState,
+              options.loginDestination,
+            ),
           });
         }
 
@@ -141,12 +154,17 @@ export function createEmailLogin(options: EmailLoginOptions = {}) {
           allowUnregistered: options.allowUnregistered,
         });
 
-        response.headers.set("Cache-Control", "no-store");
         // The client store seeds from this state instead of fetching user-info
         // again; loaded fresh since authentication may have established a session.
+        const publicAuthState = await loadFreshPublicAuthState();
+        response.headers.set("Cache-Control", "no-store");
         return response.success<EmailLoginVerificationResult>({
-          authState: await loadFreshPublicAuthState(),
-          path: getSafeReturnToPath(data.returnTo) ?? "/",
+          authState: publicAuthState,
+          path: await resolveLoginDestination(
+            data.returnTo,
+            publicAuthState,
+            options.loginDestination,
+          ),
         });
       },
     ),
@@ -170,10 +188,15 @@ export function createEmailLogin(options: EmailLoginOptions = {}) {
           allowUnregistered: options.allowUnregistered,
         });
 
+        const publicAuthState = await loadFreshPublicAuthState();
         response.headers.set("Cache-Control", "no-store");
         return response.success<EmailLoginVerificationResult>({
-          authState: await loadFreshPublicAuthState(),
-          path: returnTo ?? "/",
+          authState: publicAuthState,
+          path: await resolveLoginDestination(
+            returnTo,
+            publicAuthState,
+            options.loginDestination,
+          ),
         });
       },
     ),

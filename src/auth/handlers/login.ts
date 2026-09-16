@@ -13,17 +13,22 @@ import {
 
 import type { LoginActionResult } from "@kenstack/auth/api";
 import { login as loginUser } from "@kenstack/auth/server/auth";
-import { getSafeReturnToPath } from "@kenstack/auth/returnTo";
+import {
+  resolveLoginDestination,
+  type LoginDestination,
+} from "@kenstack/auth/returnTo";
 import loginSchema from "@kenstack/auth/schemas/login";
 import { loadFreshPublicAuthState } from "@kenstack/auth/server/state";
 import { audit } from "@kenstack/logger";
 
 export const passwordFailureLimit = [3, "15 minutes"] as const;
 
-export const loginPipeline = () => (options: PipelineOptions) =>
-  pipeline(options, login());
+export const loginPipeline =
+  ({ loginDestination }: { loginDestination?: LoginDestination } = {}) =>
+  (options: PipelineOptions) =>
+    pipeline(options, login(loginDestination));
 
-const login = () =>
+const login = (loginDestination?: LoginDestination) =>
   pipelineStage(
     { schema: loginSchema },
     async ({
@@ -77,14 +82,17 @@ const login = () =>
         return response.error(passwordFailureMessage);
       }
 
-      const path = getSafeReturnToPath(returnTo) ?? "/";
-
       await loginUser(user.id);
 
+      const authState = await loadFreshPublicAuthState();
       return response.success<LoginActionResult>({
         authenticated: true,
-        authState: await loadFreshPublicAuthState(),
-        path,
+        authState,
+        path: await resolveLoginDestination(
+          returnTo,
+          authState,
+          loginDestination,
+        ),
       });
     },
   );

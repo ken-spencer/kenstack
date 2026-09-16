@@ -1,5 +1,6 @@
 import type { EmailLoginVerificationResult } from "@kenstack/auth/api";
 import { loginCodeSchema } from "@kenstack/auth/email/login/schemas";
+import { verificationEndedCode } from "@kenstack/auth/email/verification/internal/policy";
 import type { StatusMessage } from "@kenstack/forms/context";
 
 import VerificationCodeField from "@kenstack/auth/components/VerificationCodeField";
@@ -26,7 +27,7 @@ export default function LoginCodeForm({
   continuation: Continuation;
   email: string;
   onResend: (challengeKey: string) => void;
-  onShowEmailLogin: () => void;
+  onShowEmailLogin: (message?: string) => void;
   statusMessage?: StatusMessage;
 }) {
   const completeLogin = useCompleteLogin(continuation);
@@ -76,6 +77,11 @@ export default function LoginCodeForm({
               onSuccess: (res) => {
                 if (res.status === "success") {
                   completeLogin(res.path, res.authState);
+                } else if (res.code === verificationEndedCode) {
+                  onShowEmailLogin(
+                    res.message ??
+                      "That request has ended. Enter your email to start again.",
+                  );
                 }
               },
             },
@@ -104,7 +110,7 @@ export default function LoginCodeForm({
           >
             Resend email
           </LinkButton>
-          <LinkButton onClick={onShowEmailLogin}>
+          <LinkButton onClick={() => onShowEmailLogin()}>
             Use a different email
           </LinkButton>
         </div>
