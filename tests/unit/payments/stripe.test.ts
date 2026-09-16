@@ -27,6 +27,16 @@ describe("Stripe payment configuration", () => {
   });
 });
 
+it("requires a webhook secret before accepting live payments without blocking read-only configuration", () => {
+  vi.stubEnv("STRIPE_SECRET_KEY", "sk_live_fixture");
+  vi.stubEnv("NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY", "pk_live_fixture");
+  vi.stubEnv("STRIPE_WEBHOOK_SECRET", "");
+  expect(() => loadStripeConfig({ requireWebhook: true })).toThrow(
+    "Payments are not configured yet",
+  );
+  expect(loadStripeConfig().livemode).toBe(true);
+});
+
 describe("finite monthly payments", () => {
   it("counts the initial payment and cancels after twelve months at the existing monthly price", async () => {
     const stripe = new Stripe("sk_test_fixture");

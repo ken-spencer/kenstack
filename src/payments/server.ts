@@ -1,11 +1,15 @@
 import "server-only";
 
-// Host payment handlers use the Stripe client and finite billing schedule operation.
+// Host payment handlers use these provider operations alongside createPayments.
 import Stripe from "stripe";
+import { and, desc, eq } from "drizzle-orm";
+import type { DbTransaction } from "@kenstack/db/types";
+import { audit } from "@kenstack/logger";
+import { orders, transactions } from "./tables";
 import { ReturnedError } from "@kenstack/api/errors";
 import { reportError } from "@kenstack/lib/errorReporter";
 
-export function loadStripeConfig() {
+export function loadStripeConfig({ requireWebhook = false } = {}) {
   const secretKey = process.env.STRIPE_SECRET_KEY;
   const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
   if (!secretKey || !publishableKey)
@@ -24,6 +28,11 @@ export function loadStripeConfig() {
       "Stripe secret and publishable keys must belong to the same test or live environment.",
     );
   }
+  if (requireWebhook && livemode && !process.env.STRIPE_WEBHOOK_SECRET)
+    throw new ReturnedError(
+      "Payments are not configured yet. Please try again later.",
+      { status: 503 },
+    );
   return {
     stripe: new Stripe(secretKey, { maxNetworkRetries: 2 }),
     publishableKey,
@@ -121,7 +130,7 @@ export async function setInstallmentSchedule(
   );
 }
 
-// Host reconciliation persists this provider evidence under its order lock.
+// Reconciliation persists this provider evidence under its order lock.
 export async function readPayment(
   stripe: Stripe,
   intentId: string,
@@ -230,4 +239,92 @@ export async function readPayment(
       typeof import("@kenstack/payments/tables").transactions.$inferInsert
     >,
   };
+}
+
+export async function readInvoiceLines(
+  stripe: Stripe,
+  expected: {
+    invoiceId: string;
+    livemode: boolean;
+    currency: string;
+    totalCents: number;
+    subscriptionId: string | null;
+  },
+) {
+  const invoice = await stripe.invoices.retrieve(expected.invoiceId);
+  const subscription = invoice.parent?.subscription_details?.subscription;
+  if (
+    invoice.livemode !== expected.livemode ||
+    invoice.currency !== expected.currency ||
+    invoice.status !== "paid" ||
+    invoice.amount_paid !== expected.totalCents ||
+    (typeof subscription === "string" ? subscription : subscription?.id) !==
+      expected.subscriptionId
+  )
+    return {
+      error: `Invoice ${invoice.id} does not match the collected payment.`,
+    };
+  return {
+    lines: (
+      await stripe.invoices
+        .listLineItems(invoice.id, { limit: 100 })
+        .autoPagingToArray({ limit: 10_000 })
+    ).map((line) => ({
+      description: line.description,
+      amountCents: line.amount,
+    })),
+  };
+}
+
+// The caller locks and validates its order, then renews any domain reservation before retrying.
+export async function retryPayment(
+  tx: DbTransaction,
+  order: typeof orders.$inferSelect,
+  previousTransactionId: number | undefined,
+  beforeRetry: () => Promise<void>,
+) {
+  const [latest] = await tx
+    .select({
+      id: transactions.id,
+      status: transactions.status,
+      instalment: transactions.instalment,
+      totalCents: transactions.totalCents,
+      stripeInvoiceId: transactions.stripeInvoiceId,
+      stripePaymentIntentId: transactions.stripePaymentIntentId,
+    })
+    .from(transactions)
+    .where(
+      and(eq(transactions.orderId, order.id), eq(transactions.kind, "payment")),
+    )
+    .orderBy(desc(transactions.id))
+    .limit(1);
+  if (!latest) throw new Error("Payment order has no initial collection.");
+  if (
+    (latest.status !== "failed" && latest.status !== "canceled") ||
+    previousTransactionId !== latest.id ||
+    (latest.instalment !== null && latest.instalment !== 1)
+  )
+    return;
+  await beforeRetry();
+  const [attempt] = await tx
+    .insert(transactions)
+    .values({
+      orderId: order.id,
+      kind: "payment",
+      instalment: latest.instalment,
+      totalCents: latest.totalCents,
+      stripeInvoiceId: latest.stripeInvoiceId,
+      stripePaymentIntentId: order.stripeSubscriptionId
+        ? latest.stripePaymentIntentId
+        : null,
+    })
+    .returning({ id: transactions.id });
+  await audit({
+    db: tx,
+    action: "payment.retry",
+    table: "transactions",
+    rowId: attempt.id,
+    userId: order.userId,
+    data: { previousTransactionId: latest.id, orderId: order.id },
+  });
 }
