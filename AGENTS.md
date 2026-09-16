@@ -10,6 +10,8 @@ host repository.
 Read only the references relevant to the current task:
 
 - React APIs, client state, Next.js runtime, caching, or Suspense: `docs/runtime-boundaries.md`
+- Authentication redirects, protected pages, or auth behavior in a host proxy:
+  `docs/auth-routing.md`
 - Browser inspection or visual verification: `docs/browser-verification.md`
 - StepFlow, multi-step workflow composition, navigation, completion, or browser persistence:
   `docs/step-flow.md`
