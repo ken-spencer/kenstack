@@ -4,6 +4,10 @@ const mocks = vi.hoisted(() => ({
   cacheResults: new Map<string, unknown>(),
   cacheTag: vi.fn(),
   cookies: vi.fn(),
+  headers: vi.fn(),
+  redirect: vi.fn((path: string) => {
+    throw new Error(`REDIRECT ${path}`);
+  }),
   select: vi.fn(),
 }));
 
@@ -24,8 +28,11 @@ vi.mock("@app/modules", () => ({
   modules: { users: { admin: { table: {} } } },
 }));
 vi.mock("next/cache", () => ({ cacheLife: vi.fn(), cacheTag: mocks.cacheTag }));
-vi.mock("next/headers", () => ({ cookies: mocks.cookies }));
-vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
+vi.mock("next/headers", () => ({
+  cookies: mocks.cookies,
+  headers: mocks.headers,
+}));
+vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("drizzle-orm", () => ({
   and: vi.fn(() => ({})),
   eq: vi.fn(() => ({})),
@@ -44,6 +51,7 @@ vi.mock("@kenstack/db/tables/sessions", () => ({ sessions: {} }));
 import {
   getCurrentUser,
   getFreshCurrentUser,
+  requireUser,
 } from "@kenstack/auth/server/user";
 
 function selectResult(roles: string[] = []) {
@@ -109,5 +117,114 @@ describe("current-user loading", () => {
     expect(mocks.cacheTag).toHaveBeenCalledWith("auth-user-sessions:12");
     expect(mocks.cacheTag).toHaveBeenCalledWith("admin-load:users:12");
     expect(mocks.select).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("required-user redirects", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.cacheResults.clear();
+    mocks.cookies.mockResolvedValue({ get: vi.fn() });
+    mocks.headers.mockResolvedValue(
+      new Headers({
+        "x-pathname": "/admin/movies",
+        "x-search": "?search=Arrival&page=2",
+      }),
+    );
+    mocks.select.mockImplementation(() => selectResult());
+  });
+
+  it("preserves the proxy destination when signed out", async () => {
+    await expect(requireUser("admin")).rejects.toThrow(
+      "REDIRECT /login?returnTo=%2Fadmin%2Fmovies%3Fsearch%3DArrival%26page%3D2",
+    );
+    expect(mocks.select).not.toHaveBeenCalled();
+  });
+
+  it("uses an explicit destination without reading headers", async () => {
+    await expect(
+      requireUser("authenticated", "/account?tab=orders"),
+    ).rejects.toThrow("REDIRECT /login?returnTo=%2Faccount%3Ftab%3Dorders");
+    expect(mocks.headers).not.toHaveBeenCalled();
+  });
+
+  it("keeps plain login when neither destination is available", async () => {
+    mocks.headers.mockResolvedValue(new Headers());
+    await expect(requireUser()).rejects.toThrow("REDIRECT /login");
+    expect(mocks.redirect).toHaveBeenCalledWith("/login");
+  });
+
+  it.each([
+    "https://elsewhere.example/",
+    "//elsewhere.example/",
+    "/\\elsewhere.example",
+    "/login",
+    "",
+  ])(
+    "rejects unsafe or empty explicit destinations without falling back to the header: %s",
+    async (returnTo) => {
+      await expect(requireUser("authenticated", returnTo)).rejects.toThrow(
+        "REDIRECT /login",
+      );
+      expect(mocks.redirect).toHaveBeenCalledWith("/login");
+      expect(mocks.headers).not.toHaveBeenCalled();
+    },
+  );
+
+  it("validates header destinations on requests that did not pass through the proxy", async () => {
+    mocks.headers.mockResolvedValue(
+      new Headers({ "x-pathname": "//elsewhere.example" }),
+    );
+    await expect(requireUser()).rejects.toThrow("REDIRECT /login");
+    expect(mocks.redirect).toHaveBeenCalledWith("/login");
+  });
+
+  it("uses the pathname when no query header is available", async () => {
+    mocks.headers.mockResolvedValue(new Headers({ "x-pathname": "/pos" }));
+    await expect(requireUser()).rejects.toThrow(
+      "REDIRECT /login?returnTo=%2Fpos",
+    );
+  });
+
+  it("does not use a query header without a pathname", async () => {
+    mocks.headers.mockResolvedValue(new Headers({ "x-search": "?tab=orders" }));
+    await expect(requireUser()).rejects.toThrow("REDIRECT /login");
+    expect(mocks.redirect).toHaveBeenCalledWith("/login");
+  });
+
+  it("preserves the destination when a cookie has no valid session", async () => {
+    mocks.cookies.mockResolvedValue({
+      get: () => ({ value: "expired-token" }),
+    });
+    const query = selectResult();
+    query.limit.mockResolvedValue([]);
+    mocks.select.mockReturnValue(query);
+    await expect(requireUser("admin")).rejects.toThrow(
+      "REDIRECT /login?returnTo=%2Fadmin%2Fmovies%3Fsearch%3DArrival%26page%3D2",
+    );
+  });
+
+  it("does not send an authenticated user back to a forbidden destination", async () => {
+    mocks.cookies.mockResolvedValue({
+      get: () => ({ value: "session-token" }),
+    });
+    await expect(requireUser("admin", "/admin/movies")).rejects.toThrow(
+      "REDIRECT /login",
+    );
+    expect(mocks.redirect).toHaveBeenCalledWith("/login");
+    expect(mocks.headers).not.toHaveBeenCalled();
+  });
+
+  it("shares the session lookup across destinations and skips headers for authorized users", async () => {
+    mocks.cookies.mockResolvedValue({
+      get: () => ({ value: "session-token" }),
+    });
+    mocks.select.mockImplementation(() => selectResult(["admin"]));
+    expect((await requireUser("admin", "/admin/movies")).id).toBe(12);
+    expect((await requireUser("admin", "/admin/users")).id).toBe(12);
+    expect((await requireUser("admin")).id).toBe(12);
+    expect(mocks.select).toHaveBeenCalledOnce();
+    expect(mocks.headers).not.toHaveBeenCalled();
+    expect(mocks.redirect).not.toHaveBeenCalled();
   });
 });

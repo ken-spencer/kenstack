@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { cacheLife, cacheTag } from "next/cache";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { and, isNull, eq, gt, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 
@@ -8,6 +8,7 @@ import { db } from "@app/db";
 import { modules } from "@app/modules";
 import roles from "@app/roles";
 import type { AuthAccess } from "@kenstack/auth/server/auth";
+import { getSafeReturnToPath } from "@kenstack/auth/returnTo";
 import { selectMediaSubquery } from "@kenstack/db/queries/media";
 import { sessions } from "@kenstack/db/tables/sessions";
 import { formatUserInitials, formatUserName } from "@kenstack/lib/user";
@@ -169,11 +170,21 @@ export const getCurrentSession = cache(async () => {
 
 export const requireUser = cache(async function requireUser(
   access: AuthAccess = "authenticated",
+  // Requested for explicit destinations and hosts that do not use the auth proxy.
+  returnTo?: string,
 ): Promise<User<Role>> {
   const user = await getCurrentUser();
 
   if (!user) {
-    redirect("/login");
+    if (returnTo === undefined) {
+      const requestHeaders = await headers();
+      const pathname = requestHeaders.get("x-pathname");
+      returnTo = pathname
+        ? pathname + (requestHeaders.get("x-search") ?? "")
+        : undefined;
+    }
+    const path = getSafeReturnToPath(returnTo);
+    redirect(path ? `/login?returnTo=${encodeURIComponent(path)}` : "/login");
   }
 
   const requiredAccess = Array.isArray(access) ? access : [access];
