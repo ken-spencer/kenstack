@@ -171,6 +171,7 @@ export function createPayments(config: {
           })) {
             if (
               intent.metadata.orderId === String(id) &&
+              intent.metadata.requestId === order.requestId &&
               intent.metadata.transactionId === String(attempt.id)
             ) {
               intentId = intent.id;
@@ -231,7 +232,7 @@ export function createPayments(config: {
                 },
               },
               {
-                idempotencyKey: `${config.customer.idempotencyPrefix}:${order.userId}`,
+                idempotencyKey: `${config.customer.idempotencyPrefix}:${order.userId}:${order.requestId}`,
               },
             )
           ).id;
@@ -268,7 +269,7 @@ export function createPayments(config: {
           ).entries()) {
             const product = await stripe.products.create(
               { name: item.description, metadata: { orderId: String(id) } },
-              { idempotencyKey: `order:${id}:product:${index}` },
+              { idempotencyKey: `order:${order.requestId}:product:${index}` },
             );
             subscriptionItems.push({
               price_data: {
@@ -309,11 +310,12 @@ export function createPayments(config: {
                   metadata,
                   expand: ["latest_invoice.payments"],
                 },
-                { idempotencyKey: `order:${id}:subscription` },
+                { idempotencyKey: `order:${order.requestId}:subscription` },
               );
           if (
             subscription.livemode !== livemode ||
-            subscription.metadata.orderId !== String(id)
+            subscription.metadata.orderId !== String(id) ||
+            subscription.metadata.requestId !== order.requestId
           )
             throw new Error("Subscription does not match the order.");
           order.stripeSubscriptionId = subscription.id;
@@ -352,7 +354,9 @@ export function createPayments(config: {
                 payment_method_types: ["card"],
                 metadata,
               },
-              { idempotencyKey: `transaction:${attempt.id}:create` },
+              {
+                idempotencyKey: `order:${order.requestId}:transaction:${attempt.id}:create`,
+              },
             )
           ).id;
         }
@@ -403,6 +407,7 @@ export function createPayments(config: {
         if (
           !recurring &&
           (evidence.intent.metadata.orderId !== String(id) ||
+            evidence.intent.metadata.requestId !== order.requestId ||
             evidence.intent.metadata.transactionId !== String(attempt.id))
         )
           throw new Error(
@@ -423,7 +428,9 @@ export function createPayments(config: {
                 confirmation_token: pay.confirmationTokenId,
                 return_url: pay.returnUrl,
               },
-              { idempotencyKey: `transaction:${attempt.id}:confirm` },
+              {
+                idempotencyKey: `order:${order.requestId}:transaction:${attempt.id}:confirm`,
+              },
             );
           } catch (error) {
             if (!(error instanceof Stripe.errors.StripeCardError)) throw error;
@@ -544,7 +551,7 @@ export function createPayments(config: {
           const schedule = await setInstallmentSchedule(stripe, {
             subscriptionId: order.stripeSubscriptionId,
             paymentCount: order.paymentCount,
-            idempotencyKey: `order:${id}:schedule`,
+            idempotencyKey: `order:${order.requestId}:schedule`,
           });
           await tx
             .update(orders)

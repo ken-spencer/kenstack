@@ -122,7 +122,7 @@ beforeEach(() => {
   mocks.stripe.subscriptions.create.mockResolvedValue({
     id: "sub_course",
     livemode: false,
-    metadata: { orderId: "10001" },
+    metadata: { orderId: "10001", requestId: "abcdefghijklmn1" },
     latest_invoice: {
       id: "in_first",
       amount_due: 3335,
@@ -145,7 +145,11 @@ beforeEach(() => {
       currency: "usd",
       amount: rows.transactions[0].totalCents,
       amount_received: rows.transactions[0].totalCents,
-      metadata: { orderId: "10001", transactionId: "1" },
+      metadata: {
+        orderId: "10001",
+        transactionId: "1",
+        requestId: rows.orders[0].requestId,
+      },
     },
     values: {
       status: "succeeded",
@@ -179,7 +183,7 @@ it("collects an arbitrary order with the host's customer identity and no fulfill
       name: "Alex Example",
       metadata: { memberId: "7" },
     },
-    { idempotencyKey: "member:7" },
+    { idempotencyKey: "member:7:abcdefghijklmn1" },
   );
   expect(mocks.stripe.paymentIntents.create).toHaveBeenCalledWith(
     expect.objectContaining({
@@ -187,7 +191,7 @@ it("collects an arbitrary order with the host's customer identity and no fulfill
       currency: "usd",
       customer: "cus_member",
     }),
-    { idempotencyKey: "transaction:1:create" },
+    { idempotencyKey: "order:abcdefghijklmn1:transaction:1:create" },
   );
 });
 
@@ -263,19 +267,19 @@ it("uses a three-payment plan and settles before calling the post-commit hook", 
         }),
       ],
     }),
-    { idempotencyKey: "order:10001:subscription" },
+    { idempotencyKey: "order:abcdefghijklmn1:subscription" },
   );
   expect(mocks.stripe.products.create).toHaveBeenCalledWith(
     {
       name: "Course registration, Course materials",
       metadata: { orderId: "10001" },
     },
-    { idempotencyKey: "order:10001:product:0" },
+    { idempotencyKey: "order:abcdefghijklmn1:product:0" },
   );
   expect(mocks.schedule).toHaveBeenCalledWith(mocks.stripe, {
     subscriptionId: "sub_course",
     paymentCount: 3,
-    idempotencyKey: "order:10001:schedule",
+    idempotencyKey: "order:abcdefghijklmn1:schedule",
   });
   expect(steps).toEqual(["prepare", "succeeded", "after commit"]);
 });
@@ -326,4 +330,91 @@ it("does not run the post-commit hook when fulfillment fails", async () => {
   });
   await expect(reconcileOrder(10001)).rejects.toThrow("Fulfillment failed");
   expect(onReconciled).not.toHaveBeenCalled();
+});
+
+it.each([false, true])(
+  "isolates Stripe operations by checkout while preserving retries (recurring=%s)",
+  async (recurring) => {
+    if (recurring) {
+      rows.orders[0].paymentCount = 3;
+      rows.transactions[0].instalment = 1;
+      rows.transactions[0].totalCents = 3335;
+      mocks.stripe.subscriptions.create.mockImplementation(async () => ({
+        id: "sub_course",
+        livemode: false,
+        metadata: { orderId: "10001", requestId: rows.orders[0].requestId },
+        latest_invoice: {
+          id: "in_first",
+          amount_due: 3335,
+          currency: "usd",
+          payments: {
+            data: [
+              {
+                payment: {
+                  type: "payment_intent",
+                  payment_intent: "pi_payment",
+                },
+              },
+            ],
+          },
+        },
+      }));
+    }
+    const initialRows = structuredClone(rows);
+    const { reconcileOrder } = createPayments({
+      users,
+      customer: { metadataKey: "memberId", idempotencyPrefix: "member" },
+    });
+    for (const requestId of [
+      "abcdefghijklmn1",
+      "abcdefghijklmn2",
+      "abcdefghijklmn1",
+    ]) {
+      rows = structuredClone(initialRows);
+      rows.orders[0].requestId = requestId;
+      await reconcileOrder(10001, {
+        confirm: {
+          confirmationTokenId: "ctoken_test",
+          returnUrl: "https://example.test/paid",
+        },
+      });
+    }
+    for (const operation of [
+      mocks.stripe.customers.create,
+      ...(recurring
+        ? [mocks.stripe.products.create, mocks.stripe.subscriptions.create]
+        : [mocks.stripe.paymentIntents.create]),
+    ]) {
+      const keys = operation.mock.calls.map((call) => call[1].idempotencyKey);
+      expect(keys).toHaveLength(3);
+      expect(keys[0]).not.toBe(keys[1]);
+      expect(keys[0]).toBe(keys[2]);
+    }
+    if (recurring) {
+      const keys = mocks.schedule.mock.calls.map(
+        (call) => call[1].idempotencyKey,
+      );
+      expect(keys[0]).not.toBe(keys[1]);
+      expect(keys[0]).toBe(keys[2]);
+    }
+  },
+);
+
+it("ignores another checkout's PaymentIntent when recovering overlapping database IDs", async () => {
+  mocks.stripe.paymentIntents.list.mockReturnValue([
+    {
+      id: "pi_other_checkout",
+      metadata: {
+        orderId: "10001",
+        transactionId: "1",
+        requestId: "othercheckout01",
+      },
+    },
+  ]);
+  await createPayments({
+    users,
+    customer: { metadataKey: "memberId", idempotencyPrefix: "member" },
+  }).reconcileOrder(10001);
+  expect(mocks.readPayment).not.toHaveBeenCalled();
+  expect(rows.transactions[0].stripePaymentIntentId).toBeNull();
 });
