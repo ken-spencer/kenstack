@@ -44,12 +44,14 @@ export function createStripeWebhook(
   onEvent: (event: Stripe.Event, stripe: Stripe) => Promise<void>,
 ) {
   return async (request: Request) => {
+    const startedAt = performance.now();
+    let event: Stripe.Event | undefined;
+    let outcome = "failed";
     try {
       const { stripe, livemode } = loadStripeConfig();
       const secret = process.env.STRIPE_WEBHOOK_SECRET;
       if (!secret)
         throw new Error("Set STRIPE_WEBHOOK_SECRET for the payment webhook.");
-      let event;
       try {
         event = stripe.webhooks.constructEvent(
           await request.text(),
@@ -57,15 +59,31 @@ export function createStripeWebhook(
           secret,
         );
       } catch {
+        outcome = "invalid_signature";
         return new Response("Invalid signature", { status: 400 });
       }
-      if (event.livemode !== livemode)
+      if (event.livemode !== livemode) {
+        outcome = "wrong_environment";
         return new Response("Wrong payment environment", { status: 400 });
+      }
       await onEvent(event, stripe);
+      outcome = "acknowledged";
       return new Response(null, { status: 200 });
     } catch (error) {
-      await reportError(error, { source: "payments.webhook" });
+      await reportError(error, {
+        source: "payments.webhook",
+        context: { eventId: event?.id, eventType: event?.type },
+      });
       return new Response("Payment reconciliation failed", { status: 500 });
+    } finally {
+      // eslint-disable-next-line no-console -- Operational delivery evidence; never log payloads or signatures.
+      console.info("payments.webhook", {
+        eventId: event?.id,
+        eventType: event?.type,
+        livemode: event?.livemode,
+        outcome,
+        durationMs: Math.round(performance.now() - startedAt),
+      });
     }
   };
 }

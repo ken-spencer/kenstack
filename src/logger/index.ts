@@ -9,9 +9,15 @@ import getIp from "@kenstack/lib/ip";
 export async function audit({
   db = appDb,
   userId,
+  actor,
   ...props
 }: {
   action: string;
+  // Pass an already-resolved session actor to avoid a lookup inside a transaction.
+  actor?: Pick<
+    NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>,
+    "id" | "impersonatedBy"
+  >;
   data?: Record<string, unknown>;
   db?: {
     insert: (table: typeof auditLogs) => {
@@ -22,7 +28,7 @@ export async function audit({
   table?: string;
   userId?: number | null;
 }): Promise<void> {
-  const user = userId === null ? null : await getCurrentUser();
+  const user = userId === null ? null : (actor ?? (await getCurrentUser()));
   const headersList = await headers();
   const request = new Request("http://internal", { headers: headersList });
 

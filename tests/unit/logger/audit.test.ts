@@ -73,4 +73,24 @@ describe("audit", () => {
       }),
     );
   });
+
+  it("records an already-resolved actor and impersonator without another session lookup", async () => {
+    const values = vi.fn().mockResolvedValue(undefined);
+    const db = { insert: vi.fn(() => ({ values })) };
+
+    await audit({
+      action: "receipt.downloaded",
+      db,
+      actor: { id: 42, impersonatedBy: 7 },
+    });
+
+    expect(mocks.getCurrentUser).not.toHaveBeenCalled();
+    expect(values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "receipt.downloaded",
+        userId: 42,
+        impersonatedBy: 7,
+      }),
+    );
+  });
 });

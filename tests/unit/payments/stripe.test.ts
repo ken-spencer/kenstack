@@ -1,8 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Stripe from "stripe";
 
+const info = vi.fn();
+
 vi.mock("server-only", () => ({}));
 vi.mock("@kenstack/lib/errorReporter", () => ({ reportError: vi.fn() }));
+import { reportError } from "@kenstack/lib/errorReporter";
 import {
   createStripeWebhook,
   loadStripeConfig,
@@ -11,6 +14,8 @@ import {
 } from "@kenstack/payments/server";
 
 beforeEach(() => {
+  info.mockClear();
+  vi.spyOn(console, "info").mockImplementation(info);
   vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_fixture");
   vi.stubEnv("NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY", "pk_test_fixture");
   vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_fixture");
@@ -136,22 +141,65 @@ describe("Stripe webhook boundary", () => {
       expect.objectContaining({ id: "evt_fixture" }),
       expect.any(Stripe),
     );
+    expect(info).toHaveBeenCalledWith("payments.webhook", {
+      eventId: "evt_fixture",
+      eventType: "checkout.session.completed",
+      livemode: false,
+      outcome: "acknowledged",
+      durationMs: expect.any(Number),
+    });
   });
   it("rejects altered payloads and events from another payment environment", async () => {
     const onEvent = vi.fn();
     const handler = createStripeWebhook(onEvent);
     expect((await handler(request(false, true))).status).toBe(400);
+    expect(info).toHaveBeenLastCalledWith("payments.webhook", {
+      eventId: undefined,
+      eventType: undefined,
+      livemode: undefined,
+      outcome: "invalid_signature",
+      durationMs: expect.any(Number),
+    });
     expect((await handler(request(true))).status).toBe(400);
+    expect(info).toHaveBeenLastCalledWith("payments.webhook", {
+      eventId: "evt_fixture",
+      eventType: "checkout.session.completed",
+      livemode: true,
+      outcome: "wrong_environment",
+      durationMs: expect.any(Number),
+    });
     expect(onEvent).not.toHaveBeenCalled();
   });
   it("returns an error so Stripe retries a failed fulfilment", async () => {
-    expect(
-      (
-        await createStripeWebhook(async () => {
-          throw new Error("Database unavailable");
-        })(request())
-      ).status,
-    ).toBe(500);
+    const onEvent = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("Database unavailable"))
+      .mockResolvedValueOnce(undefined);
+    const handler = createStripeWebhook(onEvent);
+    expect((await handler(request())).status).toBe(500);
+    expect(reportError).toHaveBeenCalledWith(expect.any(Error), {
+      source: "payments.webhook",
+      context: {
+        eventId: "evt_fixture",
+        eventType: "checkout.session.completed",
+      },
+    });
+    expect(info).toHaveBeenLastCalledWith("payments.webhook", {
+      eventId: "evt_fixture",
+      eventType: "checkout.session.completed",
+      livemode: false,
+      outcome: "failed",
+      durationMs: expect.any(Number),
+    });
+    expect((await handler(request())).status).toBe(200);
+    expect(info).toHaveBeenLastCalledWith("payments.webhook", {
+      eventId: "evt_fixture",
+      eventType: "checkout.session.completed",
+      livemode: false,
+      outcome: "acknowledged",
+      durationMs: expect.any(Number),
+    });
+    expect(onEvent).toHaveBeenCalledTimes(2);
   });
 });
 
