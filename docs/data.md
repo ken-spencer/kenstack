@@ -5,9 +5,9 @@ pipeline schema work, or batch scripts.
 
 ## Database
 
-- Before editing database schemas or generating migrations, present only the proposed table, column
-  and relationship changes, with a brief reason for each. Obtain explicit approval of that proposal.
-  Applying a migration also requires authorization for the target database.
+- Before introducing unapproved table, column, or relationship changes, present the proposal with a
+  brief reason and obtain approval. A request to merge or reconcile already-approved schemas authorizes
+  the corresponding migration generation and development-database reconciliation without asking again.
 - Before committing, compress migrations from approved, uncommitted private work into one consolidated migration; a
   commit introduces only that one, so a later fix from the same commit updates or regenerates the
   private migration. Follow the migration-history rules below before rewriting consumed artifacts.
@@ -34,13 +34,13 @@ pipeline schema work, or batch scripts.
 - A development database may have consumed intermediate private migrations before they were compressed,
   so the consolidated migration cannot simply replay against it. Reset the database when it is
   disposable; otherwise compare its schema with the consolidated target and reconcile both the missing
-  schema changes and its migration ledger through a separately authorized operation before running the
-  normal migration command again.
+  schema changes and its migration ledger before running the normal migration command again.
 - If a shared Preview, staging, or production database consumed rewritten history, stop deployment,
   restore the last shared artifacts, and reconcile its schema and ledger only through a separately
   authorized operation.
-- Resetting, rebasing, squashing, or regenerating migration files never authorizes changing a database.
-  A destructive database operation requires a separate request naming the exact database and operation.
+- Generating migration files alone does not authorize applying them. Destructive database operations
+  and changes to shared Preview, staging, or production require authorization naming the target database
+  and operation.
 - Changes required by every database go in the migration chain. Reserve direct queries for simple
   changes to one identified development database and scripts for complex or repeatable reconciliation.
 
