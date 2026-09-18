@@ -15,6 +15,8 @@ import {
   readPayment,
   setInstallmentSchedule,
 } from "./server";
+import { loadCustomer } from "./customer";
+import { createPaymentMethods } from "./cards";
 import { calculateInstallments } from "./installments";
 import { createPaymentWebhook } from "./webhook";
 
@@ -207,40 +209,14 @@ export function createPayments(config: {
           .where(eq(users.id, order.userId))
           .for("update");
         if (!user) throw new Error("Payment account is missing.");
-        let customerId = user.stripeCustomerId;
-        if (!customerId) {
-          // Recover a customer whose create response was lost before its local link committed.
-          for await (const customer of stripe.customers.list({
-            email: order.customerSnapshot.email,
-            limit: 100,
-          })) {
-            if (
-              customer.metadata[config.customer.metadataKey] ===
-              String(order.userId)
-            ) {
-              customerId = customer.id;
-              break;
-            }
-          }
-          customerId ??= (
-            await stripe.customers.create(
-              {
-                email: order.customerSnapshot.email,
-                name: `${order.customerSnapshot.givenName} ${order.customerSnapshot.familyName}`,
-                metadata: {
-                  [config.customer.metadataKey]: String(order.userId),
-                },
-              },
-              {
-                idempotencyKey: `${config.customer.idempotencyPrefix}:${order.userId}:${order.requestId}`,
-              },
-            )
-          ).id;
-          await tx
-            .update(users)
-            .set({ stripeCustomerId: customerId })
-            .where(eq(users.id, order.userId));
-        }
+        const customerId = await loadCustomer(
+          tx,
+          stripe,
+          config,
+          { id: order.userId, ...order.customerSnapshot },
+          order.requestId,
+          user.stripeCustomerId,
+        );
         const metadata = {
           orderId: String(order.id),
           requestId: order.requestId,
@@ -582,6 +558,7 @@ export function createPayments(config: {
 
   return {
     reconcileOrder,
+    ...createPaymentMethods(config),
     stripeWebhook: createPaymentWebhook(reconcileOrder, config.onReconciled),
   };
 }

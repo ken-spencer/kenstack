@@ -1,7 +1,7 @@
 "use client";
 
 // Hosts supply a server quote and confirm tokens after persisting their Pay transition.
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { loadStripe, type Appearance } from "@stripe/stripe-js";
 import {
   Elements,
@@ -12,6 +12,7 @@ import {
 } from "@stripe/react-stripe-js";
 import * as z from "zod";
 import Form from "@kenstack/forms/Form";
+import CheckboxField from "@kenstack/forms/CheckboxField";
 import { useForm } from "@kenstack/forms/context";
 import { StepActions } from "@kenstack/components/StepFlow/StepActions";
 import type { FetchResult } from "@kenstack/api/fetcher";
@@ -22,6 +23,7 @@ export default function Payment({
   currency,
   recurring,
   publishableKey,
+  customerSessionClientSecret,
   appearance,
   enableLink = false,
   onConfirm,
@@ -31,6 +33,7 @@ export default function Payment({
   currency: string;
   recurring: boolean;
   publishableKey: string;
+  customerSessionClientSecret?: string;
   appearance?: Appearance;
   // Requested for enabling Link checkout later without changing the payment flow.
   enableLink?: boolean;
@@ -52,11 +55,14 @@ export default function Payment({
         amount: amountCents,
         currency,
         paymentMethodCreation: "manual",
+        customerSessionClientSecret,
+        setupFutureUsage: recurring ? "off_session" : undefined,
         paymentMethodTypes: ["card"],
         appearance,
       }}
     >
       <PaymentForm
+        recurring={recurring}
         appearance={appearance}
         enableLink={enableLink}
         onConfirm={onConfirm}
@@ -67,21 +73,26 @@ export default function Payment({
 }
 
 function PaymentForm({
+  recurring,
   appearance,
   enableLink,
   onConfirm,
   onComplete,
 }: Pick<
   Parameters<typeof Payment>[0],
-  "appearance" | "enableLink" | "onConfirm" | "onComplete"
+  "recurring" | "appearance" | "enableLink" | "onConfirm" | "onComplete"
 >) {
   const stripe = useStripe();
   const elements = useElements();
   return (
     <Form
-      schema={z.object({})}
-      defaultValues={{}}
-      mutationFn={async (): Promise<FetchResult<{ sessionId: string }>> => {
+      schema={z.object({ saveCard: z.boolean() })}
+      defaultValues={{ saveCard: false }}
+      mutationFn={async ({
+        saveCard,
+      }: {
+        saveCard: boolean;
+      }): Promise<FetchResult<{ sessionId: string }>> => {
         if (!stripe || !elements)
           return {
             status: "error",
@@ -90,7 +101,14 @@ function PaymentForm({
         const submitted = await elements.submit();
         if (submitted.error)
           return { status: "error", message: submitted.error.message };
-        const token = await stripe.createConfirmationToken({ elements });
+        const token = await stripe.createConfirmationToken({
+          elements,
+          params: {
+            payment_method_data: {
+              allow_redisplay: recurring || saveCard ? "always" : undefined,
+            },
+          },
+        });
         if (token.error)
           return { status: "error", message: token.error.message };
         const result = await onConfirm(token.confirmationToken.id);
@@ -105,22 +123,42 @@ function PaymentForm({
         await onComplete(result.sessionId);
         return { status: "success", sessionId: result.sessionId };
       }}
-      onSubmit={({ mutation }) => mutation.mutate({})}
+      onSubmit={({ data, mutation }) => mutation.mutate(data)}
     >
-      <PaymentControls appearance={appearance} enableLink={enableLink} />
+      <PaymentControls
+        recurring={recurring}
+        appearance={appearance}
+        enableLink={enableLink}
+      />
     </Form>
   );
 }
 
 function PaymentControls({
+  recurring,
   appearance,
   enableLink,
-}: Pick<Parameters<typeof Payment>[0], "appearance" | "enableLink">) {
-  const { mutation } = useForm<
+}: Pick<
+  Parameters<typeof Payment>[0],
+  "recurring" | "appearance" | "enableLink"
+>) {
+  const { mutation, form } = useForm<
     { sessionId: string },
-    Record<string, never>,
-    Record<string, never>
+    { saveCard: boolean },
+    { saveCard: boolean }
   >();
+  const [hasSavedCard, setHasSavedCard] = useState(false);
+  const elements = useElements();
+  const saveCard = form.watch("saveCard");
+  useEffect(() => {
+    elements?.update({
+      setupFutureUsage: recurring
+        ? "off_session"
+        : saveCard
+          ? "on_session"
+          : null,
+    });
+  }, [elements, recurring, saveCard]);
   return (
     <fieldset
       disabled={mutation.isPending}
@@ -166,11 +204,14 @@ function PaymentControls({
             paymentMethods: { link: enableLink ? "auto" : "never" },
           }}
           onConfirm={() => {
-            if (!mutation.isPending) mutation.mutate({});
+            if (!mutation.isPending) mutation.mutate({ saveCard });
           }}
         />
       )}
       <PaymentElement
+        onChange={(event) =>
+          setHasSavedCard(Boolean(event.value.payment_method))
+        }
         options={{
           wallets: {
             applePay: process.env.NODE_ENV === "development" ? "never" : "auto",
@@ -180,6 +221,17 @@ function PaymentControls({
           },
         }}
       />
+      {recurring ? (
+        <p className="text-sm">
+          Your card will be securely saved for your monthly payments and
+          available for future purchases.
+        </p>
+      ) : !hasSavedCard ? (
+        <CheckboxField
+          name="saveCard"
+          label="Securely save this card for future purchases"
+        />
+      ) : null}
       <StepActions
         next={{
           label: "Pay now",
