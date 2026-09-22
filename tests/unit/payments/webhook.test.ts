@@ -1,6 +1,6 @@
 import { getTableName, type SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   insert: vi.fn(),
@@ -56,8 +56,52 @@ beforeEach(() => {
     }),
   });
 });
+afterEach(() => vi.useRealTimers());
 
 describe("payment webhook recovery", () => {
+  it.each(["pi_payment", { id: "pi_payment" }])(
+    "reconciles delayed charge evidence through its intent: %j",
+    async (payment_intent) => {
+      const updated = {
+        ...event,
+        type: "charge.updated",
+        data: { object: { id: "ch_prior_attempt", payment_intent } },
+      };
+      const stripe = {
+        paymentIntents: {
+          retrieve: vi.fn().mockResolvedValue(event.data.object),
+        },
+        invoicePayments: {
+          list: vi.fn(() => ({ autoPagingToArray: async () => [] })),
+        },
+      };
+      await mocks.handler(updated, stripe);
+      await mocks.handler(updated, stripe);
+      expect(stripe.paymentIntents.retrieve).toHaveBeenCalledWith("pi_payment");
+      expect(stripe.invoicePayments.list).toHaveBeenCalledWith({
+        payment: { type: "payment_intent", payment_intent: "pi_payment" },
+        limit: 100,
+      });
+      expect(mocks.reconcile).toHaveBeenCalledTimes(2);
+      expect(mocks.reconcile).toHaveBeenLastCalledWith(10001, {
+        event: updated,
+      });
+    },
+  );
+
+  it("ignores charge updates without a PaymentIntent", async () => {
+    await mocks.handler(
+      {
+        ...event,
+        type: "charge.updated",
+        data: { object: { id: "ch_legacy", payment_intent: null } },
+      },
+      {},
+    );
+    expect(mocks.select).not.toHaveBeenCalled();
+    expect(mocks.reconcile).not.toHaveBeenCalled();
+  });
+
   it.each([
     { metadata: {}, identifiers: ["pi_payment"] },
     { metadata: { requestId: "" }, identifiers: ["pi_payment"] },
@@ -294,6 +338,84 @@ describe("recurring collection lifecycle", () => {
     expect(collections[0]).toMatchObject({ status: "failed", instalment: 2 });
     expect(mocks.audit).not.toHaveBeenCalled();
     expect(mocks.onReconciled).toHaveBeenLastCalledWith(10001, stripe, false);
+  });
+  it("fills delayed invoice fees without duplicating a collection or changing its completion time", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-09-21T20:00:00Z"));
+    const { collections, payments, stripe, invoiceEvent } = recurringFixture();
+    payments.push({
+      invoice: "in_test",
+      payment: { type: "payment_intent", payment_intent: "pi_cycle" },
+    });
+    mocks.readPayment.mockImplementation(
+      (
+        await vi.importActual<typeof import("@kenstack/payments/server")>(
+          "@kenstack/payments/server",
+        )
+      ).readPayment,
+    );
+    const retrieve = vi.fn().mockResolvedValue({
+      id: "pi_cycle",
+      status: "succeeded",
+      livemode: false,
+      currency: "cad",
+      amount: 2500,
+      amount_received: 2500,
+      latest_charge: {
+        id: "ch_cycle",
+        amount: 2500,
+        balance_transaction: null,
+      },
+    });
+    Object.assign(stripe, { paymentIntents: { retrieve } });
+    await mocks.handler(invoiceEvent, stripe);
+    expect(collections).toEqual([
+      expect.objectContaining({
+        instalment: 2,
+        status: "succeeded",
+        feeCents: null,
+        stripeBalanceTransactionId: null,
+      }),
+    ]);
+    const finishedAt = collections[0].finishedAt;
+    retrieve.mockResolvedValue({
+      id: "pi_cycle",
+      status: "succeeded",
+      livemode: false,
+      currency: "cad",
+      amount: 2500,
+      amount_received: 2500,
+      latest_charge: {
+        id: "ch_cycle",
+        amount: 2500,
+        balance_transaction: {
+          id: "txn_cycle",
+          amount: 2500,
+          currency: "cad",
+          fee: 103,
+        },
+      },
+    });
+    const updated = {
+      ...invoiceEvent,
+      type: "charge.updated",
+      data: { object: { id: "ch_cycle", payment_intent: "pi_cycle" } },
+    };
+    vi.setSystemTime(new Date("2026-09-21T20:01:00Z"));
+    await mocks.handler(updated, stripe);
+    vi.setSystemTime(new Date("2026-09-21T20:02:00Z"));
+    await mocks.handler(updated, stripe);
+    expect(mocks.reconcile).not.toHaveBeenCalled();
+    expect(collections).toEqual([
+      expect.objectContaining({
+        instalment: 2,
+        status: "succeeded",
+        stripeChargeId: "ch_cycle",
+        stripeBalanceTransactionId: "txn_cycle",
+        feeCents: 103,
+        finishedAt,
+      }),
+    ]);
   });
   it("refuses to record a collection whose invoice period has no number", async () => {
     const { collections, invoice, stripe, invoiceEvent } = recurringFixture();

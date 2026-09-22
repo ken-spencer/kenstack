@@ -46,8 +46,18 @@ export function createPaymentWebhook(
       case "payment_intent.payment_failed":
       case "payment_intent.processing":
       case "payment_intent.requires_action":
-      case "payment_intent.canceled": {
-        const intent = event.data.object;
+      case "payment_intent.canceled":
+      case "charge.updated": {
+        const intent =
+          event.type === "charge.updated"
+            ? event.data.object.payment_intent &&
+              (await stripe.paymentIntents.retrieve(
+                typeof event.data.object.payment_intent === "string"
+                  ? event.data.object.payment_intent
+                  : event.data.object.payment_intent.id,
+              ))
+            : event.data.object;
+        if (!intent) break;
         const linked = await stripe.invoicePayments
           .list({
             payment: { type: "payment_intent", payment_intent: intent.id },

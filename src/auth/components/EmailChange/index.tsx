@@ -255,7 +255,7 @@ function EmailChangeContent({
         >
           <InputField
             autoComplete="email"
-            label="Email"
+            label={<span className="sr-only">Email</span>}
             name="email"
             type="email"
           />
