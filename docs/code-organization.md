@@ -127,8 +127,9 @@ capability with their owner and the concrete maintenance cost.
 
 - Every prop and option is supported API. Start from the default behavior owned by the implementation
   and add configuration only when a current production caller needs the variation or the user
-  explicitly requested it for upcoming work; future wording, styling, or behavior the agent imagines on
-  its own earns none. A user-requested surface stays even while it has no caller.
+  explicitly requested it for upcoming work. For the latter, add a one-line comment naming the requested
+  use; cleanup and review must preserve that surface even without a caller. Agent-imagined future
+  variation earns no configuration.
 - Expose the smallest meaningful difference; invariant labels, defaults, state transitions, and
   implementation details stay internal.
 - A caller supplies domain input and genuinely optional policy; calculations, metadata, setup, and
@@ -138,11 +139,8 @@ capability with their owner and the concrete maintenance cost.
 
 ## Helper ladder
 
-- Apply the ownership and caller-cost tests to every helper or factory before considering its reference
-  count or export status. For a non-exported helper, the direct-expression reference-count rule above
-  controls: one reference is inlined when direct substitution preserves functionality, including when
-  that reference passes the helper as a callback. An uncommitted export does not retain a relay, and
-  removing any export must still pass the ownership and caller-cost tests.
+- Apply the ownership and direct-expression rules above before deciding a helper's location or export
+  status. An uncommitted export does not exempt a helper from those rules.
 - With one consuming file, keep the helper file-local and unexported.
 - A separate helper file requires multiple production consumers or a concrete runtime, tooling, or
   public-contract boundary. Tests are not production consumers and never justify a production export.

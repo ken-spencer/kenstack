@@ -1,25 +1,17 @@
 # Cleanup
 
-Use this checklist after implementation or on an explicit cleanup request. Cleanup removes unnecessary
-complexity and repairs objective rule violations while preserving product behavior, vocabulary, and the
-task's scope.
+Use this checklist with the cleanup skill when cleanup is explicitly requested or required by the
+development workflow. The skill owns invocation, Git scope, delegation, and edit eligibility; this
+reference supplies Kenstack's engineering checks.
 
 ## Scope and posture
 
-- Inspect repository status first and preserve unrelated work.
-- The default scope is the dirty files, including unstaged and untracked ones, and their nearby
-  context. Expand to the full project only on request or when an affected owner cannot otherwise be
-  found.
-- Read the current diff before editing. Keep an existing change when it improves something concrete;
-  leave equally clear forms alone.
-- Before treating a cleanup as mechanical, establish equivalence across observable behavior,
-  caller-visible type inference, ownership, and the external contract. A clean compile proves
-  compatibility, not equivalence.
-- Ask whether a simpler direct approach gives the same result and whether every abstraction or
-  mechanism earns its cost.
-- Apply only narrow changes with an objective ruling from this checklist. When a choice needs new
-  product, API, design, or naming judgment, flag the exact unresolved decision and the evidence needed
-  to make it.
+- Preserve unrelated work and use the selected diff and nearby context. Expand to the full project only
+  on request or when an affected owner cannot otherwise be found.
+- Apply only locally proven changes that preserve behavior, caller-visible types, ownership, and public
+  contracts. A clean compile proves compatibility, not equivalence.
+- Leave equally clear forms alone. Report product, API, design, ownership, and naming decisions for
+  implementation or the user's ruling.
 
 ## Checklist
 
@@ -31,51 +23,34 @@ task's scope.
   `features`, modules, and shared domains; during a requested site-wide cleanup, inventory all
   production site components and compare them with one another, including components outside the
   dirty-file set. Rule on each comparison from behavior and ownership: when ownership is duplicated,
-  name the canonical owner and the differences it must preserve, then replace the duplicate through
-  that owner; when ownership is distinct, name the domain behavior or contract that requires separate
+  name the canonical owner and the differences it must preserve, then report the consolidation for
+  implementation; when ownership is distinct, name the domain behavior or contract that requires separate
   components. A similarity score, visual resemblance, or unresolved candidate is not a finding.
 - **Owner APIs and configuration:** Inventory every new or changed prop, option, default, explicit
   override, and repeated setup around an affected reusable component or function, and inspect every
   production call site for each configuration point. Each difference needs the current behavior that
   requires it; existing divergence is not evidence of intent. Repeated or near-equivalent literals,
-  caller-recomputed owner metadata, and setup repeated at call sites are reasons to improve the owner's
-  implementation, defaults, or contract. Keep only genuinely optional consumer policy outside the owner,
-  and flag unresolved product choices for the user's ruling. For an affected multi-step workflow, apply
+  caller-recomputed owner metadata, and setup repeated at call sites identify ownership changes to
+  report for implementation. Consumer policy stays outside the owner only when it is genuinely optional;
+  flag unresolved product choices for the user's ruling. For an affected multi-step workflow, apply
   the ownership and composition checks in `docs/step-flow.md`.
-- **Helpers and indirection:** Inventory every new or changed helper, wrapper, mapper, normalizer, and
-  local alias. Apply the ownership and construction-boundary rulings first, then the capability order,
-  local-binding rule, and helper ladder in `docs/code-organization.md`, whatever the declaration's
-  reference count or export status. Inline a one-reference non-exported local variable or function
-  binding, including destructured bindings and callbacks, when direct substitution satisfies that
-  rule's keep conditions; for a retained binding, record the concrete constraint, which is never
-  readability or a descriptive name. Remove pass-through and delegating layers through the call-path
-  collapse procedure below. A cleanup that fails the caller-cost test or spreads owner-specific setup
-  across call sites is rejected.
+- **Helpers and indirection:** Inventory changed helpers, wrappers, mappers, normalizers, and local
+  bindings, including destructured bindings and callbacks. Apply ownership, capability order,
+  direct-expression keep conditions, and the helper ladder in `docs/code-organization.md`; record the
+  concrete constraint for each retained one-reference binding. Trace delegating layers through the
+  call-path collapse procedure below.
 - **Aliases and renamed bindings:** Inspect every new or changed import alias, destructuring rename,
   pass-through binding, and local alias. Use the canonical source name directly; keep a rename only
   when it resolves an actual collision or marks an explicit lifecycle boundary, and remove one that
   only introduces a synonym or repeats surrounding context. Cleanup never invents a replacement name;
   when the canonical name looks inaccurate or misleading, flag it for the user's ruling.
-- **Names:** Audit new and changed names against `docs/naming.md`. First apply the capability order in
-  `docs/code-organization.md` (native, then owner, then adopted library, then custom) and its direct
-  inference rule to every new or changed helper, including predicates and comparison functions; then
-  audit each function against the action-or-predicate naming rules in `docs/naming.md`. Compare every
-  name with the symbol's actual contract or value. Cleanup never renames: report a convention
-  violation, non-canonical vocabulary, or a factual mismatch between name and behavior for the user's
-  ruling; readability preference, an unapproved synonym, and a qualifier that distinguishes another
-  live variant are not even findings. Trace every new or changed cross-file model end to end and report
-  vocabulary drift, keeping different names for genuinely different states (requested, persisted,
-  rejected) even when their shapes match. When the user approves a rename, sweep the owning filename
-  and folder, imports, exports, tests, and local symbols as one naming family. Apply the reserved
-  runtime-boundary vocabulary in
-  `docs/runtime-boundaries.md`, including the server-only meaning of `api`. Flag a questionable
-  canonical name for the user's ruling.
-- **Declarations and exports:** Inventory every new or changed declaration (functions, values, hooks,
-  components, types) and inspect its production references. Apply the direct-expression
-  reference-count ruling to every non-exported local variable or function binding; for other
-  declarations, reference counts identify candidates for examination and are not the ruling. Each new
-  runtime export needs a current production consumer or an intentional public boundary; otherwise keep
-  it local. Committed public exports remain externally consumed.
+- **Names:** Apply `docs/naming.md` and the reserved runtime vocabulary in
+  `docs/runtime-boundaries.md`. Trace changed cross-file models for vocabulary drift. Report factual
+  or convention violations for the user's ruling; harmless synonyms, readability preferences, and
+  qualifiers distinguishing live variants are not findings. Cleanup never renames.
+- **Declarations and exports:** Inspect production references for changed declarations. Apply
+  `AGENTS.md`'s export gates and `docs/code-organization.md`'s local-binding rules; reference counts
+  alone do not decide other declarations. Committed public exports remain externally consumed.
 - **Types:** Perform the complete inventory and rulings in the `Type cleanup` section of
   `docs/typescript.md`, including types in untracked files. Use owner inference or derive from the
   canonical producer; hand-write a type only for an intentional independent contract.
@@ -129,13 +104,12 @@ user-ruling outcome. A speculative suggestion is reported as such, never as requ
   owner work.
 - A committed public boundary turns removal of that link into a user ruling; the rest of the path is
   still inventoried.
-- Re-run the trace after every collapse until no relay remains and every retained layer performs owner
-  work.
+- Apply a collapse only when the skill's equivalence and ownership gates permit it; otherwise report
+  it for implementation. Re-trace affected paths after an edit.
 
 ## Verification and handoff
 
 - Run formatting, TypeScript, lint, and the narrowest relevant existing tests per `AGENTS.md` and the
   applicable technical reference. Behavior that did not change gets no new test to pin the cleanup.
 - Re-read the final diff and run the checklist again against the result.
-- Report meaningful edits, unresolved user rulings, material residual risk, and any failed or skipped
-  check.
+- Follow `AGENTS.md`'s reporting policy; include meaningful edits and unresolved user rulings.

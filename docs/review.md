@@ -1,7 +1,8 @@
 # Review
 
-Use this checklist for review-only work in Kenstack and its host sites. Review establishes whether a
-change is correct, necessary, and ready for handoff; it does not authorize implementation.
+Use this checklist with the review skill for code review in Kenstack and its host sites. The skill owns
+invocation and independence; this reference supplies the project checks. Review reports findings and
+does not authorize implementation.
 
 ## Scope
 
@@ -27,7 +28,7 @@ change is correct, necessary, and ready for handoff; it does not authorize imple
 4. Check the applicable ownership, import-organization, public-surface, and technical contracts routed by
    `AGENTS.md`, including the ownership trace in `docs/code-organization.md#unit-ownership`.
    For an affected reusable owner, inspect every new or changed configuration branch
-   and its production call sites far enough to verify cleanup's ownership and configuration ruling. One product
+   and its production call sites. Assess any cleanup ruling independently. One product
    capability stays behind one option unless a current caller requires each partial configuration;
    reject a surface that permits contradictory, incomplete, or drifting combinations. For an affected
    multi-step workflow, apply `docs/step-flow.md`. For a new or changed site component, rule on
@@ -45,15 +46,14 @@ elsewhere, or a diff that is harder to review.
 - Review does not repeat cleanup's declaration, helper, alias, naming, type, or guard inventories. When
   the diff shows that the cleanup pass was skipped or remains materially incomplete, report that once
   with representative evidence and route the work through `docs/cleanup.md`.
-- When cleanup or fixes are requested, make only narrow changes supported by a concrete finding, then
-  re-review the result.
+- Requested fixes enter the implementation workflow; cleanup follows its own edit limits. Review
+  only the resulting changes and affected contracts again.
 
 ## Verification
 
-Ordinary review assesses the verification already performed and identifies material gaps. Run final
-checks only when requested or when the work has entered final review. Use browser inspection when visible
-behavior cannot be assessed reliably from code. Follow the repository's testing policy for integration
-tests, builds, and other expensive or stateful checks.
+Assess existing verification and identify material gaps. Run checks only when requested or needed to
+resolve a concrete evidence gap; entering final review alone does not require rerunning them. Use browser
+inspection when code cannot establish visible behavior. Follow `AGENTS.md` for test and build limits.
 
 ## Report
 

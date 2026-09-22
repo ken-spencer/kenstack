@@ -42,21 +42,16 @@ imports, caching, Suspense, and public runtime boundaries.
   conditional or dynamic import, to pull the loaded client module and its dependencies into the build
   or route bundle.
 - Admin and client registries that call `defineAdminClients` or export module `clients` maps start with
-  `"use client"`. This boundary is required even when a server module imports the file today: without
-  the directive, the registry's dynamic imports can be bundled like direct imports, leaking every
-  registered admin or client module onto every public page and massively increasing browser download
-  size. Import-boundary concerns, lint preferences, bundle analysis, and a wish to make the file look
-  server-safe are never reasons to remove it.
+  `"use client"`, including when imported by server modules. Without that boundary, their dynamic
+  imports can bundle every registered module onto public pages.
 - Admin server routes decide whether an admin route exists from server-owned module config, such as
   `moduleConfig.admin`. Client registry wiring is UI behavior, not route existence: an admin route never
   checks `moduleConfig.client` before rendering, and a missing client loader never calls `notFound()`.
   Validate client config only inside client components that consume it.
-- Fix public bundle leakage in the importing route or module graph while keeping the registry a Client
-  Component, or explicitly accept the measured bundle trade-off. Moving Client Component loaders into
-  Server Components, `server-only` files, or server-safe helper files triggers the same Next.js
-  bundling bug. When a larger fix is justified, split server-only module definitions from admin client
-  registries, or pass client-enabled modules only at the admin entry point. A client registry appearing
-  in a public route graph is not evidence that it should be server-safe.
+- Fix public bundle leakage in the importing graph while preserving the client loader boundary, or
+  explicitly accept the measured trade-off. When warranted, split server module definitions from
+  client registries or pass client-enabled modules only at the admin entry point. Moving a loader to
+  server-only or server-safe code reintroduces the bundling problem.
 - Before changing any file with `"use client"` or any dynamic import of a Client Component, establish
   why the boundary is safe. When the goal is bundle reduction, verify with a production build before and
   after, once the user has authorized production builds.

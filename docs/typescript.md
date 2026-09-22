@@ -6,29 +6,14 @@ an inference or compiler problem.
 
 ## Earn every type
 
-- The best type is no type. Start with inference and add a type only when it protects a necessary
-  contract the inferred type does not express.
-- Infer internal values, function bodies, builder results, schemas, and configuration.
-- Use the inference supplied by native operations, canonical owners, and adopted libraries directly; a
-  type alias, wrapper, annotation, overload, or generic that only preserves, renames, or reshapes that
-  inference adds nothing.
-- Name a type when it defines an exported contract a current consumer must reference or protects an
-  external, schema, generic, or library boundary that inference does not express.
-- Remove a type that names a one-use object shape, mirrors a value its owner already infers, or exists
-  only to silence a diagnostic created by awkward code.
+- Infer internal values, function bodies, builder results, schemas, and configuration. Add a named
+  type only for an exported contract a current consumer needs or a necessary external, schema,
+  generic, or library boundary that inference does not express.
+- Use native, owner, and adopted-library inference directly. Remove aliases, wrappers, annotations,
+  overloads, and generics that only mirror or rename it, including one-use object shapes and types
+  introduced to silence a diagnostic from awkward code.
 - Derive from canonical owners with `typeof`, `ReturnType`, `Parameters`, Zod input and output types,
   and table or builder inference; an existing contract has one version.
-- When an inferred value needs an exported type name, export a type derived from its canonical owner.
-  Hand-write the type only for an intentional contract independent of that producer.
-
-  ```ts
-  export async function loadItems() {
-    return db.select({ id: items.id, name: items.name }).from(items);
-  }
-
-  export type Item = Awaited<ReturnType<typeof loadItems>>[number];
-  ```
-
 ## Carry inference across boundaries
 
 - Let the canonical producer infer its return type. When another runtime, module, or layer needs a named
@@ -72,17 +57,15 @@ an inference or compiler problem.
   part of it is a second owner.
 - Keep required lower-level values required, and validate optional runtime configuration at the
   boundary that reads it, so the contract stays strong and no later code throws for a missing value.
-- Name a public type for the concept callers pass, receive, or implement. `Resolved`, `Built`, `Patch`,
-  or `Defaults` earn their place only when that state changes how callers use the value. Before renaming
-  a committed type, inspect its consumers and verify a representative host.
+- Name public types under `docs/naming.md`, preserving the rename restrictions in `AGENTS.md`.
+  For an authorized committed-type rename, inspect consumers and verify a representative host.
 - When a canonical factory, parser, resolver, compiler, schema, or query produces a named state, derive
   its type from that producer and construct values through it; a manually assembled lookalike that
   happens to satisfy the exported output type is not that state.
 
 ## Keep types with their owner
 
-- A function's parameter and result contracts belong beside that function.
-- A public type belongs beside the public value or function that owns it.
+- Parameter, result, and public type contracts belong beside the function or value that owns them.
 - A shared predicate belongs beside the named domain type it narrows; a one-off structural check stays
   inline at its use.
 - A type stays with its owner however many files import it; there is no generic `types.ts` bucket.
@@ -170,8 +153,6 @@ an inference or compiler problem.
 - For every type newly exported in a dirty-file diff or exported from an untracked file, verify that a
   current in-repository consumer imports and uses it outside its defining file; otherwise remove the
   export and keep the type local.
-- Keep deliberate compile-time contract fixtures under `tests/types/`, where `tsc` checks them without
-  presenting them as runtime tests.
 - Delete compatibility aliases and duplicate type surfaces for uncommitted APIs and update their call
   sites directly. Committed public types are externally consumed; document an authorized break per
   `docs/upgrading.md`.
