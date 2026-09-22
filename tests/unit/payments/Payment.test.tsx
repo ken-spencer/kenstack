@@ -105,3 +105,40 @@ it("uses Stripe wallets in a production build with test credentials", async () =
     container.querySelector('button[aria-label="Pay with Google Pay"]'),
   ).toBeNull();
 });
+
+it("reports Stripe card-entry events to a hold owner without treating continued focus as activity", async () => {
+  vi.useFakeTimers();
+  const onActivity = vi.fn();
+  try {
+    await act(async () =>
+      root.render(
+        <Payment
+          amountCents={22500}
+          currency="cad"
+          recurring={false}
+          publishableKey="pk_test_fixture"
+          onConfirm={vi.fn()}
+          onComplete={vi.fn()}
+          onActivity={onActivity}
+        />,
+      ),
+    );
+    const element = vi.mocked(PaymentElement).mock.calls.at(-1)![0];
+    expect(onActivity).not.toHaveBeenCalled();
+    act(() => element.onFocus?.({ elementType: "payment" }));
+    act(() =>
+      element.onChange?.({
+        elementType: "payment",
+        empty: false,
+        complete: false,
+        collapsed: false,
+        value: { type: "card" },
+      }),
+    );
+    expect(onActivity).toHaveBeenCalledTimes(2);
+    await act(async () => vi.advanceTimersByTimeAsync(120000));
+    expect(onActivity).toHaveBeenCalledTimes(2);
+  } finally {
+    vi.useRealTimers();
+  }
+});

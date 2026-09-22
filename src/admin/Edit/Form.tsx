@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Form from "@kenstack/forms/Form";
 import fetcher from "@kenstack/api/fetcher";
+import { refreshUserInfo } from "@kenstack/auth/useUserInfo";
 
 import { useAdminEdit } from "./context";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
@@ -83,6 +84,7 @@ export default function EditForm({ children }: { children: React.ReactNode }) {
         }
 
         if (name === "users" && recordId === userId) {
+          void refreshUserInfo();
           router.refresh();
         }
 

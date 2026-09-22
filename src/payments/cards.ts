@@ -4,8 +4,13 @@ import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { db } from "@app/db";
 import { ReturnedError } from "@kenstack/api/errors";
+import { claimQuota } from "@kenstack/api/quota";
 import { audit } from "@kenstack/logger";
-import { loadStripeConfig } from "./server";
+import {
+  assertOrderSubscription,
+  endedSubscriptionStatuses,
+  loadStripeConfig,
+} from "./server";
 import { loadCustomer } from "./customer";
 import { orders, orderItems } from "./tables";
 import type { createPayments } from "./reconcile";
@@ -14,33 +19,38 @@ import type { createPayments } from "./reconcile";
 export function createPaymentMethods(
   config: Pick<Parameters<typeof createPayments>[0], "users" | "customer">,
 ) {
-  async function loadPaymentCustomer(user: Parameters<typeof loadCustomer>[3]) {
+  async function loadPaymentCustomer(
+    user: Parameters<typeof loadCustomer>[3],
+    customerId?: string,
+  ) {
     const { stripe, livemode, publishableKey } = loadStripeConfig();
-    const [account] = await db
-      .select({ stripeCustomerId: config.users.stripeCustomerId })
-      .from(config.users)
-      .where(eq(config.users.id, user.id));
-    if (!account)
-      throw new ReturnedError("Account not found.", { status: 404 });
-    const customerId =
-      account.stripeCustomerId ??
-      (await db.transaction(async (tx) => {
-        const [locked] = await tx
-          .select({ stripeCustomerId: config.users.stripeCustomerId })
-          .from(config.users)
-          .where(eq(config.users.id, user.id))
-          .for("update");
-        if (!locked)
-          throw new ReturnedError("Account not found.", { status: 404 });
-        return loadCustomer(
-          tx,
-          stripe,
-          config,
-          user,
-          randomUUID(),
-          locked.stripeCustomerId,
-        );
-      }));
+    if (!customerId) {
+      const [account] = await db
+        .select({ stripeCustomerId: config.users.stripeCustomerId })
+        .from(config.users)
+        .where(eq(config.users.id, user.id));
+      if (!account)
+        throw new ReturnedError("Account not found.", { status: 404 });
+      customerId =
+        account.stripeCustomerId ??
+        (await db.transaction(async (tx) => {
+          const [locked] = await tx
+            .select({ stripeCustomerId: config.users.stripeCustomerId })
+            .from(config.users)
+            .where(eq(config.users.id, user.id))
+            .for("update");
+          if (!locked)
+            throw new ReturnedError("Account not found.", { status: 404 });
+          return loadCustomer(
+            tx,
+            stripe,
+            config,
+            user,
+            randomUUID(),
+            locked.stripeCustomerId,
+          );
+        }));
+    }
     const customer = await stripe.customers.retrieve(customerId);
     if (
       customer.deleted ||
@@ -54,8 +64,20 @@ export function createPaymentMethods(
   async function loadPaymentMethods(
     user: Parameters<typeof loadPaymentCustomer>[0],
   ) {
+    const [account] = await db
+      .select({ stripeCustomerId: config.users.stripeCustomerId })
+      .from(config.users)
+      .where(eq(config.users.id, user.id));
+    if (!account)
+      throw new ReturnedError("Account not found.", { status: 404 });
+    if (!account.stripeCustomerId)
+      return {
+        publishableKey: loadStripeConfig().publishableKey,
+        cards: [],
+        plans: [],
+      };
     const { stripe, publishableKey, customer, livemode } =
-      await loadPaymentCustomer(user);
+      await loadPaymentCustomer(user, account.stripeCustomerId);
     const [methods, subscriptions, purchases] = await Promise.all([
       stripe.paymentMethods
         .list({ customer: customer.id, type: "card", limit: 100 })
@@ -80,7 +102,7 @@ export function createPaymentMethods(
         : (customer.invoice_settings.default_payment_method?.id ?? null);
     const active = subscriptions.filter(
       (subscription) =>
-        !["canceled", "incomplete_expired"].includes(subscription.status),
+        !endedSubscriptionStatuses.includes(subscription.status),
     );
     return {
       publishableKey,
@@ -103,12 +125,7 @@ export function createPaymentMethods(
           (purchase) => purchase.stripeSubscriptionId === subscription.id,
         );
         if (!lines.length) return [];
-        if (
-          subscription.livemode !== livemode ||
-          subscription.metadata.orderId !== String(lines[0].id) ||
-          subscription.metadata.requestId !== lines[0].requestId
-        )
-          throw new Error("Subscription does not match the account purchase.");
+        assertOrderSubscription(subscription, lines[0], livemode);
         return [
           {
             id: lines[0].id,
@@ -127,6 +144,8 @@ export function createPaymentMethods(
   async function createCardSetup(
     user: Parameters<typeof loadPaymentCustomer>[0],
   ) {
+    const exceeded = await claimQuota("card-setup", { email: user.email });
+    if (exceeded) throw new ReturnedError(exceeded.message, { status: 429 });
     const { stripe, customer } = await loadPaymentCustomer(user);
     return {
       clientSecret: (
@@ -176,7 +195,7 @@ export function createPaymentMethods(
         .select({ id: config.users.id })
         .from(config.users)
         .where(eq(config.users.id, user.id))
-        .for("update");
+        .for("no key update");
       const method = await stripe.paymentMethods.retrieve(
         input.paymentMethodId,
       );
@@ -205,14 +224,10 @@ export function createPaymentMethods(
         const subscription = await stripe.subscriptions.retrieve(
           order.stripeSubscriptionId,
         );
-        if (
-          subscription.customer !== customer.id ||
-          subscription.livemode !== livemode ||
-          subscription.metadata.orderId !== String(order.id) ||
-          subscription.metadata.requestId !== order.requestId
-        )
+        assertOrderSubscription(subscription, order, livemode);
+        if (subscription.customer !== customer.id)
           throw new Error("Subscription does not match the account purchase.");
-        if (["canceled", "incomplete_expired"].includes(subscription.status))
+        if (endedSubscriptionStatuses.includes(subscription.status))
           throw new ReturnedError("This recurring purchase has ended.", {
             status: 409,
           });
@@ -239,8 +254,7 @@ export function createPaymentMethods(
           status: "all",
           limit: 100,
         })) {
-          if (["canceled", "incomplete_expired"].includes(subscription.status))
-            continue;
+          if (endedSubscriptionStatuses.includes(subscription.status)) continue;
           const methodId =
             typeof subscription.default_payment_method === "string"
               ? subscription.default_payment_method

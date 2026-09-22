@@ -28,6 +28,7 @@ export default function Payment({
   enableLink = false,
   onConfirm,
   onComplete,
+  onActivity,
 }: {
   amountCents: number;
   currency: string;
@@ -45,6 +46,7 @@ export default function Payment({
     }>
   >;
   onComplete: (sessionId: string) => Promise<void>;
+  onActivity?: () => void;
 }) {
   const [stripe] = useState(() => loadStripe(publishableKey));
   return (
@@ -67,6 +69,7 @@ export default function Payment({
         enableLink={enableLink}
         onConfirm={onConfirm}
         onComplete={onComplete}
+        onActivity={onActivity}
       />
     </Elements>
   );
@@ -78,9 +81,15 @@ function PaymentForm({
   enableLink,
   onConfirm,
   onComplete,
+  onActivity,
 }: Pick<
   Parameters<typeof Payment>[0],
-  "recurring" | "appearance" | "enableLink" | "onConfirm" | "onComplete"
+  | "recurring"
+  | "appearance"
+  | "enableLink"
+  | "onConfirm"
+  | "onComplete"
+  | "onActivity"
 >) {
   const stripe = useStripe();
   const elements = useElements();
@@ -129,18 +138,20 @@ function PaymentForm({
         recurring={recurring}
         appearance={appearance}
         enableLink={enableLink}
+        onActivity={onActivity}
       />
     </Form>
   );
 }
 
 function PaymentControls({
+  onActivity,
   recurring,
   appearance,
   enableLink,
 }: Pick<
   Parameters<typeof Payment>[0],
-  "recurring" | "appearance" | "enableLink"
+  "recurring" | "appearance" | "enableLink" | "onActivity"
 >) {
   const { mutation, form } = useForm<
     { sessionId: string },
@@ -209,9 +220,11 @@ function PaymentControls({
         />
       )}
       <PaymentElement
-        onChange={(event) =>
-          setHasSavedCard(Boolean(event.value.payment_method))
-        }
+        onFocus={onActivity}
+        onChange={(event) => {
+          onActivity?.();
+          setHasSavedCard(Boolean(event.value.payment_method));
+        }}
         options={{
           wallets: {
             applePay: process.env.NODE_ENV === "development" ? "never" : "auto",

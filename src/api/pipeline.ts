@@ -163,6 +163,7 @@ export default async function pipeline(
             code: e.code,
             message: e.message,
             status: e.status,
+            redirect: e.redirect,
           })
           .toNextResponse();
       }

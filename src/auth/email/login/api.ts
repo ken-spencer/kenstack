@@ -21,6 +21,8 @@ import {
   type LoginDestination,
 } from "@kenstack/auth/returnTo";
 import getIp from "@kenstack/lib/ip";
+import { getCurrentSession } from "@kenstack/auth/server/user";
+import { hasRecentAuthentication } from "@kenstack/auth/reauthentication";
 
 import {
   createVerificationEmail,
@@ -72,7 +74,8 @@ export function createEmailLogin(options: EmailLoginOptions = {}) {
         const authState = await loadAuthState();
         if (
           authState.state === "authenticated" &&
-          authState.email === data.email
+          authState.email === data.email &&
+          hasRecentAuthentication(await getCurrentSession())
         ) {
           const publicAuthState = await loadPublicAuthState();
           response.headers.set("Cache-Control", "no-store");

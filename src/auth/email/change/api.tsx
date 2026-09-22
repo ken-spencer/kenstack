@@ -22,6 +22,9 @@ import {
   loadPublicAuthState,
 } from "@kenstack/auth/server/state";
 import { userSessionsCacheTag } from "@kenstack/auth/server/user";
+import { login } from "@kenstack/auth/server/auth";
+import { requireRecentAuthentication } from "@kenstack/auth/reauthentication/server";
+import { sessions } from "@kenstack/db/tables/sessions";
 import { errorTranslator } from "@kenstack/db/errorTranslator";
 import { verifications } from "@kenstack/db/tables/verification";
 import { normalizeEmail } from "@kenstack/fields/email";
@@ -135,6 +138,7 @@ export function createEmailChange(options: EmailChangeOptions = {}) {
     request: pipelineStage(
       { access: "authenticated", schema: requestEmailChangeSchema },
       async ({ data, request, response, user }) => {
+        await requireRecentAuthentication(request, user.id);
         if (data.email === normalizeEmail(user.email)) {
           return response.error({
             message:
@@ -213,9 +217,10 @@ export function createEmailChange(options: EmailChangeOptions = {}) {
     ),
     verifyCode: pipelineStage(
       { access: "authenticated", schema: verifyEmailChangeCodeSchema },
-      async ({ data, response, user }) => {
+      async ({ data, request, response, user }) => {
         await applyEmailChange(
           await verifyCode({ ...data, kind, userId: user.id }),
+          request,
         );
 
         response.headers.set("Cache-Control", "no-store");
@@ -226,7 +231,7 @@ export function createEmailChange(options: EmailChangeOptions = {}) {
     ),
     verifyLink: pipelineStage(
       { access: "authenticated", schema: verifyEmailChangeLinkSchema },
-      async ({ data, response, user }) => {
+      async ({ data, request, response, user }) => {
         const verification = await verifyLink(data.token, {
           kind,
           userId: user.id,
@@ -238,7 +243,7 @@ export function createEmailChange(options: EmailChangeOptions = {}) {
           );
         }
 
-        await applyEmailChange(verification);
+        await applyEmailChange(verification, request);
 
         response.headers.set("Cache-Control", "no-store");
         return response.success<EmailChangeVerificationResult>({
@@ -313,13 +318,16 @@ export function createEmailChange(options: EmailChangeOptions = {}) {
   };
 }
 
-async function applyEmailChange({
-  email,
-  verificationId,
-}: {
-  email: string;
-  verificationId: number;
-}) {
+async function applyEmailChange(
+  {
+    email,
+    verificationId,
+  }: {
+    email: string;
+    verificationId: number;
+  },
+  request: Request,
+) {
   // A write must not trust the cached session snapshot.
   const authState = await loadFreshAuthState();
   if (authState.state !== "authenticated") {
@@ -328,6 +336,7 @@ async function applyEmailChange({
     });
   }
 
+  const session = await requireRecentAuthentication(request, authState.userId);
   const users = modules.users.admin.table;
   const now = new Date();
   try {
@@ -350,6 +359,8 @@ async function applyEmailChange({
         .update(users)
         .set({ email: normalizeEmail(email), updatedAt: now })
         .where(eq(users.id, authState.userId));
+
+      await tx.delete(sessions).where(eq(sessions.userId, authState.userId));
 
       await audit({
         action: "email-changed",
@@ -377,4 +388,5 @@ async function applyEmailChange({
   revalidateTag(userSessionsCacheTag(authState.userId), { expire: 0 });
   revalidateTag(adminLoadCacheTag("users", authState.userId), { expire: 0 });
   revalidateTag(adminListCacheTag("users"), { expire: 0 });
+  await login(authState.userId, session.provider);
 }

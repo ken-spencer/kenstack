@@ -78,19 +78,24 @@ async function writeErrorReport(
   const originalError = toError(thrown);
   const error = getRootError(originalError);
   const code = getErrorCode(error);
-  const message = normalizeErrorMessage(error.message).slice(0, 2000);
+  const message = redactSensitiveText(error.message).slice(0, 2000);
   const pathname = getSafePathname(request?.path);
   const fingerprint = await createErrorFingerprint(error);
   const timestamp = new Date().toISOString();
-  const stack =
-    originalError.stack
-      ?.split("\n")
-      .slice(1, 9)
-      .map(redactSensitiveText)
-      .join("\n") ?? "";
+  const stack = (error === originalError ? [error] : [error, originalError])
+    .map((item) =>
+      (item.stack ?? "")
+        .split("\n")
+        .filter((line) => /^\s+at\s/.test(line))
+        .map(redactSensitiveText)
+        .join("\n"),
+    )
+    .filter(Boolean)
+    .join("\n\n");
   const project =
     process.env.VERCEL_PROJECT_PRODUCTION_URL ??
     process.env.VERCEL_PROJECT_ID ??
+    process.env.npm_package_name ??
     "unknown-project";
   const environment =
     process.env.VERCEL_ENV ?? process.env.NODE_ENV ?? "unknown";
@@ -133,40 +138,39 @@ async function writeErrorReport(
     return;
   }
 
-  const projectKey =
-    process.env.VERCEL_PROJECT_ID ??
-    process.env.VERCEL_PROJECT_PRODUCTION_URL ??
-    "unknown-project";
-  const key = [
-    "kenstack:error-alert:v1",
-    projectKey,
-    environment,
-    fingerprint,
-  ].join(":");
+  // Without Redis every error is emailed; with it, one email per fingerprint per window.
+  if (monitoring.redis) {
+    const projectKey =
+      process.env.VERCEL_PROJECT_ID ??
+      process.env.VERCEL_PROJECT_PRODUCTION_URL ??
+      "unknown-project";
+    const key = [
+      "kenstack:error-alert:v1",
+      projectKey,
+      environment,
+      fingerprint,
+    ].join(":");
 
-  let acquired;
-  try {
-    acquired = await claimErrorAlert(monitoring.redis, key);
-  } catch (inhibitorError) {
-    // This must not recurse through the reporter.
-    // eslint-disable-next-line no-console
-    console.error(
-      "[kenstack:error] Alert inhibition failed; email suppressed.",
-      {
-        error: getSafeErrorSummary(inhibitorError),
-        fingerprint,
-      },
-    );
-    return;
-  }
-
-  if (!acquired) {
-    return;
+    try {
+      if (!(await claimErrorAlert(monitoring.redis, key))) {
+        return;
+      }
+    } catch (inhibitorError) {
+      // This must not recurse through the reporter.
+      // eslint-disable-next-line no-console
+      console.error(
+        "[kenstack:error] Alert inhibition failed; email sent without it.",
+        {
+          error: getSafeErrorSummary(inhibitorError),
+          fingerprint,
+        },
+      );
+    }
   }
 
   try {
     const { default: mailer } = await import("@kenstack/lib/mailer");
-    const route = request?.routePath ?? pathname ?? "No route";
+    const route = pathname ?? request?.routePath ?? "No route";
     const result = await mailer({
       to: monitoring.email,
       from: emailFrom,
@@ -290,7 +294,7 @@ function getMonitoringConfiguration() {
     return { email, redis: { url: vercelUrl, token: vercelToken } };
   }
 
-  return null;
+  return { email, redis: undefined };
 }
 
 function toError(thrown: unknown) {

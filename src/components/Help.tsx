@@ -21,7 +21,7 @@ export default function Help({ className, message }: HelpProps) {
       <PopoverTrigger asChild>
         <Button
           aria-label="Help"
-          className={cn("size-4 rounded-full", className)}
+          className={cn("size-4 min-h-0 rounded-full", className)}
           size="icon"
           type="button"
           variant="ghost"

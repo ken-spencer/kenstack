@@ -5,9 +5,15 @@ import Stripe from "stripe";
 import { and, desc, eq } from "drizzle-orm";
 import type { DbTransaction } from "@kenstack/db/types";
 import { audit } from "@kenstack/logger";
-import { orders, transactions } from "./tables";
+import { finishedTransactionStatuses, orders, transactions } from "./tables";
 import { ReturnedError } from "@kenstack/api/errors";
 import { reportError } from "@kenstack/lib/errorReporter";
+
+// Stripe prunes idempotency keys after 24 hours; a replay past that could create a second operation.
+export const idempotencyReplayWindowMs = 23 * 60 * 60_000;
+
+// A subscription in either state collects nothing further.
+export const endedSubscriptionStatuses = ["canceled", "incomplete_expired"];
 
 export function loadStripeConfig({ requireWebhook = false } = {}) {
   const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -38,6 +44,21 @@ export function loadStripeConfig({ requireWebhook = false } = {}) {
     publishableKey,
     livemode,
   };
+}
+
+export function assertOrderSubscription(
+  subscription: Stripe.Subscription,
+  order: { id: number; requestId: string },
+  livemode: boolean,
+) {
+  if (
+    subscription.livemode !== livemode ||
+    subscription.metadata.orderId !== String(order.id) ||
+    subscription.metadata.requestId !== order.requestId
+  )
+    throw new Error(
+      `Subscription ${subscription.id} does not match order ${order.id}.`,
+    );
 }
 
 export function createStripeWebhook(
@@ -247,12 +268,11 @@ export async function readPayment(
         intent.last_payment_error?.decline_code ??
         intent.last_payment_error?.code ??
         null,
-      finishedAt:
-        status === "succeeded" || status === "failed" || status === "canceled"
-          ? intent.status === "canceled" && intent.canceled_at
-            ? new Date(intent.canceled_at * 1000)
-            : (finishedAt ?? new Date())
-          : null,
+      finishedAt: finishedTransactionStatuses.includes(status)
+        ? intent.status === "canceled" && intent.canceled_at
+          ? new Date(intent.canceled_at * 1000)
+          : (finishedAt ?? new Date())
+        : null,
     } satisfies Partial<
       typeof import("@kenstack/payments/tables").transactions.$inferInsert
     >,

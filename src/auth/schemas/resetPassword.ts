@@ -3,7 +3,6 @@ import * as z from "zod";
 
 export default z
   .object({
-    currentPassword: z.string().optional(),
     password: password.min(8, "Password must be at least 8 characters"),
     confirmPassword: password,
   })

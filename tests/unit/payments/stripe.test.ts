@@ -7,6 +7,7 @@ vi.mock("server-only", () => ({}));
 vi.mock("@kenstack/lib/errorReporter", () => ({ reportError: vi.fn() }));
 import { reportError } from "@kenstack/lib/errorReporter";
 import {
+  assertOrderSubscription,
   createStripeWebhook,
   loadStripeConfig,
   readPayment,
@@ -40,6 +41,40 @@ it("requires a webhook secret before accepting live payments without blocking re
     "Payments are not configured yet",
   );
   expect(loadStripeConfig().livemode).toBe(true);
+});
+
+describe("subscription identity", () => {
+  const order = { id: 10001, requestId: "abcdefghijklmno" };
+  const subscription = {
+    id: "sub_fixture",
+    livemode: false,
+    metadata: { orderId: "10001", requestId: "abcdefghijklmno" },
+  } as unknown as Stripe.Subscription;
+
+  it("accepts the subscription created for the order", () => {
+    expect(() =>
+      assertOrderSubscription(subscription, order, false),
+    ).not.toThrow();
+  });
+
+  it("rejects another order's subscription", () => {
+    expect(() =>
+      assertOrderSubscription(subscription, { ...order, id: 10002 }, false),
+    ).toThrow("does not match order 10002");
+    expect(() =>
+      assertOrderSubscription(
+        subscription,
+        { ...order, requestId: "onmlkjihgfedcba" },
+        false,
+      ),
+    ).toThrow("does not match order 10001");
+  });
+
+  it("rejects a subscription from the other Stripe environment", () => {
+    expect(() => assertOrderSubscription(subscription, order, true)).toThrow(
+      "does not match order 10001",
+    );
+  });
 });
 
 describe("finite monthly payments", () => {

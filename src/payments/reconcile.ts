@@ -1,6 +1,7 @@
 // Host applications configure account linkage and fulfillment once for every payment route.
 import "server-only";
 
+import { createHash } from "node:crypto";
 import Stripe from "stripe";
 import { and, asc, desc, eq } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
@@ -9,8 +10,16 @@ import type { DbTransaction, NumericIdTable } from "@kenstack/db/types";
 import { audit } from "@kenstack/logger";
 import { auditLogs } from "@kenstack/db/tables/audit";
 import { ReturnedError } from "@kenstack/api";
-import { orders, orderItems, transactions } from "./tables";
 import {
+  finishedTransactionStatuses,
+  orders,
+  orderItems,
+  transactions,
+} from "./tables";
+import {
+  assertOrderSubscription,
+  endedSubscriptionStatuses,
+  idempotencyReplayWindowMs,
   loadStripeConfig,
   readPayment,
   setInstallmentSchedule,
@@ -19,6 +28,7 @@ import { loadCustomer } from "./customer";
 import { createPaymentMethods } from "./cards";
 import { calculateInstallments } from "./installments";
 import { createPaymentWebhook } from "./webhook";
+import { createRefunds } from "./refunds";
 
 export function createPayments(config: {
   users: NumericIdTable & {
@@ -34,14 +44,19 @@ export function createPayments(config: {
     expire?: boolean;
     installmentDescription?: string;
     settle: (status: "succeeded" | "canceled") => Promise<void>;
+    // Scarce-resource checkouts release only after the failed intent cannot be retried.
+    failed?: () => Promise<void>;
   }>;
   onReconciled?: (
     id: number,
     stripe: Stripe,
     livemode: boolean,
   ) => Promise<void> | void;
+  onRefunded?: Parameters<typeof createRefunds>[0]["onRefunded"];
 }) {
   const { users } = config;
+  const { refundPayment, reconcileRefund, reconcileRefundEvent } =
+    createRefunds({ onRefunded: config.onRefunded });
   async function reconcileOrder(
     id: number,
     options: {
@@ -197,7 +212,10 @@ export function createPayments(config: {
         !intentId
       ) {
         // Never reuse a pruned Stripe idempotency key for a possibly accepted operation.
-        if (attempt.createdAt.getTime() < Date.now() - 23 * 60 * 60_000)
+        if (
+          attempt.createdAt.getTime() <
+          Date.now() - idempotencyReplayWindowMs
+        )
           throw new ReturnedError(
             "This payment needs reconciliation before another charge can be attempted. Please contact the office.",
             { status: 409 },
@@ -207,7 +225,8 @@ export function createPayments(config: {
           .select({ stripeCustomerId: users.stripeCustomerId })
           .from(users)
           .where(eq(users.id, order.userId))
-          .for("update");
+          // A full row lock would wait on the key-share lock another order's insert holds for this account.
+          .for("no key update");
         if (!user) throw new Error("Payment account is missing.");
         const customerId = await loadCustomer(
           tx,
@@ -288,12 +307,7 @@ export function createPayments(config: {
                 },
                 { idempotencyKey: `order:${order.requestId}:subscription` },
               );
-          if (
-            subscription.livemode !== livemode ||
-            subscription.metadata.orderId !== String(id) ||
-            subscription.metadata.requestId !== order.requestId
-          )
-            throw new Error("Subscription does not match the order.");
+          assertOrderSubscription(subscription, order, livemode);
           order.stripeSubscriptionId = subscription.id;
           await tx
             .update(orders)
@@ -405,7 +419,7 @@ export function createPayments(config: {
                 return_url: pay.returnUrl,
               },
               {
-                idempotencyKey: `order:${order.requestId}:transaction:${attempt.id}:confirm`,
+                idempotencyKey: `order:${order.requestId}:transaction:${attempt.id}:confirm:${createHash("sha256").update(pay.confirmationTokenId).digest("hex")}`,
               },
             );
           } catch (error) {
@@ -413,36 +427,43 @@ export function createPayments(config: {
           }
           evidence = await readPayment(stripe, intentId, options.event);
         }
-        if (expire && evidence.status !== "succeeded") {
+        if (
+          ((expire && (options.abandon || evidence.status !== "processing")) ||
+            (!recurring && prepared?.failed && evidence.status === "failed")) &&
+          evidence.status !== "succeeded"
+        ) {
           if (evidence.intent.status !== "canceled") {
+            let cancelError: unknown;
             try {
               // Invoice-owned PaymentIntents must be canceled by voiding the invoice.
               if (attempt.stripeInvoiceId)
                 await stripe.invoices.voidInvoice(attempt.stripeInvoiceId);
-              else await stripe.paymentIntents.cancel(intentId);
+              else
+                await stripe.paymentIntents.cancel(
+                  intentId,
+                  {},
+                  {
+                    idempotencyKey: `order:${order.requestId}:transaction:${attempt.id}:cancel`,
+                  },
+                );
             } catch (error) {
-              const current = await readPayment(
-                stripe,
-                intentId,
-                options.event,
-              );
-              if (
-                current.status !== "succeeded" &&
-                current.status !== "canceled"
-              )
-                throw error;
+              cancelError = error;
             }
+            // Every decision after a cancel attempt uses evidence read after it.
+            evidence = await readPayment(stripe, intentId, options.event);
+            if (
+              cancelError !== undefined &&
+              evidence.status !== "succeeded" &&
+              evidence.status !== "canceled"
+            )
+              throw cancelError;
           }
-          evidence = await readPayment(stripe, intentId, options.event);
           // Authentication can succeed while cancellation is in flight.
           if (evidence.status === "canceled" && order.stripeSubscriptionId) {
             const subscription = await stripe.subscriptions.retrieve(
               order.stripeSubscriptionId,
             );
-            if (
-              subscription.status !== "canceled" &&
-              subscription.status !== "incomplete_expired"
-            )
+            if (!endedSubscriptionStatuses.includes(subscription.status))
               await stripe.subscriptions.cancel(order.stripeSubscriptionId);
           }
         }
@@ -479,8 +500,9 @@ export function createPayments(config: {
               .returning();
             attempt = created;
           } else if (
-            !["succeeded", "failed", "canceled"].includes(attempt.status) ||
-            evidence.status === attempt.status
+            !finishedTransactionStatuses.includes(attempt.status) ||
+            evidence.status === attempt.status ||
+            (prepared?.failed && attempt.status === "failed")
           ) {
             const [updated] = await tx
               .update(transactions)
@@ -535,6 +557,8 @@ export function createPayments(config: {
             .where(eq(orders.id, id));
         }
         await prepared?.settle("succeeded");
+      } else if (attempt.status === "canceled") {
+        await prepared?.failed?.();
       }
       return {
         id: order.id,
@@ -558,7 +582,13 @@ export function createPayments(config: {
 
   return {
     reconcileOrder,
+    refundPayment,
+    reconcileRefund,
     ...createPaymentMethods(config),
-    stripeWebhook: createPaymentWebhook(reconcileOrder, config.onReconciled),
+    stripeWebhook: createPaymentWebhook(
+      reconcileOrder,
+      config.onReconciled,
+      reconcileRefundEvent,
+    ),
   };
 }

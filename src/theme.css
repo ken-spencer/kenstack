@@ -2,3 +2,4 @@
 @import "./components/markdown.css";
 @import "./components/menu-item.css";
 @import "./auth/components/Login/Form/theme.css";
+@import "./payments/checkout/theme.css";

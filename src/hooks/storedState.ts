@@ -172,6 +172,17 @@ export function useStoredValue<T>(
   ];
 }
 
+export function readStoredValue<T>(
+  storeId: string,
+  name: string,
+  schema: z.ZodType<T>,
+) {
+  const deadline = readStoreDeadline(storeId);
+  return deadline !== undefined && deadline > Date.now()
+    ? parseStoredValue(readStorageItem(getStorageKey(storeId, name)), schema)
+    : undefined;
+}
+
 export function clearStoredState(storeId: string) {
   const prefix = getStorageKey(storeId, "");
   const removedKeys: string[] = [];

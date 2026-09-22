@@ -1,13 +1,22 @@
 import assert from "node:assert/strict";
-import { test } from "vitest";
+import { test, vi } from "vitest";
 
 import {
   claimErrorAlert,
   createErrorFingerprint,
   getSafePathname,
   normalizeErrorMessage,
+  onRequestError,
   reportError,
 } from "@kenstack/lib/errorReporter";
+
+const mailer = vi.hoisted(() =>
+  vi.fn<typeof import("@kenstack/lib/mailer").default>(async () => ({
+    status: "sent",
+    messageId: "test-message",
+  })),
+);
+vi.mock("@kenstack/lib/mailer", () => ({ default: mailer }));
 
 test("normalizes changing database details before fingerprinting", async () => {
   const first = Object.assign(
@@ -224,7 +233,7 @@ test("does not claim an alert when the fingerprint is already inhibited", async 
   }
 });
 
-test("fails closed when Upstash is unavailable", async () => {
+test("rejects when Upstash is unavailable", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => new Response(null, { status: 503 });
 
@@ -238,5 +247,118 @@ test("fails closed when Upstash is unavailable", async () => {
     );
   } finally {
     globalThis.fetch = originalFetch;
+  }
+});
+
+test.each([
+  ["emails every error when Redis is not configured", undefined, 1],
+  ["emails once per window when Redis is configured", { result: null }, 0],
+  ["emails when Redis cannot be reached", new Error("offline"), 1],
+] as const)("%s", async (_name, redis, emails) => {
+  vi.stubEnv("FROM_ADDRESS", "alerts@example.com");
+  vi.stubEnv("MONITORING_EMAIL", "operator@example.com");
+  vi.stubEnv("KV_REST_API_URL", "");
+  vi.stubEnv("KV_REST_API_TOKEN", "");
+  vi.stubEnv(
+    "UPSTASH_REDIS_REST_URL",
+    redis ? "https://example.upstash.io" : "",
+  );
+  vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", redis ? "test-token" : "");
+  vi.stubGlobal("fetch", async () => {
+    if (redis instanceof Error) throw redis;
+    return Response.json(redis);
+  });
+  vi.spyOn(console, "error").mockImplementation(() => undefined);
+  mailer.mockClear();
+
+  try {
+    await reportError(new Error("Cleanup failed"), { source: "test" });
+    assert.equal(mailer.mock.calls.length, emails);
+  } finally {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  }
+});
+
+test("emails the actual page and complete error frames without the SQL preamble", async () => {
+  vi.stubEnv("FROM_ADDRESS", "alerts@example.com");
+  vi.stubEnv("MONITORING_EMAIL", "operator@example.com");
+  vi.stubEnv("KV_REST_API_URL", "");
+  vi.stubEnv("KV_REST_API_TOKEN", "");
+  vi.stubEnv("UPSTASH_REDIS_REST_URL", "");
+  vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "");
+  vi.stubEnv("VERCEL_PROJECT_PRODUCTION_URL", undefined);
+  vi.stubEnv("VERCEL_PROJECT_ID", undefined);
+  vi.stubEnv("npm_package_name", "civictheatre.ca");
+  vi.stubEnv("NEXT_RUNTIME", "nodejs");
+  const logs = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  mailer.mockClear();
+
+  const cause = Object.assign(
+    new TypeError("Expected a string; received Date at parameter 42"),
+    {
+      code: "ERR_INVALID_ARG_TYPE",
+    },
+  );
+  cause.stack = [
+    `${cause.name}: ${cause.message}`,
+    "    at encode (node:buffer:12:3)",
+    ...Array.from(
+      { length: 12 },
+      (_, index) => `    at execute (/app/db/driver.ts:${index + 1}:4)`,
+    ),
+    "    at request (https://example.com/private?token=stack-secret)",
+  ].join("\n");
+  const error = new Error(
+    `Failed query:\n${"select jsonb_build_object('private-value')\n".repeat(12)}`,
+    { cause },
+  );
+  error.stack = `${error.name}: ${error.message}\n    at loadUsers (/app/src/list/server.ts:142:8)\n    at renderPage (/app/src/admin/Page.tsx:30:2)`;
+
+  try {
+    await onRequestError(
+      error,
+      {
+        method: "GET",
+        path: "/admin/users?token=request-secret#details",
+        headers: {},
+      },
+      {
+        routerKind: "App Router",
+        routePath: "/admin/[...admin]",
+        routeType: "render",
+        revalidateReason: undefined,
+      },
+    );
+
+    assert.equal(mailer.mock.calls.length, 1);
+    const email = mailer.mock.calls[0][0];
+    assert.match(email.html, /Project:<\/strong> civictheatre\.ca/);
+    assert.match(email.html, /Route:<\/strong> \/admin\/users/);
+    assert.match(email.html, /ERR_INVALID_ARG_TYPE/);
+    assert.match(email.html, /received Date at parameter 42/);
+    assert.match(email.html, /at encode \(node:buffer:12:3\)/);
+    assert.match(email.html, /at execute \(\/app\/db\/driver.ts:12:4\)/);
+    assert.match(
+      email.html,
+      /at loadUsers \(\/app\/src\/list\/server.ts:142:8\)/,
+    );
+    assert.match(
+      email.html,
+      /at renderPage \(\/app\/src\/admin\/Page.tsx:30:2\)/,
+    );
+    assert.match(email.html, /Fingerprint:<\/strong> [a-f0-9]{64}/);
+    assert.doesNotMatch(
+      email.html,
+      /jsonb_build_object|private-value|stack-secret|request-secret|\.\.\.admin/,
+    );
+    assert.doesNotMatch(
+      JSON.stringify(logs.mock.calls),
+      /private-value|stack-secret|request-secret/,
+    );
+  } finally {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
   }
 });

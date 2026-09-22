@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   select: vi.fn(),
   transaction: vi.fn(),
   audit: vi.fn(),
+  claimQuota: vi.fn(),
   stripe: {
     customers: { retrieve: vi.fn(), update: vi.fn() },
     paymentMethods: {
@@ -23,7 +24,9 @@ vi.mock("@app/db", () => ({
   db: { select: mocks.select, transaction: mocks.transaction },
 }));
 vi.mock("@kenstack/logger", () => ({ audit: mocks.audit }));
-vi.mock("@kenstack/payments/server", () => ({
+vi.mock("@kenstack/api/quota", () => ({ claimQuota: mocks.claimQuota }));
+vi.mock("@kenstack/payments/server", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@kenstack/payments/server")>()),
   loadStripeConfig: () => ({
     stripe: mocks.stripe,
     livemode: false,
@@ -47,6 +50,7 @@ const user = {
   givenName: "Alex",
   familyName: "Example",
 };
+let stripeCustomerId: string | null;
 let order:
   | {
       id: number;
@@ -58,6 +62,8 @@ let order:
 
 beforeEach(() => {
   vi.resetAllMocks();
+  stripeCustomerId = "cus_member";
+  mocks.claimQuota.mockResolvedValue(null);
   order = {
     id: 4,
     requestId: "request-four",
@@ -72,7 +78,7 @@ beforeEach(() => {
         then: (resolve: (value: unknown) => unknown) =>
           Promise.resolve(
             getTableName(table) === "card_test_users"
-              ? [{ id: 7, stripeCustomerId: "cus_member" }]
+              ? [{ id: 7, stripeCustomerId }]
               : order
                 ? [order]
                 : [],
@@ -210,4 +216,29 @@ it("creates an authenticated customer setup for cards without charging", async (
       payment_method_types: ["card"],
     }),
   );
+  expect(mocks.claimQuota).toHaveBeenCalledWith("card-setup", {
+    email: user.email,
+  });
+});
+
+it("blocks card setup before provider work when the account quota is exhausted", async () => {
+  mocks.claimQuota.mockResolvedValue({ message: "Too many requests." });
+  await expect(payments.createCardSetup(user)).rejects.toMatchObject({
+    status: 429,
+  });
+  expect(mocks.select).not.toHaveBeenCalled();
+  expect(mocks.stripe.customers.retrieve).not.toHaveBeenCalled();
+  expect(mocks.stripe.setupIntents.create).not.toHaveBeenCalled();
+});
+
+it("lists no cards without creating a customer for a new account", async () => {
+  stripeCustomerId = null;
+  await expect(payments.loadPaymentMethods(user)).resolves.toEqual({
+    publishableKey: "pk_test_fixture",
+    cards: [],
+    plans: [],
+  });
+  expect(mocks.transaction).not.toHaveBeenCalled();
+  expect(mocks.stripe.customers.retrieve).not.toHaveBeenCalled();
+  expect(mocks.stripe.setupIntents.create).not.toHaveBeenCalled();
 });

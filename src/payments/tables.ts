@@ -53,6 +53,9 @@ export const transactionStatus = pgEnum("transaction_status", [
   "failed",
   "canceled",
 ]);
+// transactions_finished_at_check repeats these in SQL; a change here needs a migration there.
+export const finishedTransactionStatuses: (typeof transactionStatus.enumValues)[number][] =
+  ["succeeded", "failed", "canceled"];
 
 export const orders = pgTable(
   "orders",
@@ -129,6 +132,8 @@ export const orderItems = pgTable(
       .$type<
         {
           id: string;
+          // Older order snapshots predate saved tax codes.
+          code?: string;
           name: string;
           rate: number;
           isIncluded: boolean;
@@ -252,3 +257,5 @@ export const paymentEvents = pgTable("payment_events", {
     .notNull()
     .defaultNow(),
 });
+
+export { taxRegions } from "./taxes/tables";

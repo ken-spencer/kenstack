@@ -47,6 +47,24 @@ describe("siteOrigin", () => {
     );
   });
 
+  it("refuses request-controlled origins in unconfigured production", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("SITE_URL", "");
+    vi.stubEnv("VERCEL_ENV", "");
+    vi.stubEnv("VERCEL_URL", "");
+    await expect(siteOrigin(request)).rejects.toThrow("Set SITE_URL");
+    expect(mocks.headers).not.toHaveBeenCalled();
+  });
+
+  it("refuses a Vercel production deployment without its production origin", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("SITE_URL", "");
+    vi.stubEnv("VERCEL_ENV", "production");
+    vi.stubEnv("VERCEL_PROJECT_PRODUCTION_URL", "");
+    vi.stubEnv("VERCEL_URL", "preview.example.com");
+    await expect(siteOrigin(request)).rejects.toThrow("Set SITE_URL");
+  });
+
   it("reads the render-path headers when no request is given", async () => {
     mocks.headers.mockResolvedValue(
       new Headers({ host: "www.example.com", "x-forwarded-proto": "https" }),

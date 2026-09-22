@@ -112,10 +112,13 @@ describe("payment webhook recovery", () => {
         {
           invoices: {
             retrieve: async () => ({
-              parent: { subscription_details: { subscription: "sub_test" } },
+              parent: {
+                subscription_details: {
+                  subscription: { id: "sub_test", metadata },
+                },
+              },
             }),
           },
-          subscriptions: { retrieve: async () => ({ metadata }) },
         },
       );
       expect(where).toHaveBeenCalledTimes(1);
@@ -147,7 +150,7 @@ describe("payment webhook recovery", () => {
 });
 
 describe("recurring collection lifecycle", () => {
-  it("records an unpaid finalized invoice and deduplicates a chargeless failure", async () => {
+  function recurringFixture() {
     const collections: Record<string, unknown>[] = [];
     const rows: Record<string, Record<string, unknown>[]> = {
       orders: [
@@ -205,7 +208,11 @@ describe("recurring collection lifecycle", () => {
     const invoice = {
       id: "in_test",
       billing_reason: "subscription_cycle",
-      parent: { subscription_details: { subscription: "sub_test" } },
+      parent: {
+        subscription_details: {
+          subscription: { id: "sub_test", metadata: {}, livemode: false },
+        },
+      },
       currency: "cad",
       amount_due: 2500,
       period_end: 2000,
@@ -222,9 +229,6 @@ describe("recurring collection lifecycle", () => {
           ],
         }),
       },
-      subscriptions: {
-        retrieve: async () => ({ metadata: {}, livemode: false }),
-      },
       invoicePayments: {
         list: () => ({ autoPagingToArray: async () => payments }),
       },
@@ -235,6 +239,12 @@ describe("recurring collection lifecycle", () => {
       type: "invoice.finalized",
       data: { object: { id: invoice.id } },
     };
+    return { collections, invoice, payments, stripe, invoiceEvent };
+  }
+
+  it("records an unpaid finalized invoice and deduplicates a chargeless failure", async () => {
+    const { collections, invoice, payments, stripe, invoiceEvent } =
+      recurringFixture();
     await mocks.handler(invoiceEvent, stripe);
     expect(collections).toEqual([
       expect.objectContaining({
@@ -284,6 +294,15 @@ describe("recurring collection lifecycle", () => {
     expect(collections[0]).toMatchObject({ status: "failed", instalment: 2 });
     expect(mocks.audit).not.toHaveBeenCalled();
     expect(mocks.onReconciled).toHaveBeenLastCalledWith(10001, stripe, false);
+  });
+  it("refuses to record a collection whose invoice period has no number", async () => {
+    const { collections, invoice, stripe, invoiceEvent } = recurringFixture();
+    invoice.billing_reason = "subscription_update";
+    await expect(mocks.handler(invoiceEvent, stripe)).rejects.toThrow(
+      "Invoice period has no collection number.",
+    );
+    expect(collections).toEqual([]);
+    expect(mocks.onReconciled).not.toHaveBeenCalled();
   });
   it("retains a completed finite order when Stripe ends its subscription", async () => {
     mocks.select.mockReturnValue({

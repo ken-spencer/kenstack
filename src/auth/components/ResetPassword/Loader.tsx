@@ -1,10 +1,9 @@
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
 
-import { db } from "@app/db";
-import { modules } from "@app/modules";
 import { getCurrentSession } from "@kenstack/auth/server/user";
-import { requiresCurrentPassword } from "@kenstack/auth/passwordChange";
+import { getAuthenticationRemainingMs } from "@kenstack/auth/reauthentication";
+import ReauthenticationTimer from "@kenstack/auth/reauthentication/Timer";
+import { getReauthenticationPath } from "@kenstack/auth/returnTo";
 import Notice from "@kenstack/components/Notice";
 
 import Form from "./Form";
@@ -30,20 +29,18 @@ export default async function ResetPasswordFormLoader({
     );
   }
 
-  const users = modules.users.admin.table;
-  const [currentUser] = await db
-    .select({ passwordHash: users.passwordHash })
-    .from(users)
-    .where(eq(users.id, session.userId))
-    .limit(1);
-
-  if (!currentUser) {
-    redirect(loginPath);
+  const remainingMs = getAuthenticationRemainingMs(session);
+  if (remainingMs <= 0) {
+    redirect(getReauthenticationPath(path));
   }
 
   return (
-    <Form
-      requiresCurrentPassword={requiresCurrentPassword(currentUser, session)}
-    />
+    <>
+      <ReauthenticationTimer
+        key={session.createdAt.toISOString()}
+        remainingMs={remainingMs}
+      />
+      <Form />
+    </>
   );
 }

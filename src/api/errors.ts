@@ -1,8 +1,13 @@
-type ReturnedErrorOptions = { code?: string; status?: number };
+type ReturnedErrorOptions = {
+  code?: string;
+  status?: number;
+  redirect?: string;
+};
 
 export interface ReturnedError extends Error {
   code?: string;
   status: number;
+  redirect?: string;
 }
 
 type ReturnedErrorConstructor = {
@@ -13,13 +18,13 @@ type ReturnedErrorConstructor = {
 
 const createReturnedError = function (
   message: string,
-  { code, status = 400 }: ReturnedErrorOptions = {},
+  { code, status = 400, redirect }: ReturnedErrorOptions = {},
 ) {
   const error = new Error(message);
   error.name = "ReturnedError";
   Object.setPrototypeOf(error, ReturnedError.prototype);
 
-  return Object.assign(error, { code, status });
+  return Object.assign(error, { code, status, redirect });
 };
 
 createReturnedError.prototype = Object.create(Error.prototype) as ReturnedError;

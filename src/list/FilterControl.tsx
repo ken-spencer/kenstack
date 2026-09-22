@@ -1,6 +1,7 @@
 "use client";
 
 import { parseDate } from "chrono-node";
+import { formatISO, parseISO } from "date-fns";
 import { ListFilter, RotateCcw, X } from "lucide-react";
 import type { ComponentProps, Dispatch, SetStateAction } from "react";
 import { useMemo, useState } from "react";
@@ -386,7 +387,7 @@ function DateFilterInput({
       nextValue instanceof Date ? nextValue : (parseDate(nextValue) ?? null);
 
     if (parsedDate) {
-      onChange(parsedDate.toISOString());
+      onChange(formatISO(parsedDate, { representation: "date" }));
       setTextValue(formatLongDate(parsedDate));
       return;
     }
@@ -565,7 +566,7 @@ function parseStoredDate(value: string) {
     return undefined;
   }
 
-  const date = new Date(value);
+  const date = parseISO(value);
   return Number.isNaN(date.getTime()) ? undefined : date;
 }
 

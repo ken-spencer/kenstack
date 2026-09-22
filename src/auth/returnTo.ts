@@ -1,5 +1,10 @@
 import type { PublicAuthState } from "@kenstack/auth/server/state";
 
+export function getReauthenticationPath(returnTo?: string): `/${string}` {
+  const path = getSafeReturnToPath(returnTo);
+  return `/login${path ? `?returnTo=${encodeURIComponent(path)}` : ""}`;
+}
+
 export function getSafeReturnToPath(
   value?: string | null,
   { allowLogin = false }: { allowLogin?: boolean } = {},

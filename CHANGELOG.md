@@ -5,15 +5,54 @@ contract lives in `docs/upgrading.md`.
 
 ## Unreleased
 
+### Shared Reauthentication
+
+Move `hasRecentAuthentication` and `getAuthenticationRemainingMs` imports from
+`@kenstack/auth/passwordChange` to `@kenstack/auth/reauthentication`,
+`requireRecentAuthentication` imports from `@kenstack/auth/server/reauthentication` to
+`@kenstack/auth/reauthentication/server`, and the default `ReauthenticationTimer` import from
+`@kenstack/auth/components/ReauthenticationTimer` to `@kenstack/auth/reauthentication/Timer`. The
+timing policy, server guard, and browser timer now live together under `auth/reauthentication/`.
+
+Password and email changes now require recent authentication in a non-impersonated session.
+Sensitive pages redirect to login when five minutes have elapsed since authentication; opening a page
+does not restart that allowance. Server writes accept one additional minute for requests in flight.
+`ResetPassword` includes this browser timer. Hosts rendering `EmailChange` must also check the current
+session on entry and mount `ReauthenticationTimer` from `@kenstack/auth/reauthentication/Timer`
+with `remainingMs` from `getAuthenticationRemainingMs` in `@kenstack/auth/reauthentication`, keyed by the
+session's `createdAt`. Keep email-change cancellation links accessible without recent authentication.
+The auth guard returns `/login?returnTo=...` through the existing API `redirect` response.
+It derives a safe local return path from the request Referer; without one, login uses the host destination.
+The shared fetcher follows the supplied redirect without interpreting authentication error codes.
+Hosts must check session recency before their already-signed-in login-page redirect. Stale sessions
+use the ordinary `Login` form from `@kenstack/auth/components/Login`; recent sessions continue to the
+return destination. The email-login shortcut also requires a recent session. Password and email proof
+use the existing login handlers, which rotate the session and renew its timestamp for every recency
+check. There is no separate login mode or additional login-schema field. No database migration is
+required. The browser returns to the original page; it does not replay the interrupted write.
+
+`reset-password` no longer accepts current-password confirmation in place of fresh authentication,
+including for accounts that have no password yet. Remove `requiresCurrentPassword` imports and the
+corresponding prop from direct users of `ResetPassword/Form`; that field and helper have been removed.
+Pass the request to `requireRecentAuthentication` from `@kenstack/auth/reauthentication/server` to protect additional
+sensitive actions.
+
+### Error Alerts Without Redis
+
+`reportError` no longer needs Redis to email. A host with `MONITORING_EMAIL` and `FROM_ADDRESS` but no
+Upstash credentials now receives one email for every reported error; before, it received none. With
+Upstash configured, repeats of one error are still emailed once per 15 minutes, and an unreachable
+Upstash now sends the email instead of suppressing it. Add the Upstash credentials to a host that
+should not receive every repeat.
+
 ### Email Verification While Signed In
 
 `sendCode`, `verifyCode` and `verifyLink` no longer refuse a signed-in or impersonated session, and
 `verifyLink` no longer returns `wrong-account`; `emailLoginLinkFailureCodeSchema` drops that code.
 A signed-in user who proves another address through email login now switches to that address's
 account: `redeemEmailProof` looks the account up as it does for an anonymous browser and `login()`
-ends the current session, including an impersonation, first. The only remaining refusal for a
-signed-in user is the email-login request stage's short circuit for the address they are already
-signed in as, which still returns success.
+ends the current session, including an impersonation, first. The email-login request stage still
+short-circuits for the address the user is already signed in as only while that session is recent.
 
 ### Sign-In Email Changes
 
@@ -38,6 +77,11 @@ the requesting browser, so it still works after a sign-in in between.
 An address that already has an account gets a decoy challenge and an "account already exists"
 email instead of a code, so the requester's screen never reveals it. `sendCode` accepts `isDecoy`
 for that purpose.
+The request stage and both verification stages use the shared recent-authentication guard, including
+its one-minute server grace period. An older session gets a 403 with code `reauthentication-required`, and an impersonated
+session gets a 403; the shared fetcher routes an expired proof through reauthentication. A completed
+change deletes every session for the account and signs the requesting browser in again, so other
+browsers sign in with the new address.
 
 ### Login Destination
 
@@ -46,11 +90,14 @@ carries no safe `returnTo`; a safe `returnTo` always wins, and the callback's re
 `getSafeReturnToPath` with `/` as the fallback. `createEmailLogin` and `loginPipeline` accept the
 same option. Without it, sign-ins land on `/` as before.
 
-### Emailed Links Follow The Visitor's Host
+### Emailed Link Origin
 
 Sign-in, onboarding, and email-change links are built through `@kenstack/lib/siteOrigin`: the
 `SITE_URL` variable when set, else Vercel's `VERCEL_PROJECT_PRODUCTION_URL` in production or
-`VERCEL_URL` in previews, else the request's Host header. `request.url` is not used,
+`VERCEL_URL` in previews. Outside production the request's Host header is the last fallback, so a
+local name such as `site.localhost` works. In production with none of those set, `siteOrigin` throws
+instead of trusting the Host header: a host that is not on Vercel, or a Vercel project with system
+environment variables turned off, must set `SITE_URL` before upgrading. `request.url` is not used,
 since Next fills it with the hostname the server started on.
 
 ### Reset Password Path

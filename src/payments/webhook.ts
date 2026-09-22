@@ -4,7 +4,12 @@ import type Stripe from "stripe";
 import { and, asc, eq, isNull, or } from "drizzle-orm";
 import { db } from "@app/db";
 import { createStripeWebhook, readPayment } from "./server";
-import { orders, paymentEvents, transactions } from "./tables";
+import {
+  finishedTransactionStatuses,
+  orders,
+  paymentEvents,
+  transactions,
+} from "./tables";
 import type { createPayments } from "./reconcile";
 
 export function createPaymentWebhook(
@@ -13,6 +18,7 @@ export function createPaymentWebhook(
     options: { event: Stripe.Event },
   ) => Promise<unknown>,
   onReconciled: Parameters<typeof createPayments>[0]["onReconciled"],
+  onRefundEvent?: (event: Stripe.Event, stripe: Stripe) => Promise<void>,
 ) {
   return createStripeWebhook(async (event, stripe) => {
     const message =
@@ -29,6 +35,13 @@ export function createPaymentWebhook(
       .onConflictDoNothing();
     // Logging a duplicate never skips financial effects: an earlier handler may have failed.
     switch (event.type) {
+      case "refund.created":
+      case "refund.updated":
+      case "refund.failed":
+      case "charge.refunded": {
+        await onRefundEvent?.(event, stripe);
+        break;
+      }
       case "payment_intent.succeeded":
       case "payment_intent.payment_failed":
       case "payment_intent.processing":
@@ -118,13 +131,16 @@ export function createPaymentWebhook(
     event: Stripe.Event,
     stripe: Stripe,
   ) {
-    const initial = await stripe.invoices.retrieve(invoiceId);
+    const initial = await stripe.invoices.retrieve(invoiceId, {
+      expand: ["parent.subscription_details.subscription"],
+    });
     const subscription = initial.parent?.subscription_details?.subscription;
-    const subscriptionId =
-      typeof subscription === "string" ? subscription : subscription?.id;
-    if (!subscriptionId) return;
+    if (!subscription) return;
     const subscriptionRecord =
-      await stripe.subscriptions.retrieve(subscriptionId);
+      typeof subscription === "string"
+        ? await stripe.subscriptions.retrieve(subscription)
+        : subscription;
+    const subscriptionId = subscriptionRecord.id;
     const [order] = await db
       .select({ id: orders.id })
       .from(orders)
@@ -156,9 +172,7 @@ export function createPaymentWebhook(
         current.stripeSubscriptionId !== subscriptionId
       )
         throw new Error("Invoice subscription does not match the order.");
-      const invoice = await stripe.invoices.retrieve(initial.id, {
-        expand: ["payments"],
-      });
+      const invoice = await stripe.invoices.retrieve(initial.id);
       if (
         invoice.currency !== current.currency ||
         !["subscription_cycle", "subscription_update"].includes(
@@ -166,23 +180,27 @@ export function createPaymentWebhook(
         )
       )
         throw new Error("Invoice needs payment reconciliation.");
-      const invoices = await stripe.invoices
-        .list({ subscription: subscriptionId, limit: 100 })
-        .autoPagingToArray({ limit: 10_000 });
-      const periods = [
-        ...new Set(
-          invoices
-            .filter(
-              (row) =>
-                row.billing_reason === "subscription_create" ||
-                row.billing_reason === "subscription_cycle",
-            )
-            .map((row) => row.period_end),
-        ),
-      ].sort((a, b) => a - b);
-      const instalment = periods.indexOf(invoice.period_end) + 1;
-      if (instalment < 1)
-        throw new Error("Invoice period has no collection number.");
+      // Only a new collection row needs its number; existing rows keep theirs.
+      const readInstalment = async () => {
+        const invoices = await stripe.invoices
+          .list({ subscription: subscriptionId, limit: 100 })
+          .autoPagingToArray({ limit: 10_000 });
+        const periods = [
+          ...new Set(
+            invoices
+              .filter(
+                (row) =>
+                  row.billing_reason === "subscription_create" ||
+                  row.billing_reason === "subscription_cycle",
+              )
+              .map((row) => row.period_end),
+          ),
+        ].sort((a, b) => a - b);
+        const position = periods.indexOf(invoice.period_end);
+        if (position < 0)
+          throw new Error("Invoice period has no collection number.");
+        return position + 1;
+      };
       const payments = await stripe.invoicePayments
         .list({ invoice: invoice.id, limit: 100 })
         .autoPagingToArray({ limit: 10_000 });
@@ -201,11 +219,12 @@ export function createPaymentWebhook(
           await tx.insert(transactions).values({
             orderId: current.id,
             kind: "payment",
-            instalment,
+            instalment: await readInstalment(),
             totalCents: invoice.amount_due,
             stripeInvoiceId: invoice.id,
           });
       }
+      let instalment: number | undefined;
       for (const payment of payments) {
         const intent = payment.payment.payment_intent;
         const intentId = typeof intent === "string" ? intent : intent?.id;
@@ -259,7 +278,7 @@ export function createPaymentWebhook(
           rows.find(
             (row) =>
               !row.stripeChargeId &&
-              !["succeeded", "failed", "canceled"].includes(row.status),
+              !finishedTransactionStatuses.includes(row.status),
           );
         if (matching)
           await tx
@@ -273,17 +292,17 @@ export function createPaymentWebhook(
                   : evidence.values.finishedAt,
             })
             .where(eq(transactions.id, matching.id));
-        else
-          await tx
-            .insert(transactions)
-            .values({
-              orderId: current.id,
-              kind: "payment",
-              instalment,
-              totalCents: evidence.intent.amount,
-              stripeInvoiceId: invoice.id,
-              ...evidence.values,
-            });
+        else {
+          instalment ??= await readInstalment();
+          await tx.insert(transactions).values({
+            orderId: current.id,
+            kind: "payment",
+            instalment,
+            totalCents: evidence.intent.amount,
+            stripeInvoiceId: invoice.id,
+            ...evidence.values,
+          });
+        }
       }
     });
     await onReconciled?.(order.id, stripe, event.livemode);

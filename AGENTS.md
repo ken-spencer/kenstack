@@ -76,9 +76,12 @@ Read only the references relevant to the current task:
 
 ## Public surface
 
-- Preserve development-only gates such as `process.env.NODE_ENV === "development"` and explicit
-  development flags. Promote gated behavior to production only when the user explicitly authorizes that
-  behavior and its production configuration.
+- Preserve what a development-only or launch gate withholds, whether it tests
+  `process.env.NODE_ENV === "development"` or an explicit development flag. Promote gated behavior to
+  production only when the user explicitly authorizes that behavior and its production configuration.
+  Place each gate once, at the outermost point that works: which loader runs, or whether a component
+  renders. Remove an inner check that the outer gate already makes redundant; this rule protects what
+  is gated, never the number of checks.
 - Add a module export only when another current production module imports it or a fixed framework or
   tooling entry point requires it, and a public-entry re-export only when a current host imports that
   contract. Otherwise keep the declaration file-local.
@@ -97,7 +100,9 @@ Read only the references relevant to the current task:
 - Treat test churn as evidence about the test. When production behavior has not changed, an existing
   test stays unchanged; when a move, rename, type cleanup, or internal reorganization forces it to follow
   the implementation, rewrite it against the stable boundary or remove it. A new test that keeps
-  changing while the requirement has not changed gets the same treatment.
+  changing while the requirement has not changed gets the same treatment. An existing test is never a
+  reason to keep slower, more complex, or worse-for-users code: make the improvement, then rewrite or
+  remove the test that pinned the old implementation.
 - Derive expected values from the requirement, an incident, an independent oracle, or deliberately
   characterized existing behavior. Review and accept observed output before it becomes an expectation.
 - Runtime tests exercise runtime behavior. Keep compile-time contract fixtures under `tests/types/` and

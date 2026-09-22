@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("server-only", () => ({}));
+vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 vi.mock("@app/db", () => ({
   db: new Proxy({}, { get: (_target, property) => mocks.database[property] }),
 }));

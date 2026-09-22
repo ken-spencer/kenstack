@@ -38,7 +38,9 @@ export async function listQuery<TSelection extends SelectedFields>(
     cacheLife?: string;
     cacheTags?: string[];
     draft: boolean;
-    joins?: (query: Pick<AnyPgSelectQueryBuilder, "innerJoin">) => void;
+    joins?: (
+      query: Pick<AnyPgSelectQueryBuilder, "innerJoin" | "leftJoin">,
+    ) => void;
     limit?: number;
     orderBy?: (PgColumn | SQL | SQL.Aliased)[];
     select: TSelection;

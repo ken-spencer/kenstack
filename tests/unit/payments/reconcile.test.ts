@@ -7,7 +7,12 @@ const mocks = vi.hoisted(() => ({
   schedule: vi.fn(),
   stripe: {
     customers: { list: vi.fn(), create: vi.fn() },
-    paymentIntents: { list: vi.fn(), create: vi.fn() },
+    paymentIntents: {
+      list: vi.fn(),
+      create: vi.fn(),
+      cancel: vi.fn(),
+      confirm: vi.fn(),
+    },
     products: { create: vi.fn() },
     subscriptions: { list: vi.fn(), create: vi.fn() },
   },
@@ -15,7 +20,8 @@ const mocks = vi.hoisted(() => ({
 vi.mock("server-only", () => ({}));
 vi.mock("@app/db", () => ({ db: { transaction: mocks.transaction } }));
 vi.mock("@kenstack/logger", () => ({ audit: vi.fn() }));
-vi.mock("@kenstack/payments/server", () => ({
+vi.mock("@kenstack/payments/server", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@kenstack/payments/server")>()),
   loadStripeConfig: () => ({ stripe: mocks.stripe, livemode: false }),
   readPayment: mocks.readPayment,
   setInstallmentSchedule: mocks.schedule,
@@ -29,6 +35,56 @@ import { createPayments } from "@kenstack/payments/reconcile";
 const users = defineTable({
   name: "payment_test_users",
   columns: paymentUserColumns,
+});
+
+it("can submit a different confirmation token after an uncertain pending confirmation", async () => {
+  rows.transactions[0].stripePaymentIntentId = "pi_payment";
+  mocks.readPayment.mockResolvedValue({
+    status: "pending",
+    intent: {
+      id: "pi_payment",
+      status: "requires_confirmation",
+      livemode: false,
+      currency: "usd",
+      amount: 10001,
+      metadata: {
+        orderId: "10001",
+        transactionId: "1",
+        requestId: "abcdefghijklmn1",
+      },
+    },
+    values: { status: "pending", stripePaymentIntentId: "pi_payment" },
+  });
+  const attempted = new Map<string, string>();
+  mocks.stripe.paymentIntents.confirm.mockImplementation(
+    async (_id, params, options) => {
+      const previous = attempted.get(options.idempotencyKey);
+      if (previous && previous !== params.confirmation_token)
+        throw new Error("Idempotency parameters changed");
+      attempted.set(options.idempotencyKey, params.confirmation_token);
+      throw new Error("Provider unavailable");
+    },
+  );
+  const payments = createPayments({
+    users,
+    customer: { metadataKey: "memberId", idempotencyPrefix: "member" },
+  });
+  for (const confirmationTokenId of [
+    "ctoken_first",
+    "ctoken_first",
+    "ctoken_second",
+  ])
+    await expect(
+      payments.reconcileOrder(10001, {
+        confirm: {
+          confirmationTokenId,
+          returnUrl: "https://example.com/complete",
+        },
+      }),
+    ).rejects.toThrow("Provider unavailable");
+  expect(attempted.size).toBe(2);
+  expect([...attempted.keys()].every((key) => key.length <= 255)).toBe(true);
+  expect(mocks.stripe.paymentIntents.create).not.toHaveBeenCalled();
 });
 let rows: Record<string, Record<string, unknown>[]>;
 let inTransaction: boolean;
@@ -418,3 +474,209 @@ it("ignores another checkout's PaymentIntent when recovering overlapping databas
   expect(mocks.readPayment).not.toHaveBeenCalled();
   expect(rows.transactions[0].stripePaymentIntentId).toBeNull();
 });
+
+it.each(["canceled", "succeeded", "uncertain"])(
+  "settles scarce resources only after resolving a declined intent (%s)",
+  async (outcome) => {
+    rows.transactions[0].stripePaymentIntentId = "pi_payment";
+    rows.transactions[0].status = "failed";
+    const failed = vi.fn();
+    const settle = vi.fn();
+    const buildEvidence = (status: string) => ({
+      status,
+      finishedAtVerified: true,
+      intent: {
+        id: "pi_payment",
+        status: status === "failed" ? "requires_payment_method" : status,
+        livemode: false,
+        currency: "usd",
+        amount: 10001,
+        amount_received: status === "succeeded" ? 10001 : 0,
+        metadata: {
+          orderId: "10001",
+          transactionId: "1",
+          requestId: "abcdefghijklmn1",
+        },
+      },
+      values: { status, finishedAt: new Date() },
+    });
+    mocks.readPayment.mockResolvedValueOnce(buildEvidence("failed"));
+    if (outcome === "uncertain") {
+      mocks.stripe.paymentIntents.cancel.mockRejectedValue(
+        new Error("timeout"),
+      );
+      mocks.readPayment.mockResolvedValue(buildEvidence("processing"));
+    } else {
+      mocks.stripe.paymentIntents.cancel.mockResolvedValue({});
+      mocks.readPayment.mockResolvedValue(buildEvidence(outcome));
+    }
+    const { reconcileOrder } = createPayments({
+      users,
+      customer: { metadataKey: "memberId", idempotencyPrefix: "member" },
+      prepareOrder: async () => ({ failed, settle }),
+    });
+    if (outcome === "uncertain") {
+      await expect(reconcileOrder(10001)).rejects.toThrow("timeout");
+      expect(failed).not.toHaveBeenCalled();
+      expect(settle).not.toHaveBeenCalled();
+    } else {
+      await expect(reconcileOrder(10001)).resolves.toMatchObject({
+        paymentStatus: outcome,
+      });
+      if (outcome === "canceled") {
+        expect(failed).toHaveBeenCalledTimes(1);
+        expect(settle).not.toHaveBeenCalled();
+      } else {
+        expect(settle).toHaveBeenCalledWith("succeeded");
+        expect(failed).not.toHaveBeenCalled();
+      }
+    }
+    expect(mocks.stripe.paymentIntents.cancel).toHaveBeenCalledWith(
+      "pi_payment",
+      {},
+      { idempotencyKey: "order:abcdefghijklmn1:transaction:1:cancel" },
+    );
+  },
+);
+
+it("treats a cancel that throws as paid when the payment succeeded meanwhile", async () => {
+  rows.transactions[0].stripePaymentIntentId = "pi_payment";
+  rows.transactions[0].status = "failed";
+  const failed = vi.fn();
+  const settle = vi.fn();
+  mocks.readPayment.mockResolvedValueOnce({
+    status: "failed",
+    intent: {
+      status: "requires_payment_method",
+      livemode: false,
+      currency: "usd",
+      amount: 10001,
+      metadata: {
+        orderId: "10001",
+        transactionId: "1",
+        requestId: "abcdefghijklmn1",
+      },
+    },
+    values: { status: "failed", finishedAt: new Date() },
+  });
+  mocks.stripe.paymentIntents.cancel.mockRejectedValue(
+    new Error("PaymentIntent has already succeeded"),
+  );
+  const { reconcileOrder } = createPayments({
+    users,
+    customer: { metadataKey: "memberId", idempotencyPrefix: "member" },
+    prepareOrder: async () => ({ failed, settle }),
+  });
+  await expect(reconcileOrder(10001)).resolves.toMatchObject({
+    paymentStatus: "succeeded",
+  });
+  expect(rows.transactions[0].status).toBe("succeeded");
+  expect(settle).toHaveBeenCalledWith("succeeded");
+  expect(failed).not.toHaveBeenCalled();
+});
+
+it("cancels an expired order from an already canceled intent without another cancel attempt", async () => {
+  rows.transactions[0].stripePaymentIntentId = "pi_payment";
+  const settle = vi.fn();
+  mocks.readPayment.mockResolvedValue({
+    status: "canceled",
+    finishedAtVerified: true,
+    intent: {
+      status: "canceled",
+      livemode: false,
+      currency: "usd",
+      amount: 10001,
+      metadata: {
+        orderId: "10001",
+        transactionId: "1",
+        requestId: "abcdefghijklmn1",
+      },
+    },
+    values: { status: "canceled", finishedAt: new Date() },
+  });
+  const { reconcileOrder } = createPayments({
+    users,
+    customer: { metadataKey: "memberId", idempotencyPrefix: "member" },
+    prepareOrder: async () => ({ settle }),
+  });
+  await expect(reconcileOrder(10001, { expire: true })).resolves.toMatchObject({
+    paymentStatus: "canceled",
+  });
+  expect(mocks.stripe.paymentIntents.cancel).not.toHaveBeenCalled();
+  expect(rows.orders[0].status).toBe("canceled");
+  expect(settle.mock.calls).toEqual([["canceled"]]);
+});
+
+it("preserves decline handling when the host has no resource-release callback", async () => {
+  rows.transactions[0].stripePaymentIntentId = "pi_payment";
+  const settle = vi.fn();
+  mocks.readPayment.mockResolvedValue({
+    status: "failed",
+    intent: {
+      status: "requires_payment_method",
+      livemode: false,
+      currency: "usd",
+      amount: 10001,
+      metadata: {
+        orderId: "10001",
+        transactionId: "1",
+        requestId: "abcdefghijklmn1",
+      },
+    },
+    values: { status: "failed", finishedAt: new Date() },
+  });
+  const { reconcileOrder } = createPayments({
+    users,
+    customer: { metadataKey: "memberId", idempotencyPrefix: "member" },
+    prepareOrder: async () => ({ settle }),
+  });
+  await expect(reconcileOrder(10001)).resolves.toMatchObject({
+    paymentStatus: "failed",
+  });
+  expect(mocks.stripe.paymentIntents.cancel).not.toHaveBeenCalled();
+  expect(settle).not.toHaveBeenCalled();
+});
+
+it.each([
+  { status: "processing", expire: false },
+  { status: "requires_action", expire: false },
+  { status: "processing", expire: true },
+])(
+  "reopens an opted-in failed attempt without expiring provider processing: %j",
+  async ({ status, expire }) => {
+    rows.transactions[0].stripePaymentIntentId = "pi_payment";
+    rows.transactions[0].status = "failed";
+    rows.transactions[0].finishedAt = new Date();
+    const failed = vi.fn();
+    const settle = vi.fn();
+    mocks.readPayment.mockResolvedValue({
+      status,
+      intent: {
+        status,
+        livemode: false,
+        currency: "usd",
+        amount: 10001,
+        client_secret: "pi_payment_secret_test",
+        metadata: {
+          orderId: "10001",
+          transactionId: "1",
+          requestId: "abcdefghijklmn1",
+        },
+      },
+      values: { status, finishedAt: null },
+    });
+    const { reconcileOrder } = createPayments({
+      users,
+      customer: { metadataKey: "memberId", idempotencyPrefix: "member" },
+      prepareOrder: async () => ({ failed, settle }),
+    });
+    await expect(reconcileOrder(10001, { expire })).resolves.toMatchObject({
+      paymentStatus: status,
+      transactionId: 1,
+    });
+    expect(rows.transactions[0]).toMatchObject({ status, finishedAt: null });
+    expect(mocks.stripe.paymentIntents.cancel).not.toHaveBeenCalled();
+    expect(failed).not.toHaveBeenCalled();
+    expect(settle).not.toHaveBeenCalled();
+  },
+);

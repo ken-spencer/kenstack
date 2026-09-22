@@ -12,6 +12,10 @@ Deferred until the current work is reviewed and committed:
 
 4. **Admin publication UX normalization** — table ownership of publish and SEO, the header publication control, the SEO dialog replacing `MetaFields`, the pinned edit-header action row with Cmd/Ctrl+S, and touch-safe drag activation landed 2026-09-03; record-wide draft isolation remains deferred. Settled design; implementation gated on a working browser build. See `04-admin-publication-ux.md`.
 
+Planned work:
+
+5. **Email log and address suppression** — add reusable staff views for outgoing messages and suppressed addresses, with SES delivery feedback updating message status. The message records also provide the basis for a future newsletter queue. See `05-email-log-and-suppression.md`.
+
 Resolved review and bug lists are removed after their durable outcomes are retained in
 code, tests, migration notes, or active policy. Completed plans are archived only when
 they preserve lasting rationale that is not owned elsewhere. Resolved bug scans, the

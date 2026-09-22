@@ -2,12 +2,27 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import {
+  getAuthenticationRemainingMs,
   hasRecentAuthentication,
-  requiresCurrentPassword,
-} from "@kenstack/auth/passwordChange";
+} from "@kenstack/auth/reauthentication";
 
 const now = new Date("2026-07-19T20:00:00.000Z");
 const fiveMinutes = 5 * 60 * 1000;
+
+test("uses the remaining session age, never a fresh five-minute allowance", () => {
+  assert.equal(
+    getAuthenticationRemainingMs(session({ age: 280_000 }), now),
+    20_000,
+  );
+  assert.equal(
+    getAuthenticationRemainingMs(session({ age: fiveMinutes }), now),
+    0,
+  );
+  assert.equal(
+    getAuthenticationRemainingMs(session({ age: 360_000 }), now),
+    -60_000,
+  );
+});
 
 function session({
   age = 0,
@@ -47,27 +62,20 @@ test("requires authentication when there is no current session", () => {
   assert.equal(hasRecentAuthentication(undefined, now), false);
 });
 
-test("confirms a stored password once the session is no longer recent", () => {
+test("allows one minute for an in-flight write after the browser deadline", () => {
   assert.equal(
-    requiresCurrentPassword(
-      { passwordHash: "hash" },
-      session({ age: fiveMinutes }),
-      now,
-    ),
+    hasRecentAuthentication(session({ age: fiveMinutes }), now),
+    false,
+  );
+  assert.equal(
+    hasRecentAuthentication(session({ age: fiveMinutes }), now, 60_000),
     true,
   );
   assert.equal(
-    requiresCurrentPassword({ passwordHash: "hash" }, session(), now),
-    false,
-  );
-});
-
-test("never asks an account without a password to confirm one", () => {
-  assert.equal(
-    requiresCurrentPassword(
-      { passwordHash: null },
-      session({ age: fiveMinutes }),
+    hasRecentAuthentication(
+      session({ age: fiveMinutes + 60_000 }),
       now,
+      60_000,
     ),
     false,
   );

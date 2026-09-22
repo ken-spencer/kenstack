@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   redeemEmailProof: vi.fn(),
   loadAuthState: vi.fn(),
+  getCurrentSession: vi.fn(),
   loadPublicAuthState: vi.fn(),
   loadFreshPublicAuthState: vi.fn(),
   sendCode: vi.fn(),
@@ -11,6 +12,9 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("server-only", () => ({}));
+vi.mock("@kenstack/auth/server/user", () => ({
+  getCurrentSession: mocks.getCurrentSession,
+}));
 vi.mock("@kenstack/lib/ip", () => ({ default: vi.fn() }));
 vi.mock("@kenstack/api", () => {
   class ReturnedError extends Error {
@@ -113,6 +117,41 @@ describe("requestEmailLogin", () => {
     vi.clearAllMocks();
     mocks.redeemEmailProof.mockResolvedValue(12);
   });
+
+  it.each([299_000, 300_000])(
+    "uses session recency to decide whether to ask for proof at age %i",
+    async (age) => {
+      mocks.loadAuthState.mockResolvedValue(signedInState);
+      mocks.loadPublicAuthState.mockResolvedValue(signedInState);
+      mocks.getCurrentSession.mockResolvedValue({
+        createdAt: new Date(Date.now() - age),
+        impersonatedBy: null,
+      });
+      mocks.sendCode.mockResolvedValue({
+        challengeKey,
+        email: signedInState.email,
+      });
+      const result = await createEmailLogin().request(
+        requestContext("/account/password"),
+      );
+      if (age < 300_000) {
+        expect(result).toMatchObject({
+          authState: signedInState,
+          path: "/account/password",
+        });
+        expect(mocks.sendCode).not.toHaveBeenCalled();
+      } else {
+        expect(result).toMatchObject({
+          challengeKey,
+          authState: { state: "code-sent" },
+        });
+        expect(mocks.sendCode.mock.lastCall?.[0]).toMatchObject({
+          email: signedInState.email,
+          linkPath: "/login?returnTo=%2Faccount%2Fpassword",
+        });
+      }
+    },
+  );
 
   it("rejects an unknown account from an existing proof", async () => {
     mocks.redeemEmailProof.mockRejectedValueOnce(

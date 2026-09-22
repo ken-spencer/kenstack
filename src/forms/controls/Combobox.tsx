@@ -304,16 +304,16 @@ function ComboboxInput({
         onChange={(event) => {
           const nextInputValue = event.currentTarget.value;
 
-          combobox.setInputValue(nextInputValue);
-
           if (
             combobox.commitInputValue &&
             isAutofillChange(event.currentTarget)
           ) {
+            combobox.setInputValue(nextInputValue);
             combobox.commitInputValue(nextInputValue);
             picker.setOpen(false);
           } else {
             picker.setOpen(true);
+            combobox.setInputValue(nextInputValue);
           }
 
           onChange?.(event);

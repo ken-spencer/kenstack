@@ -80,10 +80,10 @@ function resolveFilters(
       case "date-range": {
         const range = parseDateRange(rawValue);
         if (range.from) {
-          where.push(gte(sql`${filter.field}`, range.from));
+          where.push(gte(sql`${filter.field}`, range.from.toISOString()));
         }
         if (range.to) {
-          where.push(lte(sql`${filter.field}`, range.to));
+          where.push(lte(sql`${filter.field}`, range.to.toISOString()));
         }
         break;
       }
@@ -161,7 +161,11 @@ function parseDateValue(value: unknown, endOfDay = false) {
   }
 
   if (endOfDay) {
-    date.setHours(23, 59, 59, 999);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      date.setUTCHours(23, 59, 59, 999);
+    } else {
+      date.setHours(23, 59, 59, 999);
+    }
   }
 
   return date;
