@@ -1,17 +1,9 @@
 # Cleanup
 
 Use this checklist with the cleanup skill when cleanup is explicitly requested or required by the
-development workflow. The skill owns invocation, Git scope, delegation, and edit eligibility; this
-reference supplies Kenstack's engineering checks.
-
-## Scope and posture
-
-- Preserve unrelated work and use the selected diff and nearby context. Expand to the full project only
-  on request or when an affected owner cannot otherwise be found.
-- Apply only locally proven changes that preserve behavior, caller-visible types, ownership, and public
-  contracts. A clean compile proves compatibility, not equivalence.
-- Leave equally clear forms alone. Report product, API, design, ownership, and naming decisions for
-  implementation or the user's ruling.
+development workflow. The skill owns invocation, Git scope, delegation, edit eligibility, the equivalence
+bar, verification, and the report; this reference supplies Kenstack's engineering checks. Expand past
+the diff only on request or when an affected owner cannot otherwise be found.
 
 ## Checklist
 
@@ -59,12 +51,8 @@ reference supplies Kenstack's engineering checks.
 - **Explanatory text:** Apply the code-comment rule in `docs/code-organization.md` to every new or
   changed code comment. Cleanup never removes or rewords interface text; development review covers
   interface lines the agent added.
-- **Residual artifacts:** Inspect changed debug output, reviewer notes, stale TODOs, suppressions,
-  commented-out code, placeholders, and every untracked file in scope. Keep a changed artifact only for
-  a concrete current purpose. Remove a task-created untracked file with no production, test, tooling,
-  or documented operational purpose; report any other unexplained untracked file for the user's ruling.
-- **Public surface:** Committed Kenstack APIs are externally consumed; an authorized break follows
-  `docs/upgrading.md`. For uncommitted APIs, update consumers directly and remove compatibility aliases.
+- **Untracked files:** Remove a task-created untracked file with no production, test, tooling, or
+  documented operational purpose; report any other unexplained untracked file for the user's ruling.
 
 A speculative suggestion is reported as such, never as required cleanup.
 
@@ -94,11 +82,3 @@ A speculative suggestion is reported as such, never as required cleanup.
   still inventoried.
 - Apply a collapse only when the skill's equivalence and ownership gates permit it; otherwise report
   it for implementation. Re-trace affected paths after an edit.
-
-## Verification and handoff
-
-- Run formatting, TypeScript, lint, and the narrowest relevant existing tests per `AGENTS.md` and the
-  applicable technical reference. Behavior that did not change gets no new test to pin the cleanup.
-- Recheck only the hunks cleanup edited.
-- Follow `AGENTS.md`'s reporting policy; report only edits made and unresolved user rulings, never
-  the items judged clean or kept.

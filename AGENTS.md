@@ -33,6 +33,7 @@ Read only the references relevant to the current task:
 - Naming or renaming a symbol, prop, file, or folder, or a function's reading order: `docs/naming.md`
 - Creating, changing, or consolidating a UI component, page markup or styling, or `role` and `aria-*`
   attributes: `docs/components.md`
+- Adding, removing, or judging a test: `docs/testing.md`
 - Reviewing code changes: `docs/review.md`
 - Cleaning up code changes: `docs/cleanup.md`
 - Diagnosing or fixing regressions, failed checks, runtime errors, or broken UI: `docs/debugging.md`
@@ -87,35 +88,12 @@ Read only the references relevant to the current task:
 ## Verification
 
 - Development adds no tests. A test enters a suite only through the `$tests` skill on the user's
-  explicit request, and only for a durable observable behavior or compile-time contract with a
-  plausible regression a reader would miss; the skill states both before writing it. Development
-  keeps existing tests passing: update one mechanically to a changed public shape, delete one that
-  pins removed structure, never rewrite one to keep it alive.
-- These never qualify, so write no test and delete an existing one that only checks them: interface
-  wording (labels, headings, notices, help and error text), the order or count of calls between
-  internal modules, mock chains, generated SQL text, markup or class names, a constant's value, a
-  restatement of the implementation or its defaults, development-only scaffolding, and a behavior
-  another test already covers. Instead, assert the state, value, role, or result the wording
-  reports, such as a disabled control, an amount, or a returned status, or the side effects that
-  reach the outside world, such as one provider charge or no email sent, and move claims about what
-  a query returns or locks to the PostgreSQL suite. Wording or a constant is pinned only when it is
-  itself a legal, protocol, or compatibility requirement. Copy changes often, so a test that pins it
-  breaks on every edit and protects nothing.
-- Test through a public or domain boundary. Production exports, options, parameters, reset hooks, and
-  branches need production consumers, never only tests. If behavior is unreachable, establish whether
-  a real production contract is missing before adding one.
-- When behavior is unchanged, leave tests unchanged. If a refactor forces a test to follow internal
-  structure, remove it and name a replacement at a stable boundary as a recommended `$tests`
-  candidate. Tests never
-  justify retaining worse production code.
-- Derive expected values from the requirement, an incident, an independent oracle, or deliberately
-  characterized existing behavior. Review and accept observed output before it becomes an expectation.
-- Runtime tests exercise runtime behavior. Keep compile-time contract fixtures under `tests/types/` and
-  verify them with TypeScript; a Vitest case cannot check an erased type.
-- Use the narrowest test boundary that can establish the contract. When it depends on wiring,
-  transaction rollback, database concurrency, provider protocol behavior, or rendered interaction, use
-  an integration or UI test, and keep those tests out of routine verification for changes that do not
-  affect their boundary.
+  explicit request, under `docs/testing.md`. Development keeps existing tests passing: update one
+  mechanically to a changed public shape, delete one that pins removed structure, never rewrite one to
+  keep it alive. When behavior is unchanged, leave tests unchanged; a test that a refactor forces to
+  follow internal structure is removed and its replacement named as a `$tests` candidate.
+- Tests never justify retaining worse production code. Production exports, options, parameters, reset
+  hooks, and branches need production consumers, never only tests.
 - PostgreSQL tests under `tests/integration/` run only when the user explicitly asks for integration
   testing or a pre-launch verification pass; they need sandbox or shared-memory permission that routine
   work must not request. Mention an un-run opt-in check in the handoff only when the user asked for it
