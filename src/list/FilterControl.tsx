@@ -19,7 +19,8 @@ import { Checkbox } from "@kenstack/forms/controls/Checkbox";
 import { Separator } from "@kenstack/components/Separator";
 import type { AdminFilterMeta } from "@kenstack/admin/types/list";
 import Tooltip from "@kenstack/components/Tooltip";
-import { formatLongDate } from "@kenstack/lib/dateFormat";
+import deps from "@app/deps";
+import { formatDateKey, formatLongDate } from "@kenstack/lib/dateFormat";
 import { cn } from "@kenstack/lib/utils";
 import {
   hasFilterValue,
@@ -375,6 +376,7 @@ function DateFilterInput({
   }
 
   const date = parseStoredDate(value);
+  const today = parseISO(formatDateKey(new Date(), deps.defaultTimeZone));
 
   const commitDate = (nextValue: string | Date) => {
     if (!nextValue) {
@@ -384,7 +386,9 @@ function DateFilterInput({
     }
 
     const parsedDate =
-      nextValue instanceof Date ? nextValue : (parseDate(nextValue) ?? null);
+      nextValue instanceof Date
+        ? nextValue
+        : (parseDate(nextValue, today) ?? null);
 
     if (parsedDate) {
       onChange(formatISO(parsedDate, { representation: "date" }));
@@ -402,6 +406,7 @@ function DateFilterInput({
         <PopoverContent className="w-auto p-0">
           <Calendar
             mode="single"
+            today={today}
             selected={date}
             onSelect={(selectedDate) => {
               commitDate(selectedDate ?? "");

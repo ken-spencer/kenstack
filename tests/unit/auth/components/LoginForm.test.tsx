@@ -23,6 +23,7 @@ vi.mock("react-google-recaptcha-v3", () => ({
 }));
 
 import LoginForm from "@kenstack/auth/components/Login/Form";
+import ReauthenticationFormClient from "@kenstack/auth/reauthentication/FormClient";
 
 const inputValueSetter = Object.getOwnPropertyDescriptor(
   HTMLInputElement.prototype,
@@ -66,6 +67,98 @@ describe("LoginForm", () => {
     vi.clearAllMocks();
   });
 
+  it("keeps an email-change link and signed-in identity while requesting inline proof", async () => {
+    const token = "a".repeat(43);
+    window.history.replaceState(
+      null,
+      "",
+      `/account/profile?confirmEmailChange=${token}`,
+    );
+    mocks.fetcher.mockResolvedValueOnce({
+      status: "success",
+      challengeKey: "challenge",
+      authState: { state: "code-sent", email: "patron@example.com" },
+    });
+    await act(async () => {
+      root.render(
+        <ReauthenticationFormClient
+          authorization={{
+            sessionId: 1,
+            userId: 1,
+            authorizedUntil: new Date(0).toISOString(),
+            remainingMs: 0,
+          }}
+          loginForm={
+            <LoginForm email="patron@example.com" mode="reauthentication" />
+          }
+          message="To update your sign-in email, please confirm your identity."
+        >
+          <p>Change email</p>
+        </ReauthenticationFormClient>,
+      );
+    });
+    expect(container.textContent).not.toContain("Change email");
+    expect(
+      container.querySelector<HTMLInputElement>('input[name="email"]')?.value,
+    ).toBe("patron@example.com");
+    expect(mocks.fetcher).not.toHaveBeenCalled();
+    expect(window.location.search).toBe(`?confirmEmailChange=${token}`);
+    await act(async () => {
+      container
+        .querySelector("form")
+        ?.dispatchEvent(
+          new Event("submit", { bubbles: true, cancelable: true }),
+        );
+    });
+    await vi.waitFor(() => expect(mocks.fetcher).toHaveBeenCalledOnce());
+    expect(mocks.fetcher).toHaveBeenCalledWith(
+      "/api/auth",
+      expect.objectContaining({
+        action: "email-login",
+        email: "patron@example.com",
+        linkToReturnTo: undefined,
+        returnTo: `/account/profile?confirmEmailChange=${token}`,
+      }),
+    );
+    await vi.waitFor(() =>
+      expect(container.querySelector('input[name="code"]')).not.toBeNull(),
+    );
+    expect(mocks.setUserInfo).not.toHaveBeenCalled();
+  });
+
+  // A change can finish just as the window lapses; its fresh session must restore the form.
+  it("returns to the sensitive form when a fresh session follows expiry", async () => {
+    vi.useFakeTimers({
+      toFake: ["setTimeout", "clearTimeout", "performance", "Date"],
+    });
+    const form = (sessionCreatedAt: string, remainingMs: number) => (
+      <ReauthenticationFormClient
+        authorization={{
+          sessionId: sessionCreatedAt === "session-1" ? 1 : 2,
+          userId: 1,
+          authorizedUntil: new Date(Date.now() + remainingMs).toISOString(),
+          remainingMs,
+        }}
+        loginForm={
+          <LoginForm email="patron@example.com" mode="reauthentication" />
+        }
+        message="Please confirm your identity."
+      >
+        <p>Change email</p>
+      </ReauthenticationFormClient>
+    );
+    try {
+      await act(async () => root.render(form("session-1", 1_000)));
+      act(() => vi.advanceTimersByTime(1_000));
+      expect(container.querySelector('input[name="email"]')).not.toBeNull();
+      await act(async () => root.render(form("session-2", 600_000)));
+      expect(container.textContent).toContain("Change email");
+      expect(container.querySelector('input[name="email"]')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("keeps verifying after consuming a standalone link token", async () => {
     window.history.replaceState(null, "", `/login?token=${"a".repeat(43)}`);
     const { promise, resolve: settleLink } =
@@ -90,10 +183,9 @@ describe("LoginForm", () => {
       });
     });
     await vi.waitFor(() =>
-      expect(container.textContent).toContain(
-        "We couldn’t finish signing you in.",
-      ),
+      expect(container.querySelector('[role="alert"]')).not.toBeNull(),
     );
+    expect(container.querySelector('input[name="email"]')).toBeNull();
 
     expect(mocks.fetcher).toHaveBeenCalledWith("/api/auth", {
       action: "verify-email-login-link",
@@ -126,7 +218,8 @@ describe("LoginForm", () => {
     );
 
     expect(container.querySelector('input[name="password"]')).toBeNull();
-    expect(container.textContent).toContain(
+    // The server's failure reason reaches the email form.
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain(
       "This link was opened in a different browser.",
     );
     expect(window.location.search).toBe("?returnTo=%2Faccount");
@@ -159,13 +252,11 @@ describe("LoginForm", () => {
       );
     });
 
-    expect(container.textContent).toContain(
-      "Your account is ready. Confirm your email below",
-    );
     const emailInput = container.querySelector<HTMLInputElement>(
       'input[name="email"]',
     );
     expect(emailInput?.value).toBe("patron@example.com");
+    expect(container.querySelector('[role="status"]')).not.toBeNull();
     expect(window.location.search).toBe("?email=Patron%40Example.com");
     expect(mocks.fetcher).not.toHaveBeenCalled();
   });
@@ -184,9 +275,6 @@ describe("LoginForm", () => {
       );
     });
 
-    expect(container.textContent).toContain(
-      "We sent an email to patron@example.com",
-    );
     expect(container.querySelector('input[name="code"]')).not.toBeNull();
     expect(container.querySelector('input[name="email"]')).toBeNull();
   });
@@ -227,8 +315,13 @@ describe("LoginForm", () => {
           new Event("submit", { bubbles: true, cancelable: true }),
         );
     });
-
-    expect(container.textContent).toContain("Password is required");
+    await vi.waitFor(() =>
+      expect(
+        container
+          .querySelector('input[name="password"]')
+          ?.getAttribute("aria-invalid"),
+      ).toBe("true"),
+    );
 
     await act(async () =>
       Array.from(container.querySelectorAll("button"))
@@ -240,7 +333,6 @@ describe("LoginForm", () => {
     expect(
       container.querySelector<HTMLInputElement>('input[name="email"]')?.value,
     ).toBe("patron@example.com");
-    expect(container.textContent).toContain("Use a password instead");
     expect(document.cookie).toContain("loginMethod=email");
   });
 
@@ -259,7 +351,9 @@ describe("LoginForm", () => {
       );
     });
 
-    expect(container.textContent).toContain("Please sign in");
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain(
+      "Please sign in",
+    );
     expect(window.location.search).toBe("?returnTo=%2Faccount");
 
     await act(async () => {
@@ -270,7 +364,9 @@ describe("LoginForm", () => {
       );
     });
 
-    expect(container.textContent).toContain("Please sign in");
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain(
+      "Please sign in",
+    );
   });
 
   it("requests a standalone email link for its return destination", async () => {
@@ -300,7 +396,7 @@ describe("LoginForm", () => {
     });
 
     await vi.waitFor(() =>
-      expect(container.textContent).toContain("We sent an email"),
+      expect(container.querySelector('input[name="code"]')).not.toBeNull(),
     );
     expect(mocks.fetcher).toHaveBeenCalledWith("/api/auth", {
       action: "email-login",
@@ -337,7 +433,6 @@ describe("LoginForm", () => {
 
     // The code page shows before the send settles, with resend and
     // verification unavailable.
-    expect(container.textContent).toContain("Sending an email");
     const buttons = Array.from(container.querySelectorAll("button"));
     expect(
       buttons.find((button) => button.textContent?.includes("Resend email"))
@@ -357,11 +452,10 @@ describe("LoginForm", () => {
       });
     });
 
-    expect(container.textContent).not.toContain("We sent an email");
-    expect(container.textContent).toContain(
+    expect(container.querySelector('input[name="email"]')).not.toBeNull();
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain(
       "Wait a moment before requesting another email.",
     );
-    expect(container.querySelector('input[name="email"]')).not.toBeNull();
   });
 
   it("ignores a resend that settles after choosing a different email", async () => {
@@ -394,7 +488,7 @@ describe("LoginForm", () => {
       );
     });
     await vi.waitFor(() =>
-      expect(container.textContent).toContain("We sent an email"),
+      expect(container.querySelector('input[name="code"]')).not.toBeNull(),
     );
 
     await act(async () => {
@@ -402,7 +496,6 @@ describe("LoginForm", () => {
         .find((button) => button.textContent?.includes("Resend email"))
         ?.click();
     });
-    expect(container.textContent).toContain("Sending an email");
     expect(
       container.querySelector<HTMLInputElement>('input[name="code"]')?.disabled,
     ).toBe(true);
@@ -423,7 +516,6 @@ describe("LoginForm", () => {
     });
 
     expect(container.querySelector('input[name="email"]')).not.toBeNull();
-    expect(container.textContent).not.toContain("We sent an email");
   });
 
   it("keeps a link failure message while switching login methods", async () => {
@@ -441,10 +533,6 @@ describe("LoginForm", () => {
       );
     });
 
-    expect(container.textContent).toContain(
-      "This link was opened in a different browser.",
-    );
-
     await act(async () =>
       Array.from(container.querySelectorAll("button"))
         .find((button) => button.textContent === "Use a password instead")
@@ -452,6 +540,9 @@ describe("LoginForm", () => {
     );
 
     expect(container.querySelector('input[name="password"]')).not.toBeNull();
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain(
+      "This link was opened in a different browser.",
+    );
     expect(window.location.search).toBe("?returnTo=%2Ftake-your-seat%2Fsignin");
     expect(mocks.fetcher).not.toHaveBeenCalled();
   });
@@ -480,7 +571,6 @@ describe("LoginForm", () => {
       'input[name="email"]',
     );
     expect(emailInput).not.toBeNull();
-    expect(inputValueSetter).toBeDefined();
 
     await act(async () => {
       setInputValue(emailInput, "patron@example.com");
@@ -490,7 +580,7 @@ describe("LoginForm", () => {
     });
 
     await vi.waitFor(() =>
-      expect(container.textContent).toContain("We sent an email"),
+      expect(container.querySelector('input[name="code"]')).not.toBeNull(),
     );
     expect(window.location.search).toBe("");
 
@@ -502,7 +592,6 @@ describe("LoginForm", () => {
       );
     });
 
-    expect(container.textContent).toContain("We sent an email");
     expect(container.querySelector('input[name="code"]')).not.toBeNull();
   });
 });

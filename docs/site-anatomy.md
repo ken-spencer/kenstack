@@ -54,8 +54,11 @@ unsupported top-level directories are transitional and set no precedent.
   database-setup executable. `db/index.ts` creates the schema-aware database with
   `createDb({ schema: tables })` and supplies the `@app/db` binding; query modules import that owner
   directly.
-- `modules/index.ts`, `email/index.ts`, and `roles.ts` supply the `@app/modules`, `@app/email`, and
-  `@app/roles` bindings. These are compile-time path bindings, not a runtime dependency container.
+- `modules/index.ts`, `email/index.ts`, and `deps.ts` supply the `@app/modules`, `@app/email`, and
+  `@app/deps` bindings. `deps.ts` default-exports one object built with `createDeps` from
+  `@kenstack/deps`; Kenstack owns its shape and defaults, and the host states only what differs.
+  Client components read `deps`, so keep the module browser-safe. These are compile-time path
+  bindings, not a runtime dependency container.
 - `app/**/route.ts` exposes module, feature, or integration HTTP behavior only where Next.js requires a
   framework entry point.
 
@@ -84,3 +87,14 @@ declaration from one of its leaves is the wrong shape.
 Kenstack may improve shared mechanics without requiring hosts to copy those changes. Changes to an
 established visual default stay conservative; a material change requires an upgrade note so a host can
 decide whether to accept or override it.
+
+## Local time
+
+Hosts bind `@app/deps` to a module default-exporting one object built with `createDeps`; its
+`defaultTimeZone` is an IANA time zone name, `America/Vancouver` unless the host passes another. Shared timestamp displays, date-time entry, and
+timestamp date filters use this zone on both server and client. Date-only fields retain their
+calendar dates. Callers displaying another venue's timestamps pass that venue's time zone to the
+date formatter. The zone belongs to the thing (a venue, else the site default), never to the person:
+never read the browser's zone for entry or display. Show a zone abbreviation beside a time or field
+only when the site's locations span more than one zone, derived from the data; never add
+explanatory time-zone messages.

@@ -27,10 +27,12 @@ pipeline schema work, or batch scripts.
 
 ### Migration history
 
-- Append by default. Once Preview, staging, or production has recorded a migration, preserve its SQL,
-  snapshot, and journal entry exactly.
-- Rebase private history only after checking every database ledger and defining how each database
-  reaches the replacement chain. When in doubt, append.
+- Append to committed history by default. Once Preview, staging, or production has recorded a
+  migration, preserve its SQL, snapshot, and journal entry exactly.
+- Treat uncommitted migrations as private development without asking for confirmation unless evidence
+  indicates they reached a shared environment. Before consolidating them, check affected development
+  database ledgers and define how each database reaches the replacement chain. Check shared ledgers
+  only when there is evidence those migrations were applied there.
 - A development database may have consumed intermediate private migrations before they were compressed,
   so the consolidated migration cannot simply replay against it. Reset the database when it is
   disposable; otherwise compare its schema with the consolidated target and reconcile both the missing
@@ -38,9 +40,11 @@ pipeline schema work, or batch scripts.
 - If a shared Preview, staging, or production database consumed rewritten history, stop deployment,
   restore the last shared artifacts, and reconcile its schema and ledger only through a separately
   authorized operation.
-- Generating migration files alone does not authorize applying them. Destructive database operations
-  and changes to shared Preview, staging, or production require authorization naming the target database
-  and operation.
+- The approval gate is the schema change itself, not its migration. Once a table, column, or
+  relationship change is approved, generate its migration without asking again, and apply any migration
+  already in the working tree to the local development database whenever testing needs it. Destructive
+  database operations and changes to shared Preview, staging, or production require authorization naming
+  the target database and operation.
 - Changes required by every database go in the migration chain. Reserve direct queries for simple
   changes to one identified development database and scripts for complex or repeatable reconciliation.
 
@@ -53,6 +57,10 @@ pipeline schema work, or batch scripts.
 - Use Kenstack's table helpers for standard relationship tables: `defineTags({ table, prefix })` from
   `@kenstack/db/tables/tags` builds a tag relation table with its `tableId`/`tagId`/`createdAt` columns
   and indexes.
+- Store each fact in one column of one owning table. Another table that needs it references the
+  owning row or derives it in a query. Keep a copy only as a deliberate point-in-time snapshot, such
+  as an order line's price at purchase, and say so in a comment; two live columns holding the same
+  fact drift apart and need code to keep them in step.
 - Define field maps with isomorphic `defineFields({ fields: { ... } })` from `@kenstack/admin/fields`.
   The publication and SEO fields come from the table's `publish` and `seo` flags through
   `defineModule(...)`, never from the field map; see `docs/admin.md#generated-fields`.

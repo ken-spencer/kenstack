@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 
 import { db } from "@app/db";
 import { modules } from "@app/modules";
-import roles from "@app/roles";
+import deps from "@app/deps";
 import type { AuthAccess } from "@kenstack/auth/server/auth";
 import { getSafeReturnToPath } from "@kenstack/auth/returnTo";
 import { selectMediaSubquery } from "@kenstack/db/queries/media";
@@ -40,7 +40,10 @@ async function loadUserByTokenHash(tokenHash: string) {
       email: users.email,
       avatar: selectMediaSubquery(users.avatar, "square"),
       roles: users.roles,
+      sessionId: sessions.id,
+      provider: sessions.provider,
       expiresAt: sessions.expiresAt,
+      authorizedUntil: sessions.authorizedUntil,
     })
     .from(sessions)
     .innerJoin(users, eq(users.id, sessions.userId))
@@ -58,7 +61,8 @@ async function loadUserByTokenHash(tokenHash: string) {
 
 // Cached per session for up to fifteen minutes; login, logout, impersonation,
 // password changes, and user edits revalidate the tags so a change takes
-// effect on the next request. getFreshCurrentUser bypasses it.
+// effect on the next request. getFreshCurrentUser and getFreshCurrentSession
+// bypass it.
 async function getCachedUserByTokenHash(tokenHash: string) {
   "use cache: remote";
   cacheTag(sessionCacheTag(tokenHash));
@@ -98,7 +102,7 @@ function toPublicUser(
     // Persisted values grant authority only while the host still registers
     // them, so removing a role disables it without rewriting stored rows.
     roles: user.roles.filter((role): role is Role =>
-      Object.hasOwn(roles, role),
+      Object.hasOwn(deps.roles, role),
     ),
     ...(user.impersonatedBy ? { impersonatedBy: user.impersonatedBy } : {}),
     name: formatUserName(user),
@@ -122,51 +126,46 @@ const getUserBySessionToken = cache(async (token: string) => {
   return user && toPublicUser(user);
 });
 
-async function getCurrentUserUsing(
-  getUser: (token: string) => ReturnType<typeof loadFreshUserBySessionToken>,
-) {
-  const sessionCookie = (await cookies()).get("sessionId");
-
-  if (!sessionCookie) {
-    return;
-  }
-
-  return getUser(sessionCookie.value);
+async function getSessionToken() {
+  return (await cookies()).get("sessionId")?.value ?? "";
 }
 
-export const getCurrentUser = () => getCurrentUserUsing(getUserBySessionToken);
+export const getCurrentUser = async () =>
+  getUserBySessionToken(await getSessionToken());
 
-export const getFreshCurrentUser = () =>
-  getCurrentUserUsing(loadFreshUserBySessionToken);
+export const getFreshCurrentUser = async () =>
+  loadFreshUserBySessionToken(await getSessionToken());
 
-export const getCurrentSession = cache(async () => {
-  const sessionCookie = (await cookies()).get("sessionId");
-
-  if (!sessionCookie) {
+function toSession(user: Awaited<ReturnType<typeof loadUserByTokenHash>>) {
+  if (!user || user.expiresAt <= new Date()) {
     return;
   }
 
-  const users = modules.users.admin.table;
-  const [session] = await db
-    .select({
-      createdAt: sessions.createdAt,
-      impersonatedBy: sessions.impersonatedBy,
-      provider: sessions.provider,
-      userId: sessions.userId,
-    })
-    .from(sessions)
-    .innerJoin(users, eq(users.id, sessions.userId))
-    .where(
-      and(
-        eq(sessions.tokenHash, hashToken(sessionCookie.value)),
-        gt(sessions.expiresAt, sql`now()`),
-        isNull(users.deletedAt),
-      ),
-    )
-    .limit(1);
+  return {
+    id: user.sessionId,
+    userId: user.id,
+    expiresAt: user.expiresAt,
+    authorizedUntil: user.authorizedUntil,
+    impersonatedBy: user.impersonatedBy,
+    provider: user.provider,
+  };
+}
 
-  return session;
+export const getCurrentSession = cache(async () => {
+  const token = await getSessionToken();
+  return token
+    ? toSession(await getCachedUserByTokenHash(hashToken(token)))
+    : undefined;
 });
+
+// Authorization for a write reads the session row itself: a revoked session must
+// fail at once, not once its cleared cache entry reaches the remote cache.
+export const getFreshCurrentSession = async () => {
+  const token = await getSessionToken();
+  return token
+    ? toSession(await loadUserByTokenHash(hashToken(token)))
+    : undefined;
+};
 
 export const requireUser = cache(async function requireUser(
   access: AuthAccess = "authenticated",

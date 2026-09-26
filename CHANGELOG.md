@@ -4,38 +4,130 @@ Migration notes for committed Kenstack API changes, newest release first. The au
 contract lives in `docs/upgrading.md`.
 
 ## Unreleased
+### Payments moved to its own package
+
+`@kenstack/payments/*` no longer exists. The payments code, its tests and its checkout stylesheet
+live in the separate private `payments` package mounted beside Kenstack; import `@payments/...` and
+add `@payments/checkout/theme.css` after `@kenstack/theme.css`. Kenstack's stand-in `@app/db` no
+longer includes the payment tables.
+
+
+### Pipeline stages as actions
+
+`multiPipeline` accepts a `pipelineStage` result or a stage array per action and runs the pipeline
+itself; actions written as `(options) => pipeline(options, ...)` still work. `pipelineStage` takes
+`quota` (per-IP quota scope) and `recaptcha` (action checked against the schema's `recaptchaToken`).
+`loginPipeline(opts)` and `forgotPasswordPipeline(props)` now return a stage, and `logoutPipeline` and
+`sendOnboardingEmailAction` are plain stages, so call sites drop the `()`. Email login `subject` and
+`actionLabel`, and email change `subject`, default to `heading`; hosts that set a `heading` without a
+`subject` now send the heading as the subject.
+
+### First validation error per field
+
+`FormProvider` again shows the first failed schema rule or server error for each field, instead of
+stacking every failure for that field. Put required checks before format and range checks, and order
+server field-error arrays by priority. No caller changes are required; separate server `formErrors`
+remain visible in the form's status outlet.
+
+### Forms ignore a repeated submit
+
+`Form` ignores a submit while its previous submission is validating or its mutation is pending, so
+Enter, a double click or a self-submitting field cannot send the same request twice. Remove any
+`mutation.isPending` early return from `onSubmit`. A form whose `onSubmit` does not use the form's
+mutation, and returns before its own request finishes, is unaffected.
+
+### Enum filters handle empty values
+
+An enum list filter's `""` option now matches both NULL and empty-string rows, and excluding it
+removes both; excluding any other option keeps rows whose value is NULL. A nullable column no longer
+needs a custom `coalesce(...)` filter to make its empty option work; remove such overrides.
+
+### Host deps binding
+
+Replace the `@app/roles` TypeScript path binding with `@app/deps`, and delete the old path and its
+module. Point `@app/deps` at a browser-safe module default-exporting one object built with
+`createDeps` from `@kenstack/deps`:
+
+```ts
+import { createDeps } from "@kenstack/deps";
+
+export default createDeps();
+```
+
+`defaultTimeZone`, an IANA time zone name, defaults to `America/Vancouver`; a host in another zone
+passes its own. Shared timestamp displays, scheduled
+date-time entry, and timestamp date filters now use this host zone instead of server, browser, or UTC
+defaults. Date-only values keep their calendar dates; stored and transported instants remain
+unchanged. Existing explicit formatter time zones still take precedence.
+
+A host with custom roles passes the registry the old `@app/roles` module exported by default as
+`roles`; omitted roles default to `@kenstack/auth/roles`.
 
 ### Shared Reauthentication
 
-Move `hasRecentAuthentication` and `getAuthenticationRemainingMs` imports from
+Move `hasRecentAuthentication` imports from
 `@kenstack/auth/passwordChange` to `@kenstack/auth/reauthentication`,
 `requireRecentAuthentication` imports from `@kenstack/auth/server/reauthentication` to
 `@kenstack/auth/reauthentication/server`, and the default `ReauthenticationTimer` import from
 `@kenstack/auth/components/ReauthenticationTimer` to `@kenstack/auth/reauthentication/Timer`. The
 timing policy, server guard, and browser timer now live together under `auth/reauthentication/`.
+`getAuthenticationRemainingMs` has been removed; it measured only the initial sign-in window. A
+sensitive-action timer uses the fresh session's `authorizedUntil` instead. `hasRecentAuthentication`
+now reads the current time itself: remove any `now` argument, and pass a grace period as its second
+argument. `getCurrentSession` now reads the per-session cache, which holds a session for up to
+fifteen minutes, and returns `id`, `userId`, `expiresAt`, `authorizedUntil`, `impersonatedBy` and
+`provider`; `createdAt` has been removed. Authorize writes with the new uncached
+`getFreshCurrentSession`, and replace any `createdAt` recency check with `hasRecentAuthentication`.
 
 Password and email changes now require recent authentication in a non-impersonated session.
-Sensitive pages redirect to login when five minutes have elapsed since authentication; opening a page
-does not restart that allowance. Server writes accept one additional minute for requests in flight.
-`ResetPassword` includes this browser timer. Hosts rendering `EmailChange` must also check the current
-session on entry and mount `ReauthenticationTimer` from `@kenstack/auth/reauthentication/Timer`
-with `remainingMs` from `getAuthenticationRemainingMs` in `@kenstack/auth/reauthentication`, keyed by the
-session's `createdAt`. Keep email-change cancellation links accessible without recent authentication.
-The auth guard returns `/login?returnTo=...` through the existing API `redirect` response.
-It derives a safe local return path from the request Referer; without one, login uses the host destination.
-The shared fetcher follows the supplied redirect without interpreting authentication error codes.
+Sensitive forms ask for identity confirmation after ten minutes. Activity in the inline wrapper requests
+another ten minutes when less than two remain. Only a live, non-impersonated session whose short
+authorization has not expired may extend it; the original sign-in timestamp and fixed login expiry stay
+unchanged. Server writes retain one additional minute for requests in flight, but extension never uses
+that grace. The required `sessions.authorizedUntil` timestamp requires a host migration before deployment. Add the
+column as nullable, backfill it with `least(created_at + interval '10 minutes', expires_at)`, then set it
+NOT NULL. Coordinate migration and deployment: old code cannot create sessions after this migration
+because it does not populate the required column, so logins are interrupted until the new code is live.
+The new code also requires the column to exist. Backfilled deadlines are anchored to the original
+sign-in time, never the migration time; sessions signed in at least ten minutes ago remain expired.
+`hasRecentAuthentication` now requires the session's
+`authorizedUntil`, `expiresAt`, and `impersonatedBy`; update hand-built session fixtures accordingly.
+Email-change codes and links expire after ten minutes; resends retain the original challenge deadline.
+Their issuance transaction grants authorization through the actual challenge expiry before mail delivery.
+Login verification and proof lifetimes are unchanged. `ResetPassword` embeds
+this confirmation. Hosts rendering `EmailChange` must wrap it in the inline `ReauthenticationForm`
+from `@kenstack/auth/reauthentication/Form`, which owns activity extension and grants.
+`ReauthenticationTimer` now requires `onExpire`; it no longer navigates to login itself. Add an expiry
+callback at every direct call site. It takes `deadline`, a `performance.now()` time, instead of
+`remainingMs`: anchor it once when the authorization arrives (`performance.now() + remainingMs`) so
+hidden Activity effects resume against the same time. The inline form is a Server Component that loads the session, email,
+remembered login method, and authoritative session deadline itself; pass only an explanatory `message` and the
+protected form as children, and render it only for a signed-in, non-impersonated session. It resets its
+timer when the session changes while preserving the child form's success notice for the same account.
+Keep email-change cancellation links accessible without
+recent authentication.
+
+The inline form uses the existing password and email-code login handlers. Successful confirmation
+refreshes the owning page with the new session, keeping unsaved state elsewhere on the page; it does
+not replay an interrupted write. Confirming as a different account reloads the page instead, so no
+unsaved state carries across accounts. Login links
+verify through `/login` and return to the owning page, preserving any pending email-change token.
+The `Login/Form` client entry accepts `mode="reauthentication"` for this continuation, without adding
+an API login-schema field. Sending a confirmation code leaves the signed-in account menu intact.
+
+The auth guard reloads a stale signed-in form at its safe Referer path through the API `redirect`
+response, so the inline check appears. Missing sessions and missing safe paths still use login.
 Hosts must check session recency before their already-signed-in login-page redirect. Stale sessions
 use the ordinary `Login` form from `@kenstack/auth/components/Login`; recent sessions continue to the
 return destination. The email-login shortcut also requires a recent session. Password and email proof
-use the existing login handlers, which rotate the session and renew its timestamp for every recency
-check. There is no separate login mode or additional login-schema field. No database migration is
-required. The browser returns to the original page; it does not replay the interrupted write.
+rotate the session and grant a new authorization window.
 
 `reset-password` no longer accepts current-password confirmation in place of fresh authentication,
 including for accounts that have no password yet. Remove `requiresCurrentPassword` imports and the
 corresponding prop from direct users of `ResetPassword/Form`; that field and helper have been removed.
 Pass the request to `requireRecentAuthentication` from `@kenstack/auth/reauthentication/server` to protect additional
-sensitive actions.
+sensitive actions. Their pages must also provide `ReauthenticationForm` so a stale submission has a way to obtain
+fresh proof.
 
 ### Error Alerts Without Redis
 
@@ -111,23 +203,6 @@ default to `/reset-password`, so existing hosts are unchanged.
 relationship then has no `relationship` value, and the filter, load, and save queries omit the
 discriminator clause, so a plain join table can use `relationshipField(...)` and `filter: true`.
 Existing definitions are unchanged.
-
-### Payments Use Server Confirmation
-
-`Payment` now uses deferred Stripe Elements with `amountCents`, `currency`, `recurring`, and
-`onConfirm(confirmationTokenId)`. Replace Checkout Session creation and its client secret with a
-side-effect-free quote. In `onConfirm`, persist the accepted order and collection, confirm the
-payment on the server, and return its `sessionId`, `paymentStatus`, and optional `clientSecret`.
-`onComplete(sessionId)` routes to the host's server-verified confirmation view after any required
-authentication. Reconcile PaymentIntent and invoice webhooks against the same stored collection.
-
-Commerce tables remain opt-in through `@kenstack/payments/tables`. Hosts that need a Stripe
-customer link compose `paymentUserColumns` into their own user table.
-
-`setInstallmentSchedule` now uses the subscription's existing monthly price for one phase covering
-`paymentCount` months, including the initial payment's period. Remove `finalPaymentCents` from calls.
-Put any rounding adjustment on the first invoice when creating the subscription; the helper no longer
-creates a separate final-price phase. Already configured schedules retain their existing terms.
 
 ### GroupField Owns Grouped Controls
 

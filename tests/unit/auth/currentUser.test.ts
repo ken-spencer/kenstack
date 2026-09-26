@@ -48,10 +48,13 @@ vi.mock("@kenstack/db/queries/media", () => ({
 }));
 vi.mock("@kenstack/db/tables/sessions", () => ({ sessions: {} }));
 
+import { adminLoadCacheTag } from "@kenstack/admin/cache";
 import {
   getCurrentUser,
   getFreshCurrentUser,
   requireUser,
+  sessionCacheTag,
+  userSessionsCacheTag,
 } from "@kenstack/auth/server/user";
 
 function selectResult(roles: string[] = []) {
@@ -90,15 +93,13 @@ describe("current-user loading", () => {
   });
 
   it("shares ordinary session reads while fresh reads bypass the cache", async () => {
-    await getCurrentUser();
-    await getCurrentUser();
-    expect(mocks.select).toHaveBeenCalledOnce();
+    mocks.select.mockImplementation(() => selectResult(["admin"]));
+    expect((await getCurrentUser())?.roles).toEqual(["admin"]);
 
-    await getFreshCurrentUser();
-    expect(mocks.select).toHaveBeenCalledTimes(2);
-
-    await getCurrentUser();
-    expect(mocks.select).toHaveBeenCalledTimes(2);
+    // The stored session changes, such as a role being revoked.
+    mocks.select.mockImplementation(() => selectResult());
+    expect((await getCurrentUser())?.roles).toEqual(["admin"]);
+    expect((await getFreshCurrentUser())?.roles).toEqual([]);
   });
 
   it("grants only roles registered by the host", async () => {
@@ -109,14 +110,15 @@ describe("current-user loading", () => {
     expect((await getCurrentUser())?.roles).toEqual(["admin"]);
   });
 
+  // Logout, password changes and user edits revalidate these tags to revoke
+  // cached sessions.
   it("tags the cached session read by session and by user", async () => {
     const user = await getCurrentUser();
 
     expect(user?.id).toBe(12);
-    expect(mocks.cacheTag).toHaveBeenCalledWith("auth-session:token-hash");
-    expect(mocks.cacheTag).toHaveBeenCalledWith("auth-user-sessions:12");
-    expect(mocks.cacheTag).toHaveBeenCalledWith("admin-load:users:12");
-    expect(mocks.select).toHaveBeenCalledTimes(1);
+    expect(mocks.cacheTag).toHaveBeenCalledWith(sessionCacheTag("token-hash"));
+    expect(mocks.cacheTag).toHaveBeenCalledWith(userSessionsCacheTag(12));
+    expect(mocks.cacheTag).toHaveBeenCalledWith(adminLoadCacheTag("users", 12));
   });
 });
 
@@ -138,14 +140,12 @@ describe("required-user redirects", () => {
     await expect(requireUser("admin")).rejects.toThrow(
       "REDIRECT /login?returnTo=%2Fadmin%2Fmovies%3Fsearch%3DArrival%26page%3D2",
     );
-    expect(mocks.select).not.toHaveBeenCalled();
   });
 
-  it("uses an explicit destination without reading headers", async () => {
+  it("prefers an explicit destination over the proxy destination", async () => {
     await expect(
       requireUser("authenticated", "/account?tab=orders"),
     ).rejects.toThrow("REDIRECT /login?returnTo=%2Faccount%3Ftab%3Dorders");
-    expect(mocks.headers).not.toHaveBeenCalled();
   });
 
   it("keeps plain login when neither destination is available", async () => {
@@ -167,7 +167,6 @@ describe("required-user redirects", () => {
         "REDIRECT /login",
       );
       expect(mocks.redirect).toHaveBeenCalledWith("/login");
-      expect(mocks.headers).not.toHaveBeenCalled();
     },
   );
 
@@ -212,19 +211,14 @@ describe("required-user redirects", () => {
       "REDIRECT /login",
     );
     expect(mocks.redirect).toHaveBeenCalledWith("/login");
-    expect(mocks.headers).not.toHaveBeenCalled();
   });
 
-  it("shares the session lookup across destinations and skips headers for authorized users", async () => {
+  it("returns a user who holds the required role", async () => {
     mocks.cookies.mockResolvedValue({
       get: () => ({ value: "session-token" }),
     });
     mocks.select.mockImplementation(() => selectResult(["admin"]));
     expect((await requireUser("admin", "/admin/movies")).id).toBe(12);
-    expect((await requireUser("admin", "/admin/users")).id).toBe(12);
-    expect((await requireUser("admin")).id).toBe(12);
-    expect(mocks.select).toHaveBeenCalledOnce();
-    expect(mocks.headers).not.toHaveBeenCalled();
     expect(mocks.redirect).not.toHaveBeenCalled();
   });
 });

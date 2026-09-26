@@ -15,30 +15,17 @@ reference supplies Kenstack's engineering checks.
 
 ## Checklist
 
-- **Ownership and duplication:** Apply the canonical-ownership and direct-expression rules in
-  `docs/code-organization.md` and the component-reuse rules in `docs/components.md`. Follow the ownership
-  trace in `docs/code-organization.md#unit-ownership`; report ownership moves for implementation without
-  changing unrelated code or existing domain boundaries. Compare every
-  new or changed site component with Kenstack and with existing site components across `app`, `components`,
-  `features`, modules, and shared domains; during a requested site-wide cleanup, inventory all
-  production site components and compare them with one another, including components outside the
-  dirty-file set. Rule on each comparison from behavior and ownership: when ownership is duplicated,
-  name the canonical owner and the differences it must preserve, then report the consolidation for
-  implementation; when ownership is distinct, name the domain behavior or contract that requires separate
-  components. A similarity score, visual resemblance, or unresolved candidate is not a finding.
-- **Owner APIs and configuration:** Inventory every new or changed prop, option, default, explicit
-  override, and repeated setup around an affected reusable component or function, and inspect every
-  production call site for each configuration point. Each difference needs the current behavior that
-  requires it; existing divergence is not evidence of intent. Repeated or near-equivalent literals,
-  caller-recomputed owner metadata, and setup repeated at call sites identify ownership changes to
-  report for implementation. Consumer policy stays outside the owner only when it is genuinely optional;
-  flag unresolved product choices for the user's ruling. For an affected multi-step workflow, apply
-  the ownership and composition checks in `docs/step-flow.md`.
-- **Helpers and indirection:** Inventory changed helpers, wrappers, mappers, normalizers, and local
+- Ownership, owner APIs and component duplication are review's checks (`docs/review.md`); cleanup
+  does not repeat them.
+- **Helpers and indirection:** Inspect changed helpers, wrappers, mappers, normalizers, and local
   bindings, including destructured bindings and callbacks. Apply ownership, capability order,
-  direct-expression keep conditions, and the helper ladder in `docs/code-organization.md`; record the
-  concrete constraint for each retained one-reference binding. Trace delegating layers through the
+  direct-expression keep conditions, and the helper ladder in `docs/code-organization.md`. Trace
+  delegating layers through the
   call-path collapse procedure below.
+- **Redundant lookups:** Within one function or component, take each value from a call it already
+  makes when that call returns it, rather than adding a second lookup. Extend that call's owner only
+  when every one of its callers should receive the value. Separate functions and components each load
+  what they need; never move a load into a parent to pass it down.
 - **Aliases and renamed bindings:** Inspect every new or changed import alias, destructuring rename,
   pass-through binding, and local alias. Use the canonical source name directly; keep a rename only
   when it resolves an actual collision or marks an explicit lifecycle boundary, and remove one that
@@ -50,16 +37,17 @@ reference supplies Kenstack's engineering checks.
   qualifiers distinguishing live variants are not findings. Cleanup never renames.
 - **Declarations and exports:** Inspect production references for changed declarations. Apply
   `AGENTS.md`'s export gates and `docs/code-organization.md`'s local-binding rules; reference counts
-  alone do not decide other declarations. Committed public exports remain externally consumed.
-- **Types:** Perform the complete inventory and rulings in the `Type cleanup` section of
-  `docs/typescript.md`, including types in untracked files. Use owner inference or derive from the
+  alone do not decide other declarations. Committed public APIs (see `AGENTS.md`) remain externally
+  consumed.
+- **Types:** Apply the `Type cleanup` section of `docs/typescript.md`, including types in untracked
+  files. Use owner inference or derive from the
   canonical producer; hand-write a type only for an intentional independent contract.
-- **Invariants and defensive code:** Inventory every new or changed blocking guard. Its condition and
+- **Invariants and defensive code:** Inspect each new or changed blocking guard. Its condition and
   message must describe the same restriction, and every blocked state must make the message true.
   Remove a fallback, type check, resolved-value alias, or nullability branch once routing, loading,
   schema validation, or an earlier guard establishes the state; enforce a required invariant once at
   its proper boundary.
-- **Failure paths:** Inventory every new or changed `catch` block and every fallback reached because an
+- **Failure paths:** Inspect each new or changed `catch` block and every fallback reached because an
   operation failed. Keep it only when it rethrows the failure, translates it into a defined domain or
   public failure state and reports it as `docs/error-reporting.md` requires, or implements an
   already-authorized degradation with an explicit caller-visible result and a concrete product reason.
@@ -68,8 +56,9 @@ reference supplies Kenstack's engineering checks.
 - **Accessibility:** Apply the accessible-control-name rules in `docs/components.md` to every new or
   changed `role` and `aria-*` attribute, keeping only necessary and accurate semantics that native
   markup or visible content does not already supply.
-- **Explanatory text:** Apply the explanatory-text rules in `docs/code-organization.md` to every new or
-  changed code comment and explanatory interface sentence.
+- **Explanatory text:** Apply the code-comment rule in `docs/code-organization.md` to every new or
+  changed code comment. Cleanup never removes or rewords interface text; development review covers
+  interface lines the agent added.
 - **Residual artifacts:** Inspect changed debug output, reviewer notes, stale TODOs, suppressions,
   commented-out code, placeholders, and every untracked file in scope. Keep a changed artifact only for
   a concrete current purpose. Remove a task-created untracked file with no production, test, tooling,
@@ -77,8 +66,7 @@ reference supplies Kenstack's engineering checks.
 - **Public surface:** Committed Kenstack APIs are externally consumed; an authorized break follows
   `docs/upgrading.md`. For uncommitted APIs, update consumers directly and remove compatibility aliases.
 
-Cleanup is complete only when each item in the requested scope has a concrete keep, remove, correct, or
-user-ruling outcome. A speculative suggestion is reported as such, never as required cleanup.
+A speculative suggestion is reported as such, never as required cleanup.
 
 ## Call-path collapse
 
@@ -111,5 +99,6 @@ user-ruling outcome. A speculative suggestion is reported as such, never as requ
 
 - Run formatting, TypeScript, lint, and the narrowest relevant existing tests per `AGENTS.md` and the
   applicable technical reference. Behavior that did not change gets no new test to pin the cleanup.
-- Re-read the final diff and run the checklist again against the result.
-- Follow `AGENTS.md`'s reporting policy; include meaningful edits and unresolved user rulings.
+- Recheck only the hunks cleanup edited.
+- Follow `AGENTS.md`'s reporting policy; report only edits made and unresolved user rulings, never
+  the items judged clean or kept.

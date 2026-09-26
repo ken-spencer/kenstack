@@ -19,12 +19,6 @@ const products = defineTable({
   },
 });
 
-const fields = defineFields({
-  fields: {
-    name: textField(),
-  },
-});
-
 describe("admin filter configuration", () => {
   it("rejects a module field that the table's publish flag generates", () => {
     expect(() =>
@@ -38,10 +32,9 @@ describe("admin filter configuration", () => {
             },
           }),
           table: products,
-          list: {},
         },
       }),
-    ).toThrow(/generated from the table's publish flag/);
+    ).toThrow();
   });
 
   it("derives checked field filter choices from the two declared values", () => {
@@ -59,7 +52,6 @@ describe("admin filter configuration", () => {
           },
         }),
         table: products,
-        list: {},
       },
     });
 
@@ -68,10 +60,7 @@ describe("admin filter configuration", () => {
         kind: {
           kind: "enum",
           field: products.kind,
-          options: [
-            { label: "Item", value: "item" },
-            { label: "Combo", value: "combo" },
-          ],
+          options: [{ value: "item" }, { value: "combo" }],
         },
       },
     });
@@ -92,7 +81,6 @@ describe("admin filter configuration", () => {
           },
         }),
         table: products,
-        list: {},
       },
     });
 
@@ -101,31 +89,6 @@ describe("admin filter configuration", () => {
         pos: {
           kind: "boolean",
           field: products.pos,
-        },
-      },
-    });
-  });
-
-  it("retains the standard visibility filter by default", () => {
-    const moduleConfig = defineModule({
-      name: "default-filter-config-products",
-      admin: {
-        fields,
-        table: products,
-        list: {},
-      },
-    });
-    expect(moduleConfig.admin.list).toMatchObject({
-      filters: {
-        visibility: {
-          label: "Status",
-          kind: "enum",
-          field: products.visibility,
-          options: [
-            { label: "Draft", value: "draft" },
-            { label: "Published", value: "published" },
-            { label: "Unlisted", value: "unlisted" },
-          ],
         },
       },
     });

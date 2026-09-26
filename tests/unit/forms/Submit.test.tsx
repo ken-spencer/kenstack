@@ -1,3 +1,5 @@
+/** @vitest-environment jsdom */
+
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -29,12 +31,11 @@ describe("SubmitButton", () => {
   });
 
   it("honors a caller-supplied pending state", () => {
-    const markup = renderToStaticMarkup(
+    const container = document.createElement("div");
+    container.innerHTML = renderToStaticMarkup(
       <SubmitButton isPending>Save changes</SubmitButton>,
     );
 
-    expect(markup).toContain("disabled");
-    expect(markup).toContain("animate-spin");
-    expect(markup).toContain("Save changes");
+    expect(container.querySelector("button")?.disabled).toBe(true);
   });
 });

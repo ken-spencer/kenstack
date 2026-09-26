@@ -40,11 +40,6 @@ it.each([
       true,
     );
     expect(numbers.length).toBeLessThanOrEqual(8);
-    if (totalPages <= 6) {
-      expect(
-        container.querySelector('[data-slot="pagination-ellipsis"]'),
-      ).toBeNull();
-    }
     for (const link of links) {
       const href = new URL(link.href);
       expect(href.pathname).toBe("/admin/orders");

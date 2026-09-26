@@ -11,6 +11,7 @@ export type FetchSuccess<T extends Record<string, unknown>> = {
 export type FetchError = {
   status: "error";
   code?: string;
+  details?: Record<string, unknown>;
   message?: string;
   debugMessage?: string;
   debugStack?: string;

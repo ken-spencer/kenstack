@@ -6,6 +6,7 @@ import type { UseMutationResult } from "@tanstack/react-query";
 import * as z from "zod";
 
 import { type FetchResult } from "@kenstack/api/fetcher";
+import RecaptchaTerms from "@kenstack/components/RecaptchaTerms";
 import {
   FormProvider,
   useForm,
@@ -83,17 +84,20 @@ export default function FormContainer<
   guardUnsaved,
   initialStatusMessage,
   mutationFn,
+  mutationKey,
   onError,
   onSuccess,
   recaptchaAction,
   schema,
   validationMessage,
+  children,
   ...props
 }: FormProviderProps<TResult, TVariables, TSchema> &
   FormProps<TResult, TVariables, TSchema>) {
   return (
     <FormProvider
       mutationFn={mutationFn}
+      mutationKey={mutationKey}
       apiPath={apiPath}
       guardUnsaved={guardUnsaved}
       initialStatusMessage={initialStatusMessage}
@@ -109,7 +113,11 @@ export default function FormContainer<
         onBlur={onBlur}
         validationMessage={validationMessage}
         {...props}
-      />
+      >
+        {children}
+        {/* Every reCAPTCHA form must show the terms, so the form owns them. */}
+        {recaptchaAction && <RecaptchaTerms />}
+      </Form>
     </FormProvider>
   );
 }
@@ -135,6 +143,12 @@ export function Form<
     <form
       noValidate
       onSubmit={(event) => {
+        // A repeated submit (Enter, a double click, a self-submitting field)
+        // must not send the same request twice.
+        if (form.formState.isSubmitting || mutation.isPending) {
+          event.preventDefault();
+          return;
+        }
         if (uploadingFields.size) {
           event.preventDefault();
           setStatusMessage({

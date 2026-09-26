@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { eq } from "drizzle-orm";
 
 import { db } from "@app/db";
+import { authenticationWindowMs } from "@kenstack/auth/reauthentication";
 import { verificationCookie } from "@kenstack/auth/email/verification/internal/cookie";
 import { sessions, type LoginProvider } from "@kenstack/db/tables/sessions";
 import { audit } from "@kenstack/logger";
@@ -32,6 +33,7 @@ export async function login(
       tokenHash: hashToken(token),
       provider,
       expiresAt,
+      authorizedUntil: new Date(Date.now() + authenticationWindowMs),
     })
     .returning({ id: sessions.id });
 

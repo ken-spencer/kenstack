@@ -49,3 +49,13 @@ helper ladder follow `docs/code-organization.md`.
   navigation, and name it with `aria-labelledby` when it has a visible heading; layout wrappers,
   loading skeletons, and focus targets are not landmarks. Put loading or status wording in real text,
   visually hidden when necessary, never in an `aria-label` on a generic container.
+
+## Visual language
+
+These apply to every Kenstack site. Do not use:
+
+- eyebrow, kicker, or overline labels above headings; put useful context in the heading or supporting
+  copy;
+- italic accent words inside headings; the heading's wording carries the emphasis;
+- numbered section labels such as `01` or `02`; the heading names the section;
+- monospace labels; use the site's body or heading font.

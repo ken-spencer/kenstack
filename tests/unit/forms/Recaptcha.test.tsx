@@ -79,7 +79,7 @@ describe("Form recaptchaAction", () => {
 
     await submit();
     await vi.waitFor(() =>
-      expect(container.textContent).toContain("reCAPTCHA didn’t complete"),
+      expect(container.querySelector('[role="alert"]')).not.toBeNull(),
     );
 
     expect(mocks.fetcher).not.toHaveBeenCalled();

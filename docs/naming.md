@@ -24,8 +24,9 @@ vocabulary such as the server-only meaning of `api` lives in `docs/runtime-bound
 - Keep the same domain noun as a value crosses its producer, result type, response property, prop,
   query, and local variable. Add a qualifier such as `initial`, `cached`, `authoritative`, or
   `previous` only for a real lifecycle or behavioral distinction. A reader should understand the
-  relationship between a value and its type without hovering through each layer; fix drift at the
-  canonical producer and update callers directly.
+  relationship between a value and its type without hovering through each layer. Fix drift in names
+  introduced in the current task at the canonical producer; propose renames of existing names under
+  the Names rule in `AGENTS.md`.
 - Filenames and folders are part of the same naming family. When renaming an internal concept, whether
   the user requested it or the agent is correcting a name it introduced in the current task, audit its
   owning path, exports, imports, tests, and local symbols together. Rename the path

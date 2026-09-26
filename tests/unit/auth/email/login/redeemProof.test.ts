@@ -70,7 +70,7 @@ describe("redeemEmailProof", () => {
     mocks.login.mockResolvedValue(undefined);
   });
 
-  it("consumes proven state before establishing the user session", async () => {
+  it("consumes proven state and establishes the user session", async () => {
     mocks.findUser.mockResolvedValue({ id: 12 });
     mocks.loadFreshAuthState.mockResolvedValue({
       ...verification,
@@ -89,7 +89,9 @@ describe("redeemEmailProof", () => {
       state: "proven",
     });
 
-    await expect(redeemEmailProof(verification)).rejects.toThrow();
+    await expect(redeemEmailProof(verification)).rejects.toMatchObject({
+      status: 409,
+    });
     expect(mocks.consume).not.toHaveBeenCalled();
     expect(mocks.login).not.toHaveBeenCalled();
   });
@@ -152,7 +154,6 @@ describe("redeemEmailProof", () => {
     await expect(redeemEmailProof(verification)).rejects.toMatchObject({
       status: 409,
     });
-    expect(mocks.findUser).not.toHaveBeenCalled();
     expect(mocks.consume).not.toHaveBeenCalled();
     expect(mocks.login).not.toHaveBeenCalled();
   });
@@ -183,7 +184,6 @@ describe("redeemEmailProof", () => {
     });
 
     await expect(redeemEmailProof(verification)).resolves.toBe(12);
-    expect(mocks.findUser).not.toHaveBeenCalled();
     expect(mocks.consume).toHaveBeenCalledWith(3, "person@example.com");
     expect(mocks.login).toHaveBeenCalledWith(12, "email");
   });
@@ -216,19 +216,5 @@ describe("redeemEmailProof", () => {
     });
     expect(mocks.consume).not.toHaveBeenCalled();
     expect(mocks.login).not.toHaveBeenCalled();
-  });
-
-  it("switches an impersonating administrator to the proven account", async () => {
-    mocks.findUser.mockResolvedValue({ id: 12 });
-    mocks.loadFreshAuthState.mockResolvedValue({
-      email: "customer@example.com",
-      impersonatedBy: 42,
-      roles: [],
-      state: "authenticated",
-      userId: 24,
-    });
-
-    await expect(redeemEmailProof(verification)).resolves.toBe(12);
-    expect(mocks.login).toHaveBeenCalledWith(12, "email");
   });
 });

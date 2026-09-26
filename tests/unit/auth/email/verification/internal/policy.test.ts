@@ -2,9 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   calculateChallengeExpiresAt,
-  calculateProofExpiresAt,
   getCurrentVerificationHistory,
-  hasChallengeReachedSendLimit,
   isChallengeInResendCooldown,
   resolveCodeOutcome,
 } from "@kenstack/auth/email/verification/internal/policy";
@@ -29,23 +27,8 @@ describe("email challenge expiry", () => {
   });
 });
 
-describe("verified email proof expiry", () => {
-  it("starts a fresh one-hour proof window when verification succeeds", () => {
-    const now = new Date("2026-07-28T18:00:00.000Z");
-
-    expect(calculateProofExpiresAt(now)).toEqual(
-      new Date("2026-07-28T19:00:00.000Z"),
-    );
-  });
-});
-
 describe("email challenge resend limits", () => {
   const now = new Date("2026-07-28T18:00:00.000Z");
-
-  it("enforces the send limit on the third delivery", () => {
-    expect(hasChallengeReachedSendLimit(2)).toBe(false);
-    expect(hasChallengeReachedSendLimit(3)).toBe(true);
-  });
 
   it("allows another send once the thirty-second cooldown has elapsed", () => {
     expect(
@@ -127,4 +110,17 @@ describe("email verification code outcomes", () => {
       }),
     ).toEqual({ status: "exhausted" });
   });
+});
+
+it("bounds email-change challenges to ten minutes and resends to the original expiry", () => {
+  const now = new Date("2026-09-25T12:00:00Z");
+  const expiresAt = calculateChallengeExpiresAt({ now, kind: "email-change" });
+  expect(expiresAt).toEqual(new Date("2026-09-25T12:10:00Z"));
+  expect(
+    calculateChallengeExpiresAt({
+      now: new Date("2026-09-25T12:02:00Z"),
+      kind: "email-change",
+      verificationExpiresAt: expiresAt,
+    }),
+  ).toEqual(expiresAt);
 });

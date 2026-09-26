@@ -17,7 +17,11 @@ import {
   type Path,
 } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
-import { useMutation, type UseMutationResult } from "@tanstack/react-query";
+import {
+  useMutation,
+  type MutationKey,
+  type UseMutationResult,
+} from "@tanstack/react-query";
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 import type * as z from "zod";
 
@@ -106,6 +110,8 @@ export type FormProviderProps<
   /** Also used internally by some fields */
   apiPath?: string;
   mutationFn?: MutationFn<TResult, TVariables>;
+  // Lets code outside the form follow its submission with `useIsMutating`.
+  mutationKey?: MutationKey;
   // Names the reCAPTCHA action this form protects. Each submission requests
   // a token under that name and sends it as `recaptchaToken`; the site-wide
   // RecaptchaProvider supplies the script.
@@ -175,6 +181,7 @@ function FormContextProvider<
   initialStatusMessage,
   schema,
   mutationFn,
+  mutationKey,
   onError,
   onSuccess,
   recaptchaAction,
@@ -224,7 +231,6 @@ function FormContextProvider<
       };
     },
     defaultValues,
-    criteriaMode: "all",
     mode: "onBlur", // validate fields on blur
     shouldFocusError: true,
   });
@@ -243,6 +249,7 @@ function FormContextProvider<
   );
 
   const mutation = useMutation({
+    mutationKey,
     mutationFn: async (variables: TVariables, context) => {
       // Without a configured site key the provider supplies no
       // executeRecaptcha, and the server skips the check. With no provider
@@ -302,22 +309,11 @@ function FormContextProvider<
         }
         if (fieldErrors) {
           Object.entries(fieldErrors).forEach(([field, err]) => {
-            const messages = Array.isArray(err) ? err : [err];
             setFieldError(
               field as Path<z.input<TSchema>>,
               {
                 type: "server",
-                message: messages[0],
-                ...(messages.length > 1
-                  ? {
-                      types: Object.fromEntries(
-                        messages.map((message, index) => [
-                          `server.${index}`,
-                          message,
-                        ]),
-                      ),
-                    }
-                  : {}),
+                message: Array.isArray(err) ? err[0] : err,
               },
               { shouldFocus: true },
             );

@@ -55,7 +55,7 @@ export default function NoticeList({
       role={isError ? "alert" : "status"}
       status={isError ? "error" : statusMessage?.status}
     >
-      <div className="flex items-center">
+      <div className="flex items-center gap-3">
         <div className="grow">
           {showValidation
             ? statusMessage?.status === "error"
@@ -72,6 +72,29 @@ export default function NoticeList({
             </ul>
           ) : null}
         </div>
+        {showValidation && fieldErrors.length > unrenderedErrors.length ? (
+          <Button
+            className="shrink-0"
+            size="sm"
+            variant="outline"
+            type="button"
+            onClick={(event) => {
+              const message =
+                event.currentTarget.form?.querySelector<HTMLElement>(
+                  '[data-slot="form-message"]',
+                );
+              const control = message?.id
+                ? event.currentTarget.form?.querySelector<HTMLElement>(
+                    `[aria-describedby~="${message.id}"]`,
+                  )
+                : null;
+              (control ?? message)?.focus({ preventScroll: true });
+              message?.scrollIntoView({ behavior: "smooth", block: "center" });
+            }}
+          >
+            View error
+          </Button>
+        ) : null}
         {statusMessage ? (
           <Button
             aria-label="Dismiss message"

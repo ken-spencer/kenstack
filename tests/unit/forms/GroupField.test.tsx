@@ -50,7 +50,6 @@ describe("GroupField", () => {
     );
 
     const fieldset = container.querySelector("fieldset");
-    expect(fieldset?.querySelector("legend")?.textContent).toBe("Plan");
     expect(document.activeElement).toBe(fieldset);
     expect(fieldset?.getAttribute("aria-invalid")).toBe("true");
 

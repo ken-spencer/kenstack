@@ -4,6 +4,7 @@ import { verificationEndedCode } from "@kenstack/auth/email/verification/interna
 import type { StatusMessage } from "@kenstack/forms/context";
 
 import VerificationCodeField from "@kenstack/auth/components/VerificationCodeField";
+import RecaptchaTerms from "@kenstack/components/RecaptchaTerms";
 import { StepActions } from "@kenstack/components/StepFlow/StepActions";
 import Form from "@kenstack/forms/Form";
 import Submit from "@kenstack/forms/Submit";
@@ -115,6 +116,8 @@ export default function LoginCodeForm({
           </LinkButton>
         </div>
       </Form>
+      {/* Resending the email requests a reCAPTCHA token. */}
+      <RecaptchaTerms />
     </div>
   );
 }

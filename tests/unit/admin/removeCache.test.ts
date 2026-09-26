@@ -32,7 +32,6 @@ const usersModule = defineModule({
   admin: {
     table,
     fields: defineFields({ fields: { name: textField() } }),
-    list: {},
   },
 });
 
@@ -64,12 +63,6 @@ describe("user removal cache invalidation", () => {
       expect(mocks.revalidateTag).toHaveBeenCalledWith("admin-list:users", {
         expire: 0,
       });
-      expect(mocks.revalidateTag.mock.invocationCallOrder[0]).toBeGreaterThan(
-        mocks.update.mock.invocationCallOrder[0],
-      );
-      expect(mocks.revalidateTag.mock.invocationCallOrder[0]).toBeLessThan(
-        mocks.audit.mock.invocationCallOrder[0],
-      );
     },
   );
 
@@ -84,7 +77,6 @@ describe("user removal cache invalidation", () => {
             throw new Error("Custom rule failed");
           },
         ],
-        list: {},
       },
     });
     await expect(

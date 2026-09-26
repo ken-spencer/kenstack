@@ -1,7 +1,8 @@
 import { execFile } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { createServer } from "node:net";
-import { tmpdir } from "node:os";
+import { tmpdir, userInfo } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 
@@ -29,8 +30,36 @@ async function findAvailablePort() {
   return address.port;
 }
 
-// Starts an isolated PostgreSQL cluster under the system temporary directory.
+// Uses a disposable database on a running local PostgreSQL server when one is
+// ready, because each disposable cluster on macOS leaks SysV shared memory
+// until reboot. Otherwise starts an isolated cluster under the system
+// temporary directory.
 export async function startTestPostgres() {
+  const serverPort = process.env.PGPORT ?? "5432";
+  const server = ["-h", "127.0.0.1", "-p", serverPort];
+  const serverReady = await execFileAsync("pg_isready", server, { env }).then(
+    () => true,
+    () => false,
+  );
+
+  if (serverReady) {
+    const database = `kenstack_test_${randomBytes(6).toString("hex")}`;
+    await execFileAsync("createdb", [...server, database], { env });
+    return {
+      connection: {
+        database,
+        host: "127.0.0.1",
+        port: Number(serverPort),
+        username: process.env.PGUSER ?? userInfo().username,
+      },
+      async stop() {
+        await execFileAsync("dropdb", [...server, "--force", database], {
+          env,
+        });
+      },
+    };
+  }
+
   const root = await mkdtemp(join(tmpdir(), "kenstack-postgres-"));
   const data = join(root, "data");
   const log = join(root, "postgres.log");

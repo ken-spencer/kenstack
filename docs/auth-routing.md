@@ -15,9 +15,9 @@ through the host proxy for another purpose. Preserve existing matchers and routi
 auth; for a proxy whose sole purpose is auth, use a narrow matcher to avoid unnecessary invocations.
 Next.js requires literal matcher values, and protected-page prefetches can also invoke the proxy.
 
-When changing a protected route, check whether its proxy auth selection should change too. Test the
+When changing a protected route, check whether its proxy auth selection should change too. Verify the
 host's actual selection boundary: the matcher for an auth-only proxy, or the auth branch in a custom
-proxy. Cover both included pages and excluded requests. Preserve development-only access gates.
+proxy. Check both included pages and excluded requests. Preserve development-only access gates.
 
 ## Optional helper and custom proxies
 

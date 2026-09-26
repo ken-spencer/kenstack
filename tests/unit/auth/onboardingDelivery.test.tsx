@@ -2,11 +2,11 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PipelineResponse } from "@kenstack/api/PipelineResponse";
+import type { PipelineStage } from "@kenstack/api/pipeline";
 
 const mocks = vi.hoisted(() => ({
   audit: vi.fn(),
   mailer: vi.fn(),
-  pipeline: vi.fn(),
   render: vi.fn(),
   selectWhere: vi.fn(),
 }));
@@ -27,7 +27,6 @@ vi.mock("@app/modules", () => ({
 }));
 vi.mock("@kenstack/logger", () => ({ audit: mocks.audit }));
 vi.mock("@kenstack/api", () => ({
-  pipeline: mocks.pipeline,
   pipelineStage: (_options: unknown, action: (context: unknown) => unknown) =>
     action,
 }));
@@ -54,7 +53,7 @@ const request = new NextRequest("https://example.com/api/auth", {
 
 async function runPipeline(
   options: { json?: Record<string, unknown>; request: NextRequest },
-  action: (context: unknown) => Promise<unknown>,
+  action: PipelineStage,
 ) {
   const response = new PipelineResponse();
   await action({
@@ -70,7 +69,6 @@ async function runPipeline(
 describe("admin onboarding email", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.pipeline.mockImplementation(runPipeline);
     mocks.render.mockResolvedValue("<p>Your account is ready</p>");
     mocks.selectWhere.mockResolvedValue([
       {
@@ -83,10 +81,10 @@ describe("admin onboarding email", () => {
   });
 
   it("sends a non-expiring login prefill without creating authentication proof", async () => {
-    const response = await sendOnboardingEmailAction({
-      json: { userId: 42 },
-      request,
-    });
+    const response = await runPipeline(
+      { json: { userId: 42 }, request },
+      sendOnboardingEmailAction,
+    );
 
     await expect(response.json()).resolves.toMatchObject({
       status: "success",
@@ -94,15 +92,12 @@ describe("admin onboarding email", () => {
     expect(mocks.render).toHaveBeenCalledWith(
       expect.objectContaining({
         props: expect.objectContaining({
-          invitedBy: "Admin",
-          name: "Test Patron",
           url: "https://example.com/login?email=patron%40example.com&notice=onboarding",
         }),
       }),
     );
     expect(mocks.mailer).toHaveBeenCalledWith(
       expect.objectContaining({
-        subject: "Your account is ready",
         to: "patron@example.com",
       }),
     );

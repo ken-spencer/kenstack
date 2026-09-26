@@ -49,3 +49,33 @@ export const errorTranslator = (err: unknown): FetchError | undefined => {
     }
   }
 };
+
+// Builds a module translateError that reports each named constraint as one
+// field's message.
+export function constraintErrorTranslator(
+  messages: Record<string, { field: string; message: string }>,
+) {
+  return (err: unknown): FetchError | undefined => {
+    if (
+      typeof err !== "object" ||
+      err === null ||
+      !("cause" in err) ||
+      !isPostgresError(err.cause) ||
+      !err.cause.constraint_name
+    ) {
+      return;
+    }
+
+    const translated = messages[err.cause.constraint_name];
+    if (!translated) {
+      return;
+    }
+
+    return {
+      status: "error",
+      message:
+        "We couldn't complete your request. See the highlighted field below for more information.",
+      fieldErrors: { [translated.field]: translated.message },
+    };
+  };
+}

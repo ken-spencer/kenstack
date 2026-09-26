@@ -1,5 +1,7 @@
 import { ReturnedError } from "./errors";
 import { NextRequest, NextResponse } from "next/server";
+import { claimQuota } from "./quota";
+import recaptcha from "./recaptcha";
 import type { ObjectSchema } from ".";
 
 import { type FetchError } from "@kenstack/api/fetcher";
@@ -16,6 +18,7 @@ import { reportError } from "@kenstack/lib/errorReporter";
 import type { AuthAccess } from "@kenstack/auth/server/auth";
 import type { User } from "@kenstack/types";
 import { isRecord } from "@kenstack/lib/isRecord";
+import getIp from "@kenstack/lib/ip";
 
 type ValidationErrorTree = {
   errors: string[];
@@ -97,9 +100,15 @@ type PipelineStageResult =
       user?: never;
     });
 
-type PipelineStage = (
+export type PipelineStage = (
   ctx: PipelineContext,
 ) => Promise<PipelineStageResult> | PipelineStageResult;
+
+// Marks what pipelineStage returns, so multiPipeline can tell a stage from an
+// action that runs its own pipeline. The key holds the stage itself because
+// multiPipeline types a stage by this key alone: a second call signature in
+// its action union would leave untyped action parameters as implicit any.
+export const isStage = Symbol("pipelineStage");
 
 type PipelineStageCallback<TContext extends PipelineContext> = (
   arg: TContext,
@@ -109,6 +118,14 @@ type PipelineStageOptions<TSchema extends ObjectSchema | undefined, TAccess> = {
   schema?: TSchema;
   access?: TAccess;
   fieldsKey?: string;
+  // Per-IP quota scope, claimed before reCAPTCHA and the action.
+  quota?: string;
+  // reCAPTCHA action, verified against the schema's recaptchaToken.
+  recaptcha?: TSchema extends ObjectSchema
+    ? "recaptchaToken" extends keyof z.output<TSchema>
+      ? string
+      : never
+    : never;
 };
 
 export default async function pipeline(
@@ -161,6 +178,7 @@ export default async function pipeline(
         return response
           .error({
             code: e.code,
+            details: e.details,
             message: e.message,
             status: e.status,
             redirect: e.redirect,
@@ -213,23 +231,29 @@ export function pipelineStage<
   action: PipelineStageCallback<
     PipelineStageContextWithSchema<TSchema, TAccess>
   >,
-): PipelineStage;
+): PipelineStage & { [isStage]: PipelineStage };
 
 export function pipelineStage<
   const TAccess extends AuthAccess | undefined = undefined,
 >(
   options: PipelineStageOptions<undefined, TAccess>,
   action: PipelineStageCallback<PipelineStageContext<undefined, TAccess>>,
-): PipelineStage;
+): PipelineStage & { [isStage]: PipelineStage };
 
 export function pipelineStage<
   TSchema extends ObjectSchema | undefined = undefined,
   const TAccess extends AuthAccess | undefined = undefined,
 >(
-  { schema, access, fieldsKey }: PipelineStageOptions<TSchema, TAccess>,
+  {
+    schema,
+    access,
+    fieldsKey,
+    quota,
+    recaptcha: recaptchaAction,
+  }: PipelineStageOptions<TSchema, TAccess>,
   action: PipelineStageCallback<PipelineStageContext<TSchema, TAccess>>,
-): PipelineStage {
-  return async (ctx: PipelineContext) => {
+) {
+  const stage = async (ctx: PipelineContext) => {
     let data: PipelineStageContext<TSchema, TAccess>["data"];
 
     if (schema) {
@@ -253,7 +277,7 @@ export function pipelineStage<
           console.error("Invalid form metadata", parsedMeta.error);
 
           return ctx.response.error(
-            "There was an unexpected problem with your submission. The metadata received was invalid.",
+            "There was an unexpected problem with your submission.",
           );
         }
 
@@ -308,6 +332,31 @@ export function pipelineStage<
       user = await requireUser();
     }
 
+    // Quota first: cheaper than the reCAPTCHA assessment and the action.
+    if (quota) {
+      const exceeded = await claimQuota(quota, {
+        ip: await getIp(ctx.request),
+      });
+      if (exceeded) {
+        throw new ReturnedError(exceeded.message, { status: 429 });
+      }
+    }
+
+    if (recaptchaAction) {
+      const rejection = await recaptcha({
+        action: recaptchaAction,
+        request: ctx.request,
+        response: ctx.response,
+        token:
+          isRecord(data) && typeof data.recaptchaToken === "string"
+            ? data.recaptchaToken
+            : undefined,
+      });
+      if (rejection) {
+        return rejection;
+      }
+    }
+
     const arg = {
       ...ctx,
       user: user as PipelineStageContext<TSchema, TAccess>["user"],
@@ -316,4 +365,6 @@ export function pipelineStage<
 
     return action(arg);
   };
+
+  return Object.assign(stage, { [isStage]: stage });
 }

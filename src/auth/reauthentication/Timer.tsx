@@ -1,31 +1,26 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { getReauthenticationPath } from "@kenstack/auth/returnTo";
+import { useEffect, useEffectEvent } from "react";
 
+// `deadline` is on the performance.now() clock, anchored once when the
+// authorization arrives, so a hidden Activity resumes against the same time.
 export default function ReauthenticationTimer({
-  remainingMs,
+  deadline,
+  onExpire,
 }: {
-  remainingMs: number;
+  deadline: number;
+  onExpire: () => void;
 }) {
-  const deadline = useRef<number | null>(null);
+  const expire = useEffectEvent(onExpire);
   useEffect(() => {
-    // Keep elapsed time when Activity hides and restores the form.
-    deadline.current ??= performance.now() + remainingMs;
     function checkDeadline() {
-      if (deadline.current !== null && performance.now() >= deadline.current) {
-        window.location.replace(
-          getReauthenticationPath(
-            window.location.pathname +
-              window.location.search +
-              window.location.hash,
-          ),
-        );
+      if (performance.now() >= deadline) {
+        expire();
       }
     }
     const timeout = window.setTimeout(
       checkDeadline,
-      Math.max(0, Math.ceil(deadline.current - performance.now())),
+      Math.max(0, Math.ceil(deadline - performance.now())),
     );
     window.addEventListener("focus", checkDeadline);
     document.addEventListener("visibilitychange", checkDeadline);
@@ -34,6 +29,6 @@ export default function ReauthenticationTimer({
       window.removeEventListener("focus", checkDeadline);
       document.removeEventListener("visibilitychange", checkDeadline);
     };
-  }, [remainingMs]);
+  }, [deadline]);
   return null;
 }

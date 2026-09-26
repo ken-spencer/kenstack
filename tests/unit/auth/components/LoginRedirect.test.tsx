@@ -8,6 +8,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   fetcher: vi.fn(),
   assign: vi.fn(),
+  reload: vi.fn(),
   refresh: vi.fn(),
 }));
 const router = vi.hoisted(() => ({ refresh: mocks.refresh }));
@@ -25,17 +26,18 @@ vi.mock("@kenstack/components/StepFlow/StepActions", () => ({
 }));
 
 import LoginForm from "@kenstack/auth/components/Login/Form";
+import { AuthorizationContext } from "@kenstack/auth/reauthentication/context";
 
 let container: HTMLDivElement;
 let root: ReturnType<typeof createRoot>;
 beforeEach(() => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   const browserWindow = window;
-  const location = { assign: mocks.assign };
+  const location = { assign: mocks.assign, reload: mocks.reload };
   const browserLocation = new Proxy(location, {
     get: (target, key) =>
-      key === "assign"
-        ? target.assign
+      key === "assign" || key === "reload"
+        ? target[key]
         : Reflect.get(browserWindow.location, key),
   });
   vi.stubGlobal(
@@ -110,8 +112,6 @@ it.each(["code", "link", "already-verified"])(
     expect(mocks.assign).toHaveBeenCalledExactlyOnceWith("/account");
     expect(container.querySelector('input[name="email"]')).toBeNull();
     expect(document.cookie).toContain("loginMethod=password");
-    if (method === "link")
-      expect(container.textContent).toContain("Signing you in");
     if (method === "code")
       expect(container.querySelector('input[name="code"]')).not.toBeNull();
   },
@@ -134,3 +134,75 @@ it("completes an embedded link in its owner without assigning a location or reme
   expect(container.querySelector('input[name="email"]')).toBeNull();
   expect(document.cookie).toContain("loginMethod=password");
 });
+
+it.each(["password", "code"] as const)(
+  "returns inline %s confirmation to its owning page with pending parameters intact",
+  async (method) => {
+    const path = `/account/profile?confirmEmailChange=${"c".repeat(43)}#email`;
+    window.history.replaceState(null, "", path);
+    mocks.fetcher.mockResolvedValue({
+      status: "success",
+      path,
+      authState: {
+        state: "authenticated",
+        userId: 1,
+        email: "patron@example.com",
+      },
+    });
+    await act(async () =>
+      root.render(
+        <AuthorizationContext
+          value={{
+            userId: 1,
+            setAuthorization: () => {},
+            track: (request) => request,
+          }}
+        >
+          <LoginForm
+            email="patron@example.com"
+            method="password"
+            mode="reauthentication"
+            challengeKey={
+              method === "code"
+                ? "6f0f6dfa-7e5a-4be8-a0d5-0f1c2ff05c55"
+                : undefined
+            }
+          />
+        </AuthorizationContext>,
+      ),
+    );
+    expect(mocks.fetcher).not.toHaveBeenCalled();
+    const input = container.querySelector<HTMLInputElement>(
+      `input[name="${method === "code" ? "code" : "password"}"]`,
+    );
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "value",
+      )?.set?.call(input, method === "code" ? "123456" : "Existing123");
+      input?.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    if (method === "password") {
+      await act(async () =>
+        container
+          .querySelector("form")
+          ?.dispatchEvent(
+            new Event("submit", { bubbles: true, cancelable: true }),
+          ),
+      );
+    }
+    await vi.waitFor(() => expect(mocks.refresh).toHaveBeenCalledOnce());
+    expect(mocks.reload).not.toHaveBeenCalled();
+    expect(mocks.assign).not.toHaveBeenCalled();
+    expect(
+      window.location.pathname + window.location.search + window.location.hash,
+    ).toBe(path);
+    expect(mocks.fetcher).toHaveBeenCalledWith(
+      "/api/auth",
+      expect.objectContaining({
+        action: method === "code" ? "verify-email-login-code" : "login",
+        returnTo: path,
+      }),
+    );
+  },
+);

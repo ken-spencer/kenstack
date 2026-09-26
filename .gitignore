@@ -12,6 +12,7 @@
 /.next/
 /out/
 
+
 # production
 /build
 
@@ -19,6 +20,7 @@
 .DS_Store
 .!*.DS_Store
 *.pem
+/tmp/
 
 # debug
 npm-debug.log*

@@ -1,3 +1,4 @@
+import deps from "@app/deps";
 import {
   asc,
   desc,
@@ -8,6 +9,7 @@ import {
   isNotNull,
   isNull,
   lte,
+  lt,
   not,
   or,
   sql,
@@ -78,12 +80,41 @@ function resolveFilters(
 
     switch (filter.kind) {
       case "date-range": {
-        const range = parseDateRange(rawValue);
-        if (range.from) {
-          where.push(gte(sql`${filter.field}`, range.from.toISOString()));
-        }
-        if (range.to) {
-          where.push(lte(sql`${filter.field}`, range.to.toISOString()));
+        // The list query schema admits only calendar dates (YYYY-MM-DD).
+        const range =
+          typeof rawValue === "object" && rawValue !== null ? rawValue : {};
+        const from =
+          "from" in range && typeof range.from === "string"
+            ? range.from
+            : undefined;
+        const to =
+          "to" in range && typeof range.to === "string" ? range.to : undefined;
+        const field = sql`${filter.field}`;
+        if (
+          "columnType" in filter.field &&
+          (filter.field.columnType === "PgDate" ||
+            filter.field.columnType === "PgDateString")
+        ) {
+          if (from) where.push(gte(field, from));
+          if (to) where.push(lte(field, to));
+        } else {
+          // A timestamp range covers whole days in the host's time zone.
+          if (from) {
+            where.push(
+              gte(
+                field,
+                sql`${from}::date::timestamp at time zone ${deps.defaultTimeZone}`,
+              ),
+            );
+          }
+          if (to) {
+            where.push(
+              lt(
+                field,
+                sql`(${to}::date + interval '1 day') at time zone ${deps.defaultTimeZone}`,
+              ),
+            );
+          }
         }
         break;
       }
@@ -94,14 +125,27 @@ function resolveFilters(
         break;
       }
       case "enum": {
-        const selected = parseOptionFilterValue(filter, rawValue);
-        if (selected.include.length === 1) {
-          where.push(eq(sql`${filter.field}`, selected.include[0]));
-        } else if (selected.include.length > 1) {
-          where.push(inArray(sql`${filter.field}`, selected.include));
+        const { include, exclude } = parseOptionFilterValue(filter, rawValue);
+        const field = sql`${filter.field}`;
+        // An empty option stands for no value, which a nullable column stores
+        // as NULL; comparisons alone never match or exclude NULL.
+        const isBlank = sql`(${field} is null or ${field} = '')`;
+        const includedValues = include.filter(Boolean);
+        const excludedValues = exclude.filter(Boolean);
+        const matches = [
+          ...(include.includes("") ? [isBlank] : []),
+          ...(includedValues.length ? [inArray(field, includedValues)] : []),
+        ];
+        if (matches.length) {
+          where.push(sql`(${sql.join(matches, sql` or `)})`);
         }
-        if (selected.exclude.length > 0) {
-          where.push(not(inArray(sql`${filter.field}`, selected.exclude)));
+        if (excludedValues.length) {
+          where.push(
+            sql`(${field} is null or ${not(inArray(field, excludedValues))})`,
+          );
+        }
+        if (exclude.includes("")) {
+          where.push(not(isBlank));
         }
         break;
       }
@@ -137,38 +181,6 @@ function arrayOverlapsValues(field: AdminFilterField, values: string[]) {
     values.map((value) => sql`${value}`),
     sql`, `,
   )}]::text[]`;
-}
-
-function parseDateRange(value: unknown) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return {};
-  }
-
-  return {
-    from: parseDateValue("from" in value ? value.from : undefined),
-    to: parseDateValue("to" in value ? value.to : undefined, true),
-  };
-}
-
-function parseDateValue(value: unknown, endOfDay = false) {
-  if (typeof value !== "string" || !value) {
-    return undefined;
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.valueOf())) {
-    return undefined;
-  }
-
-  if (endOfDay) {
-    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-      date.setUTCHours(23, 59, 59, 999);
-    } else {
-      date.setHours(23, 59, 59, 999);
-    }
-  }
-
-  return date;
 }
 
 function parseOptionFilterValue(

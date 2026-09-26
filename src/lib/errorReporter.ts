@@ -124,7 +124,12 @@ async function writeErrorReport(
   console.error("[kenstack:error]", event);
 
   const monitoring = getMonitoringConfiguration();
-  if (!monitoring || process.env.NEXT_RUNTIME === "edge") {
+  // A development server already shows every error in its terminal and overlay.
+  if (
+    !monitoring ||
+    process.env.NEXT_RUNTIME === "edge" ||
+    process.env.NODE_ENV === "development"
+  ) {
     return;
   }
 

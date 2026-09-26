@@ -31,8 +31,9 @@ does not authorize implementation.
    and its production call sites. Assess any cleanup ruling independently. One product
    capability stays behind one option unless a current caller requires each partial configuration;
    reject a surface that permits contradictory, incomplete, or drifting combinations. For an affected
-   multi-step workflow, apply `docs/step-flow.md`. For a new or changed site component, rule on
-   ownership against the component-reuse rules in `docs/components.md`; a similarity score, visual
+   multi-step workflow, apply `docs/step-flow.md`. For a new site component, or a change that adds
+   behavior to one, compare it with Kenstack and existing site components and rule on ownership
+   against the component-reuse rules in `docs/components.md`; a similarity score, visual
    resemblance, or unresolved duplication candidate is not a finding.
 5. Make each finding actionable: state the concrete defect or maintenance cost, support it with an
    execution path or evidence and its material consequence, and give the smallest useful correction.

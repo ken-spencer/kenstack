@@ -4,7 +4,7 @@ export default function RecaptchaTOC() {
   }
 
   return (
-    <div className="text-muted-foreground">
+    <div className="text-muted-foreground text-center text-xs leading-5">
       This site is protected by reCAPTCHA and the Google{" "}
       <a href="https://policies.google.com/privacy">Privacy Policy</a> and{" "}
       <a href="https://policies.google.com/terms">Terms of Service</a> apply.

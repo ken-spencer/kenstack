@@ -42,6 +42,10 @@ export const sessions = pgTable(
       .defaultNow()
       .notNull(),
 
+    authorizedUntil: timestamp("authorized_until", {
+      withTimezone: true,
+    }).notNull(),
+
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
 
     // Optional metadata (useful for “log out other devices” UI, audits, etc.)

@@ -14,6 +14,7 @@ import {
   dateField,
   defineField,
   field,
+  fileField,
   getFieldNames,
   imageField,
   moneyField,

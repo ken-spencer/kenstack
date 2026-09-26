@@ -3,7 +3,6 @@
 import Link from "next/link";
 
 import schema from "@kenstack/auth/schemas/forgotPassword";
-import RecaptchaTerms from "@kenstack/components/RecaptchaTerms";
 import Form from "@kenstack/forms/Form";
 import InputField from "@kenstack/forms/InputField";
 import Submit from "@kenstack/forms/Submit";
@@ -44,8 +43,6 @@ export function ForgotPasswordForm() {
         <Submit>Send reset link</Submit>
         <Link href="/login">Return to login</Link>
       </div>
-
-      <RecaptchaTerms />
     </Form>
   );
 }

@@ -37,12 +37,12 @@ and client-side form validation in Kenstack and host sites.
   when it affects the form.
 - Before adding site-local form infrastructure or controls, inspect the available Kenstack form
   components and APIs. When a required capability is missing, surface the gap and recommend whether it
-  belongs in Kenstack as a reusable enhancement or in the current site as a site-specific feature;
-  implementing either needs explicit authorization from the task or project instructions.
+  belongs in Kenstack or in the current site under the ownership rule in `AGENTS.md`.
 
 ## Errors and Status
 
-- Route every form-submission outcome through the status outlet rendered by `Form`. The outlet
+- Route every submission error and status message through the status outlet rendered by `Form`; a
+  success that replaces the form or advances a flow is its own terminal state. The outlet
   displays mutation errors, form-level schema and server errors, and errors for fields that are not
   currently rendered; rendered fields display their own errors inline.
 - When submission work runs outside the form's mutation, report its outcome with `setStatusMessage`.

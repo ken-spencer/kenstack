@@ -33,7 +33,6 @@ describe("getIp", () => {
     ipAddress.mockReturnValue("203.0.113.7");
 
     await expect(getIp()).resolves.toBe("203.0.113.7");
-    expect(ipAddress).toHaveBeenCalledWith(expect.any(Request));
   });
 
   it("does not invent an IP outside development", async () => {

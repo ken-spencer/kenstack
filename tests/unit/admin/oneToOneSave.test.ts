@@ -51,19 +51,10 @@ const moduleConfig = defineModule({
         title: "TV Series",
       }),
     },
-    list: {},
   },
 });
 
 describe("one-to-one save validation", () => {
-  it("uses module relation titles for the generated admin filter", () => {
-    const { kind } = moduleConfig.admin.fields;
-    expect("options" in kind ? kind.options : undefined).toEqual([
-      { label: "Movie", value: "movie" },
-      { label: "TV Series", value: "tv_series" },
-    ]);
-  });
-
   it("rejects more than one submitted relation namespace", async () => {
     const result = await saveAdminRecord({
       changes: ["movie", "tv_series"],

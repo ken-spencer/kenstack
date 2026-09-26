@@ -8,8 +8,6 @@ import { modules } from "@app/modules";
 import {
   checkQuota,
   claimQuota,
-  pipeline,
-  type PipelineOptions,
   pipelineStage,
   recaptcha,
   ReturnedError,
@@ -35,131 +33,125 @@ export type ForgotPasswordProps = {
   resetPath?: `/${string}`;
 };
 
-export const forgotPasswordPipeline =
-  (props: ForgotPasswordProps) => (options: PipelineOptions) =>
-    pipeline(
-      options,
-      pipelineStage({ schema }, async ({ data, request, response }) => {
-        const Email = props.Email ?? DefaultEmail;
-        const from = props.from ?? (await loadEmailFrom());
-        if (!from) {
-          return response.error(
-            "Password reset email sender is not configured.",
-          );
-        }
+export const forgotPasswordPipeline = (props: ForgotPasswordProps) =>
+  pipelineStage({ schema }, async ({ data, request, response }) => {
+    const Email = props.Email ?? DefaultEmail;
+    const from = props.from ?? (await loadEmailFrom());
+    if (!from) {
+      return response.error("Password reset email sender is not configured.");
+    }
 
-        const { email } = data;
+    const { email } = data;
 
-        const startedAt = Date.now();
+    const startedAt = Date.now();
 
-        const sleepRemaining = async () => {
-          const remaining = 6_000 - (Date.now() - startedAt);
-          if (remaining > 0) {
-            await new Promise((resolve) => setTimeout(resolve, remaining));
-          }
-        };
+    const sleepRemaining = async () => {
+      const remaining = 6_000 - (Date.now() - startedAt);
+      if (remaining > 0) {
+        await new Promise((resolve) => setTimeout(resolve, remaining));
+      }
+    };
 
-        try {
-          const exceeded = await checkQuota("forgottenPassword", {
-            email,
-            ip: await getIp(request),
-          });
-          if (exceeded) {
-            await sleepRemaining();
-            return response.error({
-              message: exceeded.message,
-              status: 429,
-            });
-          }
-        } catch (error) {
-          await sleepRemaining();
-          throw error;
-        }
-
-        const recaptchaRejection = await recaptcha({
-          action: "forgottenPassword",
-          request,
-          response,
-          token: data.recaptchaToken,
-        });
-        if (recaptchaRejection) {
-          return recaptchaRejection;
-        }
-
-        const exceeded = await claimQuota("forgottenPassword", {
-          email,
-          ip: await getIp(request),
-        });
-        if (exceeded) {
-          await sleepRemaining();
-          return response.error({
-            message: exceeded.message,
-            status: 429,
-          });
-        }
-
-        const geo = geolocation(request);
-        const ip = (await getIp(request)) ?? "unknown";
-
-        const users = modules.users.admin.table;
-
-        const [user] = await db
-          .select({
-            givenName: users.givenName,
-            familyName: users.familyName,
-          })
-          .from(users)
-          .where(
-            and(sql`lower(${users.email}) = ${email}`, isNull(users.deletedAt)),
-          )
-          .limit(1);
-
-        if (user) {
-          await audit({
-            action: "password-reset-request",
-            userId: null,
-            data: { email },
-          });
-        } else {
-          await audit({
-            action: "password-reset-miss",
-            userId: null,
-            data: { email },
-          });
-        }
-
-        try {
-          await sendVerificationLink(
-            {
-              attachments: props.attachments ?? defaultAttachments,
-              email,
-              from,
-              isDecoy: !user,
-              linkPath: `/login?returnTo=${encodeURIComponent(props.resetPath ?? "/reset-password")}`,
-              request,
-            },
-            async ({ expiresInMinutes, url }) => ({
-              html: await render(
-                <Email
-                  expiresInMinutes={expiresInMinutes}
-                  geo={geo}
-                  ip={ip}
-                  name={user ? formatUserName(user) : "there"}
-                  url={url}
-                />,
-              ),
-              subject: "Forgotten password request",
-            }),
-          );
-        } catch (error) {
-          if (!(error instanceof ReturnedError)) {
-            throw error;
-          }
-        }
-
+    try {
+      const exceeded = await checkQuota("forgottenPassword", {
+        email,
+        ip: await getIp(request),
+      });
+      if (exceeded) {
         await sleepRemaining();
-        return response.success({
-          message: `An email has been sent to ${email}. Please open and follow the provided instructions to reset your password.`,
+        return response.error({
+          message: exceeded.message,
+          status: 429,
         });
-      }),
-    );
+      }
+    } catch (error) {
+      await sleepRemaining();
+      throw error;
+    }
+
+    const recaptchaRejection = await recaptcha({
+      action: "forgottenPassword",
+      request,
+      response,
+      token: data.recaptchaToken,
+    });
+    if (recaptchaRejection) {
+      return recaptchaRejection;
+    }
+
+    const exceeded = await claimQuota("forgottenPassword", {
+      email,
+      ip: await getIp(request),
+    });
+    if (exceeded) {
+      await sleepRemaining();
+      return response.error({
+        message: exceeded.message,
+        status: 429,
+      });
+    }
+
+    const geo = geolocation(request);
+    const ip = (await getIp(request)) ?? "unknown";
+
+    const users = modules.users.admin.table;
+
+    const [user] = await db
+      .select({
+        givenName: users.givenName,
+        familyName: users.familyName,
+      })
+      .from(users)
+      .where(
+        and(sql`lower(${users.email}) = ${email}`, isNull(users.deletedAt)),
+      )
+      .limit(1);
+
+    if (user) {
+      await audit({
+        action: "password-reset-request",
+        userId: null,
+        data: { email },
+      });
+    } else {
+      await audit({
+        action: "password-reset-miss",
+        userId: null,
+        data: { email },
+      });
+    }
+
+    try {
+      await sendVerificationLink(
+        {
+          attachments: props.attachments ?? defaultAttachments,
+          email,
+          from,
+          isDecoy: !user,
+          linkPath: `/login?returnTo=${encodeURIComponent(props.resetPath ?? "/reset-password")}`,
+          request,
+        },
+        async ({ expiresInMinutes, url }) => ({
+          html: await render(
+            <Email
+              expiresInMinutes={expiresInMinutes}
+              geo={geo}
+              ip={ip}
+              name={user ? formatUserName(user) : "there"}
+              url={url}
+            />,
+          ),
+          subject: "Forgotten password request",
+        }),
+      );
+    } catch (error) {
+      if (!(error instanceof ReturnedError)) {
+        throw error;
+      }
+    }
+
+    await sleepRemaining();
+    return response.success({
+      message: `An email has been sent to ${email}. Please open and follow the provided instructions to reset your password.`,
+    });
+  });

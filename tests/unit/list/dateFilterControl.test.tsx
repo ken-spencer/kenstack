@@ -106,21 +106,6 @@ it("edits and clears a generic calendar-date filter", async () => {
   expect(document.querySelector("output")!.textContent).toBe("{}");
 });
 
-it("shows a legacy timestamp on its local calendar day and replaces it with a calendar date", async () => {
-  await render({
-    publishedAt: { from: new Date(2026, 8, 1, 20, 30).toISOString() },
-  });
-  const input = document.querySelector<HTMLInputElement>(
-    '[aria-label="Published from"]',
-  )!;
-  expect(input.value).toBe("September 1, 2026");
-
-  await changeDate(input, "September 3, 2026");
-  expect(document.querySelector("output")!.textContent).toBe(
-    '{"publishedAt":{"from":"2026-09-03"}}',
-  );
-});
-
 it("retains the applied date when invalid text is committed", async () => {
   await render({ publishedAt: { from: "2026-09-01" } });
   const input = document.querySelector<HTMLInputElement>(
@@ -133,4 +118,21 @@ it("retains the applied date when invalid text is committed", async () => {
   expect(document.querySelector("output")!.textContent).toBe(
     '{"publishedAt":{"from":"2026-09-01"}}',
   );
+});
+
+it("interprets today using the venue day when the device has crossed midnight", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-09-02T03:30:00.000Z"));
+  try {
+    await render({ publishedAt: { from: "2026-09-01" } });
+    const input = document.querySelector<HTMLInputElement>(
+      '[aria-label="Published from"]',
+    )!;
+    await changeDate(input, "today");
+    expect(document.querySelector("output")!.textContent).toBe(
+      '{"publishedAt":{"from":"2026-09-01"}}',
+    );
+  } finally {
+    vi.useRealTimers();
+  }
 });

@@ -7,7 +7,7 @@ import { headers } from "next/headers";
 // 2. Vercel's system variables: the production domain in production, the
 //    deployment URL in previews. These need "Automatically expose System
 //    Environment Variables" on in the Vercel project.
-// 3. The Host header in development, so a name such as civic.localhost
+// 3. The Host header in development, so a name such as example.localhost
 //    works locally. request.url is never used: Next fills it with the
 //    hostname the server started on.
 export default async function siteOrigin(request?: Request) {

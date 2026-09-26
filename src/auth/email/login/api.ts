@@ -21,7 +21,7 @@ import {
   type LoginDestination,
 } from "@kenstack/auth/returnTo";
 import getIp from "@kenstack/lib/ip";
-import { getCurrentSession } from "@kenstack/auth/server/user";
+import { getFreshCurrentSession } from "@kenstack/auth/server/user";
 import { hasRecentAuthentication } from "@kenstack/auth/reauthentication";
 
 import {
@@ -54,13 +54,14 @@ export type EmailLoginOptions = {
 };
 
 export function createEmailLogin(options: EmailLoginOptions = {}) {
+  const heading = options.email?.heading ?? "Sign in";
   const config = {
     email: {
-      actionLabel: "Sign in",
-      heading: "Sign in",
+      actionLabel: heading,
+      heading,
       introduction:
         "Use the button below or enter the six-digit code to continue.",
-      subject: "Sign in",
+      subject: heading,
       ...options.email,
     },
     linkPath: "/login" as const,
@@ -75,7 +76,7 @@ export function createEmailLogin(options: EmailLoginOptions = {}) {
         if (
           authState.state === "authenticated" &&
           authState.email === data.email &&
-          hasRecentAuthentication(await getCurrentSession())
+          hasRecentAuthentication(await getFreshCurrentSession())
         ) {
           const publicAuthState = await loadPublicAuthState();
           response.headers.set("Cache-Control", "no-store");

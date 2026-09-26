@@ -1,3 +1,5 @@
+import { authenticationWindowMs } from "@kenstack/auth/reauthentication";
+
 const challengeLifetimeMinutes = 15;
 const challengeSendLimit = 3;
 
@@ -9,7 +11,8 @@ export const verificationMissingMessage =
   "This browser has no open request for that email. It may have been cleared or started somewhere else. Enter your email to start again.";
 export const verificationReplacedMessage =
   "That request was replaced or cancelled. Enter your email to start again.";
-export const verificationExpiredMessage = `That request expired after ${challengeLifetimeMinutes} minutes. Enter your email to get a new code.`;
+export const verificationExpiredMessage =
+  "That request expired. Enter your email to get a new code.";
 export const verificationAttemptsMessage =
   "Too many incorrect codes. Enter your email to get a new one.";
 export const verificationSendLimitMessage = `That email has already been sent ${challengeSendLimit} times. Enter your email to start again.`;
@@ -35,11 +38,17 @@ export function calculateProofExpiresAt(now: Date) {
 export function calculateChallengeExpiresAt({
   verificationExpiresAt,
   now,
+  kind,
 }: {
   verificationExpiresAt?: Date;
+  kind?: string;
   now: Date;
 }) {
-  const expiry = now.getTime() + challengeLifetimeMinutes * 60 * 1000;
+  const expiry =
+    now.getTime() +
+    (kind === "email-change"
+      ? authenticationWindowMs
+      : challengeLifetimeMinutes * 60 * 1000);
 
   return new Date(
     verificationExpiresAt

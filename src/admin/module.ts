@@ -137,7 +137,7 @@ type AdminListConfig<
   TListSelect extends SelectShape | undefined = undefined,
 > = AdminConfigBase<TTable, TFields> & {
   create?: boolean;
-  list: {
+  list?: {
     filters?: AdminFilterOptions;
     limit?: number;
     reorder?: AdminListReorderOptions;
@@ -209,7 +209,10 @@ type ResolvedModule<
   basePath: PreviewPath;
   icon: TModule extends { icon: infer TIcon } ? TIcon : undefined;
   admin: TModule extends { admin: infer TAdmin }
-    ? Omit<TAdmin, keyof AnyAdminConfig> & AnyAdminConfig & { table: TTable }
+    ? Omit<TAdmin, keyof AnyAdminConfig> &
+        (TTable extends AdminTable
+          ? Extract<AnyAdminConfig, { list: unknown }>
+          : Exclude<AnyAdminConfig, { list: unknown }>) & { table: TTable }
     : undefined;
   settings: TModule extends {
     settings: infer TSettings extends ModuleSettingsConfig;
@@ -463,8 +466,8 @@ function resolveAdmin(
     };
   };
 
-  if ("list" in admin) {
-    const { table, list } = admin;
+  if (isRecordTableAdmin(admin)) {
+    const { table, list = {} } = admin;
     const { sort, filters, reorder, ...listOptions } = list;
     const resolvedAdmin = resolveBase(admin);
     const resolvedReorder = defineReorder(table, reorder);
@@ -526,6 +529,13 @@ function resolveAdmin(
   }
 
   return resolveBase(admin);
+}
+
+// Record tables always have a list; key tables are singleton settings.
+function isRecordTableAdmin(
+  admin: AdminConfigRuntime,
+): admin is Extract<AdminConfigRuntime, { table: AdminTable }> {
+  return "deletedAt" in admin.table;
 }
 
 function resolveModuleFields<TFields extends DefinedFields>(

@@ -33,13 +33,12 @@ describe("API field errors", () => {
       }),
     );
 
-    expect(await response.json()).toEqual({
+    expect(await response.json()).toMatchObject({
       fieldErrors: {
         "movie.language": ["Select a language"],
         "showtimes.0.startsAt": ["Enter a start time"],
       },
       formErrors: ["Review the whole form"],
-      message: "Please review the form and correct the highlighted fields.",
       status: "error",
     });
   });

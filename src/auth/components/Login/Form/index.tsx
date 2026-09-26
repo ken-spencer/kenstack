@@ -27,7 +27,6 @@ import QueryProvider from "@kenstack/context/QueryProvider";
 import type { StatusMessage } from "@kenstack/forms/context";
 
 import CookieTest from "@kenstack/components/CookieTest";
-import RecaptchaTerms from "@kenstack/components/RecaptchaTerms";
 import useConsumedSearchParam from "@kenstack/hooks/useConsumedSearchParam";
 
 import { rememberLoginMethod, type LoginMethod } from "../method";
@@ -98,10 +97,11 @@ function LoginFormContent({
     initialMethod ?? "email",
   );
   const [emailAddress, setEmailAddress] = useState(email);
-  // An embedded form takes focus only once the visitor acts inside it.
+  // An embedded or inline confirmation form takes focus only once the visitor
+  // acts inside it.
   const [focusField, setFocusField] = useState<
     "email" | "password" | undefined
-  >(mode === "embedded" ? undefined : "email");
+  >(mode ? undefined : "email");
   const [dismissedToken, setDismissedToken] = useState<string | null>(null);
   const token = searchToken === dismissedToken ? null : searchToken;
   const [statusMessage, setStatusMessage] = useState<StatusMessage | undefined>(
@@ -117,7 +117,7 @@ function LoginFormContent({
   );
 
   const continuation: Continuation =
-    mode === "embedded" ? { anchor, mode, onComplete } : {};
+    mode === "embedded" ? { anchor, mode, onComplete } : { mode };
   const completeLogin = useCompleteLogin(continuation);
 
   // The code page shows while the email is sent; a code cannot arrive before
@@ -173,7 +173,9 @@ function LoginFormContent({
       }
 
       setChallengeKey(result.challengeKey);
-      setUserInfo(result.authState);
+      if (mode !== "reauthentication") {
+        setUserInfo(result.authState);
+      }
     } catch {
       if (requestIdRef.current === requestId) {
         showSendFailure(failureMessage);
@@ -259,8 +261,6 @@ function LoginFormContent({
           onShowPasswordLogin={(form) => showLoginForm("password", form)}
         />
       )}
-
-      <RecaptchaTerms />
     </div>
   );
 }

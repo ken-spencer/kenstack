@@ -1,4 +1,4 @@
-import roles from "@app/roles";
+import deps from "@app/deps";
 import { defineFields } from "@kenstack/admin/fields";
 import {
   checkboxListField,
@@ -8,7 +8,7 @@ import {
 } from "@kenstack/fields";
 import * as z from "zod";
 
-const roleOptions = Object.entries(roles).map(([value, { label }]) => ({
+const roleOptions = Object.entries(deps.roles).map(([value, { label }]) => ({
   value,
   label,
 }));

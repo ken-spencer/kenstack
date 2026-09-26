@@ -1,3 +1,4 @@
+import deps from "@app/deps";
 import {
   differenceInCalendarDays,
   format,
@@ -31,13 +32,9 @@ function getZonedFormatter(
 
 export function dateFormat(
   value: string | Date,
-  { timeZone }: { timeZone?: string } = {},
+  { timeZone = deps.defaultTimeZone }: { timeZone?: string } = {},
 ) {
   const date = toDate(value);
-
-  if (!timeZone) {
-    return format(date, "MMM d, yyyy, h:mm a");
-  }
 
   return getZonedFormatter("date-time", "en-US", timeZone, {
     day: "numeric",
@@ -85,6 +82,17 @@ export function formatDateOnly(value: string | null | undefined) {
   return date ? format(date, "MMM d, yyyy") : null;
 }
 
+// A wall-clock "HH:MM" or database "HH:MM:SS" value, with no timezone.
+export function formatWallTime(value: string | null | undefined) {
+  const match = value?.match(/^(\d{2}):(\d{2})(?::\d{2})?$/);
+  if (!match) {
+    return null;
+  }
+
+  const hours = Number(match[1]);
+  return `${hours % 12 || 12}:${match[2]} ${hours >= 12 ? "PM" : "AM"}`;
+}
+
 export function formatShortDateOnly(value: string | null | undefined) {
   const date = parseDateOnly(value);
   return date ? format(date, "MMM d") : null;
@@ -110,7 +118,7 @@ export function relativeDateFormat(
   dateString: string | Date,
   {
     historicalAfterDays = 30,
-    timeZone,
+    timeZone = deps.defaultTimeZone,
   }: { historicalAfterDays?: number; timeZone?: string } = {},
 ) {
   const date = toDate(dateString);

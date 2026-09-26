@@ -68,6 +68,7 @@ import {
 } from "@kenstack/components/SortableList";
 import { defineFormFields } from "@kenstack/fields/formFields";
 import DateTimeField from "@kenstack/forms/DateTimeField";
+import { dateFormat } from "@kenstack/lib/dateFormat";
 import unsecureId from "@kenstack/lib/unsecureId";
 
 import {
@@ -98,11 +99,6 @@ type EditorView = "blocks" | "preview";
 
 const MetaFields = defineFormFields(composerMetaFields);
 const seoFieldNames = ["meta.seoTitle", "meta.seoDescription"];
-
-const publicationDateFormat = new Intl.DateTimeFormat(undefined, {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
 
 type PublicationAction =
   | {
@@ -178,7 +174,7 @@ export default function EditComposerClient({
     : visibilityStatus?.label;
   const hasDraftChanges = form.formState.isDirty || hasUnpublishedChanges;
   const scheduledStatusDate = publication.publishedAt
-    ? publicationDateFormat.format(new Date(publication.publishedAt))
+    ? dateFormat(new Date(publication.publishedAt))
     : null;
   // The publication control carries the status itself; this label only
   // reports save activity.

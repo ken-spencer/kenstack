@@ -86,7 +86,7 @@ capability with their owner and the concrete maintenance cost.
   it only when substitution preserves observable behavior, evaluation order and frequency,
   caller-visible TypeScript behavior, language and framework requirements, cache and transaction
   boundaries, and recursion. These are deterministic keep conditions: when one applies, leave the
-  binding and record the constraint. Multiple references permit a binding without requiring one. Never
+  binding. Multiple references permit a binding without requiring one. Never
   satisfy this rule by changing how the program works.
 - A substitution fails the caller-cost test when the enclosing call, JSX element, return expression,
   provider value, or registry entry must name or construct additional domain-specific props, options,
@@ -112,30 +112,65 @@ capability with their owner and the concrete maintenance cost.
 
 ## Explanatory text
 
-- Every comment and explanatory interface sentence supplies information its surrounding code or visible
-  interface does not. For maintainers, that is a non-obvious constraint, invariant, or intentionally
-  surprising behavior they could plausibly remove or violate; for users, the context, outcome,
-  expectation, or next action they need at that moment.
-- Let direct code structure, visible values, labels, and controls carry the point when they already do.
-  Delete text that narrates syntax, control flow, the visible interface, prototype or component
-  mechanics, or hypothetical future work, and any interface sentence whose deletion leaves the meaning
-  and next action equally clear.
+- A code comment supplies a non-obvious constraint, invariant, or intentionally surprising behavior a
+  maintainer could plausibly remove or violate. Delete comments that narrate syntax, control flow,
+  component mechanics, or hypothetical future work.
+- When writing interface text, add a sentence only when users need its context, outcome, expectation,
+  or next action. Do not add encouragement, vague reassurance, or friendly filler. At a money,
+  commitment, or destructive step, reassurance is one specific true fact the screen does not already
+  show, such as "Nothing has been taken."
+- Development review checks only interface lines the agent newly added in the current task, never
+  text the user supplied or copy that already existed; no review or cleanup pass removes or rewords
+  existing copy unless the user asks, and then only the lines the user names, never a sweep. It
+  reports a newly added line that repeats the adjacent title, label, control, or value; states that
+  nothing beyond the default happens; explains internal mechanics the user cannot act on; is wrong or
+  contradicts the controls; is generic filler naming no specific fact; or adds encouragement or
+  reassurance that is not one specific true fact needed at a money, commitment, or destructive step.
+  It does not report a title, heading, or introduction unless it is wrong, a specific reassurance, or
+  one line of first-use guidance; when unsure, it does not report the line.
 - Describe only behavior the product actually performs; prototype narration must never read as
   confirmation that an incomplete or mocked action occurred.
+- Newly added lines that fail, with the fix:
+  - "Recorded manual refund." on a row that already shows its method and no provider link: delete.
+  - "Already paid by Cash. Recording sends no money through Stripe." under a title that says "Record
+    cash refund": delete.
+  - "Refund this amount and keep the screening booking." when nothing beyond the refund happens: say
+    only what else changes, such as "This also cancels the booking."
+  - "Prior refunds: $0.00 · Pending: $0.00 · Remaining: $370.00" when nothing has been refunded: show
+    such a line only when it carries a non-zero fact.
+  - "Paid $370.00" directly under "Total $370.00": show it only while the two differ.
 
 ## Configuration surfaces
 
 - Every prop and option is supported API. Start from the default behavior owned by the implementation
-  and add configuration only when a current production caller needs the variation or the user
-  explicitly requested it for upcoming work. For the latter, add a one-line comment naming the requested
-  use; cleanup and review must preserve that surface even without a caller. Agent-imagined future
-  variation earns no configuration.
+  and ask: does this configuration represent a meaningful caller choice, or is it a narrow workaround
+  for an inadequate design? Prefer the smallest coherent solution, including improving the owning
+  component or API when needed. Resolve genuine trade-offs in API shape, exposed options, and option
+  names with the user before implementation, especially for shared Kenstack APIs whose design affects
+  multiple consumers. Present the proposed surface and recommendation early, without waiting for
+  cleanup or review. Routine choices with no meaningful trade-off stay local.
+  Add configuration only when a current production caller needs the
+  meaningful variation or the user explicitly requested that configuration contract for upcoming work;
+  a requested outcome alone does not request an option. For an explicitly requested contract, add a
+  one-line comment naming the requested use; cleanup and review preserve that surface even without a
+  caller and report supported design concerns for the user's ruling. Agent-imagined future variation
+  earns no configuration.
 - Expose the smallest meaningful difference; invariant labels, defaults, state transitions, and
   implementation details stay internal.
-- A caller supplies domain input and genuinely optional policy; calculations, metadata, setup, and
-  defaults the owner can derive stay with the owner. Existing differences between call sites do not
-  establish variation: identify the concrete current requirement for each difference or consolidate it
-  through the owner.
+- A boolean or mode parameter never steers a function between behaviors; a different behavior is a
+  different function, sharing what is common. If the two calls would take different verbs (`preview`
+  vs `void`, `check` vs `retry`, `expire` vs `abandon`), split them. This is a rule about functions
+  and server operations: a boolean the operation consumes as data (a value it stores, sends or
+  displays) is not a mode, and a component's presentational variants (`compact`, `disabled`, `wide`)
+  stay props under the rules above. Calls that differ only in such flags are not reuse: a helper they
+  share is one use per behavior, so inline each behavior where it is used.
+- Never pass a value through props or parameters when the function or component can derive it
+  itself. A caller supplies only what the owner cannot know: domain input and genuinely optional
+  policy. Calculations, lookups, metadata, setup, and defaults the owner can derive stay with the
+  owner. A Client Component that needs server-derived values gets a Server Component owner that loads
+  them and renders the client part; `"use client"` never moves that work to callers. Existing
+  differences between call sites do not establish variation: identify the concrete current requirement
+  for each difference or consolidate it through the owner.
 
 ## Helper ladder
 

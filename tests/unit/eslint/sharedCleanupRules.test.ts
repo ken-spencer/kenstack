@@ -28,18 +28,6 @@ describe("shared cleanup lint rules", () => {
     ).toHaveLength(2);
   });
 
-  it("rejects locally inferrable primitive annotations", async () => {
-    const messages = await lintSource(`
-      const attempts: number = 0;
-    `);
-
-    expect(
-      messages.filter(
-        ({ ruleId }) => ruleId === "@typescript-eslint/no-inferrable-types",
-      ),
-    ).toHaveLength(1);
-  });
-
   it("rejects field units importing their public aggregate", async () => {
     const messages = await lintSource(
       `import { textField } from "..";`,

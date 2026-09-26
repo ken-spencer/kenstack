@@ -19,6 +19,7 @@ import {
 } from "@kenstack/auth/email/change/schemas";
 import { verificationEndedCode } from "@kenstack/auth/email/verification/internal/policy";
 import type { PublicAuthState } from "@kenstack/auth/server/state";
+import { useAuthorization } from "@kenstack/auth/reauthentication/context";
 import { setUserInfo, useUserInfo } from "@kenstack/auth/useUserInfo";
 import type { StatusMessage } from "@kenstack/forms/context";
 
@@ -63,7 +64,7 @@ export default function EmailChange({
 }: {
   apiPath?: string;
 }) {
-  const token = useConsumedSearchParam("token");
+  const token = useConsumedSearchParam("confirmEmailChange");
   const cancelChallengeKey = useConsumedSearchParam("cancelEmailChange");
 
   return (
@@ -87,6 +88,7 @@ function EmailChangeContent({
   token: string | null;
 }) {
   const router = useRouter();
+  const authorization = useAuthorization();
   const userInfo = useUserInfo();
   const [view, setView] = useState<View>({ kind: "email" });
   // Outcomes independent of the form being shown: a confirmed change, a
@@ -116,10 +118,13 @@ function EmailChangeContent({
   const isConfirmingLink = useParamAction(
     token,
     (activeToken) =>
-      fetcher<EmailChangeVerificationResult>(apiPath, {
-        action: "verify-email-change-link",
-        token: activeToken,
-      }),
+      authorization.track(
+        fetcher<EmailChangeVerificationResult>(apiPath, {
+          action: "verify-email-change-link",
+          token: activeToken,
+        }),
+        { rotatesSession: true },
+      ),
     (activeToken, result) => {
       if (result?.status === "success") {
         complete(result.authState);
@@ -173,17 +178,21 @@ function EmailChangeContent({
 
     let next: View;
     try {
-      const result = await fetcher<EmailChangeRequestResult>(apiPath, {
-        action: "email-change",
-        challengeKey,
-        email,
-      });
+      const result = await authorization.track(
+        fetcher<EmailChangeRequestResult>(apiPath, {
+          action: "email-change",
+          challengeKey,
+          email,
+        }),
+      );
       if (result.status === "error" && result.code === verificationEndedCode) {
         if (requestIdRef.current === requestId) {
           returnToEmailForm(result.message ?? failureMessage);
         }
         return;
       }
+      if (result.status === "success")
+        authorization.setAuthorization(result.authorization);
       next =
         result.status === "success"
           ? {
@@ -235,22 +244,25 @@ function EmailChangeContent({
           defaultValues={{ email: userInfo.email }}
           key={userInfo.email}
           schema={requestEmailChangeSchema}
-          onSubmit={({ data, mutation }) => {
+          onSubmit={async ({ data, mutation }) => {
             setNotice(undefined);
-            mutation.mutate(
-              { action: "email-change", email: data.email },
-              {
-                onSuccess: (result) => {
-                  if (result.status === "success") {
-                    setView({
-                      challengeKey: result.challengeKey,
-                      email: result.email,
-                      kind: "code",
-                    });
-                  }
-                },
-              },
-            );
+            const result = await authorization
+              .track(
+                mutation.mutateAsync({
+                  action: "email-change",
+                  email: data.email,
+                }),
+              )
+              // The form's mutation already reported the failure.
+              .catch(() => undefined);
+            if (result?.status === "success") {
+              authorization.setAuthorization(result.authorization);
+              setView({
+                challengeKey: result.challengeKey,
+                email: result.email,
+                kind: "code",
+              });
+            }
           }}
         >
           <InputField
@@ -299,7 +311,13 @@ function EmailChangeCodeForm({
   onShowEmailForm: () => void;
   statusMessage?: StatusMessage;
 }) {
+  const authorization = useAuthorization();
   const isSending = challengeKey === null;
+  // A resend can replace the challenge while an older code is still verifying.
+  const currentChallengeKey = useRef(challengeKey);
+  useEffect(() => {
+    currentChallengeKey.current = challengeKey;
+  }, [challengeKey]);
 
   return (
     <div className="space-y-4">
@@ -327,30 +345,33 @@ function EmailChangeCodeForm({
         initialStatusMessage={statusMessage}
         key={challengeKey ?? "sending"}
         schema={emailChangeCodeSchema}
-        onSubmit={({ data, mutation }) => {
+        onSubmit={async ({ data, mutation }) => {
           if (challengeKey === null) {
             return;
           }
 
-          mutation.mutate(
-            {
-              action: "verify-email-change-code",
-              challengeKey,
-              code: data.code,
-            },
-            {
-              onSuccess: (result) => {
-                if (result.status === "success") {
-                  onComplete(result.authState);
-                } else if (result.code === verificationEndedCode) {
-                  onEnded(
-                    result.message ??
-                      "That request has ended. Enter the email again to start over.",
-                  );
-                }
-              },
-            },
-          );
+          const result = await authorization
+            .track(
+              mutation.mutateAsync({
+                action: "verify-email-change-code",
+                challengeKey,
+                code: data.code,
+              }),
+              { rotatesSession: true },
+            )
+            // The form's mutation already reported the failure.
+            .catch(() => undefined);
+          if (result?.status === "success") {
+            onComplete(result.authState);
+          } else if (
+            result?.code === verificationEndedCode &&
+            currentChallengeKey.current === challengeKey
+          ) {
+            onEnded(
+              result.message ??
+                "That request has ended. Enter the email again to start over.",
+            );
+          }
         }}
       >
         <VerificationCodeField disabled={isSending} name="code" />

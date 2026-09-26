@@ -72,6 +72,7 @@ export class PipelineResponse implements PipelineResponseShape {
       | string
       | {
           code?: string;
+          details?: Record<string, unknown>;
           message: string;
           status?: number;
           formErrors?: string[];

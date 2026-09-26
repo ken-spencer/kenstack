@@ -1,6 +1,7 @@
 import { requestEmailLoginSchema } from "@kenstack/auth/email/login/schemas";
 import type { StatusMessage } from "@kenstack/forms/context";
 
+import RecaptchaTerms from "@kenstack/components/RecaptchaTerms";
 import Form from "@kenstack/forms/Form";
 import InputField from "@kenstack/forms/InputField";
 
@@ -48,6 +49,8 @@ export default function EmailLoginForm({
           Use a password instead
         </LinkButton>
       </LoginSubmit>
+      {/* Sending the email requests a reCAPTCHA token. */}
+      <RecaptchaTerms />
     </Form>
   );
 }

@@ -15,12 +15,8 @@ import { visibilityStatusOptions } from "@kenstack/admin/lib/visibilityStatus";
 import { useSaveShortcut } from "@kenstack/admin/lib/useSaveShortcut";
 import { useForm } from "@kenstack/forms/context";
 import DateTimeField from "@kenstack/forms/DateTimeField";
+import { dateFormat } from "@kenstack/lib/dateFormat";
 import { useAdminEdit } from "../context";
-
-const publicationDateFormat = new Intl.DateTimeFormat(undefined, {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
 
 // The clock as an external store, at the minute the status needs: a
 // scheduled record turns live on its own without a render reading Date.now.
@@ -118,7 +114,7 @@ function PublishingSave({
   );
   const StatusIcon = isScheduled ? CalendarClock : option?.icon;
   const statusLabel = isScheduled
-    ? `Scheduled for ${publicationDateFormat.format(publishDate)}`
+    ? `Scheduled for ${dateFormat(publishDate)}`
     : option?.label;
 
   function stage(next: VisibilityValue) {

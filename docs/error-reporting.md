@@ -6,9 +6,8 @@ reporting, or request metadata capture.
 ## Containment
 
 - On a composite page, contain a failure at the section level only when that section is independently
-  useful and independently queried, using the canonical Kenstack section error boundary. If it does not
-  exist yet, implement it in Kenstack before using it from a site; a site-local boundary or parallel
-  reporting path is never the answer.
+  useful and independently queried, using `AsyncBoundary` from `@kenstack/components/AsyncBoundary`; do not
+  add a second boundary or a parallel reporting path.
 - Keep expected empty results distinct from unexpected failures. The public failure state accepts a
   module title and says, “There is an unexpected problem loading {module title}. Please check back later.”
   Exception messages, stack traces, query details, and error digests never reach the page.
@@ -34,6 +33,7 @@ reporting, or request metadata capture.
   provider rejections, may be worth sanitized permanent logging and never calls `reportError(...)`.
   Operational reporting is for failures that require operator action; a user-caused failure never
   generates operator email.
+- A development server logs reported errors but never emails them.
 - Email delivery failures never call `reportError(...)`, because the operational reporter sends its own
   alerts by email. `@kenstack/lib/mailer` owns sanitized delivery-failure logging through
   `errorLog(...)` and returns its classified result; callers may translate that result into

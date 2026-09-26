@@ -135,24 +135,24 @@ an inference or compiler problem.
   literals already present; omit either when the surrounding typed call or declaration already performs
   the same check or preserves the same information.
 - When dynamic construction cannot retain an exact mapped return type, localize one assertion at the
-  construction boundary and test the invariant.
+  construction boundary and verify the invariant.
 
 ## Type cleanup
 
 - A split into sub-types is earned only when the parts are independently reused, name owned domain
   concepts, form meaningful union members, or are large enough that inlining would bury the boundary. A
   type derived from a canonical owner stays derived; the derivation preserves its source of truth.
-- Build a complete inventory of every new or changed named type, interface, generic parameter,
-  overload, predicate, annotation, and assertion in the cleanup scope, including untracked files.
-  Resolve each entry by using its owner's inference directly, deriving a consumer-facing type from its
-  canonical producer, or retaining an intentional independent contract and applying it where that
-  boundary value is constructed. Cleanup is complete only when every entry has one of these rulings.
-- For every value passed between runtimes, modules, or layers, trace it from its canonical producer to
-  its consumers and verify that each consumer-facing type follows `Carry inference across boundaries`
-  or is an intentional independent boundary contract.
+- For each new or changed named type, interface, generic parameter, overload, predicate, annotation, or
+  assertion, use its owner's inference directly, derive a consumer-facing type from its canonical
+  producer, or retain an intentional independent contract applied where that boundary value is
+  constructed.
+- For a value whose type changed and that crosses runtimes, modules, or layers, check that each
+  consumer-facing type follows `Carry inference across boundaries` or is an intentional independent
+  boundary contract.
 - For every type newly exported in a dirty-file diff or exported from an untracked file, verify that a
-  current in-repository consumer imports and uses it outside its defining file; otherwise remove the
-  export and keep the type local.
+  current production consumer in Kenstack or a current host imports it; otherwise remove the export and
+  keep the type local. A committed export may have hosts this repository cannot see; never remove one
+  for lacking a visible consumer.
 - Delete compatibility aliases and duplicate type surfaces for uncommitted APIs and update their call
-  sites directly. Committed public types are externally consumed; document an authorized break per
+  sites directly. Committed public APIs (see `AGENTS.md`) are externally consumed; document an authorized break per
   `docs/upgrading.md`.

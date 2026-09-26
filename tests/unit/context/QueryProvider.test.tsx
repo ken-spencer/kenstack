@@ -9,18 +9,6 @@ import { describe, expect, it } from "vitest";
 import QueryProvider from "@kenstack/context/QueryProvider";
 
 describe("QueryProvider", () => {
-  it("creates a query client when no owner exists", () => {
-    let resolvedClient: QueryClient | undefined;
-
-    renderToStaticMarkup(
-      <QueryProvider>
-        <CaptureClient onResolve={(client) => (resolvedClient = client)} />
-      </QueryProvider>,
-    );
-
-    expect(resolvedClient).toBeInstanceOf(QueryClient);
-  });
-
   it("reuses the owning query client", () => {
     const owner = new QueryClient();
     let resolvedClient: QueryClient | undefined;

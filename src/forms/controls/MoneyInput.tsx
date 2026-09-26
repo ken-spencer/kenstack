@@ -2,7 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { formatDecimalAmount, parseDecimalAmount } from "@kenstack/lib/money";
+import {
+  formatDecimalAmount,
+  formatMoney,
+  parseDecimalAmount,
+} from "@kenstack/lib/money";
+import { cn } from "@kenstack/lib/utils";
 import { Input } from "./Input";
 
 type MoneyInputProps = Omit<
@@ -15,10 +20,16 @@ type MoneyInputProps = Omit<
 
 // Preserves editable decimal text while reporting complete values as integer cents.
 export default function MoneyInput({
+  className,
   onBlur,
   onFocus,
   onValueChange,
   placeholder = "0.00",
+  startAdornment = (
+    <span className="text-muted-foreground pointer-events-none">
+      {formatMoney(0).replace(/[\d.,\s]/g, "")}
+    </span>
+  ),
   value,
   ...props
 }: MoneyInputProps) {
@@ -34,6 +45,8 @@ export default function MoneyInput({
   return (
     <Input
       {...props}
+      className={cn("ps-6", className)}
+      startAdornment={startAdornment}
       inputMode="decimal"
       placeholder={placeholder}
       type="text"

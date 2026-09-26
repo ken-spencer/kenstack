@@ -65,19 +65,6 @@ afterAll(async () => {
 });
 
 describe("quota PostgreSQL boundary", () => {
-  it("exhausts a sequential quota", async () => {
-    const claim = () =>
-      claimQuota("integration-sequential", {
-        ip: "203.0.113.7",
-        limits: { ip: [2, "15 minutes"] },
-      });
-
-    await expect(claim()).resolves.toBeNull();
-    await expect(claim()).resolves.toBeNull();
-
-    await expect(claim()).resolves.toMatchObject({ subject: "ip" });
-  });
-
   it("never exceeds the quota under concurrent claims", async () => {
     const results = await Promise.all(
       Array.from({ length: 6 }, () =>

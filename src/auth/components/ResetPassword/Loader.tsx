@@ -1,9 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { getCurrentSession } from "@kenstack/auth/server/user";
-import { getAuthenticationRemainingMs } from "@kenstack/auth/reauthentication";
-import ReauthenticationTimer from "@kenstack/auth/reauthentication/Timer";
-import { getReauthenticationPath } from "@kenstack/auth/returnTo";
+import ReauthenticationForm from "@kenstack/auth/reauthentication/Form";
 import Notice from "@kenstack/components/Notice";
 
 import Form from "./Form";
@@ -29,18 +27,9 @@ export default async function ResetPasswordFormLoader({
     );
   }
 
-  const remainingMs = getAuthenticationRemainingMs(session);
-  if (remainingMs <= 0) {
-    redirect(getReauthenticationPath(path));
-  }
-
   return (
-    <>
-      <ReauthenticationTimer
-        key={session.createdAt.toISOString()}
-        remainingMs={remainingMs}
-      />
+    <ReauthenticationForm message="To change your password, please confirm your identity.">
       <Form />
-    </>
+    </ReauthenticationForm>
   );
 }

@@ -23,7 +23,10 @@ import {
 } from "@kenstack/auth/server/state";
 import { userSessionsCacheTag } from "@kenstack/auth/server/user";
 import { login } from "@kenstack/auth/server/auth";
-import { requireRecentAuthentication } from "@kenstack/auth/reauthentication/server";
+import {
+  requireRecentAuthentication,
+  serializeAuthorization,
+} from "@kenstack/auth/reauthentication/server";
 import { sessions } from "@kenstack/db/tables/sessions";
 import { errorTranslator } from "@kenstack/db/errorTranslator";
 import { verifications } from "@kenstack/db/tables/verification";
@@ -122,13 +125,14 @@ export type EmailChangeOptions = {
 };
 
 export function createEmailChange(options: EmailChangeOptions = {}) {
+  const heading = options.email?.heading ?? "Confirm your new email";
   const config = {
     email: {
       actionLabel: "Confirm email",
-      heading: "Confirm your new email",
+      heading,
       introduction:
         "Confirming this address makes it the email you sign in with. Use the button below or enter the six-digit code to continue.",
-      subject: "Confirm your new email",
+      subject: heading,
       ...options.email,
     },
     linkPath: options.linkPath ?? ("/account/profile" as const),
@@ -138,7 +142,7 @@ export function createEmailChange(options: EmailChangeOptions = {}) {
     request: pipelineStage(
       { access: "authenticated", schema: requestEmailChangeSchema },
       async ({ data, request, response, user }) => {
-        await requireRecentAuthentication(request, user.id);
+        const session = await requireRecentAuthentication(request, user.id);
         if (data.email === normalizeEmail(user.email)) {
           return response.error({
             message:
@@ -162,7 +166,7 @@ export function createEmailChange(options: EmailChangeOptions = {}) {
               ),
           }),
         );
-        const { challengeKey, email } = await sendCode(
+        const { challengeKey, email, authorization } = await sendCode(
           {
             challengeKey: data.challengeKey,
             email: data.email,
@@ -171,9 +175,13 @@ export function createEmailChange(options: EmailChangeOptions = {}) {
             linkPath: config.linkPath,
             request,
             userId: user.id,
+            sessionId: session.id,
           },
           createVerificationEmail(config.email),
         );
+        if (!authorization) {
+          throw new Error("Email-change issuance did not grant authorization");
+        }
         if (isTaken) {
           await sendNotice({
             html: (
@@ -212,6 +220,7 @@ export function createEmailChange(options: EmailChangeOptions = {}) {
           authState: await loadPublicAuthState(),
           challengeKey,
           email,
+          authorization: serializeAuthorization(authorization),
         });
       },
     ),

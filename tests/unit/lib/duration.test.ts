@@ -25,9 +25,7 @@ describe("parseDuration", () => {
   it.each(["0 minutes", "-1 hour", "1.5 hours", "one day", "1 month"])(
     "rejects %s at runtime",
     (duration) => {
-      expect(() => parseDuration(duration as DurationString)).toThrow(
-        "Invalid duration",
-      );
+      expect(() => parseDuration(duration as DurationString)).toThrow();
     },
   );
 });

@@ -32,7 +32,6 @@ describe("audit", () => {
 
     await audit({ action: "password-failure", db, userId: null });
 
-    expect(mocks.getCurrentUser).not.toHaveBeenCalled();
     expect(values).toHaveBeenCalledWith(
       expect.objectContaining({
         action: "password-failure",
@@ -74,9 +73,10 @@ describe("audit", () => {
     );
   });
 
-  it("records an already-resolved actor and impersonator without another session lookup", async () => {
+  it("records an already-resolved actor and impersonator over the session user", async () => {
     const values = vi.fn().mockResolvedValue(undefined);
     const db = { insert: vi.fn(() => ({ values })) };
+    mocks.getCurrentUser.mockResolvedValue({ id: 1, impersonatedBy: null });
 
     await audit({
       action: "receipt.downloaded",
@@ -84,7 +84,6 @@ describe("audit", () => {
       actor: { id: 42, impersonatedBy: 7 },
     });
 
-    expect(mocks.getCurrentUser).not.toHaveBeenCalled();
     expect(values).toHaveBeenCalledWith(
       expect.objectContaining({
         action: "receipt.downloaded",

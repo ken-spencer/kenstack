@@ -22,7 +22,7 @@
       "@app/db": ["./mocks/app/db"],
       "@app/email": ["./mocks/app/email"],
       "@app/modules": ["./mocks/app/modules"],
-      "@app/roles": ["./mocks/app/roles"],
+      "@app/deps": ["./mocks/app/deps"],
       "@kenstack/*": ["./src/*"]
     }
   },

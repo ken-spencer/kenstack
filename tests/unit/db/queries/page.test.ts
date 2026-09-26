@@ -1,31 +1,19 @@
 import { eq } from "drizzle-orm";
 import { text } from "drizzle-orm/pg-core";
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  expectTypeOf,
-  it,
-  vi,
-} from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { cacheLife, cacheTag, draftMode, queries, requireUser } = vi.hoisted(
-  () => ({
-    cacheLife: vi.fn(),
-    cacheTag: vi.fn(),
-    draftMode: vi.fn(),
-    queries: [] as string[],
-    requireUser: vi.fn(),
-  }),
-);
+const { cacheLife, cacheTag, draftMode, requireUser } = vi.hoisted(() => ({
+  cacheLife: vi.fn(),
+  cacheTag: vi.fn(),
+  draftMode: vi.fn(),
+  requireUser: vi.fn(),
+}));
 
 vi.mock("@app/db", async () => {
   return {
-    db: (await import("drizzle-orm/pg-proxy")).drizzle(async (query) => {
-      queries.push(query);
-      return { rows: [] };
-    }),
+    db: (await import("drizzle-orm/pg-proxy")).drizzle(async () => ({
+      rows: [],
+    })),
   };
 });
 vi.mock("@kenstack/auth/server/user", () => ({ requireUser }));
@@ -50,7 +38,6 @@ describe("resolveVisiblePage", () => {
   afterEach(() => {
     cacheLife.mockClear();
     cacheTag.mockClear();
-    queries.length = 0;
     vi.useRealTimers();
   });
 
@@ -75,56 +62,6 @@ describe("resolveVisiblePage", () => {
     });
     expect(cacheTag).toHaveBeenCalledWith("articles", "articles:news");
     expect(cacheLife).toHaveBeenLastCalledWith("max");
-  });
-
-  it("owns active-row and configured page metadata selection", async () => {
-    const articles = defineTable({
-      name: "articles",
-      publish: true,
-      seo: true,
-      columns: {
-        slug: text("slug").notNull(),
-        title: text("title").notNull(),
-      },
-    });
-
-    const page = await pageQuery(articles, {
-      select: { id: articles.id, title: articles.title },
-      where: eq(articles.slug, "news"),
-    });
-
-    if (page) {
-      expectTypeOf(page.seoTitle).toEqualTypeOf<string>();
-      expectTypeOf(page.seoDescription).toEqualTypeOf<string>();
-      expectTypeOf(page.ogImage).toEqualTypeOf<
-        import("@kenstack/db/queries").SelectedImage | null
-      >();
-    }
-
-    expect(queries).toHaveLength(1);
-    expect(queries[0]).toContain('"articles"."deleted_at" is null');
-    expect(queries[0]).toContain(
-      'select "id", "title", "published_at", "visibility", "seo_title", "seo_description"',
-    );
-    expect(queries[0]).toContain('"og_image"');
-    expect(queries[0]).toContain('"articles"."slug" = $');
-    expect(queries[0]).toContain("limit $");
-  });
-
-  it("does not expose SEO fields for a table without that capability", async () => {
-    const articles = defineTable({
-      name: "plain_articles",
-      publish: true,
-      columns: { slug: text("slug").notNull() },
-    });
-    const page = await pageQuery(articles, {
-      select: { id: articles.id },
-      where: eq(articles.slug, "news"),
-    });
-
-    if (page) {
-      expectTypeOf(page).not.toHaveProperty("seoTitle");
-    }
   });
 
   it("includes unlisted pages that have no publication time", async () => {

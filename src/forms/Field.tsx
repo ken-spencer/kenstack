@@ -56,9 +56,7 @@ export default function Field({
               </div>
             )}
             {render({ field, fieldState })}
-            {description && (
-              <div className="text-muted-foreground text-sm">{description}</div>
-            )}
+            {description && <FormDescription>{description}</FormDescription>}
             <FormMessage className="" />
           </FormItem>
         )}
@@ -147,6 +145,19 @@ function FormControl({
   });
 }
 
+// Pulled up so its text sits as close to the control as the leading-none label does.
+function FormDescription(props: React.ComponentProps<"div">) {
+  const { formDescriptionId } = useFormField();
+
+  return (
+    <div
+      id={formDescriptionId}
+      className="text-muted-foreground -mt-1 text-sm"
+      {...props}
+    />
+  );
+}
+
 function FormMessage({ className, ...props }: React.ComponentProps<"p">) {
   const { error, formMessageId } = useFormField();
 
@@ -178,6 +189,7 @@ function FieldErrorMessage({
   return (
     <p
       data-slot="form-message"
+      tabIndex={-1}
       className={cn("text-destructive grid gap-1 text-sm", className)}
       {...props}
     >

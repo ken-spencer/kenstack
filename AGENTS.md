@@ -2,8 +2,10 @@
 
 ## Scope
 
-Kenstack is a shared submodule. Treat committed public APIs and behavior as used outside the current
-host repository.
+Kenstack is a shared submodule. Treat committed public APIs as used outside the current host
+repository. A format Kenstack both writes and reads itself (a URL parameter, API action name,
+cookie or payload field name) is internal: change it with its writer and reader, without a
+compatibility path or upgrade note.
 
 ## Technical references
 
@@ -25,10 +27,12 @@ Read only the references relevant to the current task:
 - Host-site containers, wiring, or placement: `docs/site-anatomy.md`
 - A registered module's internal structure or module queries: `docs/module-anatomy.md`
 - Cross-cutting ownership, import paths and grouping, helpers, configuration surfaces, file headers,
-  unit boundaries, code comments, or interface copy: `docs/code-organization.md`
+  unit boundaries, or code comments: `docs/code-organization.md`
+- Writing or changing any user-visible text (labels, notices, dialog and status lines, empty states):
+  `docs/code-organization.md#explanatory-text`
 - Naming or renaming a symbol, prop, file, or folder, or a function's reading order: `docs/naming.md`
-- Creating, changing, or consolidating a UI component, or `role` and `aria-*` attributes:
-  `docs/components.md`
+- Creating, changing, or consolidating a UI component, page markup or styling, or `role` and `aria-*`
+  attributes: `docs/components.md`
 - Reviewing code changes: `docs/review.md`
 - Cleaning up code changes: `docs/cleanup.md`
 - Diagnosing or fixing regressions, failed checks, runtime errors, or broken UI: `docs/debugging.md`
@@ -39,52 +43,41 @@ Read only the references relevant to the current task:
 - When responding to a correction or objection, lead with the evidence, consequence, or corrective
   action, without canned validation such as “you’re right to challenge that”.
 - Use the simplest direct implementation that satisfies the current requirement.
-- Write code a reader can follow from top to bottom: keep one-use logic at its call site and apply the
-  indirection rules in `docs/code-organization.md`. A descriptive name alone does not earn a helper,
-  alias, wrapper, or other indirection.
-- Keep one canonical owner for labels, options, metadata, schemas, configuration, and other domain
-  facts; consumers derive or assemble them from that owner instead of keeping parallel copies.
+- Apply the ownership, indirection, configuration, and explanatory-text rules in
+  `docs/code-organization.md`; keep domain facts with one canonical owner.
+- Never pass a value through props or parameters when the function or component can derive it itself.
 - A new entry in `dependencies`, `devDependencies`, or `peerDependencies` requires explicit user
   authorization. Propose one only after identifying the current need and why the native platform, the
   owning API, and already-adopted libraries cannot meet it.
-- Prefer inferred internal types. An explicit annotation, assertion, cast, wrapper, overload, or generic
-  must protect a deliberate contract or bridge a verified boundary; when the type checker fails, fix the
-  producer or contract. `docs/typescript.md` owns the rules.
+- Prefer inferred internal types; `docs/typescript.md` owns annotations, assertions, and boundary
+  contracts.
 - Use `===` and `!==`; use `Object.is` only when `NaN` or signed-zero semantics matter for a real case.
-- Keep configuration surfaces minimal: add a prop or option only when a current production caller needs
-  the variation or the user explicitly requested it for upcoming work, and expose the smallest
-  difference that satisfies it. A user-requested surface is a current requirement even with no caller:
-  mark it with a one-line comment naming the upcoming use so a later pass can tell it from a speculative
-  one, and cleanup and review must not remove it. `docs/code-organization.md#configuration-surfaces`
-  owns the rules.
-- Put behavior shared by every host at the narrowest Kenstack owner; keep a host override only for a
-  host-specific difference.
-- Every edit must improve something concrete: change requested behavior, reduce indirection, or clarify
-  ownership. Leave equally clear equivalent forms alone. A name that existed before the current task
-  is an equivalent form: never rename such a symbol, prop, file, or folder unless the user asked for
-  that rename. There is no other exception: when a name looks wrong, or the change makes it wrong, keep
-  it and list the proposed rename in the handoff for the user to decide. Names introduced in the
-  current task are the agent's draft and must satisfy `docs/naming.md` before handoff; a name whose
-  origin is unclear counts as pre-existing. Cleanup and review never rename.
+- Code goes on the site by default. When site work needs a change to something in Kenstack, and that
+  change would likely benefit another site, make it in Kenstack. Reusable does not mean Kenstack:
+  another shared package (such as payments) owns its own domain. Keep each unit whole in one
+  repository rather than splitting it between the site and a package. When it is unclear which side
+  owns a unit, ask before building; ownership is the user's call.
+- Every edit must change requested behavior, reduce indirection, or clarify ownership. Leave equally
+  clear equivalent forms alone.
+- Never rename a pre-existing symbol, prop, file, or folder unless the user requested that rename.
+  Preserve questionable names and propose them in the handoff; uncertain origin counts as pre-existing.
+  If keeping a name would force a workaround (a flag, mode branch, alias or special case that exists
+  only to avoid the rename), stop and propose the rename before building, with the workaround it removes.
+  Names introduced in the current task must satisfy `docs/naming.md`. Cleanup and review never rename.
 - Write a defensive guard against the narrowest credible reachable conflict with meaningful
   consequences, with a message that is true for every case it blocks; otherwise narrow the condition or
   support the broader case.
-- Apply the explanatory-text rules in `docs/code-organization.md` to code comments and user-facing copy.
-- Test through a durable public or domain boundary. Production exports, options, parameters, reset
-  hooks, seams, and branches exist for production consumers, never only for tests; when a test cannot
-  reach the behavior, decide whether a real production contract is missing before adding one.
-
 ## Public surface
 
-- Preserve what a development-only or launch gate withholds, whether it tests
-  `process.env.NODE_ENV === "development"` or an explicit development flag. Promote gated behavior to
-  production only when the user explicitly authorizes that behavior and its production configuration.
-  Place each gate once, at the outermost point that works: which loader runs, or whether a component
-  renders. Remove an inner check that the outer gate already makes redundant; this rule protects what
-  is gated, never the number of checks.
+- Preserve development-only and launch gates. Promoting gated behavior requires explicit user
+  authorization for both the behavior and its production configuration. Place each gate once at the
+  outermost effective loader or render boundary; remove redundant inner checks.
 - Add a module export only when another current production module imports it or a fixed framework or
   tooling entry point requires it, and a public-entry re-export only when a current host imports that
   contract. Otherwise keep the declaration file-local.
+- A public API is a committed export of a file headed "Public entry point", or a committed export a
+  current host imports. Everything else, including exports that exist only for other Kenstack modules,
+  is internal and changes with its callers.
 - Treat committed public APIs as externally consumed: removing, renaming, narrowing, inlining, or
   changing one incompatibly requires explicit authorization, and an authorized break follows
   `docs/upgrading.md`.
@@ -93,16 +86,28 @@ Read only the references relevant to the current task:
 
 ## Verification
 
-- Before creating a test, name the durable contract and a plausible regression it should catch, and
-  write the test from that contract. It may be written before, during, or after implementation once its
-  expected behavior can be stated independently. Prefer a test that exercises the public or domain
-  boundary and survives behavior-preserving refactors.
-- Treat test churn as evidence about the test. When production behavior has not changed, an existing
-  test stays unchanged; when a move, rename, type cleanup, or internal reorganization forces it to follow
-  the implementation, rewrite it against the stable boundary or remove it. A new test that keeps
-  changing while the requirement has not changed gets the same treatment. An existing test is never a
-  reason to keep slower, more complex, or worse-for-users code: make the improvement, then rewrite or
-  remove the test that pinned the old implementation.
+- Development adds no tests. A test enters a suite only through the `$tests` skill on the user's
+  explicit request, and only for a durable observable behavior or compile-time contract with a
+  plausible regression a reader would miss; the skill states both before writing it. Development
+  keeps existing tests passing: update one mechanically to a changed public shape, delete one that
+  pins removed structure, never rewrite one to keep it alive.
+- These never qualify, so write no test and delete an existing one that only checks them: interface
+  wording (labels, headings, notices, help and error text), the order or count of calls between
+  internal modules, mock chains, generated SQL text, markup or class names, a constant's value, a
+  restatement of the implementation or its defaults, development-only scaffolding, and a behavior
+  another test already covers. Instead, assert the state, value, role, or result the wording
+  reports, such as a disabled control, an amount, or a returned status, or the side effects that
+  reach the outside world, such as one provider charge or no email sent, and move claims about what
+  a query returns or locks to the PostgreSQL suite. Wording or a constant is pinned only when it is
+  itself a legal, protocol, or compatibility requirement. Copy changes often, so a test that pins it
+  breaks on every edit and protects nothing.
+- Test through a public or domain boundary. Production exports, options, parameters, reset hooks, and
+  branches need production consumers, never only tests. If behavior is unreachable, establish whether
+  a real production contract is missing before adding one.
+- When behavior is unchanged, leave tests unchanged. If a refactor forces a test to follow internal
+  structure, remove it and name a replacement at a stable boundary as a recommended `$tests`
+  candidate. Tests never
+  justify retaining worse production code.
 - Derive expected values from the requirement, an incident, an independent oracle, or deliberately
   characterized existing behavior. Review and accept observed output before it becomes an expectation.
 - Runtime tests exercise runtime behavior. Keep compile-time contract fixtures under `tests/types/` and
@@ -115,13 +120,8 @@ Read only the references relevant to the current task:
   testing or a pre-launch verification pass; they need sandbox or shared-memory permission that routine
   work must not request. Mention an un-run opt-in check in the handoff only when the user asked for it
   or its absence leaves a material unresolved risk.
-- A change does not automatically owe a test.
-- Pin a constant's exact value only when that value is an observable product, protocol, or
-  compatibility decision.
 - Run TypeScript after type-affecting changes and lint after code or style changes.
 - After a coherent behavior change, run the narrowest relevant existing tests; rerun only after edits
   that affect the behavior.
-- Tests protect durable observable behavior or a deliberate compile-time contract, never temporary
-  scaffolding, duplicated enforcement, or incidental implementation structure.
-- Report failures and material blockers; omit successful routine checks unless asked.
+- Report failures and material blockers; passing checks get at most one line, "Checks pass."
 - Run production builds only when explicitly asked.

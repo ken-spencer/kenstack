@@ -1,5 +1,6 @@
 import "server-only";
 
+import { extendAuthorization } from "@kenstack/auth/reauthentication/server";
 import { lte, sql } from "drizzle-orm";
 import type { NextRequest } from "next/server";
 import { waitUntil } from "@vercel/functions";
@@ -63,8 +64,10 @@ export async function sendCode(
     linkPath,
     request,
     userId = null,
+    sessionId,
   }: Partial<VerificationBinding> & {
     challengeKey?: string;
+    sessionId?: number;
     email: string;
     // A decoy keeps the code screen identical for an address the caller
     // must not confirm or deny; no code is sent and none can prove it.
@@ -74,7 +77,7 @@ export async function sendCode(
   },
   createVerificationEmail: CreateVerificationEmail,
 ) {
-  const challenge = await sendVerification(
+  return sendVerification(
     {
       challengeKey,
       concealDeliveryFailure: false,
@@ -84,11 +87,10 @@ export async function sendCode(
       linkPath,
       request,
       userId,
+      sessionId,
     },
     createVerificationEmail,
   );
-
-  return { challengeKey: challenge.challengeKey, email: challenge.email };
 }
 
 export async function sendVerificationLink(
@@ -135,9 +137,11 @@ async function sendVerification(
     linkPath,
     request,
     userId = null,
+    sessionId,
   }: Partial<VerificationBinding> & {
     attachments?: Attachment[];
     challengeKey?: string;
+    sessionId?: number;
     concealDeliveryFailure: boolean;
     email: string;
     from?: EmailAddress;
@@ -235,10 +239,23 @@ async function sendVerification(
       throw new ReturnedError(exceeded.message, { status: 429 });
     }
 
-    const expiresAt = calculateChallengeExpiresAt({
+    let expiresAt = calculateChallengeExpiresAt({
+      kind,
       verificationExpiresAt: isResending ? current.expiresAt : undefined,
       now,
     });
+    let authorization;
+    if (kind === "email-change") {
+      if (sessionId === undefined) {
+        throw new Error(
+          "Email-change issuance requires its requesting session",
+        );
+      }
+      authorization = await extendAuthorization({ sessionId }, tx, expiresAt);
+      expiresAt = new Date(
+        Math.min(expiresAt.getTime(), authorization.authorizedUntil.getTime()),
+      );
+    }
     if (!isResending && current) {
       await endVerification(tx, current.id, now);
     }
@@ -247,6 +264,7 @@ async function sendVerification(
       challengeKey: secrets.challengeKey,
       expiresAt,
       status: "prepared" as const,
+      authorization,
       verificationId: (
         await createVerification(tx, {
           email,
@@ -282,7 +300,11 @@ async function sendVerification(
         });
       }
 
-      url.searchParams.set("token", secrets.token);
+      // A login link and an email-change link can land on the same page.
+      url.searchParams.set(
+        kind === "email-change" ? "confirmEmailChange" : "token",
+        secrets.token,
+      );
       const message = await createVerificationEmail({
         code: secrets.code,
         email,
@@ -332,5 +354,9 @@ async function sendVerification(
   }
 
   await setVerificationCookie(verificationKey, prepared.expiresAt);
-  return { challengeKey: prepared.challengeKey, email };
+  return {
+    challengeKey: prepared.challengeKey,
+    email,
+    authorization: prepared.authorization,
+  };
 }

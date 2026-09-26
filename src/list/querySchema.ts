@@ -11,7 +11,6 @@ import type {
 import { getFilterMeta, getSortMeta } from "@kenstack/admin/types/list";
 
 const maxTextFilterLength = 200;
-const maxDateFilterLength = 64;
 
 export type ListSearchParams = Record<string, string | string[] | undefined>;
 
@@ -302,7 +301,7 @@ function getFilterInputSchema(filter: AdminFilterMeta) {
 }
 
 function getDateFilterDateSchema() {
-  return z.string().max(maxDateFilterLength).optional().catch(undefined);
+  return z.iso.date().optional().catch(undefined);
 }
 
 export function hasFilterValue(value: unknown) {

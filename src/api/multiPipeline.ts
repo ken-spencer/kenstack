@@ -1,13 +1,19 @@
 import { NextResponse } from "next/server";
 import { type FetchError } from "./fetcher";
-import pipeline, { type PipelineOptions } from "./pipeline";
+import pipeline, {
+  isStage,
+  type PipelineOptions,
+  type PipelineStage,
+} from "./pipeline";
 import { isRecord } from "@kenstack/lib/isRecord";
 
 export default async function multiPipeline(
   options: PipelineOptions & Record<string, unknown>,
   actions: Record<
     string,
-    (options: PipelineOptions) => ReturnType<typeof pipeline>
+    | { [isStage]: PipelineStage }
+    | PipelineStage[]
+    | ((options: PipelineOptions) => ReturnType<typeof pipeline>)
   >,
 ) {
   const { request } = options;
@@ -71,5 +77,11 @@ export default async function multiPipeline(
     );
   }
 
+  if (isStage in actionItem) {
+    return await pipeline({ ...options, json }, actionItem[isStage]);
+  }
+  if (Array.isArray(actionItem)) {
+    return await pipeline({ ...options, json }, actionItem);
+  }
   return await actionItem({ ...options, json });
 }

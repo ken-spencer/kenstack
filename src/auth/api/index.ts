@@ -1,9 +1,15 @@
+import * as z from "zod";
+import {
+  extendAuthorization,
+  serializeAuthorization,
+  type Authorization,
+} from "@kenstack/auth/reauthentication/server";
 import type { NextRequest } from "next/server";
 import {
   loadPublicAuthState,
   type PublicAuthState,
 } from "@kenstack/auth/server/state";
-import { multiPipeline, pipeline, pipelineStage } from "@kenstack/api";
+import { multiPipeline, pipelineStage } from "@kenstack/api";
 import ForgotPasswordEmail, {
   attachments as forgotPasswordAttachments,
 } from "@kenstack/auth/handlers/forgotPassword/Email";
@@ -44,6 +50,7 @@ export type EmailLoginVerificationResult = {
 };
 
 export type EmailChangeRequestResult = {
+  authorization: Authorization;
   // The requester stays signed in as the current account until the change
   // is confirmed.
   authState: PublicAuthState;
@@ -101,17 +108,26 @@ export const authPipeline = (
       multiPipeline(
         { request },
         {
-          logout: logoutPipeline(),
-          "user-info": (actionOptions) =>
-            pipeline(
-              actionOptions,
-              pipelineStage({}, async ({ response }) => {
-                response.headers.set("Cache-Control", "no-store");
-                return response.success<UserInfoResult>({
-                  authState: await loadPublicAuthState(),
-                });
-              }),
-            ),
+          logout: logoutPipeline,
+          "extend-authorization": pipelineStage(
+            {
+              schema: z.object({ sessionId: z.number().int().positive() }),
+            },
+            async ({ data, response }) => {
+              response.headers.set("Cache-Control", "no-store");
+              return response.success({
+                authorization: serializeAuthorization(
+                  await extendAuthorization(data),
+                ),
+              });
+            },
+          ),
+          "user-info": pipelineStage({}, async ({ response }) => {
+            response.headers.set("Cache-Control", "no-store");
+            return response.success<UserInfoResult>({
+              authState: await loadPublicAuthState(),
+            });
+          }),
 
           login: loginPipeline({
             loginDestination: options.loginDestination,
@@ -119,23 +135,16 @@ export const authPipeline = (
           "forgot-password": forgotPasswordPipeline(forgotPassword),
           "reset-password": resetPasswordPipeline(),
 
-          "email-login": (actionOptions) =>
-            pipeline(actionOptions, emailLogin.request),
-          "verify-email-login-code": (actionOptions) =>
-            pipeline(actionOptions, emailLogin.verifyCode),
-          "verify-email-login-link": (actionOptions) =>
-            pipeline(actionOptions, emailLogin.verifyLink),
+          "email-login": emailLogin.request,
+          "verify-email-login-code": emailLogin.verifyCode,
+          "verify-email-login-link": emailLogin.verifyLink,
 
           ...(emailChange
             ? {
-                "email-change": (actionOptions) =>
-                  pipeline(actionOptions, emailChange.request),
-                "verify-email-change-code": (actionOptions) =>
-                  pipeline(actionOptions, emailChange.verifyCode),
-                "verify-email-change-link": (actionOptions) =>
-                  pipeline(actionOptions, emailChange.verifyLink),
-                "cancel-email-change": (actionOptions) =>
-                  pipeline(actionOptions, emailChange.cancel),
+                "email-change": emailChange.request,
+                "verify-email-change-code": emailChange.verifyCode,
+                "verify-email-change-link": emailChange.verifyLink,
+                "cancel-email-change": emailChange.cancel,
               }
             : {}),
 

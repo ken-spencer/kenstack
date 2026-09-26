@@ -8,10 +8,11 @@ cross-cutting ownership, helper, and file-shape rules live in `docs/code-organiz
 
 Kenstack imports no host-site module: no `@/`, root `src/`, relative path into a host application, or
 site module path. The few host-owned values Kenstack needs enter through the named `@app/db`,
-`@app/email`, `@app/modules`, and `@app/roles` bindings. Kenstack's standalone TypeScript configuration
-maps those names to `mocks/app/`; a host maps them to its real owners. These bindings are the whole
-mechanism; there is no general dependency container. Committed Kenstack entry points are host-facing
-public contracts.
+`@app/email`, `@app/modules`, and `@app/deps` bindings. `@app/deps` carries the host facts as
+one default-exported object built with `createDeps` from `src/deps.ts`. Kenstack's standalone TypeScript
+configuration maps those names to `mocks/app/`; a host maps them to its real owners. These bindings
+are the whole mechanism; there is no general dependency container. Which exports are public contracts
+is defined under "Public surface" in `AGENTS.md`.
 
 ## Top-level areas
 
@@ -38,6 +39,8 @@ independent capability.
 - `records/` — whole-record loading, selection, saving, and revision shaping.
 - `pageRoute.tsx` — the host-facing page-route entry point; keep it a file until multiple owned files
   require a folder.
+- `deps.ts` — the `createDeps` factory each host's `@app/deps` binding
+  uses to fill its defaults.
 - `types/` — a shrinking compatibility location: no new ownerless types, and existing types relocate
   beside their owners when the relevant contract changes.
 

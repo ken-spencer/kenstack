@@ -2,11 +2,11 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PipelineResponse } from "@kenstack/api/PipelineResponse";
+import type { PipelineStage } from "@kenstack/api/pipeline";
 
 const mocks = vi.hoisted(() => ({
   checkQuota: vi.fn(),
   claimQuota: vi.fn(),
-  pipeline: vi.fn(),
   recaptcha: vi.fn(),
   render: vi.fn(),
   selectWhere: vi.fn(),
@@ -48,7 +48,6 @@ vi.mock("@kenstack/api", () => {
   return {
     checkQuota: mocks.checkQuota,
     claimQuota: mocks.claimQuota,
-    pipeline: mocks.pipeline,
     pipelineStage: (_options: unknown, action: (context: unknown) => unknown) =>
       action,
     recaptcha: mocks.recaptcha,
@@ -89,7 +88,7 @@ const admin = { email: "admin@example.com", name: "Admin" };
 
 async function runPipeline(
   options: { json?: Record<string, unknown>; request: NextRequest },
-  action: (context: unknown) => Promise<unknown>,
+  action: PipelineStage,
 ) {
   const response = new PipelineResponse();
   await action({
@@ -103,19 +102,19 @@ async function runPipeline(
 }
 
 async function runForgottenPassword() {
-  const response = await forgotPasswordPipeline({
-    from: "sender@example.com",
-  })({
-    request,
-    json: { email: customer.email, recaptchaToken: "token" },
-  });
+  const response = await runPipeline(
+    {
+      request,
+      json: { email: customer.email, recaptchaToken: "token" },
+    },
+    forgotPasswordPipeline({ from: "sender@example.com" }),
+  );
   return response.json();
 }
 
 describe("password recovery email delivery", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.pipeline.mockImplementation(runPipeline);
     vi.spyOn(Date, "now").mockReturnValueOnce(0).mockReturnValue(6_000);
     mocks.checkQuota.mockResolvedValue(null);
     mocks.claimQuota.mockResolvedValue(null);
@@ -125,17 +124,7 @@ describe("password recovery email delivery", () => {
     mocks.sendVerificationLink.mockResolvedValue(undefined);
   });
 
-  it("sends the familiar recovery email through an email-login link", async () => {
-    mocks.sendVerificationLink.mockImplementation(
-      async (_input, createVerificationEmail) => {
-        await createVerificationEmail({
-          code: "123456",
-          email: customer.email,
-          expiresInMinutes: 4,
-          url: "https://example.com/login?token=token",
-        });
-      },
-    );
+  it("sends recovery through an email-login link to the reset page", async () => {
     const payload = await runForgottenPassword();
 
     expect(payload).toMatchObject({ status: "success" });
@@ -146,9 +135,6 @@ describe("password recovery email delivery", () => {
       }),
       expect.any(Function),
     );
-    expect(mocks.render.mock.calls[0]?.[0]).toMatchObject({
-      props: { expiresInMinutes: 4 },
-    });
   });
 
   it("creates a decoy verification when the account is missing", async () => {

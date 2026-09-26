@@ -46,7 +46,7 @@ summaries, and browser persistence in Kenstack and host sites.
 - A return to the flow after leaving the page arrives at its URL like any visit. An emailed sign-in
   link carries its token there; the login controller brings its step forward, as far as the ledger
   allows, until the link has signed the visitor in.
-- Every flow composes the login step and every other step for every visit. `createLoginStep()` reads
+- A flow that needs an account composes the login step on every visit, as it does every other step. `createLoginStep()` reads
   the server auth state: a visit that starts signed in skips the step, and its controller brings it
   back if identity is lost during the visit, in this tab or another, then skips it again once the
   visitor signs in so the flow resumes where it was. A visit that starts signed out keeps it as an
@@ -272,5 +272,5 @@ parallel API for that component.
 - Inventory repeated step inputs, ambient context fields, cross-step setters, named navigation, and
   payment registrations. Keep each only when its owner and current consumer require that exact
   boundary.
-- Contract tests protect relative navigation, requested-step reachability, scoped activation,
-  controller behavior, and preservation of step-local state without pinning route names inside steps.
+- A change must preserve relative navigation, requested-step reachability, scoped activation,
+  controller behavior, and step-local state, without pinning route names inside steps.

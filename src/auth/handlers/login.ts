@@ -5,10 +5,8 @@ import { db } from "@app/db";
 import {
   checkQuota,
   consumeQuota,
-  pipeline,
   pipelineStage,
   recaptcha,
-  type PipelineOptions,
 } from "@kenstack/api";
 
 import type { LoginActionResult } from "@kenstack/auth/api";
@@ -23,12 +21,9 @@ import { audit } from "@kenstack/logger";
 
 export const passwordFailureLimit = [3, "15 minutes"] as const;
 
-export const loginPipeline =
-  ({ loginDestination }: { loginDestination?: LoginDestination } = {}) =>
-  (options: PipelineOptions) =>
-    pipeline(options, login(loginDestination));
-
-const login = (loginDestination?: LoginDestination) =>
+export const loginPipeline = ({
+  loginDestination,
+}: { loginDestination?: LoginDestination } = {}) =>
   pipelineStage(
     { schema: loginSchema },
     async ({

@@ -1,11 +1,12 @@
 import "server-only";
 
-import { and, count, eq, gte, lte, sql } from "drizzle-orm";
+import { and, eq, gte, lte, or, sql } from "drizzle-orm";
+import { QueryBuilder } from "drizzle-orm/pg-core";
 import { waitUntil } from "@vercel/functions";
 
 import { db } from "@app/db";
 import { quotaUses } from "@kenstack/db/tables/quotas";
-import type { Database, DbTransaction } from "@kenstack/db/types";
+import type { DbTransaction } from "@kenstack/db/types";
 import errorLog from "@kenstack/lib/errorLog";
 import { type DurationString, parseDuration } from "@kenstack/lib/duration";
 
@@ -85,42 +86,82 @@ function resolveQuota(scope: string, options: QuotaOptions): ResolvedQuota {
   return { email, ip, limits, scope: normalizedScope };
 }
 
-async function checkResolvedQuota(
-  db: Pick<Database, "select">,
-  { email, ip, limits, scope }: ResolvedQuota,
-): Promise<QuotaExceeded | null> {
-  const now = Date.now();
-
-  for (const subject of quotaSubjects) {
+// The given subjects, each with its limits and the start of its windows.
+function listSubjects({ email, ip, limits }: ResolvedQuota, now: number) {
+  return quotaSubjects.flatMap((subject) => {
     const value = subject === "email" ? email : ip;
-    if (!value) {
-      continue;
-    }
-
+    if (!value) return [];
     const [max, within] = limits[subject];
     const [siteMax, siteWithin] = siteLimits[subject];
-    const [{ site, scoped }] = await db
-      .select({
-        site: count(),
-        scoped: count(
-          sql`case when ${and(
-            eq(quotaUses.scope, scope),
-            gte(quotaUses.createdAt, new Date(now - parseDuration(within))),
-          )} then 1 end`,
-        ),
-      })
-      .from(quotaUses)
-      .where(
-        and(
-          eq(quotaUses[subject], value),
-          gte(quotaUses.createdAt, new Date(now - parseDuration(siteWithin))),
-        ),
-      );
+    return [
+      {
+        subject,
+        value,
+        max,
+        siteMax,
+        since: new Date(now - parseDuration(within)),
+        siteSince: new Date(now - parseDuration(siteWithin)),
+      },
+    ];
+  });
+}
 
+// One row counting each given subject's uses, site-wide as `${subject}Site` and within the scope as
+// `${subject}Scoped`.
+function countUses(quota: ResolvedQuota, now: number) {
+  const subjects = listSubjects(quota, now);
+  return new QueryBuilder()
+    .select(
+      Object.fromEntries(
+        subjects.flatMap(({ subject, value, since, siteSince }) => {
+          const site = and(
+            eq(quotaUses[subject], value),
+            gte(quotaUses.createdAt, siteSince),
+          );
+          return [
+            [
+              `${subject}Site`,
+              sql<number>`(count(*) filter (where ${site}))::int`.as(
+                `${subject}Site`,
+              ),
+            ],
+            [
+              `${subject}Scoped`,
+              sql<number>`(count(*) filter (where ${and(
+                site,
+                eq(quotaUses.scope, quota.scope),
+                gte(quotaUses.createdAt, since),
+              )}))::int`.as(`${subject}Scoped`),
+            ],
+          ];
+        }),
+      ),
+    )
+    .from(quotaUses)
+    .where(
+      or(
+        ...subjects.map(({ subject, value, siteSince }) =>
+          and(
+            eq(quotaUses[subject], value),
+            gte(quotaUses.createdAt, siteSince),
+          ),
+        ),
+      ),
+    );
+}
+
+// The first given subject whose counted uses reached a limit, or null.
+async function findExceeded(
+  counts: Record<string, number>,
+  quota: ResolvedQuota,
+): Promise<QuotaExceeded | null> {
+  for (const { subject, max, siteMax } of listSubjects(quota, Date.now())) {
+    const site = counts[`${subject}Site`];
+    const scoped = counts[`${subject}Scoped`];
     if (site >= siteMax || scoped >= max) {
       await errorLog({
         name: "quota-exceeded",
-        context: { scope, subject, site, scoped },
+        context: { scope: quota.scope, subject, site, scoped },
       });
       return { message: exceededMessage, subject };
     }
@@ -144,7 +185,11 @@ export async function checkQuota(
   scope: string,
   options: QuotaOptions = {},
 ): Promise<QuotaExceeded | null> {
-  return checkResolvedQuota(db, resolveQuota(scope, options));
+  const quota = resolveQuota(scope, options);
+  const [counts] = await db.execute<Record<string, number>>(
+    countUses(quota, Date.now()),
+  );
+  return findExceeded(counts, quota);
 }
 
 // Counts one use without checking (e.g. after a failed login).
@@ -170,29 +215,41 @@ export async function claimQuota(
 ) {
   const quota = resolveQuota(scope, options);
   const claim = async (tx: DbTransaction) => {
-    // Site-wide limits span scopes, so claims serialize by subject and value.
-    for (const lock of quotaSubjects
-      .flatMap((subject) => {
-        const value = quota[subject];
-        return value ? [`quota:${subject}:${value}`] : [];
-      })
-      .sort()) {
-      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${lock}))`);
-    }
-
-    const exceeded = await checkResolvedQuota(tx, quota);
-    if (exceeded) {
-      return exceeded;
-    }
-
-    const now = new Date();
-    await tx.insert(quotaUses).values({
-      scope: quota.scope,
-      email: quota.email,
-      ip: quota.ip,
-      createdAt: now,
-    });
-    scheduleCleanup(now);
+    const now = Date.now();
+    const subjects = listSubjects(quota, now);
+    // Site-wide limits span scopes, so claims serialize by subject and value. The keys are sorted,
+    // and ordering by their ordinality makes the lock order the array order, so claims never
+    // deadlock. The locks take their own statement: a statement reads from a snapshot taken as it
+    // starts, so counting in the statement that waited for a lock would miss a claim committed while
+    // it waited.
+    const keys = subjects
+      .map(({ subject, value }) => `quota:${subject}:${value}`)
+      .sort();
+    await tx.execute(sql`
+      select pg_advisory_xact_lock(hashtext(key))
+      from unnest(${sql.param(keys)}::text[]) with ordinality as locks(key, ordinal)
+      order by ordinal
+    `);
+    // The use is recorded only while every count is under its limit.
+    const [counts] = await tx.execute<Record<string, number>>(sql`
+      with counts as ${countUses(quota, now)},
+      claimed as (
+        insert into ${quotaUses} (scope, email, ip, created_at)
+        select ${quota.scope}, ${quota.email}, ${quota.ip}, ${new Date(now).toISOString()}::timestamptz
+        from counts
+        where ${sql.join(
+          subjects.map(
+            ({ subject, max, siteMax }) =>
+              sql`${sql.identifier(`${subject}Site`)} < ${siteMax} and ${sql.identifier(`${subject}Scoped`)} < ${max}`,
+          ),
+          sql` and `,
+        )}
+        returning 1
+      )
+      select counts.*, (select count(*) from claimed)::int as claimed from counts
+    `);
+    if (!counts.claimed) return findExceeded(counts, quota);
+    scheduleCleanup(new Date(now));
     return null;
   };
   return transaction ? claim(transaction) : db.transaction(claim);

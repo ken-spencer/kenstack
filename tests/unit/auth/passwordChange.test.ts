@@ -1,27 +1,17 @@
 import assert from "node:assert/strict";
-import { test } from "vitest";
+import { afterEach, beforeEach, test, vi } from "vitest";
 
-import {
-  getAuthenticationRemainingMs,
-  hasRecentAuthentication,
-} from "@kenstack/auth/reauthentication";
+import { hasRecentAuthentication } from "@kenstack/auth/reauthentication";
 
 const now = new Date("2026-07-19T20:00:00.000Z");
-const fiveMinutes = 5 * 60 * 1000;
 
-test("uses the remaining session age, never a fresh five-minute allowance", () => {
-  assert.equal(
-    getAuthenticationRemainingMs(session({ age: 280_000 }), now),
-    20_000,
-  );
-  assert.equal(
-    getAuthenticationRemainingMs(session({ age: fiveMinutes }), now),
-    0,
-  );
-  assert.equal(
-    getAuthenticationRemainingMs(session({ age: 360_000 }), now),
-    -60_000,
-  );
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(now);
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 function session({
@@ -33,48 +23,59 @@ function session({
 } = {}) {
   return {
     createdAt: new Date(now.getTime() - age),
+    authorizedUntil: new Date(now.getTime() - age + 600_000),
+    expiresAt: new Date(now.getTime() + 86400_000),
     impersonatedBy,
   };
 }
 
 test("accepts recent non-impersonated authentication", () => {
-  assert.equal(
-    hasRecentAuthentication(session({ age: fiveMinutes - 1 }), now),
-    true,
-  );
+  assert.equal(hasRecentAuthentication(session({ age: 600_000 - 1 })), true);
 });
 
-test("requires reauthentication at the five-minute boundary", () => {
-  assert.equal(
-    hasRecentAuthentication(session({ age: fiveMinutes }), now),
-    false,
-  );
+test("requires reauthentication at the ten-minute boundary", () => {
+  assert.equal(hasRecentAuthentication(session({ age: 600_000 })), false);
 });
 
 test("does not accept impersonation as recent authentication", () => {
-  assert.equal(
-    hasRecentAuthentication(session({ impersonatedBy: 42 }), now),
-    false,
-  );
+  assert.equal(hasRecentAuthentication(session({ impersonatedBy: 42 })), false);
 });
 
 test("requires authentication when there is no current session", () => {
-  assert.equal(hasRecentAuthentication(undefined, now), false);
+  assert.equal(hasRecentAuthentication(undefined), false);
 });
 
 test("allows one minute for an in-flight write after the browser deadline", () => {
   assert.equal(
-    hasRecentAuthentication(session({ age: fiveMinutes }), now),
-    false,
-  );
-  assert.equal(
-    hasRecentAuthentication(session({ age: fiveMinutes }), now, 60_000),
+    hasRecentAuthentication(session({ age: 600_000 }), 60_000),
     true,
   );
   assert.equal(
+    hasRecentAuthentication(session({ age: 600_000 + 60_000 }), 60_000),
+    false,
+  );
+});
+
+test("an extension grants time without changing authentication time", () => {
+  const original = session({ age: 900_000 });
+  assert.equal(hasRecentAuthentication(original), false);
+  assert.equal(
+    hasRecentAuthentication({
+      ...original,
+      authorizedUntil: new Date(now.getTime() + 10_000),
+    }),
+    true,
+  );
+  assert.equal(
+    hasRecentAuthentication({ ...original, authorizedUntil: now }),
+    false,
+  );
+});
+
+test("submission grace cannot outlive the login session", () => {
+  assert.equal(
     hasRecentAuthentication(
-      session({ age: fiveMinutes + 60_000 }),
-      now,
+      { ...session(), authorizedUntil: now, expiresAt: now },
       60_000,
     ),
     false,

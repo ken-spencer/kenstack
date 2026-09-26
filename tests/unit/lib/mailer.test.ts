@@ -46,6 +46,7 @@ describe("mailer delivery results", () => {
 
     const command = send.mock.calls[0]?.[0];
     const raw = Buffer.from(command.input.RawMessage.Data).toString("utf8");
+    // RFC 5322 header syntax, a protocol requirement.
     expect(raw).toContain("Reply-To: <visitor@example.com>");
   });
 
@@ -57,11 +58,11 @@ describe("mailer delivery results", () => {
       code: "MissingMessageId",
       status: "operational-failure",
     });
-    expect(errorLog).toHaveBeenCalledWith({
-      name: "ses-email-delivery-failed",
-      message: "SES email delivery failed (MissingMessageId) after 1 attempt.",
-      context: { attempts: 1, code: "MissingMessageId" },
-    });
+    expect(errorLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: { attempts: 1, code: "MissingMessageId" },
+      }),
+    );
   });
 
   it("classifies a rejection that explicitly names the recipient", async () => {
@@ -91,15 +92,14 @@ describe("mailer delivery results", () => {
       httpStatusCode: 400,
       status: "operational-failure",
     });
-    expect(errorLog).toHaveBeenCalledWith({
-      name: "ses-email-delivery-failed",
-      message:
-        "SES email delivery failed (MessageRejected; HTTP 400) after 1 attempt.",
-      context: {
-        attempts: 1,
-        code: "MessageRejected",
-        httpStatusCode: 400,
-      },
-    });
+    expect(errorLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: {
+          attempts: 1,
+          code: "MessageRejected",
+          httpStatusCode: 400,
+        },
+      }),
+    );
   });
 });

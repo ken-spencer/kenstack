@@ -52,8 +52,8 @@ imports, caching, Suspense, and public runtime boundaries.
   explicitly accept the measured trade-off. When warranted, split server module definitions from
   client registries or pass client-enabled modules only at the admin entry point. Moving a loader to
   server-only or server-safe code reintroduces the bundling problem.
-- Before changing any file with `"use client"` or any dynamic import of a Client Component, establish
-  why the boundary is safe. When the goal is bundle reduction, verify with a production build before and
+- Before adding, removing, or moving a `"use client"` directive or a dynamic import of a Client
+  Component, establish why the boundary is safe. When the goal is bundle reduction, verify with a production build before and
   after, once the user has authorized production builds.
 
 ## Server-Only Entry Points

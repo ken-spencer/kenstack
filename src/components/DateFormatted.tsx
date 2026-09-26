@@ -1,26 +1,24 @@
-import { useMemo } from "react";
-import { format, isSameYear, parseISO } from "date-fns";
+import deps from "@app/deps";
+import { formatDateKey, formatTime } from "@kenstack/lib/dateFormat";
 
 export default function DateFormatted({
   date,
   ...props
 }: React.ComponentProps<"time"> & { date: string }) {
-  const formatted = useMemo(() => {
-    const dt = parseISO(date);
-
-    const dateStr = isSameYear(dt, new Date())
-      ? format(dt, "MMM d")
-      : format(dt, "MMM d, yyyy");
-
-    const timeStr = format(dt, "h:mm a").toLowerCase();
-
-    return dateStr + " @ " + timeStr;
-  }, [date]);
-
   return (
-    // `dateTime` stays stable for SEO/semantics
-    <time {...props} dateTime={String(date)} suppressHydrationWarning={true}>
-      {formatted}
+    <time {...props} dateTime={date}>
+      {new Intl.DateTimeFormat("en-US", {
+        timeZone: deps.defaultTimeZone,
+        month: "short",
+        day: "numeric",
+        year:
+          formatDateKey(date, deps.defaultTimeZone).slice(0, 4) ===
+          formatDateKey(new Date(), deps.defaultTimeZone).slice(0, 4)
+            ? undefined
+            : "numeric",
+      }).format(new Date(date))}
+      {" @ "}
+      {formatTime(date, deps.defaultTimeZone).toLowerCase()}
     </time>
   );
 }

@@ -1,28 +1,19 @@
-const passwordChangeAuthenticationWindowMs = 5 * 60 * 1000;
+export const authenticationWindowMs = 10 * 60 * 1000;
 
 type Session = {
-  createdAt: Date;
+  authorizedUntil: Date;
+  expiresAt: Date;
   impersonatedBy: number | null;
 };
 
 export function hasRecentAuthentication(
   session: Session | undefined,
-  now = new Date(),
   graceMs = 0,
 ) {
-  return Boolean(
-    session &&
-    session.impersonatedBy === null &&
-    getAuthenticationRemainingMs(session, now) + graceMs > 0,
-  );
-}
-
-export function getAuthenticationRemainingMs(
-  session: Session,
-  now = new Date(),
-) {
   return (
-    passwordChangeAuthenticationWindowMs -
-    (now.getTime() - session.createdAt.getTime())
+    session !== undefined &&
+    session.impersonatedBy === null &&
+    session.expiresAt.getTime() > Date.now() &&
+    session.authorizedUntil.getTime() - Date.now() + graceMs > 0
   );
 }

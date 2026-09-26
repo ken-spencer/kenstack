@@ -3,7 +3,9 @@
 import { useMemo, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { format } from "date-fns";
-import { parseDate } from "chrono-node";
+import { parse } from "chrono-node";
+import { TZDate } from "react-day-picker";
+import deps from "@app/deps";
 import { twMerge } from "tailwind-merge";
 
 import Field, { FormControl, type FieldProps } from "@kenstack/forms/Field";
@@ -19,7 +21,33 @@ type InputProps = FieldProps &
 
 // "at" survives a round trip through the parser; "@" made it drop the time.
 function formatDate(date: string | Date) {
-  return format(date, "MMMM d, yyyy 'at' h:mm a");
+  return format(
+    new TZDate(new Date(date), deps.defaultTimeZone),
+    "MMMM d, yyyy 'at' h:mm a",
+  );
+}
+
+function parseFormDate(value: string) {
+  const now = new TZDate(Date.now(), deps.defaultTimeZone);
+  const result = parse(value, {
+    instant: new Date(now),
+    timezone: -now.getTimezoneOffset(),
+  })[0];
+  if (!result) return null;
+  if (result.start.isCertain("timezoneOffset")) return result.date();
+  const date = new Date(
+    result.date().getTime() - now.getTimezoneOffset() * 60_000,
+  );
+  return new TZDate(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate(),
+    date.getUTCHours(),
+    date.getUTCMinutes(),
+    date.getUTCSeconds(),
+    date.getUTCMilliseconds(),
+    deps.defaultTimeZone,
+  );
 }
 
 function formatFormValue(value: unknown) {
@@ -53,7 +81,7 @@ export default function DateTimeField({
       return;
     }
 
-    const result = newDate instanceof Date ? newDate : parseDate(newDate);
+    const result = newDate instanceof Date ? newDate : parseFormDate(newDate);
 
     if (!result) {
       setFormValue(name, "", { shouldDirty: true, shouldTouch: true });
@@ -61,7 +89,7 @@ export default function DateTimeField({
       return;
     }
 
-    setFormValue(name, result.toISOString(), {
+    setFormValue(name, new Date(result).toISOString(), {
       shouldDirty: true,
       shouldTouch: true,
     });
@@ -89,7 +117,6 @@ export default function DateTimeField({
               {...props}
               disabled={disabled}
               className={twMerge("pl-9", inputClass)}
-              suppressHydrationWarning
               value={value}
               onChange={(event) => {
                 setValue(event.target.value);
@@ -126,7 +153,7 @@ function DatePicker({
 }) {
   const [open, setOpen] = useState(false);
   const date = useMemo(
-    () => (value ? (parseDate(value) ?? undefined) : undefined),
+    () => (value ? (parseFormDate(value) ?? undefined) : undefined),
     [value],
   );
 
@@ -136,6 +163,7 @@ function DatePicker({
       <PopoverContent className="w-auto p-0">
         <Calendar
           mode="single"
+          timeZone={deps.defaultTimeZone}
           selected={date}
           onSelect={(selectedDate) => {
             handleDate(selectedDate ?? "");
