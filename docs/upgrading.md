@@ -13,8 +13,9 @@ host site to a newer Kenstack.
   describing the old API, the new API, and the migration steps. Read only the `Unreleased` section
   first, and extend an existing note when this cycle already changed the same API. Released sections are
   history; do not read them to write a note.
-- Notes describe the current implemented API; they do not define it. During review, verify each note in
-  the diff against the implementation and current public contract. If a note has drifted, correct the
+- Notes describe the current implemented API; they do not define it. During review, report a changed
+  committed public API that has no note, and verify each note in the diff against the implementation
+  and current public contract. If a note has drifted, correct the
   note; change the API only when the implementation independently requires it, then update the note.
 
 ## Releases
