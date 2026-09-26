@@ -103,3 +103,12 @@ Read only the references relevant to the current task:
   that affect the behavior.
 - Report failures and material blockers; passing checks get at most one line, "Checks pass."
 - Run production builds only when explicitly asked.
+
+## Git
+
+- Stage only when the user asks, except deletions and moves, which need no review: delete a tracked file
+  with `git rm` and move one with `git mv`, run from the repository that owns it (for a submodule, the
+  nested repository). Update references in both the staged and working-tree versions so moved files
+  stay connected to their consumers. Keep unrelated staged and unstaged changes separate.
+- Commit only when the user asks; dirty files are the user's review list. Report what was staged and
+  what was held, with no commit-time reminders.

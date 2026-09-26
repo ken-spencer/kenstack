@@ -61,6 +61,9 @@ pipeline schema work, or batch scripts.
   owning row or derives it in a query. Keep a copy only as a deliberate point-in-time snapshot, such
   as an order line's price at purchase, and say so in a comment; two live columns holding the same
   fact drift apart and need code to keep them in step.
+- Logs of every kind, including audit rows, error reports and request logs, are history. No code path
+  reads them to decide behavior; a fact that decides behavior lives in its owner's rows or columns.
+  Only staff history views and reports read logs.
 - Define field maps with isomorphic `defineFields({ fields: { ... } })` from `@kenstack/admin/fields`.
   The publication and SEO fields come from the table's `publish` and `seo` flags through
   `defineModule(...)`, never from the field map; see `docs/admin.md#generated-fields`.
