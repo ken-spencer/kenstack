@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { cacheLife, cacheTag } from "next/cache";
+import { cacheLife, cacheTag, io } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { and, isNull, eq, gt, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
@@ -136,7 +136,11 @@ export const getCurrentUser = async () =>
 export const getFreshCurrentUser = async () =>
   loadFreshUserBySessionToken(await getSessionToken());
 
-function toSession(user: Awaited<ReturnType<typeof loadUserByTokenHash>>) {
+async function toSession(
+  user: Awaited<ReturnType<typeof loadUserByTokenHash>>,
+) {
+  // The expiry check reads the clock, so it must not run while prerendering.
+  await io();
   if (!user || user.expiresAt <= new Date()) {
     return;
   }

@@ -123,6 +123,7 @@ type AdminConfigBase<
   >[];
   fields: TFields;
   oneToOne?: ServerOneToOneConfig;
+  // The record's public page, with `${field}` placeholders; without it the editor shows no preview.
   preview?: PreviewPath;
   // Extra read-only columns loaded with the edit record, for custom edit UIs
   // that display data no editable field owns. The list counterpart is
@@ -225,6 +226,17 @@ type ResolvedModule<
   parent: ModuleParentOptions | undefined;
 };
 
+// A sidebar link to an admin page that no module owns.
+export type AdminNavigationLink = {
+  href: `/${string}`;
+  title: string;
+  icon?: ComponentType<SVGProps<SVGSVGElement>>;
+};
+
+// defineAdmin keeps the sidebar's headings, in registry order, beside the modules it returns;
+// each item is a top-level module's name or a link.
+export const adminNavigation = Symbol("adminNavigation");
+
 export type DefinedAdmin = Record<
   string,
   {
@@ -238,7 +250,12 @@ export type DefinedAdmin = Record<
     parent?: ModuleParentOptions;
     navigationParent?: string;
   }
->;
+> & {
+  [adminNavigation]: {
+    heading: string;
+    items: (string | AdminNavigationLink)[];
+  }[];
+};
 
 export type DefinedAdminModule = DefinedAdmin[string] & {
   admin: AnyAdminConfig;
@@ -327,11 +344,7 @@ export function defineModule<
     admin?: AdminConfig<TTable, TFields>;
   },
 ) {
-  const basePath = options.basePath ?? `/${options.name}`;
-  const admin = resolveAdmin(
-    options.admin as AdminConfigRuntime | undefined,
-    basePath,
-  );
+  const admin = resolveAdmin(options.admin as AdminConfigRuntime | undefined);
   if (admin && "list" in admin && admin.list.reorder?.scope) {
     const scope = admin.list.reorder.scope;
     const scopeField = admin.fields[scope.fieldKey];
@@ -349,7 +362,7 @@ export function defineModule<
   const resolved = {
     name: options.name,
     title: options.title ?? startCase(options.name),
-    basePath,
+    basePath: options.basePath ?? `/${options.name}`,
     icon: options.icon,
     admin,
     settings: resolveSettings(options.settings),
@@ -391,10 +404,7 @@ function assertSelectKeys(
   }
 }
 
-function resolveAdmin(
-  admin: AdminConfigRuntime | undefined,
-  basePath: PreviewPath,
-) {
+function resolveAdmin(admin: AdminConfigRuntime | undefined) {
   if (!admin) {
     return undefined;
   }
@@ -448,16 +458,13 @@ function resolveAdmin(
       config.table,
       "admin.select",
     );
-    const preview =
-      config.preview ??
-      ("slug" in fields ? `${basePath}/${"${slug}"}` : undefined);
     return {
       table: config.table,
       publish,
       seo,
       revalidate: config.revalidate,
       translateError: config.translateError,
-      preview,
+      preview: config.preview,
       fields: flatFields,
       schema: createSchemaFromFields(flatFields, oneToOne),
       defaultValues: createDefaultValues(flatFields),

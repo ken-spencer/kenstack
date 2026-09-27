@@ -117,6 +117,29 @@ foreign keys, or generic CRUD support.
   continue to pair the isomorphic definition with `relationshipField(relationship)` from
   `@kenstack/fields/server`.
 
+## Caching Module Content
+
+Reading module content on the site:
+
+- A list: call `listQuery` in a cached function and pass `cacheTags`: the module's `admin.revalidate`
+  tags plus each joined dependency. See [Cached lists](module-anatomy.md#cached-lists).
+- A page: call `pageQuery` with the module's record tags, such as `["news", "news:" + slug]`. See
+  [Cached detail pages](module-anatomy.md#cached-detail-pages).
+- One record by id: tag it with `adminLoadCacheTag(module.name, id)` from `@kenstack/admin/cache`.
+  This shares the tag, not the admin query's payload or cache entry: select the public fields and keep
+  authentication outside the cache.
+
+Clearing it when the content changes:
+
+- The module's own admin saves and removals expire its record and list tags and its
+  `admin.revalidate` tags. A reorder expires only the list tag and the fixed-string `admin.revalidate`
+  tags. Declare any further dependency once in `admin.revalidate`.
+- Any other code that changes what a cached read or an admin list shows, such as another module, a
+  package or a site action, expires the tag itself after its commit:
+  `revalidateTag(tag, { expire: 0 })`, with `adminListCacheTag(name)` for an admin list. The email
+  change does this for users in `src/auth/email/change/api.tsx`.
+- An admin list takes no dependency option; the code that changes its data clears it.
+
 ## Record Saving
 
 - Use `saveModuleRecord({ module, fields, id, changes, values })` for authenticated site actions that
@@ -130,10 +153,8 @@ foreign keys, or generic CRUD support.
   Declare additional content dependencies once in `admin.revalidate`; public forms do not duplicate
   that tag list. Session snapshots also carry the users record tag, so module saves and removals need
   no site-level session-invalidation callback.
-- Public cached reads of an individual module record can use `adminLoadCacheTag(module.name, id)`
-  from `@kenstack/admin/cache` to share that invalidation. This shares a tag, not the admin query's
-  payload or cache entry: select the public form's fields and keep authentication outside the cache.
-  `loadRecord` itself does not cache reads.
+- `loadRecord` does not cache reads; to cache one, see
+  [Caching Module Content](#caching-module-content).
 - Use `saveAdminRecord({ module, id, changes, values })` for the standard admin module save path after
   the pipeline has enforced `access: "admin"`. It supplies admin-save authority to field handlers and
   never infers authority from the user's roles.

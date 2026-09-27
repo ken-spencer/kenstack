@@ -21,7 +21,11 @@ export * from "./types/list";
 export * from "./module";
 
 import { isSingleRelationshipField } from "@kenstack/fields/relationship";
-import type { DefinedAdmin } from "./module";
+import {
+  adminNavigation,
+  type AdminNavigationLink,
+  type DefinedAdmin,
+} from "./module";
 import type { AdminClientRegistry } from "./clientLoaders";
 import { resolveScopedReorders } from "./lib/scopedReorder";
 import { resolveSingleRelationship } from "./lib/singleRelationship";
@@ -35,26 +39,35 @@ type AdminChild =
       module: AdminModule;
       foreignKey: string;
     };
-type AdminEntry =
+type AdminParentEntry =
   | AdminModule
   | {
       module: AdminModule;
       children?: readonly AdminChild[];
     };
+// A sidebar heading of its own for its modules and links, in order; the others sit under
+// Administration.
+type AdminHeadingEntry = {
+  heading: string;
+  children: readonly (AdminParentEntry | AdminNavigationLink)[];
+};
+type AdminEntry = AdminParentEntry | AdminHeadingEntry;
 
 type EntryModule<TEntry> = TEntry extends AdminModule
   ? TEntry
-  : TEntry extends {
-        module: infer TModule extends AdminModule;
-        children?: readonly (infer TChild)[];
-      }
-    ? | TModule
-      | (TChild extends AdminModule
-          ? TChild
-          : TChild extends { module: infer TChildModule extends AdminModule }
-            ? TChildModule
-            : never)
-    : never;
+  : TEntry extends { heading: string; children: readonly (infer TGroupEntry)[] }
+    ? EntryModule<TGroupEntry>
+    : TEntry extends {
+          module: infer TModule extends AdminModule;
+          children?: readonly (infer TChild)[];
+        }
+      ? | TModule
+        | (TChild extends AdminModule
+            ? TChild
+            : TChild extends { module: infer TChildModule extends AdminModule }
+              ? TChildModule
+              : never)
+      : never;
 
 type DefinedAdminMap<TEntries extends readonly AdminEntry[]> = DefinedAdmin & {
   [TModule in EntryModule<TEntries[number]> as TModule["name"]]: TModule & {
@@ -66,7 +79,7 @@ export function defineAdmin<const TEntries extends readonly AdminEntry[]>(
   entries: TEntries,
   clients: AdminClientRegistry = {},
 ): DefinedAdminMap<TEntries> {
-  const modules = normalizeAdminEntries(entries);
+  const { modules, navigation } = normalizeAdminEntries(entries);
   const moduleNames = new Set<string>();
 
   for (const moduleConfig of modules) {
@@ -111,19 +124,22 @@ export function defineAdmin<const TEntries extends readonly AdminEntry[]>(
     }
   }
 
-  return Object.fromEntries(
-    resolvedModules.map((moduleConfig) => {
-      validateOneToOne(moduleConfig, resolvedModules);
+  return {
+    ...Object.fromEntries(
+      resolvedModules.map((moduleConfig) => {
+        validateOneToOne(moduleConfig, resolvedModules);
 
-      return [
-        moduleConfig.name,
-        {
-          ...moduleConfig,
-          client: clients,
-        },
-      ];
-    }),
-  ) as DefinedAdminMap<TEntries>;
+        return [
+          moduleConfig.name,
+          {
+            ...moduleConfig,
+            client: clients,
+          },
+        ];
+      }),
+    ),
+    [adminNavigation]: navigation,
+  } as DefinedAdminMap<TEntries>;
 }
 
 // Validates ownership and foreign-key invariants before one-to-one admin configuration is exposed.
@@ -223,7 +239,43 @@ function findIdentityForeignKey(
   });
 }
 
+// Flattens the registry into its modules and records the sidebar's groups in registry order.
+// Entries without a heading share one Administration group, placed where the first one appears.
 function normalizeAdminEntries(entries: readonly AdminEntry[]) {
+  const navigation: DefinedAdmin[typeof adminNavigation] = [];
+  let administration: (typeof navigation)[number] | undefined;
+
+  const modules = entries.flatMap((entry) => {
+    let group: (typeof navigation)[number];
+    if ("heading" in entry) {
+      group = { heading: entry.heading, items: [] };
+      navigation.push(group);
+    } else if (administration) {
+      group = administration;
+    } else {
+      group = administration = { heading: "Administration", items: [] };
+      navigation.push(group);
+    }
+
+    return ("heading" in entry ? entry.children : [entry]).flatMap((child) => {
+      if ("href" in child) {
+        group.items.push(child);
+        return [];
+      }
+
+      const [module, ...children] = normalizeParentEntries([child]);
+      // A module scoped to a parent record is reached from that record, never the sidebar.
+      if (!module.parent) {
+        group.items.push(module.name);
+      }
+      return [module, ...children];
+    });
+  });
+
+  return { modules, navigation };
+}
+
+function normalizeParentEntries(entries: readonly AdminParentEntry[]) {
   return entries.flatMap((entry) => {
     if (isAdminModule(entry)) {
       return [entry];
@@ -251,6 +303,8 @@ function normalizeAdminEntries(entries: readonly AdminEntry[]) {
   });
 }
 
-function isAdminModule(entry: AdminEntry | AdminChild): entry is AdminModule {
+function isAdminModule(
+  entry: AdminParentEntry | AdminChild,
+): entry is AdminModule {
   return "name" in entry;
 }

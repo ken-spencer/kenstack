@@ -4,6 +4,13 @@ Migration notes for committed Kenstack API changes, newest release first. The au
 contract lives in `docs/upgrading.md`.
 
 ## Unreleased
+### Admin previews are declared
+
+A slug field no longer gives a module a preview at `<basePath>/<slug>`. The editor's preview button,
+the list's link to the public site and the draft-mode exit redirect now appear only when the module
+declares `admin.preview`. A module that relied on the default must declare its page, such as
+`preview: "/events/${slug}"`, and set `basePath` when that page lives elsewhere.
+
 ### Payments moved to its own package
 
 `@kenstack/payments/*` no longer exists. The payments code, its tests and its checkout stylesheet

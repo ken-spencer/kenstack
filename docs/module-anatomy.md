@@ -217,7 +217,11 @@ other.
 Add only the registrations the module's capabilities require:
 
 - Export its tables from the host schema registry and add its default `index.ts` export to the module
-  registry. Register a child module beneath its parent, preserving that product boundary.
+  registry. Register a child module beneath its parent, preserving that product boundary. To give
+  top-level modules their own sidebar heading, register them as `{ heading, children }`; its children
+  may also include links to admin pages no module owns, as `{ href, title, icon }`, and show in the
+  order listed. Headings show in registry order, and entries without one share an Administration
+  group placed where the first appears.
 - When `client.ts` exists, add it to the host client registry through a lazy `() => import(...)`
   loader, keeping that registry's required Client Component boundary. Register custom editors by
   property through `defineFormFields(...)` in their consuming form, extracting a shared
@@ -291,7 +295,9 @@ The rules the shape encodes:
   submitted choice against authoritative uncached state with a `listQuery(...)` call that passes no
   `cacheTags`.
 - The cache wrapper tags the cache with the module's `revalidate` tags plus every joined dependency
-  whose changes can alter the result; a list passes them as `cacheTags`. A dependency with no reliable
+  whose changes can alter the result; a list passes them as `cacheTags`. Code outside the module that
+  changes a dependency clears its tag itself; see
+  [Caching Module Content](admin.md#caching-module-content). A dependency with no reliable
   invalidation tag stays uncached or is split from the cached content. Filtered lists may add
   parameterized tags, for example `cacheTags: ["news", "news:tag:" + tag]`, but these enable narrow
   invalidation only for mutation paths

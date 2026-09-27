@@ -13,6 +13,7 @@ import { AppSidebar } from "./app-sidebar";
 import AccountMenu from "@kenstack/components/AccountMenu";
 import NavLink from "./NavLink";
 import { modules } from "@app/modules";
+import { adminNavigation } from "@kenstack/admin/module";
 
 import Content from "./Content";
 
@@ -84,33 +85,49 @@ function AdminSidebarContent({
     ]);
   }
 
-  const adminModules = moduleLinks.filter(({ name }) => {
-    const moduleConfig = modules[name];
-
-    return !moduleConfig.parent && !moduleConfig.navigationParent;
-  });
+  const moduleLinksByName = new Map(
+    moduleLinks.map((link) => [link.name, link]),
+  );
 
   const sidebarNav = (
     <>
       {sidebarBefore}
-      <SidebarGroup>
-        <SidebarGroupLabel>Administration</SidebarGroupLabel>
-        <SidebarGroupContent>
-          <SidebarMenu>
-            {adminModules.map(({ href, icon, name, title }) => {
-              return (
+      {modules[adminNavigation].map(({ heading, items }, index) => {
+        const links = items.flatMap((item) => {
+          if (typeof item !== "string") {
+            return [
+              <NavLink
+                key={item.href}
+                href={item.href}
+                icon={item.icon ? <item.icon /> : <span className="w-3" />}
+                title={item.title}
+              />,
+            ];
+          }
+
+          const link = moduleLinksByName.get(item);
+          return link
+            ? [
                 <NavLink
-                  key={href}
-                  href={href}
-                  icon={icon}
-                  title={title}
-                  navChildren={childLinksByParent.get(name)}
-                />
-              );
-            })}
-          </SidebarMenu>
-        </SidebarGroupContent>
-      </SidebarGroup>
+                  key={link.href}
+                  href={link.href}
+                  icon={link.icon}
+                  title={link.title}
+                  navChildren={childLinksByParent.get(item)}
+                />,
+              ]
+            : [];
+        });
+
+        return links.length > 0 ? (
+          <SidebarGroup key={index}>
+            <SidebarGroupLabel>{heading}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>{links}</SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ) : null;
+      })}
       {sidebarAfter}
     </>
   );
