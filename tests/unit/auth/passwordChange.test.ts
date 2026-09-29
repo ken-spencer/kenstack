@@ -45,17 +45,6 @@ test("requires authentication when there is no current session", () => {
   assert.equal(hasRecentAuthentication(undefined), false);
 });
 
-test("allows one minute for an in-flight write after the browser deadline", () => {
-  assert.equal(
-    hasRecentAuthentication(session({ age: 600_000 }), 60_000),
-    true,
-  );
-  assert.equal(
-    hasRecentAuthentication(session({ age: 600_000 + 60_000 }), 60_000),
-    false,
-  );
-});
-
 test("an extension grants time without changing authentication time", () => {
   const original = session({ age: 900_000 });
   assert.equal(hasRecentAuthentication(original), false);
@@ -68,16 +57,6 @@ test("an extension grants time without changing authentication time", () => {
   );
   assert.equal(
     hasRecentAuthentication({ ...original, authorizedUntil: now }),
-    false,
-  );
-});
-
-test("submission grace cannot outlive the login session", () => {
-  assert.equal(
-    hasRecentAuthentication(
-      { ...session(), authorizedUntil: now, expiresAt: now },
-      60_000,
-    ),
     false,
   );
 });

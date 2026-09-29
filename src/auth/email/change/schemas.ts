@@ -6,10 +6,15 @@ import {
   emailSchema,
   tokenSchema,
 } from "@kenstack/auth/email/verification/schemas";
+import { protectedAccountSchema } from "@kenstack/auth/reauthentication";
 
-export const requestEmailChangeSchema = z.object({
-  challengeKey: challengeKeySchema.optional(),
+export const emailChangeEmailSchema = z.object({
   email: emailSchema,
+});
+
+export const requestEmailChangeSchema = emailChangeEmailSchema.extend({
+  ...protectedAccountSchema.shape,
+  challengeKey: challengeKeySchema.optional(),
 });
 
 export const emailChangeCodeSchema = z.object({
@@ -17,10 +22,11 @@ export const emailChangeCodeSchema = z.object({
 });
 
 export const verifyEmailChangeCodeSchema = emailChangeCodeSchema.extend({
+  ...protectedAccountSchema.shape,
   challengeKey: challengeKeySchema,
 });
 
-export const verifyEmailChangeLinkSchema = z.object({
+export const verifyEmailChangeLinkSchema = protectedAccountSchema.extend({
   token: tokenSchema,
 });
 

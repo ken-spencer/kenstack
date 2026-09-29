@@ -38,6 +38,7 @@ import {
   resolveReturnTo,
   type Continuation,
   useCompleteLogin,
+  useReauthenticationAccount,
 } from "./continuation";
 
 function LoginForm(
@@ -59,7 +60,9 @@ function LoginForm(
       <CookieTest />
       <LoginFormContent
         {...props}
-        key={[props.challengeKey, props.method, emailParam].join(":")}
+        // The remembered method is the visitor's own choice, so a server render that reports it back,
+        // such as a confirmation page refreshing, never resets a form in progress.
+        key={[props.challengeKey, emailParam].join(":")}
         email={props.email ?? emailParam?.trim().toLowerCase() ?? ""}
         loginMessage={loginMessage}
         notice={notice}
@@ -87,10 +90,10 @@ function LoginFormContent({
   notice: string | null;
   token: string | null;
 } & Continuation) {
-  // A null key shows the code page while the send request is still pending.
-  const [challengeKey, setChallengeKey] = useState<string | null | undefined>(
-    initialChallengeKey,
-  );
+  const [challengeKey, setChallengeKey] = useState(initialChallengeKey);
+  const [isResending, setIsResending] = useState(false);
+  // A form that stays mounted through a failed send shows its error when it mounts again.
+  const [failedSends, setFailedSends] = useState(0);
   const requestIdRef = useRef(0);
   const { executeRecaptcha } = useGoogleReCaptcha();
   const [loginMethod, setLoginMethod] = useState<LoginMethod>(
@@ -119,10 +122,10 @@ function LoginFormContent({
   const continuation: Continuation =
     mode === "embedded" ? { anchor, mode, onComplete } : { mode };
   const completeLogin = useCompleteLogin(continuation);
+  const account = useReauthenticationAccount(continuation);
 
-  // The code page shows while the email is sent; a code cannot arrive before
-  // the send completes, so nothing is lost. A failed send returns to where the
-  // request began with the error. A result that a newer request has
+  // The form that asked stays until the send completes, its button pending, and the code page then
+  // shows in one change. A failed send shows its error where the request began. A result that a newer request has
   // superseded is dropped, so a stale send cannot pull the user back to the
   // code page.
   async function sendEmailCode(
@@ -132,11 +135,12 @@ function LoginFormContent({
     const requestId = ++requestIdRef.current;
     const failureMessage = "We couldn’t send the email. Try again in a moment.";
     setEmailAddress(emailAddress);
-    setChallengeKey(null);
+    setIsResending(resendChallengeKey !== undefined);
     setStatusMessage(undefined);
 
     function showSendFailure(message: string) {
-      setChallengeKey(resendChallengeKey);
+      setIsResending(false);
+      setFailedSends((count) => count + 1);
       setStatusMessage({ message, status: "error" });
     }
 
@@ -152,11 +156,13 @@ function LoginFormContent({
           ? await executeRecaptcha("login")
           : null,
         returnTo: resolveReturnTo(continuation),
+        userId: account.userId,
       });
 
       if (requestIdRef.current !== requestId) {
         return;
       }
+      account.reloadIfChanged(result);
       if (result.status === "error") {
         // A request the server no longer knows cannot continue from the code
         // page; the email page is the only place a new one starts.
@@ -172,6 +178,7 @@ function LoginFormContent({
         return;
       }
 
+      setIsResending(false);
       setChallengeKey(result.challengeKey);
       if (mode !== "reauthentication") {
         setUserInfo(result.authState);
@@ -207,6 +214,8 @@ function LoginFormContent({
   }
 
   function showLoginForm(method: LoginMethod, form: HTMLFormElement | null) {
+    // A send still in flight belongs to the form being left.
+    requestIdRef.current += 1;
     const emailInput = form?.elements.namedItem("email");
     const nextEmailAddress =
       emailInput instanceof HTMLInputElement ? emailInput.value : emailAddress;
@@ -231,12 +240,15 @@ function LoginFormContent({
           challengeKey={challengeKey}
           continuation={continuation}
           email={emailAddress}
+          isResending={isResending}
+          key={failedSends}
           statusMessage={statusMessage}
           onResend={(activeChallengeKey) =>
             sendEmailCode(emailAddress, activeChallengeKey)
           }
           onShowEmailLogin={(message) => {
             requestIdRef.current += 1;
+            setIsResending(false);
             setChallengeKey(undefined);
             setStatusMessage(
               message ? { message, status: "error" } : undefined,
@@ -254,6 +266,7 @@ function LoginFormContent({
       ) : (
         <EmailLoginForm
           autoFocus={focusField === "email"}
+          key={failedSends}
           continuation={continuation}
           emailDefaultValue={emailAddress}
           statusMessage={statusMessage}

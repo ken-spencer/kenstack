@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, isNull, lte, type SQL } from "drizzle-orm";
+import { asc, gt, isNull, lte, type SQL } from "drizzle-orm";
 import type {
   AnyPgSelectQueryBuilder,
   PgColumn,
@@ -7,9 +7,9 @@ import type {
 import { cacheLife, cacheTag } from "next/cache";
 import { draftMode } from "next/headers";
 
-import { db } from "@app/db";
 import { requireUser } from "@kenstack/auth/server/user";
 import type { AdminContentTable } from "@kenstack/admin/table";
+import { isVisible, query } from "./query";
 
 export async function resolveListDraft() {
   const { isEnabled } = await draftMode();
@@ -48,24 +48,15 @@ export async function listQuery<TSelection extends SelectedFields>(
   },
 ) {
   const now = new Date();
-  const baseRowQuery = db.select(select).from(table);
-  joins?.(baseRowQuery);
-  // Call `$dynamic()` before `where` and discard each clause's return: with the
-  // selection still generic, the non-dynamic `where` type resolves callers' rows
-  // to `any[]`, and reassigning the dynamic builder fails to compile.
-  const rowQuery = baseRowQuery.$dynamic();
-  rowQuery.where(
-    and(
-      draft
-        ? isNull(table.deletedAt)
-        : and(
-            isNull(table.deletedAt),
-            eq(table.visibility, "published"),
-            lte(table.publishedAt, now),
-          ),
-      where,
-    ),
-  );
+  const rowQuery = (
+    draft
+      ? query(table).where(isNull(table.deletedAt))
+      : query(table).where(isVisible(table)).where(lte(table.publishedAt, now))
+  )
+    .select(select)
+    .where(where)
+    .build();
+  joins?.(rowQuery);
 
   if (orderBy) {
     rowQuery.orderBy(...orderBy);
@@ -75,24 +66,17 @@ export async function listQuery<TSelection extends SelectedFields>(
     rowQuery.limit(limit);
   }
 
-  const nextPublicationQuery = db
+  const nextPublicationQuery = query(table)
     .select({ publishedAt: table.publishedAt })
-    .from(table);
+    .where(isVisible(table))
+    .where(gt(table.publishedAt, now))
+    .where(where)
+    .build();
   joins?.(nextPublicationQuery);
   const [rows, [nextPublication]] = await Promise.all([
     rowQuery,
     cacheTags && !draft
-      ? nextPublicationQuery
-          .where(
-            and(
-              isNull(table.deletedAt),
-              eq(table.visibility, "published"),
-              gt(table.publishedAt, now),
-              where,
-            ),
-          )
-          .orderBy(asc(table.publishedAt))
-          .limit(1)
+      ? nextPublicationQuery.orderBy(asc(table.publishedAt)).limit(1)
       : [],
   ]);
 

@@ -1,17 +1,14 @@
 import { redirect } from "next/navigation";
 
 import { getCurrentSession } from "@kenstack/auth/server/user";
+import { getUsersModule } from "@kenstack/auth/server/getUsersModule";
 import ReauthenticationForm from "@kenstack/auth/reauthentication/Form";
 import Notice from "@kenstack/components/Notice";
 
 import Form from "./Form";
 
-export default async function ResetPasswordFormLoader({
-  path,
-}: {
-  path: `/${string}`;
-}) {
-  const loginPath = `/login?returnTo=${encodeURIComponent(path)}`;
+export default async function ResetPasswordFormLoader() {
+  const loginPath = `/login?returnTo=${encodeURIComponent(getUsersModule().passwordPath)}`;
   const session = await getCurrentSession();
   if (!session) {
     redirect(loginPath);

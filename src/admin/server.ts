@@ -45,13 +45,13 @@ type AdminParentEntry =
       module: AdminModule;
       children?: readonly AdminChild[];
     };
-// A sidebar heading of its own for its modules and links, in order; the others sit under
-// Administration.
+// A sidebar heading of its own for its modules and links, in order; other top-level modules sit
+// under Administration.
 type AdminHeadingEntry = {
   heading: string;
   children: readonly (AdminParentEntry | AdminNavigationLink)[];
 };
-type AdminEntry = AdminParentEntry | AdminHeadingEntry;
+type AdminEntry = AdminParentEntry | AdminHeadingEntry | AdminNavigationLink;
 
 type EntryModule<TEntry> = TEntry extends AdminModule
   ? TEntry
@@ -240,12 +240,23 @@ function findIdentityForeignKey(
 }
 
 // Flattens the registry into its modules and records the sidebar's groups in registry order.
-// Entries without a heading share one Administration group, placed where the first one appears.
+// Top-level modules share one Administration group, placed where the first one appears; top-level
+// links show in place without a heading.
 function normalizeAdminEntries(entries: readonly AdminEntry[]) {
   const navigation: DefinedAdmin[typeof adminNavigation] = [];
   let administration: (typeof navigation)[number] | undefined;
 
   const modules = entries.flatMap((entry) => {
+    if ("href" in entry) {
+      const previous = navigation.at(-1);
+      if (previous && previous.heading === undefined) {
+        previous.items.push(entry);
+      } else {
+        navigation.push({ items: [entry] });
+      }
+      return [];
+    }
+
     let group: (typeof navigation)[number];
     if ("heading" in entry) {
       group = { heading: entry.heading, items: [] };

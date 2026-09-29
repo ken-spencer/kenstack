@@ -20,7 +20,7 @@ export default function EmailLoginForm({
   autoFocus: boolean;
   continuation: Continuation;
   emailDefaultValue: string;
-  onEmailLogin: (email: string) => void;
+  onEmailLogin: (email: string) => Promise<void>;
   onShowPasswordLogin: (form: HTMLFormElement | null) => void;
   statusMessage?: StatusMessage;
 }) {
@@ -30,14 +30,14 @@ export default function EmailLoginForm({
       schema={requestEmailLoginSchema}
       defaultValues={{ email: emailDefaultValue }}
       initialStatusMessage={statusMessage}
-      onSubmit={({ data }) => {
-        onEmailLogin(data.email);
-      }}
+      // Awaited, so the button shows the send pending.
+      onSubmit={({ data }) => onEmailLogin(data.email)}
     >
       <InputField
         autoFocus={autoFocus}
         name="email"
         label="Email"
+        readOnly={continuation.mode === "reauthentication"}
         type="email"
       />
       <LoginSubmit continuation={continuation} label="Email me a code">

@@ -11,26 +11,26 @@ import {
 
 import type { LoginActionResult } from "@kenstack/auth/api";
 import { login as loginUser } from "@kenstack/auth/server/auth";
-import {
-  resolveLoginDestination,
-  type LoginDestination,
-} from "@kenstack/auth/returnTo";
 import loginSchema from "@kenstack/auth/schemas/login";
+import { refuseChangedAccount } from "@kenstack/auth/reauthentication/server";
+import { resolveLoginDestination } from "@kenstack/auth/server/loginDestination";
 import { loadFreshPublicAuthState } from "@kenstack/auth/server/state";
 import { audit } from "@kenstack/logger";
 
 export const passwordFailureLimit = [3, "15 minutes"] as const;
 
-export const loginPipeline = ({
-  loginDestination,
-}: { loginDestination?: LoginDestination } = {}) =>
+export const loginPipeline = () =>
   pipelineStage(
     { schema: loginSchema },
     async ({
-      data: { email, password, recaptchaToken, returnTo },
+      data: { email, password, recaptchaToken, returnTo, userId },
       request,
       response,
     }) => {
+      if (userId !== undefined) {
+        await refuseChangedAccount(userId, email);
+      }
+
       // Only failures count (see recordPasswordFailure); a successful sign-in
       // consumes nothing. Locked after 3 failures per account in 15 minutes.
       const locked = await checkQuota("password-failure", {
@@ -83,11 +83,7 @@ export const loginPipeline = ({
       return response.success<LoginActionResult>({
         authenticated: true,
         authState,
-        path: await resolveLoginDestination(
-          returnTo,
-          authState,
-          loginDestination,
-        ),
+        path: await resolveLoginDestination(returnTo),
       });
     },
   );

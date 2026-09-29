@@ -92,8 +92,8 @@ const createImageRender = ({
   className,
   accept = acceptDefault,
   canUpload = true,
-  presignedUrlAction = "get-presigned-url",
-  uploadCompleteAction = "upload-complete",
+  presignedUrlAction,
+  uploadCompleteAction,
   ImageDetails,
 }: ImageRenderProps & { ImageDetails?: ImageDetailsEditor }) =>
   function ImageFieldRender({

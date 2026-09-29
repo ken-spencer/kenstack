@@ -19,7 +19,6 @@ import { Checkbox } from "@kenstack/forms/controls/Checkbox";
 import { Separator } from "@kenstack/components/Separator";
 import type { AdminFilterMeta } from "@kenstack/admin/types/list";
 import Tooltip from "@kenstack/components/Tooltip";
-import deps from "@app/deps";
 import { formatDateKey, formatLongDate } from "@kenstack/lib/dateFormat";
 import { cn } from "@kenstack/lib/utils";
 import {
@@ -376,7 +375,7 @@ function DateFilterInput({
   }
 
   const date = parseStoredDate(value);
-  const today = parseISO(formatDateKey(new Date(), deps.defaultTimeZone));
+  const today = parseISO(formatDateKey(new Date()));
 
   const commitDate = (nextValue: string | Date) => {
     if (!nextValue) {

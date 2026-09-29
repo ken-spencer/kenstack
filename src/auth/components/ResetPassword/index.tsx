@@ -3,13 +3,7 @@ import { Suspense } from "react";
 import { Skeleton } from "@kenstack/components/Skeleton";
 import Loader from "./Loader";
 
-// path is the page that hosts this form, where a signed-out visitor returns
-// after signing in.
-export default function ResetPasswordForm({
-  path = "/reset-password",
-}: {
-  path?: `/${string}`;
-}) {
+export default function ResetPasswordForm() {
   return (
     <Suspense
       fallback={
@@ -25,7 +19,7 @@ export default function ResetPasswordForm({
         </div>
       }
     >
-      <Loader path={path} />
+      <Loader />
     </Suspense>
   );
 }

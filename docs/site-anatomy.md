@@ -54,11 +54,16 @@ unsupported top-level directories are transitional and set no precedent.
   database-setup executable. `db/index.ts` creates the schema-aware database with
   `createDb({ schema: tables })` and supplies the `@app/db` binding; query modules import that owner
   directly.
-- `modules/index.ts`, `email/index.ts`, and `deps.ts` supply the `@app/modules`, `@app/email`, and
-  `@app/deps` bindings. `deps.ts` default-exports one object built with `createDeps` from
-  `@kenstack/deps`; Kenstack owns its shape and defaults, and the host states only what differs.
-  Client components read `deps`, so keep the module browser-safe. These are compile-time path
-  bindings, not a runtime dependency container.
+- `modules/index.ts`, `email/index.ts`, `deps.ts`, and `roles.ts` supply the `@app/modules`,
+  `@app/email`, `@app/deps`, and `@app/roles` bindings. These are compile-time path bindings, not a
+  runtime dependency container.
+- `deps.ts` default-exports one object built with `createDeps` from `@kenstack/deps`; Kenstack owns its
+  shape and defaults, and the host states only what differs. Client components import it, and anything
+  the browser imports ships whole, so it holds only browser-safe values.
+- `roles.ts` default-exports the role registry. Kenstack owns the default list, so by default the file
+  is one line, `export { default } from "@kenstack/auth/roles";`, and roles Kenstack adds later reach
+  the site; it adds its own roles only when the site needs them. Only admin and server code import
+  `@app/roles`, so public pages never carry the role list.
 - `app/**/route.ts` exposes module, feature, or integration HTTP behavior only where Next.js requires a
   framework entry point.
 

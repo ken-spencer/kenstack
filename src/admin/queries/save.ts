@@ -35,10 +35,20 @@ type ModuleRecordSave = {
   values: Record<string, unknown>;
 };
 
-export function saveModuleRecord(
-  options: ModuleRecordSave & { fields: ServerDefinedFields },
-) {
-  return saveModule(options, false);
+// Saves only the fields present in the validated values, so the action's schema is the allowlist of
+// what a member may change.
+export function saveModuleRecord(options: ModuleRecordSave) {
+  return saveModule(
+    {
+      ...options,
+      fields: Object.fromEntries(
+        Object.entries(options.module.admin.fields).filter(([key]) =>
+          Object.hasOwn(options.values, key),
+        ),
+      ),
+    },
+    false,
+  );
 }
 
 export async function saveAdminRecord({
@@ -316,6 +326,7 @@ async function saveModule(
             adminListCacheTag(name),
           ]
         : [adminLoadCacheTag(name, "single")]),
+      name,
       ...(adminConfig.revalidate ?? []),
     ],
     revisionRelations: adminConfig.oneToOne?.relations,

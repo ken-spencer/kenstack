@@ -39,6 +39,34 @@ Read only the references relevant to the current task:
 - Diagnosing or fixing regressions, failed checks, runtime errors, or broken UI: `docs/debugging.md`
 - Committed API changes or downstream upgrades: `docs/upgrading.md`
 
+## Ask first
+
+Stop, ask the user and wait for the answer before:
+
+- adding anything a site would call or pass to Kenstack: a new export, prop, option or parameter. Show
+  the proposed shape and why the existing API cannot do the job.
+- writing site code that copies, rewrites or works around something Kenstack already provides,
+  including a wrapper, provider, check or setup step a Kenstack component needs. Say what the site
+  needs, what Kenstack offers today and the options.
+- adding type machinery to make TypeScript accept code: a cast or assertion, a hand-written type
+  restating what a query, schema or builder already infers, or a new conditional or mapped type. Say
+  what TypeScript rejects, where inference stops and the options. Fixing inference at its source is the
+  default; stop before writing the workaround. First have a side agent spike it on copies in `tmp/`,
+  proving each option with a TypeScript run and a check that can fail. If a fix at the source needs no
+  such machinery, build it without asking; otherwise bring the spike's options and results. A
+  necessary cast that states something TypeScript cannot infer, such as flattening a merge, is
+  acceptable; restating in detail what it already infers is not.
+
+These are always the user's call, even when the choice looks routine.
+
+## Decisions
+
+Before presenting options, look for the plain answer: make the special case use the general path, or
+make misuse become correct use. If one option is clearly the only rational one, take it and report it
+in the handoff. Bring the user a decision only when it has a real trade-off, presented on its own: the
+situation in plain words, a concrete customer or staff scenario, the options, what each costs, and a
+recommendation. The "Ask first" items always go to the user.
+
 ## Code posture
 
 - When responding to a correction or objection, lead with the evidence, consequence, or corrective
@@ -68,6 +96,7 @@ Read only the references relevant to the current task:
 - Write a defensive guard against the narrowest credible reachable conflict with meaningful
   consequences, with a message that is true for every case it blocks; otherwise narrow the condition or
   support the broader case.
+
 ## Public surface
 
 - Preserve development-only and launch gates. Promoting gated behavior requires explicit user

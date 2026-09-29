@@ -1,3 +1,7 @@
+import { io } from "next/cache";
+
+import QueryProvider from "@kenstack/context/QueryProvider";
+
 import DefaultActions from "./Actions";
 import StepFlowClient from "./Client";
 import StepHeading from "./Heading";
@@ -31,16 +35,21 @@ export default async function StepFlow({
     throw new Error("StepFlow requires at least one step.");
   }
 
+  await io();
+  // One data cache for the whole flow, steps and controllers included; a
+  // provider above the flow is reused.
   return (
-    <StepFlowClient
-      {...props}
-      Actions={Actions}
-      Header={Header}
-      id={id}
-      steps={resolvedSteps}
-      // Each server render of the flow is a visit, including a link to the
-      // flow's own URL, which Next re-renders without remounting the client.
-      visitKey={crypto.randomUUID()}
-    />
+    <QueryProvider>
+      <StepFlowClient
+        {...props}
+        Actions={Actions}
+        Header={Header}
+        id={id}
+        steps={resolvedSteps}
+        // Each server render of the flow is a visit, including a link to the
+        // flow's own URL, which Next re-renders without remounting the client.
+        visitKey={crypto.randomUUID()}
+      />
+    </QueryProvider>
   );
 }

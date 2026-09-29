@@ -145,10 +145,9 @@ capability with their owner and the concrete maintenance cost.
 - Every prop and option is supported API. Start from the default behavior owned by the implementation
   and ask: does this configuration represent a meaningful caller choice, or is it a narrow workaround
   for an inadequate design? Prefer the smallest coherent solution, including improving the owning
-  component or API when needed. Resolve genuine trade-offs in API shape, exposed options, and option
-  names with the user before implementation, especially for shared Kenstack APIs whose design affects
-  multiple consumers. Present the proposed surface and recommendation early, without waiting for
-  cleanup or review. Routine choices with no meaningful trade-off stay local.
+  component or API when needed. Adding to Kenstack's API is an Ask-first decision in `AGENTS.md`:
+  present the proposed surface and recommendation before implementation. For a site's own APIs,
+  resolve genuine trade-offs in shape, options, and names with the user; routine choices stay local.
   Add configuration only when a current production caller needs the
   meaningful variation or the user explicitly requested that configuration contract for upcoming work;
   a requested outcome alone does not request an option. For an explicitly requested contract, add a

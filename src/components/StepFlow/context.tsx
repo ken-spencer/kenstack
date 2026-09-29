@@ -19,6 +19,7 @@ import {
   useStoredValue,
 } from "@kenstack/hooks/storedState";
 import useIsHydrated from "@kenstack/hooks/useIsHydrated";
+import unsecureId from "@kenstack/lib/unsecureId";
 
 import type { Step, StepFlowProps } from "./types";
 
@@ -33,7 +34,9 @@ type FlowContextValue = {
   previous: () => void;
   setActiveStep: (stepId: string) => void;
   setStepSkipped: (stepId: string, skipped: boolean) => void;
+  startedSkipped: Record<string, boolean | undefined>;
   stepIds: string[];
+  visit: string | undefined;
 };
 
 const FlowContext = createContext<FlowContextValue | null>(null);
@@ -45,6 +48,12 @@ const completedStepsSchema = z.record(z.string().min(1), z.literal(true));
 // so a later visit finds it even when server state no longer composes the
 // final step.
 const finishedKey = "$finished";
+// A visit's id and which steps the server composed as skipped when it started. A later server render,
+// such as the refresh after a sign-in, must not change the visit's step list.
+const visitSchema = z.object({
+  id: z.string().min(1),
+  startedSkipped: z.record(z.string().min(1), z.boolean()),
+});
 
 export function useFlowContext() {
   const context = useContext(FlowContext);
@@ -83,7 +92,23 @@ export function FlowProvider({
   // the step the flow navigated to, the fresh first step stands in for it.
   const firstStep = Object.keys(steps)[0];
   const [navigatedStep, setNavigatedStep] = useState(firstStep);
-  const [skippedSteps, setSkippedSteps] = useState<Record<string, boolean>>({});
+  const [savedVisit, setSavedVisit] = useStoredValue(
+    basePath,
+    "$visit",
+    visitSchema,
+  );
+  const isFinished = completedSteps[finishedKey] === true;
+  // Readable after hydration, and ignored while a finished flow waits to be cleared.
+  const currentVisit = isHydrated && !isFinished ? savedVisit : undefined;
+  const visit = currentVisit?.id;
+  // Skip overrides belong to the visit they were set in, so a new visit starts without the previous
+  // one's; controllers that set them recompute when the visit changes, without remounting.
+  const [skipOverrides, setSkipOverrides] = useState<{
+    skipped: Record<string, boolean>;
+    visit: string | undefined;
+  }>({ skipped: {}, visit: undefined });
+  const skippedSteps =
+    skipOverrides.visit === visit ? skipOverrides.skipped : {};
   // Next may keep a left instance alive and show it again on a later visit.
   // Hiding the instance returns it to the first step, so a visit never
   // resumes where an earlier one stopped.
@@ -92,15 +117,55 @@ export function FlowProvider({
     firstStepRef.current = firstStep;
   }, [firstStep]);
   useEffect(() => () => setNavigatedStep(firstStepRef.current), []);
-  const setStepSkipped = useCallback((stepId: string, skipped: boolean) => {
-    setSkippedSteps((current) =>
-      current[stepId] === skipped ? current : { ...current, [stepId]: skipped },
-    );
-  }, []);
-  const configuredStepIds = Object.keys(steps);
-  const stepIds = configuredStepIds.filter(
-    (stepId) => !(skippedSteps[stepId] ?? steps[stepId].skipped),
+  const setStepSkipped = useCallback(
+    (stepId: string, skipped: boolean) => {
+      setSkipOverrides((current) => {
+        const currentSkipped = current.visit === visit ? current.skipped : {};
+        return current.visit === visit && currentSkipped[stepId] === skipped
+          ? current
+          : { skipped: { ...currentSkipped, [stepId]: skipped }, visit };
+      });
+    },
+    [visit],
   );
+  const configuredStepIds = Object.keys(steps);
+  const serverSkipped = Object.fromEntries(
+    configuredStepIds.map((stepId) => [stepId, steps[stepId].skipped]),
+  );
+  // The server's skipped values as this instance mounted, or as a new visit after a finished one
+  // started. A step the visit started skipped that the server showed then comes back, such as the
+  // sign-in step for a visitor who has signed out since; a later server render, the sign-in refresh
+  // included, never changes the list.
+  const [mountSkipped, setMountSkipped] = useState<{
+    finishedVisit?: string;
+    skipped: Record<string, boolean | undefined>;
+  }>(() => ({ skipped: serverSkipped }));
+  if (
+    isFinished &&
+    savedVisit !== undefined &&
+    mountSkipped.finishedVisit !== savedVisit.id
+  ) {
+    setMountSkipped({ ...mountSkipped, finishedVisit: savedVisit.id });
+  } else if (
+    visit !== undefined &&
+    mountSkipped.finishedVisit !== undefined &&
+    mountSkipped.finishedVisit !== visit
+  ) {
+    setMountSkipped({ skipped: serverSkipped });
+  }
+  // Until the visit's saved list is readable, the server's values stand in; they are then the visit's
+  // starting values.
+  const startedSkipped: Record<string, boolean | undefined> = currentVisit
+    ? Object.fromEntries(
+        Object.entries(currentVisit.startedSkipped).filter(
+          ([stepId, skipped]) =>
+            !skipped || mountSkipped.skipped[stepId] === true,
+        ),
+      )
+    : serverSkipped;
+  const isSkipped = (stepId: string) =>
+    skippedSteps[stepId] ?? startedSkipped[stepId];
+  const stepIds = configuredStepIds.filter((stepId) => !isSkipped(stepId));
   const routeTarget = Object.hasOwn(steps, navigatedStep)
     ? navigatedStep
     : firstStep;
@@ -113,7 +178,7 @@ export function FlowProvider({
       ) ?? stepIds.at(-1));
   const firstIncompleteStepIndex = stepIds.findIndex(
     (stepId) =>
-      (skippedSteps[stepId] ?? steps[stepId].skipped) === false ||
+      isSkipped(stepId) === false ||
       (isHydrated && completedSteps[stepId] !== true),
   );
   const lastReachableStepIndex =
@@ -135,17 +200,32 @@ export function FlowProvider({
   // no visit restores a finished transaction. A visit is a mount, an Activity
   // reveal, or a new server render (a link to the flow's own URL). A bfcache
   // restore is none of these, so a result stays on screen through browser
-  // Back.
-  const clearFinishedFlow = useEffectEvent(() => {
-    if (completedSteps[finishedKey] === true) {
+  // Back. A store that is finished or expired starts a new visit, which saves
+  // the server's step list for it; one that expires while open does so at its
+  // next render, before a later server render could replace those values.
+  const startVisit = useEffectEvent(() => {
+    if (isFinished) {
       clearStoredState(basePath);
+    } else if (savedVisit !== undefined) {
+      return;
     }
+
+    setSavedVisit({
+      id: unsecureId(),
+      startedSkipped: Object.fromEntries(
+        configuredStepIds.flatMap((stepId) => {
+          const { skipped } = steps[stepId];
+          return skipped === undefined ? [] : [[stepId, skipped]];
+        }),
+      ),
+    });
   });
+  const hasSavedVisit = savedVisit !== undefined;
   useEffect(() => {
     if (isHydrated) {
-      clearFinishedFlow();
+      startVisit();
     }
-  }, [isHydrated, visitKey]);
+  }, [hasSavedVisit, isHydrated, visitKey]);
   const setActiveStep = useCallback(
     (stepId: string) => {
       const requestedIndex = stepIds.indexOf(stepId);
@@ -186,10 +266,7 @@ export function FlowProvider({
           }
           // A recalled prerequisite releases the existing destination when its
           // controller skips it again; it does not complete a ledger step.
-          if (
-            activeStep !== requestedStep &&
-            (skippedSteps[activeStep] ?? steps[activeStep].skipped) === false
-          ) {
+          if (activeStep !== requestedStep && isSkipped(activeStep) === false) {
             return;
           }
           const nextStepId = stepIds[activeStepIndex + 1];
@@ -217,7 +294,9 @@ export function FlowProvider({
         },
         setActiveStep,
         setStepSkipped,
+        startedSkipped,
         stepIds,
+        visit,
       }}
     >
       {children}
@@ -269,5 +348,9 @@ export function useStep() {
     next: context.next,
     previous: context.previous,
     setSkipped,
+    // The skipped value this step started the visit with: the saved step list, less a skip the
+    // server no longer showed when this instance mounted, or the server's until that is readable.
+    startedSkipped: context.startedSkipped[stepId],
+    visit: context.visit,
   };
 }

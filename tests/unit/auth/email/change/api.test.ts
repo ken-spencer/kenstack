@@ -2,10 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   audit: vi.fn(),
+  checkLink: vi.fn(),
   consume: vi.fn(),
   endVerification: vi.fn(),
-  loadEmailFrom: vi.fn(),
-  loadFreshAuthState: vi.fn(),
   loadFreshPublicAuthState: vi.fn(),
   loadPublicAuthState: vi.fn(),
   loadVerifications: vi.fn(),
@@ -42,10 +41,7 @@ vi.mock("@app/db", () => ({
     transaction: mocks.transaction,
   },
 }));
-vi.mock("@app/email", () => ({
-  attachments: [],
-  loadEmailFrom: mocks.loadEmailFrom,
-}));
+vi.mock("@app/email", () => ({ attachments: [] }));
 vi.mock("@app/modules", () => ({
   modules: { users: { admin: { table: { email: "email", id: "id" } } } },
 }));
@@ -70,7 +66,6 @@ vi.mock("@kenstack/api", () => {
   };
 });
 vi.mock("@kenstack/auth/server/state", () => ({
-  loadFreshAuthState: mocks.loadFreshAuthState,
   loadFreshPublicAuthState: mocks.loadFreshPublicAuthState,
   loadPublicAuthState: mocks.loadPublicAuthState,
 }));
@@ -109,6 +104,7 @@ vi.mock("@kenstack/auth/email/verification/verifyCode", () => ({
   verifyCode: mocks.verifyCode,
 }));
 vi.mock("@kenstack/auth/email/verification/verifyLink", () => ({
+  checkLink: mocks.checkLink,
   verifyLink: mocks.verifyLink,
 }));
 vi.mock("@kenstack/auth/email/change/NoticeEmail", () => ({
@@ -116,13 +112,8 @@ vi.mock("@kenstack/auth/email/change/NoticeEmail", () => ({
 }));
 
 import { createEmailChange } from "@kenstack/auth/email/change/api";
+import { verificationEndedCode } from "@kenstack/auth/email/verification/internal/policy";
 
-const authorization = {
-  sessionId: 1,
-  userId: 12,
-  authorizedUntil: "2026-09-21T12:10:00.000Z",
-  remainingMs: 600_000,
-};
 const challengeKey = "6f0f6dfa-7e5a-4be8-a0d5-0f1c2ff05c55";
 type StageContext = Parameters<
   ReturnType<typeof createEmailChange>["request"]
@@ -168,45 +159,25 @@ describe("email change request", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.findUser.mockResolvedValue(undefined);
-    mocks.loadEmailFrom.mockResolvedValue("sender@example.com");
     mocks.loadPublicAuthState.mockResolvedValue(signedInState);
     mocks.mailer.mockResolvedValue({ status: "sent" });
     mocks.render.mockResolvedValue("<p>Notice</p>");
     mocks.sendCode.mockResolvedValue({
       challengeKey,
       authorization: {
-        id: authorization.sessionId,
-        userId: authorization.userId,
-        authorizedUntil: new Date(authorization.authorizedUntil),
+        id: 1,
+        userId: 12,
+        authorizedUntil: new Date("2026-09-21T12:10:00.000Z"),
       },
       email: "new@example.com",
     });
   });
 
-  it("reports only the authorization time remaining after email delivery", async () => {
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date("2026-09-21T12:00:00Z"));
-    mocks.mailer.mockImplementation(async () => {
-      vi.setSystemTime(new Date("2026-09-21T12:02:00Z"));
-      return { status: "sent" };
-    });
-    try {
-      await expect(
-        createEmailChange().request(context({ email: "new@example.com" })),
-      ).resolves.toMatchObject({
-        authorization: {
-          authorizedUntil: "2026-09-21T12:10:00.000Z",
-          remainingMs: 480_000,
-        },
-      });
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
   it("refuses the address the user is already signed in as", async () => {
     await expect(
-      createEmailChange().request(context({ email: "old@example.com" })),
+      createEmailChange({ linkPath: "/profile" }).request(
+        context({ email: "old@example.com", userId: 12 }),
+      ),
     ).resolves.toMatchObject({
       fieldErrors: { email: expect.any(String) },
     });
@@ -217,15 +188,11 @@ describe("email change request", () => {
   it("sends the code to the new address and a cancellable notice to the old one", async () => {
     await expect(
       createEmailChange({ linkPath: "/profile" }).request(
-        context({ email: "new@example.com" }),
+        context({ email: "new@example.com", userId: 12 }),
       ),
     ).resolves.toEqual({
       authState: signedInState,
       challengeKey,
-      authorization: {
-        ...authorization,
-        remainingMs: expect.any(Number),
-      },
       email: "new@example.com",
     });
     expect(mocks.sendCode.mock.lastCall?.[0]).toMatchObject({
@@ -248,14 +215,12 @@ describe("email change request", () => {
     mocks.findUser.mockResolvedValue({ id: 5 });
 
     await expect(
-      createEmailChange().request(context({ email: "new@example.com" })),
+      createEmailChange({ linkPath: "/profile" }).request(
+        context({ email: "new@example.com", userId: 12 }),
+      ),
     ).resolves.toEqual({
       authState: signedInState,
       challengeKey,
-      authorization: {
-        ...authorization,
-        remainingMs: expect.any(Number),
-      },
       email: "new@example.com",
     });
     expect(mocks.sendCode.mock.lastCall?.[0]).toMatchObject({
@@ -276,7 +241,9 @@ describe("email change request", () => {
     mocks.mailer.mockResolvedValue({ status: "operational-failure" });
 
     await expect(
-      createEmailChange().request(context({ email: "new@example.com" })),
+      createEmailChange({ linkPath: "/profile" }).request(
+        context({ email: "new@example.com", userId: 12 }),
+      ),
     ).resolves.toMatchObject({ challengeKey });
     expect(mocks.reportError).not.toHaveBeenCalled();
   });
@@ -285,14 +252,16 @@ describe("email change request", () => {
     mocks.mailer.mockRejectedValue(new Error("render failed"));
 
     await expect(
-      createEmailChange().request(context({ email: "new@example.com" })),
+      createEmailChange({ linkPath: "/profile" }).request(
+        context({ email: "new@example.com", userId: 12 }),
+      ),
     ).resolves.toMatchObject({ challengeKey });
     expect(mocks.reportError).toHaveBeenCalledOnce();
   });
 
   it("does not repeat the notice on a resend", async () => {
-    await createEmailChange().request(
-      context({ challengeKey, email: "new@example.com" }),
+    await createEmailChange({ linkPath: "/profile" }).request(
+      context({ challengeKey, email: "new@example.com", userId: 12 }),
     );
 
     expect(mocks.sendCode.mock.lastCall?.[0]).toMatchObject({ challengeKey });
@@ -317,7 +286,9 @@ describe("email change request", () => {
     async (session) => {
       mocks.getCurrentSession.mockResolvedValue({ ...session, userId: 12 });
       await expect(
-        createEmailChange().request(context({ email: "new@example.com" })),
+        createEmailChange({ linkPath: "/profile" }).request(
+          context({ email: "new@example.com", userId: 12 }),
+        ),
       ).rejects.toMatchObject({ status: 403 });
       expect(mocks.sendCode).not.toHaveBeenCalled();
       expect(mocks.mailer).not.toHaveBeenCalled();
@@ -336,11 +307,15 @@ describe("email change confirmation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.consume.mockResolvedValue({ id: 3 });
-    mocks.loadFreshAuthState.mockResolvedValue(signedInState);
     mocks.loadFreshPublicAuthState.mockResolvedValue(changedState);
     mocks.updateWhere.mockResolvedValue(undefined);
     mocks.verifyCode.mockResolvedValue(proof);
     transactionWith({
+      select: () => ({
+        from: () => ({
+          where: () => ({ limit: async () => [{ email: "old@example.com" }] }),
+        }),
+      }),
       update: () => ({ set: () => ({ where: mocks.updateWhere }) }),
       delete: () => ({ where: mocks.deleteWhere }),
     });
@@ -348,7 +323,9 @@ describe("email change confirmation", () => {
 
   it("applies the proven address to the signed-in account", async () => {
     await expect(
-      createEmailChange().verifyCode(context({ challengeKey, code: "123456" })),
+      createEmailChange({ linkPath: "/profile" }).verifyCode(
+        context({ challengeKey, code: "123456", userId: 12 }),
+      ),
     ).resolves.toEqual({ authState: changedState });
     expect(mocks.consume).toHaveBeenCalledWith(
       3,
@@ -385,7 +362,9 @@ describe("email change confirmation", () => {
     mocks.consume.mockResolvedValue(undefined);
 
     await expect(
-      createEmailChange().verifyCode(context({ challengeKey, code: "123456" })),
+      createEmailChange({ linkPath: "/profile" }).verifyCode(
+        context({ challengeKey, code: "123456", userId: 12 }),
+      ),
     ).rejects.toMatchObject({ status: 409 });
     expect(mocks.updateWhere).not.toHaveBeenCalled();
     expect(mocks.revalidateTag).not.toHaveBeenCalled();
@@ -399,7 +378,9 @@ describe("email change confirmation", () => {
     );
 
     await expect(
-      createEmailChange().verifyCode(context({ challengeKey, code: "123456" })),
+      createEmailChange({ linkPath: "/profile" }).verifyCode(
+        context({ challengeKey, code: "123456", userId: 12 }),
+      ),
     ).rejects.toMatchObject({
       status: 409,
     });
@@ -413,17 +394,23 @@ describe("email change confirmation", () => {
   });
 
   it("requires a signed-in session at confirmation time", async () => {
-    mocks.loadFreshAuthState.mockResolvedValue({ state: "anonymous" });
+    mocks.getCurrentSession.mockResolvedValue(undefined);
 
     await expect(
-      createEmailChange().verifyCode(context({ challengeKey, code: "123456" })),
+      createEmailChange({ linkPath: "/profile" }).verifyCode(
+        context({ challengeKey, code: "123456", userId: 12 }),
+      ),
     ).rejects.toMatchObject({ status: 401 });
     expect(mocks.transaction).not.toHaveBeenCalled();
   });
 
-  it.each(["verifyCode", "verifyLink"] as const)(
+  // The code step ends with its issuing session; an acceptable link asks for confirmation.
+  it.each([
+    ["verifyCode", { code: verificationEndedCode, status: 409 }],
+    ["verifyLink", { code: "reauthentication-required", status: 403 }],
+  ] as const)(
     "rechecks recent authentication when applying through %s",
-    async (method) => {
+    async (method, refusal) => {
       mocks.getCurrentSession.mockResolvedValue({
         createdAt: new Date(0),
         authorizedUntil: new Date(new Date(0).getTime() + 600_000),
@@ -431,15 +418,18 @@ describe("email change confirmation", () => {
         impersonatedBy: null,
         userId: 12,
       });
+      mocks.checkLink.mockResolvedValue("acceptable");
       mocks.verifyLink.mockResolvedValue(proof);
       await expect(
-        createEmailChange()[method](
-          context({ challengeKey, code: "123456", token: "a".repeat(43) }),
+        createEmailChange({ linkPath: "/profile" })[method](
+          context({
+            challengeKey,
+            code: "123456",
+            token: "a".repeat(43),
+            userId: 12,
+          }),
         ),
-      ).rejects.toMatchObject({
-        code: "reauthentication-required",
-        status: 403,
-      });
+      ).rejects.toMatchObject(refusal);
       expect(mocks.consume).not.toHaveBeenCalled();
       expect(mocks.updateWhere).not.toHaveBeenCalled();
       expect(mocks.deleteWhere).not.toHaveBeenCalled();
@@ -451,7 +441,9 @@ describe("email change confirmation", () => {
     mocks.verifyLink.mockResolvedValue(proof);
 
     await expect(
-      createEmailChange().verifyLink(context({ token: "a".repeat(43) })),
+      createEmailChange({ linkPath: "/profile" }).verifyLink(
+        context({ token: "a".repeat(43), userId: 12 }),
+      ),
     ).resolves.toEqual({ authState: changedState });
     expect(mocks.consume).toHaveBeenCalledOnce();
     expect(mocks.updateWhere).toHaveBeenCalledOnce();
@@ -461,7 +453,9 @@ describe("email change confirmation", () => {
     mocks.verifyLink.mockResolvedValue({ state: "wrong-browser" });
 
     await expect(
-      createEmailChange().verifyLink(context({ token: "a".repeat(43) })),
+      createEmailChange({ linkPath: "/profile" }).verifyLink(
+        context({ token: "a".repeat(43), userId: 12 }),
+      ),
     ).rejects.toMatchObject({ code: "wrong-browser", status: 409 });
     expect(mocks.transaction).not.toHaveBeenCalled();
   });
@@ -513,7 +507,9 @@ describe("email change cancellation", () => {
     ]);
 
     await expect(
-      createEmailChange().cancel(context({ challengeKey })),
+      createEmailChange({ linkPath: "/profile" }).cancel(
+        context({ challengeKey }),
+      ),
     ).resolves.toEqual({ outcome: "cancelled" });
     expect(mocks.endVerification).toHaveBeenCalledTimes(2);
     expect(mocks.endVerification).toHaveBeenCalledWith(
@@ -537,7 +533,9 @@ describe("email change cancellation", () => {
     ]);
 
     await expect(
-      createEmailChange().cancel(context({ challengeKey })),
+      createEmailChange({ linkPath: "/profile" }).cancel(
+        context({ challengeKey }),
+      ),
     ).resolves.toEqual({ outcome: "cancelled" });
     expect(mocks.endVerification).toHaveBeenCalledTimes(2);
     expect(mocks.endVerification).toHaveBeenCalledWith(
@@ -560,7 +558,9 @@ describe("email change cancellation", () => {
     ]);
 
     await expect(
-      createEmailChange().cancel(context({ challengeKey })),
+      createEmailChange({ linkPath: "/profile" }).cancel(
+        context({ challengeKey }),
+      ),
     ).resolves.toEqual({ outcome: "completed" });
     expect(mocks.endVerification).not.toHaveBeenCalled();
   });
@@ -568,13 +568,17 @@ describe("email change cancellation", () => {
   it("reports an unknown or already ended request", async () => {
     transactionFinding(undefined);
     await expect(
-      createEmailChange().cancel(context({ challengeKey })),
+      createEmailChange({ linkPath: "/profile" }).cancel(
+        context({ challengeKey }),
+      ),
     ).resolves.toEqual({ outcome: "unknown" });
 
     transactionFinding({ ...noticedRow(), verificationKeyHash: "hash" });
     mocks.loadVerifications.mockResolvedValue([noticedRow({ endedAt: now })]);
     await expect(
-      createEmailChange().cancel(context({ challengeKey })),
+      createEmailChange({ linkPath: "/profile" }).cancel(
+        context({ challengeKey }),
+      ),
     ).resolves.toEqual({ outcome: "unknown" });
     expect(mocks.endVerification).not.toHaveBeenCalled();
   });

@@ -200,7 +200,7 @@ describe("scoped admin reordering", () => {
         name: "custom-save-reorder-scope-products",
         admin: {
           fields,
-          fieldServers: {
+          serverFields: {
             categoryId: serverField(categoryIdField, () => ({
               save: async ({ value }) => value,
             })),

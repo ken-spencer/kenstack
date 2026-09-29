@@ -80,7 +80,7 @@ const moduleConfig = defineModule({
       movie: defineOneToOne({
         fields: movieFields,
         table: movies,
-        fieldServers: {
+        serverFields: {
           overview: serverField(overviewField, () => ({
             async prepareSave({ value }) {
               await preparationBarrier?.();

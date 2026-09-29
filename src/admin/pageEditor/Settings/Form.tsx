@@ -1,5 +1,4 @@
 import { useRouter } from "next/navigation";
-import fetcher from "@kenstack/api/fetcher";
 import Form from "@kenstack/forms/Form";
 import ImageField from "@kenstack/forms/ImageField";
 import InputField from "@kenstack/forms/InputField";
@@ -23,14 +22,9 @@ export default function PageEditorSidebarForm() {
         seoDescription: content.data.seoDescription,
         ogImage: content.data.ogImage,
       }}
-      mutationFn={(variables) =>
-        fetcher("/api/admin", {
-          action: "page-editor",
-          ...variables,
-        })
-      }
       onSubmit={({ data, mutation, changes }) => {
-        return mutation.mutateAsync({
+        mutation.mutate({
+          action: "page-editor",
           changes,
           slug,
           values: data,

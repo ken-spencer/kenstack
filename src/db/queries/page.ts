@@ -1,13 +1,13 @@
-import { and, isNull, type SQL } from "drizzle-orm";
+import { isNull, type SQL } from "drizzle-orm";
 import type { SelectedFields } from "drizzle-orm/pg-core";
 import { cacheLife, cacheTag, io } from "next/cache";
 import { draftMode } from "next/headers";
 
-import { db } from "@app/db";
 import { requireUser } from "@kenstack/auth/server/user";
 import type { VisibilityValue } from "@kenstack/admin/lib/visibility";
 import type { AdminContentTable, AdminSeoTable } from "@kenstack/admin/table";
 import { selectImageSubquery } from "./media";
+import { query } from "./query";
 
 type PageQueryOptions<TSelection extends SelectedFields> = {
   // A cache profile name; a call outside a "use cache" function passes no
@@ -47,45 +47,38 @@ export function pageQuery(
     : queryPage(table, options);
 }
 
-async function queryPage<TSelection extends SelectedFields>(
+function selectPage<TSelection extends SelectedFields>(
   table: AdminContentTable,
   { select, where }: PageQueryOptions<TSelection>,
 ) {
-  return (
-    (
-      await db
-        .select({
-          ...select,
-          publishedAt: table.publishedAt,
-          visibility: table.visibility,
-        })
-        .from(table)
-        .where(and(isNull(table.deletedAt), where))
-        .limit(1)
-    )[0] ?? null
-  );
+  return query(table)
+    .select(select)
+    .select({ publishedAt: table.publishedAt, visibility: table.visibility })
+    .where(isNull(table.deletedAt))
+    .where(where);
+}
+
+async function queryPage<TSelection extends SelectedFields>(
+  table: AdminContentTable,
+  options: PageQueryOptions<TSelection>,
+) {
+  const [page] = await selectPage(table, options).build().limit(1);
+  return page ?? null;
 }
 
 async function querySeoPage<TSelection extends SelectedFields>(
   table: AdminContentTable & AdminSeoTable,
-  { select, where }: PageQueryOptions<TSelection>,
+  options: PageQueryOptions<TSelection>,
 ) {
-  return (
-    (
-      await db
-        .select({
-          ...select,
-          publishedAt: table.publishedAt,
-          visibility: table.visibility,
-          seoTitle: table.seoTitle,
-          seoDescription: table.seoDescription,
-          ogImage: selectImageSubquery(table.ogImage),
-        })
-        .from(table)
-        .where(and(isNull(table.deletedAt), where))
-        .limit(1)
-    )[0] ?? null
-  );
+  const [page] = await selectPage(table, options)
+    .select({
+      seoTitle: table.seoTitle,
+      seoDescription: table.seoDescription,
+      ogImage: selectImageSubquery(table.ogImage),
+    })
+    .build()
+    .limit(1);
+  return page ?? null;
 }
 
 export async function resolveVisiblePage<

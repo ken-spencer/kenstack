@@ -8,6 +8,7 @@ import {
   SidebarMenu,
 } from "@kenstack/components/Sidebar";
 import { Skeleton } from "@kenstack/components/Skeleton";
+import QueryProvider from "@kenstack/context/QueryProvider";
 import { NavigationBlockerProvider } from "@kenstack/forms/NavigationBlocker";
 import { AppSidebar } from "./app-sidebar";
 import AccountMenu from "@kenstack/components/AccountMenu";
@@ -121,7 +122,7 @@ function AdminSidebarContent({
 
         return links.length > 0 ? (
           <SidebarGroup key={index}>
-            <SidebarGroupLabel>{heading}</SidebarGroupLabel>
+            {heading ? <SidebarGroupLabel>{heading}</SidebarGroupLabel> : null}
             <SidebarGroupContent>
               <SidebarMenu>{links}</SidebarMenu>
             </SidebarGroupContent>
@@ -133,26 +134,28 @@ function AdminSidebarContent({
   );
 
   return (
-    <SidebarProvider className="flex" defaultOpen={defaultOpen}>
-      <NavigationBlockerProvider>
-        <AppSidebar content={sidebarNav} />
-        <Content
-          logo={logo}
-          moduleLinks={moduleLinks.map(({ headerIcon, name, title }) => ({
-            icon: headerIcon,
-            name,
-            title,
-          }))}
-          accountMenu={
-            <Suspense fallback={accountMenuFallback}>
-              {accountMenu ?? <AccountMenu fallback={accountMenuFallback} />}
-            </Suspense>
-          }
-        >
-          {children}
-        </Content>
-      </NavigationBlockerProvider>
-    </SidebarProvider>
+    <QueryProvider>
+      <SidebarProvider className="flex" defaultOpen={defaultOpen}>
+        <NavigationBlockerProvider>
+          <AppSidebar content={sidebarNav} />
+          <Content
+            logo={logo}
+            moduleLinks={moduleLinks.map(({ headerIcon, name, title }) => ({
+              icon: headerIcon,
+              name,
+              title,
+            }))}
+            accountMenu={
+              <Suspense fallback={accountMenuFallback}>
+                {accountMenu ?? <AccountMenu fallback={accountMenuFallback} />}
+              </Suspense>
+            }
+          >
+            {children}
+          </Content>
+        </NavigationBlockerProvider>
+      </SidebarProvider>
+    </QueryProvider>
   );
 }
 

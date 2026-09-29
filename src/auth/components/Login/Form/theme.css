@@ -4,5 +4,23 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 0.75rem;
+
+    /* The main button and the toggle share one line, and the toggle's text breaks on a narrow screen.
+       A later link, such as Cancel, wraps below them instead. */
+    > :first-child {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      min-width: 0;
+
+      > [type="submit"] {
+        flex-shrink: 0;
+      }
+
+      > :not([type="submit"]) {
+        min-width: 0;
+        text-align: start;
+      }
+    }
   }
 }

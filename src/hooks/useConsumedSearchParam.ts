@@ -33,7 +33,7 @@ export default function useConsumedSearchParam(name: string) {
 
     params.delete(name);
     window.history.replaceState(
-      window.history.state,
+      null,
       "",
       window.location.pathname +
         (params.size ? `?${params}` : "") +

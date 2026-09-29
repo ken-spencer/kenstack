@@ -45,7 +45,10 @@ export function dateFormat(
   }).format(date);
 }
 
-export function formatDateKey(value: string | Date, timeZone: string) {
+export function formatDateKey(
+  value: string | Date,
+  timeZone = deps.defaultTimeZone,
+) {
   const parts = Object.fromEntries(
     getZonedFormatter("date-key", "en-CA", timeZone, {
       day: "2-digit",

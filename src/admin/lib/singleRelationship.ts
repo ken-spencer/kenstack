@@ -1,6 +1,14 @@
 import "server-only";
 
-import { asc, desc, getTableColumns, getTableName } from "drizzle-orm";
+import {
+  asc,
+  desc,
+  getTableColumns,
+  getTableName,
+  sql,
+  type AnyColumn,
+  type SQL,
+} from "drizzle-orm";
 import { getTableConfig } from "drizzle-orm/pg-core";
 
 import {
@@ -8,10 +16,7 @@ import {
   type DefinedAdmin,
   type DefinedAdminModule,
 } from "@kenstack/admin/module";
-import {
-  getAdminRecordTitleSelect,
-  getAdminRecordTitleSql,
-} from "@kenstack/admin/lib/recordTitle";
+import { getAdminRecordTitleSelect } from "@kenstack/admin/lib/recordTitle";
 import { isSingleRelationshipField } from "@kenstack/fields/relationship";
 import { resolveListSortFields } from "@kenstack/list/server";
 
@@ -96,4 +101,22 @@ export function resolveSingleRelationship(
     search,
     table: target.admin.table,
   };
+}
+
+function getAdminRecordTitleSql(
+  columns: Record<string, AnyColumn>,
+  id: AnyColumn,
+  moduleTitle: string,
+): SQL {
+  const titleColumns = Object.values(getAdminRecordTitleSelect(columns));
+  const fallback = sql`concat(cast(${moduleTitle + " #"} as text), ${id})`;
+
+  return titleColumns.length
+    ? sql`coalesce(${sql.join(
+        titleColumns.map(
+          (column) => sql`nullif(btrim(cast(${column} as text)), '')`,
+        ),
+        sql`, `,
+      )}, ${fallback})`
+    : fallback;
 }

@@ -2,11 +2,12 @@
 
 import Notice from "@kenstack/components/Notice";
 import { useForm } from "@kenstack/forms/context";
+import { useSubmitFailure } from "@kenstack/forms/internal/submitFailure";
 import {
   getFormFieldErrors,
   hasRegisteredField,
 } from "@kenstack/forms/internal/fieldErrors";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { Button } from "@kenstack/components/Button";
 import { CircleX } from "lucide-react";
@@ -17,9 +18,10 @@ export default function NoticeList({
   validationMessage?: React.ReactNode;
 }) {
   const { statusMessage, setStatusMessage } = useForm();
+  const { submitFailure } = useSubmitFailure();
   const {
     control,
-    formState: { errors, isSubmitted, submitCount },
+    formState: { errors, submitCount },
   } = useFormContext();
   const ref = useRef<HTMLDivElement | null>(null);
   const fieldErrors = getFormFieldErrors(errors);
@@ -29,8 +31,31 @@ export default function NoticeList({
       name.startsWith("root.") ||
       !hasRegisteredField(control._fields, name),
   );
+  // A failed submit shows until the next submit, or until its field errors, once shown, are all fixed;
+  // typing never brings it back.
+  const [shownFailure, setShownFailure] = useState({
+    failure: submitFailure,
+    fixed: false,
+    hadErrors: false,
+  });
+  if (shownFailure.failure !== submitFailure) {
+    setShownFailure({
+      failure: submitFailure,
+      fixed: false,
+      hadErrors: fieldErrors.length > 0,
+    });
+  } else if (submitFailure && !shownFailure.hadErrors && fieldErrors.length) {
+    setShownFailure({ ...shownFailure, hadErrors: true });
+  } else if (
+    shownFailure.hadErrors &&
+    !shownFailure.fixed &&
+    !fieldErrors.length
+  ) {
+    setShownFailure({ ...shownFailure, fixed: true });
+  }
   const showValidation =
-    unrenderedErrors.length > 0 || (isSubmitted && fieldErrors.length > 0);
+    unrenderedErrors.length > 0 ||
+    (submitFailure !== null && !shownFailure.fixed);
 
   // Scroll to a submission outcome, never to the validation state changing
   // under the user's edits.

@@ -13,6 +13,7 @@ function createAuthenticatedState(
     email,
     familyName: "",
     givenName: email,
+    impersonatedBy: undefined,
     initials: email.slice(0, 2).toUpperCase(),
     name: email,
     roles: [],

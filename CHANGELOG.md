@@ -4,6 +4,21 @@ Migration notes for committed Kenstack API changes, newest release first. The au
 contract lives in `docs/upgrading.md`.
 
 ## Unreleased
+
+### Admin root link in the registry
+
+`AdminSidebarNavLink` no longer takes `exact`. The sidebar now always lights a link to `/admin` only
+on `/admin` itself, and every other link on every page under its path. `defineAdmin` also accepts a
+link at the top level, `{ href, title, icon }`, shown in place without a heading. A site that built
+its root link by hand, such as a Dashboard `AdminSidebarNavLink` with `exact` in `sidebarBefore`,
+removes it and registers the link at the top level of `defineAdmin`, in the position it should show:
+
+```ts
+defineAdmin([{ href: "/admin", title: "Dashboard", icon: Gauge }, ...entries]);
+```
+
+Any other `AdminSidebarNavLink` drops its `exact` prop.
+
 ### Admin previews are declared
 
 A slug field no longer gives a module a preview at `<basePath>/<slug>`. The editor's preview button,
@@ -11,13 +26,78 @@ the list's link to the public site and the draft-mode exit redirect now appear o
 declares `admin.preview`. A module that relied on the default must declare its page, such as
 `preview: "/events/${slug}"`, and set `basePath` when that page lives elsewhere.
 
+### Users module definition
+
+Kenstack's users module is now `defineUsersModule({ admin: { fields, table: users } })` from
+`@kenstack/modules/users/module`, and a site defines its own with the same function: `admin` as for
+`defineModule`, with Kenstack's name, title and icon inherited.
+
+- `currentUser: { select: (users) => ({ … }) }` adds columns or SQL subqueries to the cached
+  current-user query. `getCurrentUser()` and `requireUser()` return them, typed through the module
+  registry. Kenstack's own fields replace a site field with the same name, and a site field named
+  `sessionId`, `provider`, `expiresAt` or `authorizedUntil` is dropped. A write to data a
+  subquery reads must clear `adminLoadCacheTag("users", userId)`.
+- `publicUser: (user) => ({ … })` adds fields to the browser's user info and `useUserInfo`. It runs
+  after the cache on each request and cannot replace Kenstack's fields. Declare it after
+  `currentUser`; declared first, its `user` lacks the selected fields.
+- The signed-in user info's `impersonatedBy` is always present, `undefined` unless an admin is
+  impersonating, so a test fixture that builds a `PublicAuthState` sets it.
+- `requireUser()` now returns the current user's inferred type, site fields included, instead of
+  `User<Role>`.
+- `defineClient` returns its inputs unchanged, and the client loader builds them once per module, so
+  a site's users client builds on Kenstack's:
+  `defineClient({ admin: { ...usersClient.admin, fields, EditForm } })`, with `usersClient` the
+  default export of `@kenstack/modules/users/client`. Code that read a built client straight from a
+  module's `client` file, such as its `settings.schema`, loads it through the client registry
+  instead.
+
+A users module built with plain `defineModule` keeps working with Kenstack's defaults. To adopt, wrap
+the site's users module in `defineUsersModule`, move any separate query for the signed-in user's own
+columns into `currentUser.select`, and compose the client from `@kenstack/modules/users/client` in
+place of copied list columns.
+
+### Site settings a site extends
+
+`defineSiteSettingsModule({ admin })` from `@kenstack/modules/siteSettings/module` defines the
+site-settings module, as `defineUsersModule` does for users; Kenstack's own module uses it, and a site
+inherits the `site-settings` name, title and icon. A site that adds settings extends
+`siteSettingsColumns` and `siteSettingsFields` and passes its table and fields. `loadSiteSettings()` and
+`loadSiteSettingsMetadata()` read the site-settings module the site registered, typed with its own
+settings, so a site drops its own loader, defaults and metadata copy and imports Kenstack's.
+
+- Every site registers a site-settings module, since the loaders read it and Kenstack does not compile
+  without one. Replace `defineModule({ name: "site-settings", … })` with
+  `defineSiteSettingsModule({ admin })`. A site without one registers Kenstack's: the default export of
+  `@kenstack/modules/siteSettings` in `defineAdmin`, and
+  `"site-settings": () => import("@kenstack/modules/siteSettings/client")` in its client registry. It
+  then generates the migration for the table below.
+- `@kenstack/db/tables` no longer exports the `site_settings` table. The site's schema registry exports
+  Kenstack's, `export * from "@kenstack/modules/siteSettings/tables"`, or its own extended table.
+
+### `fieldServers` is now `serverFields`
+
+The option that holds each field's save-time handlers, `admin.fieldServers` on a module and
+`fieldServers` in `defineOneToOne(...)`, is renamed `serverFields`, matching `serverField` and the
+`ServerFields` type. Rename the property wherever a module or one-to-one kind sets it. It is a
+property, not the retired `serverFields(...)` function, which stays removed. TypeScript does not
+reject a leftover `admin.fieldServers`, and the module then runs without those handlers, so search
+the site for `fieldServers` rather than relying on the compiler.
+
+### Admin lists show publication status
+
+The admin list's default title cell shows the record's title, then its name, then its slug, before its
+"ID n" fallback. A publishable module, whose table has `visibility` and `publishedAt` from
+`defineTable({ publish })`, always shows the Published/Draft column after its list columns, custom
+`listItems` included; other modules never show it. Remove any status column a custom `listItems` adds
+with `VisibilityStatus`, which would otherwise show twice, and any custom `listItems` whose only column
+shows the record's title or name.
+
 ### Payments moved to its own package
 
 `@kenstack/payments/*` no longer exists. The payments code, its tests and its checkout stylesheet
 live in the separate private `payments` package mounted beside Kenstack; import `@payments/...` and
 add `@payments/checkout/theme.css` after `@kenstack/theme.css`. Kenstack's stand-in `@app/db` no
 longer includes the payment tables.
-
 
 ### Pipeline stages as actions
 
@@ -51,9 +131,8 @@ needs a custom `coalesce(...)` filter to make its empty option work; remove such
 
 ### Host deps binding
 
-Replace the `@app/roles` TypeScript path binding with `@app/deps`, and delete the old path and its
-module. Point `@app/deps` at a browser-safe module default-exporting one object built with
-`createDeps` from `@kenstack/deps`:
+Add an `@app/deps` TypeScript path binding beside `@app/roles`, pointing at a module
+default-exporting one object built with `createDeps` from `@kenstack/deps`:
 
 ```ts
 import { createDeps } from "@kenstack/deps";
@@ -61,80 +140,93 @@ import { createDeps } from "@kenstack/deps";
 export default createDeps();
 ```
 
+Client components import `@app/deps`, and anything the browser imports ships whole, so the module
+holds only browser-safe values.
+
 `defaultTimeZone`, an IANA time zone name, defaults to `America/Vancouver`; a host in another zone
 passes its own. Shared timestamp displays, scheduled
 date-time entry, and timestamp date filters now use this host zone instead of server, browser, or UTC
 defaults. Date-only values keep their calendar dates; stored and transported instants remain
 unchanged. Existing explicit formatter time zones still take precedence.
 
-A host with custom roles passes the registry the old `@app/roles` module exported by default as
-`roles`; omitted roles default to `@kenstack/auth/roles`.
+The role registry stays in its own `@app/roles` binding, which only admin and server code import, so
+public pages never carry the role list. A host using only Kenstack's default roles keeps the one-line
+`export { default } from "@kenstack/auth/roles";`, so roles Kenstack adds later reach it. A host that
+removed its `@app/roles` binding restores it and its `roles.ts`, moving any `roles` it passed to
+`createDeps` there and dropping the option.
+
+`userRoleField` and the role-bearing `fields` set move from `@kenstack/modules/users/fields` to the
+admin-only `@kenstack/modules/users/adminFields`; update their imports. `userFields`, the role-free
+set public forms use for names and email, stays in `@kenstack/modules/users/fields`. A host users
+field set that adds `userRoleField` splits the same way: a role-free set for public schemas and an
+admin set with roles.
 
 ### Shared Reauthentication
 
-Move `hasRecentAuthentication` imports from
-`@kenstack/auth/passwordChange` to `@kenstack/auth/reauthentication`,
-`requireRecentAuthentication` imports from `@kenstack/auth/server/reauthentication` to
-`@kenstack/auth/reauthentication/server`, and the default `ReauthenticationTimer` import from
-`@kenstack/auth/components/ReauthenticationTimer` to `@kenstack/auth/reauthentication/Timer`. The
-timing policy, server guard, and browser timer now live together under `auth/reauthentication/`.
-`getAuthenticationRemainingMs` has been removed; it measured only the initial sign-in window. A
-sensitive-action timer uses the fresh session's `authorizedUntil` instead. `hasRecentAuthentication`
-now reads the current time itself: remove any `now` argument, and pass a grace period as its second
-argument. `getCurrentSession` now reads the per-session cache, which holds a session for up to
-fifteen minutes, and returns `id`, `userId`, `expiresAt`, `authorizedUntil`, `impersonatedBy` and
+Move `hasRecentAuthentication` imports from `@kenstack/auth/passwordChange` to
+`@kenstack/auth/reauthentication`, and `requireRecentAuthentication` imports from
+`@kenstack/auth/server/reauthentication` to `@kenstack/auth/reauthentication/server`. The timing policy,
+server guard and confirmation wrapper now live together under `auth/reauthentication/`.
+`getAuthenticationRemainingMs` and `ReauthenticationTimer` have been removed.
+`hasRecentAuthentication(session)` reads the current time itself and takes the session alone: remove any
+`now` or grace argument. `getCurrentSession` now reads the per-session cache, which holds a session for
+up to fifteen minutes, and returns `id`, `userId`, `expiresAt`, `authorizedUntil`, `impersonatedBy` and
 `provider`; `createdAt` has been removed. Authorize writes with the new uncached
 `getFreshCurrentSession`, and replace any `createdAt` recency check with `hasRecentAuthentication`.
 
-Password and email changes now require recent authentication in a non-impersonated session.
-Sensitive forms ask for identity confirmation after ten minutes. Activity in the inline wrapper requests
-another ten minutes when less than two remain. Only a live, non-impersonated session whose short
-authorization has not expired may extend it; the original sign-in timestamp and fixed login expiry stay
-unchanged. Server writes retain one additional minute for requests in flight, but extension never uses
-that grace. The required `sessions.authorizedUntil` timestamp requires a host migration before deployment. Add the
-column as nullable, backfill it with `least(created_at + interval '10 minutes', expires_at)`, then set it
-NOT NULL. Coordinate migration and deployment: old code cannot create sessions after this migration
-because it does not populate the required column, so logins are interrupted until the new code is live.
-The new code also requires the column to exist. Backfilled deadlines are anchored to the original
-sign-in time, never the migration time; sessions signed in at least ten minutes ago remain expired.
-`hasRecentAuthentication` now requires the session's
-`authorizedUntil`, `expiresAt`, and `impersonatedBy`; update hand-built session fixtures accordingly.
-Email-change codes and links expire after ten minutes; resends retain the original challenge deadline.
-Their issuance transaction grants authorization through the actual challenge expiry before mail delivery.
-Login verification and proof lifetimes are unchanged. `ResetPassword` embeds
-this confirmation. Hosts rendering `EmailChange` must wrap it in the inline `ReauthenticationForm`
-from `@kenstack/auth/reauthentication/Form`, which owns activity extension and grants.
-`ReauthenticationTimer` now requires `onExpire`; it no longer navigates to login itself. Add an expiry
-callback at every direct call site. It takes `deadline`, a `performance.now()` time, instead of
-`remainingMs`: anchor it once when the authorization arrives (`performance.now() + remainingMs`) so
-hidden Activity effects resume against the same time. The inline form is a Server Component that loads the session, email,
-remembered login method, and authoritative session deadline itself; pass only an explanatory `message` and the
-protected form as children, and render it only for a signed-in, non-impersonated session. It resets its
-timer when the session changes while preserving the child form's success notice for the same account.
-Keep email-change cancellation links accessible without
-recent authentication.
+Password and email changes require recent authentication in a non-impersonated session: signing in,
+or confirming identity, authorizes the session for ten minutes. The required
+`sessions.authorizedUntil` timestamp requires a host migration before deployment. Add the column as
+nullable, backfill it with `least(created_at + interval '10 minutes', expires_at)`, then set it NOT
+NULL. Coordinate migration and deployment: old code cannot create sessions after this migration
+because it does not populate the required column, so logins are interrupted until the new code is
+live. The new code also requires the column to exist. Backfilled deadlines are anchored to the
+original sign-in time, never the migration time; sessions signed in at least ten minutes ago remain
+expired. `hasRecentAuthentication` requires the session's `authorizedUntil`, `expiresAt` and
+`impersonatedBy`; update hand-built session fixtures accordingly. Email-change codes and links
+expire after ten minutes, and resends retain the original challenge deadline. Issuing a code extends
+the requesting session's authorization through the code's expiry, before mail delivery. Login
+verification and proof lifetimes are unchanged.
 
-The inline form uses the existing password and email-code login handlers. Successful confirmation
-refreshes the owning page with the new session, keeping unsaved state elsewhere on the page; it does
-not replay an interrupted write. Confirming as a different account reloads the page instead, so no
-unsaved state carries across accounts. Login links
-verify through `/login` and return to the owning page, preserving any pending email-change token.
-The `Login/Form` client entry accepts `mode="reauthentication"` for this continuation, without adding
-an API login-schema field. Sending a confirmation code leaves the signed-in account menu intact.
+Sensitive forms render normally and ask for confirmation only when the server refuses a submit.
+`ReauthenticationForm` from `@kenstack/auth/reauthentication/Form` is a Server Component that wraps a
+sensitive area for a signed-in visitor; pass an explanatory `message` and the protected form as
+children. Inside it, run each protected request through `track(() => request)` from
+`useAuthorization()` and send the wrapper's `userId` with it. When the server refuses with
+`code: "reauthentication-required"`, the wrapper holds the request and opens a dialog with the
+confirmation sign-in: a password or an emailed code, for the rendered account's email, which cannot be
+edited. Confirming replays the held requests one at a time, each rebuilt from its function, and
+settles `track` with the result; Cancel settles it with the original refusal, and nothing is written.
+A refusal with `code: "account-changed"`, meaning another account signed in elsewhere, reloads the
+page. `track` now takes a function, not a promise; `setAuthorization`, the `rotatesSession` option
+and the `extend-authorization` action have been removed.
 
-The auth guard reloads a stale signed-in form at its safe Referer path through the API `redirect`
-response, so the inline check appears. Missing sessions and missing safe paths still use login.
-Hosts must check session recency before their already-signed-in login-page redirect. Stale sessions
-use the ordinary `Login` form from `@kenstack/auth/components/Login`; recent sessions continue to the
-return destination. The email-login shortcut also requires a recent session. Password and email proof
-rotate the session and grant a new authorization window.
+`requireRecentAuthentication(request, userId)` requires the account id the request names. A signed-in
+stale session is refused with 403 and `code: "reauthentication-required"` and no redirect, so the
+page keeps what was typed; another account is refused with 401 and `code: "account-changed"`; a
+signed-out visitor still gets 401 with a redirect to `/login`. The one-minute submission grace is gone.
+Call it before a handler's first write, quota claim or email. `extendAuthorization` requires its
+transaction and expiry, and `serializeAuthorization` and the `Authorization` type have been removed.
+`EmailChangeRequestResult` no longer carries `authorization`. Password-change, email-change and
+confirmation sign-in requests carry the account id; a confirmation sign-in from a browser whose
+session now belongs to another account, or whose account's email changed, is refused with
+`account-changed` before a password is checked or a code is sent or redeemed.
+
+`@kenstack/auth/components/EmailChange` is now a Server Component that wraps itself in
+`ReauthenticationForm` for a signed-in visitor, and it has lost its `apiPath` prop. Remove the host's
+`ReauthenticationForm` around it and any link-parameter, sign-in or impersonation branching, and render
+it from a Server Component. It owns its `cancelEmailChange` and `confirmEmailChange` link parameters:
+a cancellation works signed out, and a confirmation opened signed out sends the visitor to sign in and
+returns with the token. `createEmailChange`'s `linkPath` is now required: set it to a public page that
+renders `<EmailChange />`.
 
 `reset-password` no longer accepts current-password confirmation in place of fresh authentication,
 including for accounts that have no password yet. Remove `requiresCurrentPassword` imports and the
 corresponding prop from direct users of `ResetPassword/Form`; that field and helper have been removed.
-Pass the request to `requireRecentAuthentication` from `@kenstack/auth/reauthentication/server` to protect additional
-sensitive actions. Their pages must also provide `ReauthenticationForm` so a stale submission has a way to obtain
-fresh proof.
+To protect another sensitive action, call `requireRecentAuthentication` from its handler and wrap its
+form in `ReauthenticationForm`. A login page no longer needs a recency check before sending a
+signed-in visitor on: the guard never sends a signed-in visitor there. The email-login shortcut still
+requires a recent session, so "Email me a code" in the confirmation always sends a code.
 
 ### Error Alerts Without Redis
 
@@ -163,9 +255,9 @@ no requesting account; these columns alone do not enforce email-change authoriza
 `authPipeline({ emailChange })` registers `email-change`, `verify-email-change-code`,
 `verify-email-change-link` and `cancel-email-change`, implemented by `createEmailChange` in
 `@kenstack/auth/email/change/api`. `emailChange.email` overrides the confirmation email copy like
-`emailLogin.email`; `emailChange.linkPath` (default `/account/profile`) is the page hosting the
-`EmailChange` component from `@kenstack/auth/components/EmailChange`, where the emailed
-confirmation (`?token=`) and cancellation (`?cancelEmailChange=`) links land. Requesting a change
+`emailLogin.email`; `emailChange.linkPath`, required, is a public page rendering the `EmailChange`
+component from `@kenstack/auth/components/EmailChange`, where the emailed confirmation
+(`?confirmEmailChange=`) and cancellation (`?cancelEmailChange=`) links land. Requesting a change
 also notifies the current address. Result types `EmailChangeRequestResult`,
 `EmailChangeVerificationResult` and `EmailChangeCancelResult` are exported from
 `@kenstack/auth/api`.
@@ -176,18 +268,22 @@ the requesting browser, so it still works after a sign-in in between.
 An address that already has an account gets a decoy challenge and an "account already exists"
 email instead of a code, so the requester's screen never reveals it. `sendCode` accepts `isDecoy`
 for that purpose.
-The request stage and both verification stages use the shared recent-authentication guard, including
-its one-minute server grace period. An older session gets a 403 with code `reauthentication-required`, and an impersonated
-session gets a 403; the shared fetcher routes an expired proof through reauthentication. A completed
+The request stage and both verification stages call the shared recent-authentication guard, with the
+account the request names, before verifying anything. An older session gets a 403 with code
+`reauthentication-required`, which opens the confirmation (see "Shared Reauthentication"), and an
+impersonated session gets a 403. A resend or a code in a stale session gets the ordinary ended-request
+refusal instead, since the code expired with the session's authorization. A completed
 change deletes every session for the account and signs the requesting browser in again, so other
 browsers sign in with the new address.
 
 ### Login Destination
 
-`authPipeline({ loginDestination })` chooses where password and email sign-ins land when the request
-carries no safe `returnTo`; a safe `returnTo` always wins, and the callback's result passes
-`getSafeReturnToPath` with `/` as the fallback. `createEmailLogin` and `loginPipeline` accept the
-same option. Without it, sign-ins land on `/` as before.
+`defineUsersModule({ loginDestination: (user) => path })` chooses where password and email sign-ins
+land when the request carries no safe `returnTo`; a safe `returnTo` always wins, and the callback's
+result passes `getSafeReturnToPath` with `/` as the fallback. It receives the current user, site
+fields included, so a rule that read `userId` reads `id`. Without it, sign-ins land on `/`.
+`authPipeline`, `createEmailLogin` and `loginPipeline` take no destination option: move a
+`loginDestination` passed to them onto the users module.
 
 ### Emailed Link Origin
 
@@ -201,8 +297,10 @@ since Next fills it with the hostname the server started on.
 
 ### Reset Password Path
 
-`ResetPasswordForm` accepts `path` and `forgotPassword.resetPath` names the page hosting it; both
-default to `/reset-password`, so existing hosts are unchanged.
+`defineUsersModule({ passwordPath })` names the page hosting `ResetPasswordForm`, where the
+forgot-password email's link lands after sign-in and a signed-out visitor returns; it defaults to
+`/reset-password`. `ResetPasswordForm` takes no `path`, and `authPipeline`'s `forgotPassword` takes
+no `resetPath`: move either value to `passwordPath`.
 
 ### Relationships Without A Discriminator Column
 
@@ -239,15 +337,24 @@ Migration steps:
 - A request made outside a form mutation, such as the email login's direct `fetcher` call, keeps its
   own `executeRecaptcha` call.
 
+### Account Links for a Mobile Menu
+
+`AccountLinks` from `@kenstack/components/AccountMenu` lays out `AccountMenu`'s links, Logout and
+signed-out fallback inline, with the same `items` and `fallback` props and the same live sign-in
+state. Place it in the site's `MobileNav` in place of a hand-copied account section, which kept
+showing "Sign in" after a sign-in until a full page load.
+
 ### Login No Longer Waits for a Server Refresh
 
 `createLoginStep()` still reads the server auth state and starts skipped for a signed-in visit, but its
-controller now follows browser identity alone: losing identity brings the step forward, and signing in
-again skips it and resumes the flow. The `always` option is gone. Signing in inside a flow updates
-browser identity in place and advances; the embedded continuation no longer calls `router.refresh()`,
-and the step shows "Signed in as …" with Continue and "Use a different account" when revisited.
-Previously the flow waited for a server refresh to compose the steps that depend on identity, and a
-retained page instance could resurface around that refresh.
+controller now follows browser identity: losing identity brings the step forward, and signing in again
+skips it and resumes the flow. The `always` option is gone. Signing in inside a flow updates browser
+identity in place and advances without waiting; the login step's controller then fires
+`router.refresh()`, so account menus and other output that depends on identity update. StepFlow keeps
+the step list the visit started with through that refresh, so the login step keeps its place and shows
+"Signed in as …" with Continue and "Use a different account" when revisited. Previously the flow waited
+for a server refresh to compose the steps that depend on identity, and a retained page instance could
+resurface around that refresh.
 
 Migration steps:
 
@@ -256,8 +363,13 @@ Migration steps:
 - Anything a step took from the server because it needed identity, such as the account's saved
   details, must reach the browser through a client query keyed by user id, hydrated from the server for
   a signed-in visit and written back on save. Civic's `AccountDetailsStep` is the reference.
-- A standalone login page that relied on the refresh to redirect needs a final step that leaves for
-  the destination.
+- A standalone login page no longer redirects a signed-in visitor on the server, which the sign-in
+  refresh would trigger mid-flow: the visitor walks the flow, which skips what it already has.
+- A step controller that calls `setSkipped` includes `visit` from `useStep()` in its effect inputs,
+  so a new visit recomputes its override.
+- A standalone login flow ends with `createLoginReturnStep()` from
+  `@kenstack/auth/components/Login/ReturnStep`, which leaves for a safe `returnTo` or the users
+  module's `loginDestination`. Remove a site-written final step that repeated the landing rule.
 
 ### Flow URLs Never Name a Step
 
@@ -283,9 +395,6 @@ Migration steps:
 - Remove `index: true` from step compositions and `createLoginStep({ index })`.
 - A flow that kept a live copy of a result for its final step, because entering it cleared the store,
   reads the stored value directly instead.
-- `StepFlow` stamps each server render with `crypto.randomUUID()`, so it must render after a dynamic
-  read such as `connection()`, `cookies()`, or the auth state; under Cache Components a prerenderable
-  scope fails the build.
 
 ### Query Store Updates URLs Without Server Navigation
 
@@ -313,9 +422,13 @@ inside the store to compensate. Kenstack admin lists already use server hydratio
 the base, admin, and site context selector. `style-guide` is a reserved admin route name and returns
 not found outside development or with additional path segments.
 
-Hosts must serve `/style-guide/[context]` for `base`, `admin`, and `site`, restricted to administrators
-in development. This route renders the guide with the host's theme styles for the isolated comparison.
-The host-route contract is documented in [Admin Reference](docs/admin.md#style-guide).
+The selector frames `/style-guide/<context>`, which `@kenstack/admin/style-guide/ContextPage` provides
+with its administrator and development-only checks, context names, noindex metadata and Kenstack's
+theme styles. The style guide is optional: a site that wants it adds a stub route that re-exports the
+page and its metadata, then imports the site theme so it loads after Kenstack's. A site without the
+stub adds nothing, and the frame shows a 404. A site that already serves its own
+`/style-guide/[context]` page replaces it with the stub, documented in
+[Admin Reference](docs/admin.md#style-guide).
 
 ### Login Steps Retain Their Controllers
 
@@ -360,6 +473,11 @@ their existing session tags.
 Public readers can import `adminLoadCacheTag` and `adminListCacheTag` from `@kenstack/admin/cache`.
 The existing query-file exports remain supported. Restricted record saves now exclude soft-deleted
 rows from their default update query; restoring records remains an admin operation.
+
+Module saves, removals and reorders also expire the tag named for the module itself, such as `news`,
+which public lists and pages tag their entries with. Remove the module's own name from its
+`admin.revalidate`, which now lists only other tags a change affects; a leftover entry only expires the
+same tag twice.
 
 ### Table-Owned Publication and SEO Fields
 
@@ -969,8 +1087,7 @@ New APIs:
 - `hasRecentAuthentication(...)` replaces `hasRecentPasswordAuthentication(...)`. A recent
   non-impersonated session now satisfies the password-change gate regardless of whether it began with a
   password or email.
-- The `@app/email` binding exports `loadEmailFrom`, which transactional senders use to resolve the
-  from-address.
+- The `@app/email` binding exports `loadEmailFrom`, which the mailer uses to resolve the from-address.
 - `createLoginStep(...)` from `@kenstack/auth/components/Login/Step` adapts email and password login to
   StepFlow. Emailed links return to the flow page and advance the login step after verification.
 
@@ -1159,7 +1276,7 @@ New behavior:
 - Text links, link-variant buttons, rendered Markdown links, and menu items use `--link-underline-offset`, with a common fallback.
 - `@kenstack/theme.css` loads Kenstack's complete shared theme, while each constituent stylesheet remains available through its component path for selective use.
 - The aggregate theme is an import-and-extend foundation. Shared styles own component mechanics and interaction defaults; a later host theme keeps control of its intentional visual decisions without repeating accepted Kenstack declarations.
-- `@kenstack/admin/style-guide/StyleGuide` renders the real shared components for a host-provided development style-guide route. Hosts can isolate the same examples under base, admin, and site stylesheet stacks for direct comparison.
+- `@kenstack/admin/style-guide/StyleGuide` renders the real shared components for the development style-guide route. Hosts can isolate the same examples under base, admin, and site stylesheet stacks for direct comparison.
 - `@kenstack/admin/theme.css` loads the baseline automatically for admin surfaces.
 - Account-menu containers carry `.account-menu`, and mobile-navigation panels expose `data-slot="mobile-nav"`, for contextual theme rules.
 
@@ -1172,7 +1289,7 @@ Migration steps:
 - In a host stylesheet that loads or references the Kenstack theme, use `@apply link` on the anchor scope that owns ordinary site links. This keeps those links and `.button.link` themed together without changing navigation, logo, or other contextual anchors globally.
 - Use `.menu-heading` for a label or signed-in identity that heads a group of menu items.
 - Replace duplicated link and button presentation classes with `.menu-item`; retain contextual rules only where a menu genuinely differs, such as `.account-menu .menu-item` or `[data-slot="mobile-nav"] .menu-item`.
-- Render the style guide through an authenticated, development-only host route that renders `@kenstack/admin/style-guide/StyleGuide` through the application's Tailwind pipeline.
+- A site that wants the style guide adds the opt-in stub route described under "Automatic Admin Style-Guide Route".
 
 ### Automatic Form Alerts
 
@@ -1413,10 +1530,17 @@ New API:
 - Operational failures include only sanitized provider diagnostics: the provider code, HTTP status when available, and attempt count. They never include recipient addresses or raw provider messages.
 - The mailer contains failures that occur before the provider request as operational failures with zero
   attempts, so callers do not add a separate mailer exception-reporting path.
+- `from` is optional. Without it the mailer sends from `loadEmailFrom()` in `@app/email`; when that
+  returns no sender, such as on a preview deployment or before site settings are saved, or fails, the
+  result is an operational failure with code `SenderUnavailable` and zero attempts, logged once
+  through `errorLog` as `email-sender-unavailable`.
 
 Migration steps:
 
 - Replace truthiness checks with a `result.status` check.
+- Drop each sender's own `loadEmailFrom()` lookup and its "sender not configured" check; pass `from`
+  only for a sender other than the site's. The failed delivery reaches the caller's existing
+  delivery-failure handling.
 - Treat `recipient-rejected` as expected customer input. It is limited to an
   `InvalidParameterValue` response that explicitly identifies the recipient;
   general SES `MessageRejected` responses remain operational because they can
@@ -1441,8 +1565,9 @@ New API:
 
 - `admin.fields` accepts the `defineFields(...)` field map directly; `defineModule(...)` resolves
   server defaults itself.
-- Module server behavior targets a field property through `admin.fieldServers`. One-to-one relation
-  behavior uses the same property-keyed `fieldServers` shape beside that relation's table binding.
+- Module server behavior targets a field property through the `admin.serverFields` property, which
+  replaces the `serverFields(...)` function. One-to-one relation behavior uses the same property-keyed
+  `serverFields` shape beside that relation's table binding.
 - A module client passes the isomorphic field map directly to `defineClient(...)`. A separate
   consumer-owned `defineFormFields(...)` call supplies custom editor components through the
   property-keyed `components` option. Extract it to `fields/formFields.ts` only when the configured map
@@ -1466,7 +1591,7 @@ New API:
 Migration steps:
 
 - Pass the isomorphic field map directly as `admin.fields`.
-- Assemble server registrations at the module entry boundary through property-keyed `fieldServers` in
+- Assemble server registrations at the module entry boundary through property-keyed `serverFields` in
   `index.ts`, and assemble property-specific client components in their consuming form or a shared
   `fields/formFields.ts`. Keep an implementation in its owning `fields/<name>/server.ts` or
   `Component.tsx`, but remove assembly-only `fields/server.ts` and `fields/client.tsx` files.
@@ -1478,7 +1603,7 @@ Migration steps:
 - Replace `serverFields(...)` with `resolveServerFields(...)` only where a resolved field map is
   needed outside `defineModule(...)`; otherwise remove the wrapper.
 - Pass bare `defineFields(...)` output to `defineModule(...)` and apply module registrations through
-  `admin.fieldServers`. Remove any path that resolves a map before giving it to
+  `admin.serverFields`. Remove any path that resolves a map before giving it to
   `defineModule(...)` or passes a `resolveServerFields(...)` result into another resolution call.
 - Replace `FieldBehavior` with `ServerField`. Type registries with `ServerFieldKinds<typeof fields>` and
   obtain resolver entries from `defineServerField(...)` or
@@ -1649,7 +1774,7 @@ Old APIs:
 
 New APIs:
 
-- `saveModuleRecord({ module, fields, id, changes, values })` saves a module record from an authenticated site action with restricted field authority and module-owned cache revalidation. The explicit field set defines that action's writable and returned surface; it must not be replaced with the module's broader admin fields.
+- `saveModuleRecord({ module, id, changes, values })` saves a module record from an authenticated site action with restricted field authority and module-owned cache revalidation. It writes the columns named in `values` and runs the handlers of the module fields among them, so the action's validated schema defines its writable and returned surface.
 - `saveAdminRecord({ module, id, changes, values })` saves through the standard admin path and supplies admin-save authority to field handlers.
 - `saveRecord(...)` remains the low-level helper for custom persistence. It is restricted by default and accepts `admin: true` for backend actions that have already enforced admin access.
 - Admin-save authority describes the backend action, not the current user's roles, and is never accepted from submitted data.
@@ -1657,7 +1782,8 @@ New APIs:
 Migration steps:
 
 - Rename the `saveAdminRecord` `moduleConfig` property to `module` and remove `actionPrefix` and `fields`; both are now derived by the admin save path.
-- Replace non-admin `saveAdminRecord(...)` calls with `saveModuleRecord(...)`.
+- Replace non-admin `saveAdminRecord(...)` calls with `saveModuleRecord(...)`, and drop any `fields`
+  list passed to `saveModuleRecord`: the validated values decide which fields are written.
 - Remove site-level server-field options that suppress admin metadata or media selection behavior. The save helper now supplies that context to field handlers.
 - Add `admin: true` to direct `saveRecord(...)` calls owned by backend admin actions, such as custom settings or page-editor persistence. Leave ordinary authenticated actions on the restricted default.
 
@@ -1749,7 +1875,7 @@ Migration steps:
   defineModule({
     admin: {
       fields,
-      fieldServers: {
+      serverFields: {
         title: serverField(fields.title, () => ({
           preSave: validateTitle,
           select: selectTitle,

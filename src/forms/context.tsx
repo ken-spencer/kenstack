@@ -31,7 +31,8 @@ import fetcher, {
 } from "@kenstack/api/fetcher";
 import { getReturnedErrorMessage, ReturnedError } from "@kenstack/api/errors";
 import { formErrorName, moveRootFormError } from "./internal/fieldErrors";
-import { useNavigationBlocker } from "./NavigationBlocker";
+import { SubmitFailureContext } from "@kenstack/forms/internal/submitFailure";
+import { isUnloadAllowed, useNavigationBlocker } from "./NavigationBlocker";
 
 import type { NoticeProps } from "@kenstack/components/Notice";
 import QueryProvider from "@kenstack/context/QueryProvider";
@@ -196,6 +197,7 @@ function FormContextProvider<
     setStatusMessageState(normalizeStatusMessage(message));
   }, []);
   const setStatusError: SetStatusError = setStatusMessage;
+  const [submitFailure, setSubmitFailure] = useState<object | null>(null);
   const [uploadingFields, setUploadingFields] = useState<Set<string>>(
     () => new Set(),
   );
@@ -307,7 +309,8 @@ function FormContextProvider<
             );
           });
         }
-        if (fieldErrors) {
+        if (fieldErrors && Object.keys(fieldErrors).length) {
+          setSubmitFailure({});
           Object.entries(fieldErrors).forEach(([field, err]) => {
             setFieldError(
               field as Path<z.input<TSchema>>,
@@ -362,7 +365,11 @@ function FormContextProvider<
 
   return (
     <ReactHookFormProvider {...form}>
-      <FormContext.Provider value={context}>{children}</FormContext.Provider>
+      <FormContext.Provider value={context}>
+        <SubmitFailureContext value={{ setSubmitFailure, submitFailure }}>
+          {children}
+        </SubmitFailureContext>
+      </FormContext.Provider>
     </ReactHookFormProvider>
   );
 }
@@ -408,6 +415,9 @@ function useUnsavedGuard(enabled: boolean, isDirty: boolean) {
     }
 
     const beforeUnload = (event: BeforeUnloadEvent) => {
+      if (isUnloadAllowed()) {
+        return;
+      }
       event.preventDefault();
       event.returnValue = "";
     };

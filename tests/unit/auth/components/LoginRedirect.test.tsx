@@ -8,6 +8,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   fetcher: vi.fn(),
   assign: vi.fn(),
+  confirm: vi.fn(),
   reload: vi.fn(),
   refresh: vi.fn(),
 }));
@@ -110,7 +111,10 @@ it.each(["code", "link", "already-verified"])(
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
     expect(mocks.assign).toHaveBeenCalledExactlyOnceWith("/account");
-    expect(container.querySelector('input[name="email"]')).toBeNull();
+    // An already-verified email signs in from the email form, which stays until the page unloads.
+    expect(container.querySelector('input[name="email"]') === null).toBe(
+      method !== "already-verified",
+    );
     expect(document.cookie).toContain("loginMethod=password");
     if (method === "code")
       expect(container.querySelector('input[name="code"]')).not.toBeNull();
@@ -153,9 +157,11 @@ it.each(["password", "code"] as const)(
       root.render(
         <AuthorizationContext
           value={{
+            cancel: () => {},
+            confirm: mocks.confirm,
+            replay: () => {},
+            track: (request) => request(),
             userId: 1,
-            setAuthorization: () => {},
-            track: (request) => request,
           }}
         >
           <LoginForm
@@ -191,7 +197,7 @@ it.each(["password", "code"] as const)(
           ),
       );
     }
-    await vi.waitFor(() => expect(mocks.refresh).toHaveBeenCalledOnce());
+    await vi.waitFor(() => expect(mocks.confirm).toHaveBeenCalledOnce());
     expect(mocks.reload).not.toHaveBeenCalled();
     expect(mocks.assign).not.toHaveBeenCalled();
     expect(
@@ -201,7 +207,8 @@ it.each(["password", "code"] as const)(
       "/api/auth",
       expect.objectContaining({
         action: method === "code" ? "verify-email-login-code" : "login",
-        returnTo: path,
+        // Marked, so an emailed link opened in another tab lands with a notice.
+        returnTo: path.replace("#", "&identityConfirmed=1#"),
       }),
     );
   },

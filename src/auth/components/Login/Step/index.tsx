@@ -10,7 +10,8 @@ import LoginController from "./Controller";
 // Composed for every visit. A visit that starts signed in skips the step and
 // its controller brings it back only if identity is lost; a visit that starts
 // signed out keeps it as an ordinary step. Signing in updates browser
-// identity in place; nothing here refreshes the server.
+// identity in place, and the controller refreshes the server render; the
+// visit keeps the step list it started with.
 export async function createLoginStep({
   hasLinkToken = false,
   title = "Sign in",
@@ -29,7 +30,12 @@ export async function createLoginStep({
     content: (
       <div className="mt-7 max-w-[560px]">
         <Suspense fallback={<div className="min-h-72 animate-pulse" />}>
-          <RememberedStepLoginForm />
+          <RememberedStepLoginForm
+            isServerSignedIn={
+              authState.state === "authenticated" ||
+              authState.state === "proven"
+            }
+          />
         </Suspense>
       </div>
     ),
@@ -44,8 +50,12 @@ export async function createLoginStep({
   };
 }
 
-async function RememberedStepLoginForm() {
+async function RememberedStepLoginForm({
+  isServerSignedIn,
+}: {
+  isServerSignedIn: boolean;
+}) {
   const formProps = await loadLoginFormProps();
 
-  return <StepLoginForm {...formProps} />;
+  return <StepLoginForm {...formProps} isServerSignedIn={isServerSignedIn} />;
 }

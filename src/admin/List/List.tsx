@@ -16,6 +16,7 @@ import {
 } from "@kenstack/components/SortableList";
 import { Checkbox } from "@kenstack/forms/controls/Checkbox";
 import ListTitle from "@kenstack/admin/components/ListTitle";
+import { getAdminRecordTitle } from "@kenstack/admin/lib/recordTitle";
 import Updated from "@kenstack/admin/components/Updated";
 import VisibilityStatus from "./VisibilityStatus";
 import type { AdminClient, BaseListItem } from "@kenstack/admin/client";
@@ -25,15 +26,15 @@ import { cn } from "@kenstack/lib/utils";
 
 type ListItems = NonNullable<AdminClient["listItems"]>;
 
-export default function AdminListWrapper() {
+export default function AdminListWrapper({ publish }: { publish: boolean }) {
   return (
     <div className="border-t border-b border-y-[var(--admin-divider)]">
-      <AdminList />
+      <AdminList publish={publish} />
     </div>
   );
 }
 
-function AdminList() {
+function AdminList({ publish }: { publish: boolean }) {
   const searchParams = useSearchParams();
   const {
     selected,
@@ -96,9 +97,19 @@ function AdminList() {
     return <div className="py-2">No results</div>;
   }
 
-  const resolvedListItems = listItems?.length
-    ? listItems
-    : buildDefaultListItems(data.items);
+  const resolvedListItems: ListItems = [
+    ...(listItems?.length
+      ? listItems
+      : ([[(row) => <DefaultTitleCell row={row} />]] satisfies ListItems)),
+    ...(publish
+      ? ([
+          [
+            (row) => <VisibilityStatus item={row} />,
+            { className: "flex items-center justify-end", column: "auto" },
+          ],
+        ] satisfies ListItems)
+      : []),
+  ];
   const canDragReorder =
     canReorder &&
     data.items.length === data.total &&
@@ -298,22 +309,6 @@ function AdminListRowsSkeleton() {
   );
 }
 
-function buildDefaultListItems(
-  items: (BaseListItem & Record<string, unknown>)[],
-): ListItems {
-  return [
-    [(row) => <DefaultTitleCell row={row} />],
-    ...(items.some((item) => typeof item.visibility === "string")
-      ? ([
-          [
-            (row) => <VisibilityStatus item={row} />,
-            { className: "flex items-center justify-end", column: "auto" },
-          ],
-        ] satisfies ListItems)
-      : []),
-  ];
-}
-
 function ListItemCells({
   grouped,
   item,
@@ -341,14 +336,16 @@ function DefaultTitleCell({
 }: {
   row: BaseListItem & Record<string, unknown> & { path: string };
 }) {
-  const title = typeof row.title === "string" ? row.title.trim() : "";
   const media = Object.values(row).find(isSelectedMedia);
   const hasImageSlot = media || "image" in row;
 
   return (
     <div className="flex min-w-0 items-center gap-2">
       {hasImageSlot ? <ImageCell media={media} path={row.path} /> : null}
-      <ListTitle path={row.path} title={title || `ID ${row.id}`}>
+      <ListTitle
+        path={row.path}
+        title={getAdminRecordTitle(row) ?? `ID ${row.id}`}
+      >
         <Updated value={row.updatedAt} />
       </ListTitle>
     </div>

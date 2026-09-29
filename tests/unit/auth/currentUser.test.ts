@@ -59,6 +59,7 @@ import {
 
 function selectResult(roles: string[] = []) {
   const query = {
+    $dynamic: vi.fn(),
     from: vi.fn(),
     innerJoin: vi.fn(),
     limit: vi.fn().mockResolvedValue([
@@ -76,6 +77,7 @@ function selectResult(roles: string[] = []) {
     ]),
     where: vi.fn(),
   };
+  query.$dynamic.mockReturnValue(query);
   query.from.mockReturnValue(query);
   query.innerJoin.mockReturnValue(query);
   query.where.mockReturnValue(query);

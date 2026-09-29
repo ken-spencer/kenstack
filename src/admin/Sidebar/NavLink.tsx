@@ -13,15 +13,11 @@ import {
 import { GuardedLink } from "@kenstack/forms/NavigationBlocker";
 
 export default function NavLink({
-  exact = false,
   href,
   icon,
   navChildren,
   title,
 }: {
-  // Current only at its own path, for an index link such as /admin that every
-  // other admin path would otherwise match.
-  exact?: boolean;
   href: string;
   icon: React.ReactNode;
   navChildren?: {
@@ -33,7 +29,7 @@ export default function NavLink({
 }) {
   const pathname = usePathname();
   const { isMobile, setOpenMobile } = useSidebar();
-  const isCurrent = exact ? pathname === href : isActivePath(pathname, href);
+  const isCurrent = isActivePath(pathname, href);
   const activeChild = Boolean(
     navChildren?.some((child) => isActivePath(pathname, child.href)),
   );
@@ -99,6 +95,9 @@ export default function NavLink({
   );
 }
 
+// Every admin page sits under /admin, so the admin root is current only at its own path.
 function isActivePath(pathname: string, href: string) {
-  return pathname === href || pathname.startsWith(`${href}/`);
+  return (
+    pathname === href || (href !== "/admin" && pathname.startsWith(`${href}/`))
+  );
 }

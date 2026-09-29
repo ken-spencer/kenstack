@@ -1,21 +1,22 @@
 import { cache } from "react";
 import { cacheLife, cacheTag, io } from "next/cache";
 import { cookies, headers } from "next/headers";
-import { and, isNull, eq, gt, sql } from "drizzle-orm";
+import { isNull, eq, gt, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
+import omit from "lodash-es/omit";
 
-import { db } from "@app/db";
 import { modules } from "@app/modules";
-import deps from "@app/deps";
+import roles from "@app/roles";
 import type { AuthAccess } from "@kenstack/auth/server/auth";
 import { getSafeReturnToPath } from "@kenstack/auth/returnTo";
 import { selectMediaSubquery } from "@kenstack/db/queries/media";
+import { query } from "@kenstack/db/queries/query";
 import { sessions } from "@kenstack/db/tables/sessions";
 import { formatUserInitials, formatUserName } from "@kenstack/lib/user";
 import { adminLoadCacheTag } from "@kenstack/admin/cache";
-import type { User } from "@kenstack/types";
 
 import { hashToken } from "./token";
+import { getUsersModule } from "./getUsersModule";
 import type { Role } from "./types";
 
 const maxSessionCacheSeconds = 15 * 60;
@@ -30,7 +31,10 @@ export function userSessionsCacheTag(userId: number) {
 
 async function loadUserByTokenHash(tokenHash: string) {
   const users = modules.users.admin.table;
-  const [user] = await db
+  const { currentUser } = getUsersModule();
+  const [user] = await query(sessions)
+    .select(currentUser.select(users))
+    // Kenstack's own fields follow, so a site field with the same name cannot replace them.
     .select({
       id: users.id,
       impersonatedBy: sessions.impersonatedBy,
@@ -45,15 +49,11 @@ async function loadUserByTokenHash(tokenHash: string) {
       expiresAt: sessions.expiresAt,
       authorizedUntil: sessions.authorizedUntil,
     })
-    .from(sessions)
     .innerJoin(users, eq(users.id, sessions.userId))
-    .where(
-      and(
-        eq(sessions.tokenHash, tokenHash),
-        gt(sessions.expiresAt, sql`now()`),
-        isNull(users.deletedAt),
-      ),
-    )
+    .where(eq(sessions.tokenHash, tokenHash))
+    .where(gt(sessions.expiresAt, sql`now()`))
+    .where(isNull(users.deletedAt))
+    .build()
     .limit(1);
 
   return user;
@@ -93,16 +93,19 @@ function toPublicUser(
   user: NonNullable<Awaited<ReturnType<typeof loadUserByTokenHash>>>,
 ) {
   return {
-    id: user.id,
-    givenName: user.givenName,
-    middleName: user.middleName,
-    familyName: user.familyName,
-    email: user.email,
-    avatar: user.avatar,
+    // The site's selected fields travel with the user; the session columns stay behind.
+    ...omit(user, [
+      "authorizedUntil",
+      "expiresAt",
+      "impersonatedBy",
+      "provider",
+      "roles",
+      "sessionId",
+    ]),
     // Persisted values grant authority only while the host still registers
     // them, so removing a role disables it without rewriting stored rows.
     roles: user.roles.filter((role): role is Role =>
-      Object.hasOwn(deps.roles, role),
+      Object.hasOwn(roles, role),
     ),
     ...(user.impersonatedBy ? { impersonatedBy: user.impersonatedBy } : {}),
     name: formatUserName(user),
@@ -175,7 +178,7 @@ export const requireUser = cache(async function requireUser(
   access: AuthAccess = "authenticated",
   // Requested for explicit destinations and hosts that do not use the auth proxy.
   returnTo?: string,
-): Promise<User<Role>> {
+) {
   const user = await getCurrentUser();
 
   if (!user) {

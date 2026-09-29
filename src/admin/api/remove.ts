@@ -126,6 +126,7 @@ export const removeAction = ({
         revalidateTag(adminLoadCacheTag(name, row.id), { expire: 0 });
       });
       revalidateTag(adminListCacheTag(name), { expire: 0 });
+      revalidateTag(name, { expire: 0 });
       for (const row of rows) {
         revalidator(adminConfig.revalidate, row);
       }

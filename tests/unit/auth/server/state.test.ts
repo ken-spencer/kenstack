@@ -20,6 +20,7 @@ vi.mock("@kenstack/auth/email/verification/internal/cookie", () => ({
   getVerificationKey: mocks.getVerificationKey,
 }));
 vi.mock("@app/db", () => ({ db: { select: mocks.select } }));
+vi.mock("@app/modules", () => ({ modules: { users: {} } }));
 vi.mock("@kenstack/auth/server/user", () => ({
   getCurrentUser: mocks.getCurrentUser,
   getFreshCurrentUser: mocks.getFreshCurrentUser,

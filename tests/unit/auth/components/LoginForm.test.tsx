@@ -23,7 +23,6 @@ vi.mock("react-google-recaptcha-v3", () => ({
 }));
 
 import LoginForm from "@kenstack/auth/components/Login/Form";
-import ReauthenticationFormClient from "@kenstack/auth/reauthentication/FormClient";
 
 const inputValueSetter = Object.getOwnPropertyDescriptor(
   HTMLInputElement.prototype,
@@ -65,98 +64,6 @@ describe("LoginForm", () => {
   afterEach(() => {
     act(() => root.unmount());
     vi.clearAllMocks();
-  });
-
-  it("keeps an email-change link and signed-in identity while requesting inline proof", async () => {
-    const token = "a".repeat(43);
-    window.history.replaceState(
-      null,
-      "",
-      `/account/profile?confirmEmailChange=${token}`,
-    );
-    mocks.fetcher.mockResolvedValueOnce({
-      status: "success",
-      challengeKey: "challenge",
-      authState: { state: "code-sent", email: "patron@example.com" },
-    });
-    await act(async () => {
-      root.render(
-        <ReauthenticationFormClient
-          authorization={{
-            sessionId: 1,
-            userId: 1,
-            authorizedUntil: new Date(0).toISOString(),
-            remainingMs: 0,
-          }}
-          loginForm={
-            <LoginForm email="patron@example.com" mode="reauthentication" />
-          }
-          message="To update your sign-in email, please confirm your identity."
-        >
-          <p>Change email</p>
-        </ReauthenticationFormClient>,
-      );
-    });
-    expect(container.textContent).not.toContain("Change email");
-    expect(
-      container.querySelector<HTMLInputElement>('input[name="email"]')?.value,
-    ).toBe("patron@example.com");
-    expect(mocks.fetcher).not.toHaveBeenCalled();
-    expect(window.location.search).toBe(`?confirmEmailChange=${token}`);
-    await act(async () => {
-      container
-        .querySelector("form")
-        ?.dispatchEvent(
-          new Event("submit", { bubbles: true, cancelable: true }),
-        );
-    });
-    await vi.waitFor(() => expect(mocks.fetcher).toHaveBeenCalledOnce());
-    expect(mocks.fetcher).toHaveBeenCalledWith(
-      "/api/auth",
-      expect.objectContaining({
-        action: "email-login",
-        email: "patron@example.com",
-        linkToReturnTo: undefined,
-        returnTo: `/account/profile?confirmEmailChange=${token}`,
-      }),
-    );
-    await vi.waitFor(() =>
-      expect(container.querySelector('input[name="code"]')).not.toBeNull(),
-    );
-    expect(mocks.setUserInfo).not.toHaveBeenCalled();
-  });
-
-  // A change can finish just as the window lapses; its fresh session must restore the form.
-  it("returns to the sensitive form when a fresh session follows expiry", async () => {
-    vi.useFakeTimers({
-      toFake: ["setTimeout", "clearTimeout", "performance", "Date"],
-    });
-    const form = (sessionCreatedAt: string, remainingMs: number) => (
-      <ReauthenticationFormClient
-        authorization={{
-          sessionId: sessionCreatedAt === "session-1" ? 1 : 2,
-          userId: 1,
-          authorizedUntil: new Date(Date.now() + remainingMs).toISOString(),
-          remainingMs,
-        }}
-        loginForm={
-          <LoginForm email="patron@example.com" mode="reauthentication" />
-        }
-        message="Please confirm your identity."
-      >
-        <p>Change email</p>
-      </ReauthenticationFormClient>
-    );
-    try {
-      await act(async () => root.render(form("session-1", 1_000)));
-      act(() => vi.advanceTimersByTime(1_000));
-      expect(container.querySelector('input[name="email"]')).not.toBeNull();
-      await act(async () => root.render(form("session-2", 600_000)));
-      expect(container.textContent).toContain("Change email");
-      expect(container.querySelector('input[name="email"]')).toBeNull();
-    } finally {
-      vi.useRealTimers();
-    }
   });
 
   it("keeps verifying after consuming a standalone link token", async () => {
@@ -407,7 +314,7 @@ describe("LoginForm", () => {
     });
   });
 
-  it("shows the code page optimistically and reverts when the send fails", async () => {
+  it("keeps the email form pending while the send runs and shows its failure there", async () => {
     window.history.replaceState(null, "", "/take-your-seat/signin");
     const { promise, resolve: settleSend } =
       Promise.withResolvers<Record<string, unknown>>();
@@ -431,18 +338,12 @@ describe("LoginForm", () => {
       );
     });
 
-    // The code page shows before the send settles, with resend and
-    // verification unavailable.
-    const buttons = Array.from(container.querySelectorAll("button"));
+    // The email form stays, its button pending, until the send settles.
+    expect(container.querySelector('input[name="code"]')).toBeNull();
     expect(
-      buttons.find((button) => button.textContent?.includes("Resend email"))
-        ?.disabled,
-    ).toBe(true);
-    expect(
-      buttons.find((button) => button.textContent === "Continue")?.disabled,
-    ).toBe(true);
-    expect(
-      container.querySelector<HTMLInputElement>('input[name="code"]')?.disabled,
+      Array.from(container.querySelectorAll("button")).find(
+        (button) => button.textContent === "Email me a code",
+      )?.disabled,
     ).toBe(true);
 
     await act(async () => {

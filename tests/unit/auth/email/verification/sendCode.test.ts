@@ -13,7 +13,6 @@ const mocks = vi.hoisted(() => ({
   deleteVerification: vi.fn(),
   error: vi.fn(),
   hashKey: vi.fn(),
-  loadFrom: vi.fn(),
   loadVerification: vi.fn(),
   markVerificationDecoy: vi.fn(),
   sendEmail: vi.fn(),
@@ -56,10 +55,7 @@ vi.mock("@app/db", () => ({
     transaction: mocks.transaction,
   },
 }));
-vi.mock("@app/email", () => ({
-  attachments: [],
-  loadEmailFrom: mocks.loadFrom,
-}));
+vi.mock("@app/email", () => ({ attachments: [] }));
 vi.mock("@kenstack/db/tables/verification", () => ({
   verifications: { expiresAt: {} },
 }));
@@ -138,7 +134,6 @@ describe("sendCode", () => {
         authorizedUntil: expiresAt,
       }),
     );
-    mocks.loadFrom.mockResolvedValue("sender@example.com");
     mocks.sendEmail.mockResolvedValue({ status: "sent" });
     mocks.transaction.mockImplementation(async (callback) => {
       const result = await callback({ execute: vi.fn() });

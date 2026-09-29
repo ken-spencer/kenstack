@@ -28,9 +28,6 @@ vi.mock("@app/db", () => ({
     }),
   },
 }));
-vi.mock("@app/email", () => ({
-  loadEmailFrom: vi.fn(async () => "sender@example.com"),
-}));
 vi.mock("@app/modules", () => ({
   modules: { users: { admin: { table: {} } } },
 }));

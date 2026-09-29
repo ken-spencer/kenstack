@@ -138,10 +138,7 @@ type BareFieldDefinitions<TFields extends DefinedFields> = {
 export function defineClient<
   const TFields extends DefinedFields = DefinedFields,
   const TSettingsFields extends DefinedFields = DefinedFields,
->({
-  admin,
-  settings,
-}: {
+>(client: {
   admin?: {
     fields: TFields & BareFieldDefinitions<TFields>;
     listItems?: ListItems<TFields>;
@@ -153,6 +150,21 @@ export function defineClient<
     SettingsForm: FC;
   };
 }) {
+  return client;
+}
+
+// What a module registers: defineClient's inputs, built once by the client loader.
+export type ClientInput = {
+  admin?: {
+    fields: DefinedFields;
+    listItems?: ListItems<DefinedFields>;
+    EditForm: FC<PropsWithChildren>;
+    oneToOne?: ClientOneToOneConfig;
+  };
+  settings?: { fields: DefinedFields; SettingsForm: FC };
+};
+
+export function buildClient({ admin, settings }: ClientInput): ClientConfig {
   return {
     admin: admin
       ? (() => {

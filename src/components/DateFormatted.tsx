@@ -12,8 +12,8 @@ export default function DateFormatted({
         month: "short",
         day: "numeric",
         year:
-          formatDateKey(date, deps.defaultTimeZone).slice(0, 4) ===
-          formatDateKey(new Date(), deps.defaultTimeZone).slice(0, 4)
+          formatDateKey(date).slice(0, 4) ===
+          formatDateKey(new Date()).slice(0, 4)
             ? undefined
             : "numeric",
       }).format(new Date(date))}

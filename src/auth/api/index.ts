@@ -1,9 +1,3 @@
-import * as z from "zod";
-import {
-  extendAuthorization,
-  serializeAuthorization,
-  type Authorization,
-} from "@kenstack/auth/reauthentication/server";
 import type { NextRequest } from "next/server";
 import {
   loadPublicAuthState,
@@ -26,10 +20,10 @@ import {
   type ForgotPasswordProps,
 } from "@kenstack/auth/handlers/forgotPassword";
 import { loginPipeline } from "@kenstack/auth/handlers/login";
+import { resolveLoginDestination } from "@kenstack/auth/server/loginDestination";
 import { logoutPipeline } from "@kenstack/auth/handlers/logout";
 import { resetPasswordPipeline } from "@kenstack/auth/handlers/resetPassword";
 import { sendOnboardingEmailAction } from "@kenstack/auth/handlers/sendOnboarding";
-import type { LoginDestination } from "@kenstack/auth/returnTo";
 
 export type LoginActionResult = {
   authenticated: true;
@@ -50,7 +44,6 @@ export type EmailLoginVerificationResult = {
 };
 
 export type EmailChangeRequestResult = {
-  authorization: Authorization;
   // The requester stays signed in as the current account until the change
   // is confirmed.
   authState: PublicAuthState;
@@ -69,6 +62,8 @@ export type EmailChangeCancelResult = {
 
 export type UserInfoResult = {
   authState: PublicAuthState;
+  // Where the login flow's final step leaves for when no returnTo applies; absent without a session.
+  loginDestination?: string;
 };
 
 export type LogoutResult = {
@@ -86,9 +81,6 @@ export const authPipeline = (
     // Email-login and recovery-link behavior and copy.
     emailLogin?: EmailLoginOptions;
     forgotPassword?: ForgotPasswordProps;
-    // Where a completed sign-in lands when the request carried no safe
-    // returnTo; its result is checked like a returnTo and falls back to "/".
-    loginDestination?: LoginDestination;
   } = {},
 ) => {
   const forgotPassword = {
@@ -96,10 +88,7 @@ export const authPipeline = (
     attachments: forgotPasswordAttachments,
     ...options.forgotPassword,
   };
-  const emailLogin = createEmailLogin({
-    loginDestination: options.loginDestination,
-    ...options.emailLogin,
-  });
+  const emailLogin = createEmailLogin(options.emailLogin);
   const emailChange = options.emailChange
     ? createEmailChange(options.emailChange)
     : undefined;
@@ -109,29 +98,19 @@ export const authPipeline = (
         { request },
         {
           logout: logoutPipeline,
-          "extend-authorization": pipelineStage(
-            {
-              schema: z.object({ sessionId: z.number().int().positive() }),
-            },
-            async ({ data, response }) => {
-              response.headers.set("Cache-Control", "no-store");
-              return response.success({
-                authorization: serializeAuthorization(
-                  await extendAuthorization(data),
-                ),
-              });
-            },
-          ),
           "user-info": pipelineStage({}, async ({ response }) => {
             response.headers.set("Cache-Control", "no-store");
+            const authState = await loadPublicAuthState();
             return response.success<UserInfoResult>({
-              authState: await loadPublicAuthState(),
+              authState,
+              loginDestination:
+                authState.state === "authenticated"
+                  ? await resolveLoginDestination(undefined)
+                  : undefined,
             });
           }),
 
-          login: loginPipeline({
-            loginDestination: options.loginDestination,
-          }),
+          login: loginPipeline(),
           "forgot-password": forgotPasswordPipeline(forgotPassword),
           "reset-password": resetPasswordPipeline(),
 

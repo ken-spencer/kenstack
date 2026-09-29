@@ -45,17 +45,17 @@ export async function uploadMedia({
   extraData,
   fieldname,
   file,
-  presignedUrlAction,
+  presignedUrlAction = "get-presigned-url",
   signal,
-  uploadCompleteAction,
+  uploadCompleteAction = "upload-complete",
 }: {
   apiPath: string;
   extraData?: Record<string, unknown>;
   fieldname: string;
   file: File;
-  presignedUrlAction: string;
+  presignedUrlAction?: string;
   signal?: AbortSignal;
-  uploadCompleteAction: string;
+  uploadCompleteAction?: string;
 }): Promise<
   | {
       status: "aborted";

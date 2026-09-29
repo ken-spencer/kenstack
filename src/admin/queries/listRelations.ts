@@ -2,6 +2,7 @@ import { and, eq, getTableColumns, type SQL } from "drizzle-orm";
 import type { AnyPgColumn, AnyPgTable } from "drizzle-orm/pg-core";
 
 import type { AnyAdminConfig } from "@kenstack/admin/module";
+import { getAdminRecordTitleSelect } from "@kenstack/admin/lib/recordTitle";
 
 export type ListJoin = {
   on: SQL;
@@ -9,7 +10,7 @@ export type ListJoin = {
 };
 
 // Selects the parent columns every list row carries: list-flagged fields, the
-// title and publication fallback when none are flagged, and visibility.
+// record-title and publication fallback when none are flagged, and visibility.
 export function getListSelect(
   table: AnyAdminConfig["table"],
   fields: AnyAdminConfig["fields"],
@@ -37,9 +38,7 @@ export function getListSelect(
   }
 
   if (!Object.keys(select).length) {
-    if ("title" in columns) {
-      select.title = columns.title;
-    }
+    Object.assign(select, getAdminRecordTitleSelect(columns));
 
     if ("publishedAt" in columns) {
       select.publishedAt = columns.publishedAt;

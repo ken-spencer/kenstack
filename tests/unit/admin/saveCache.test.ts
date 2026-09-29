@@ -72,10 +72,7 @@ describe("shared module cache invalidation", () => {
       };
       const result =
         source === "public"
-          ? await saveModuleRecord({
-              ...options,
-              fields: moduleConfig.admin.fields,
-            })
+          ? await saveModuleRecord(options)
           : await saveAdminRecord(options);
       expect(result).toMatchObject({ status: "success" });
       for (const tag of [
@@ -94,7 +91,6 @@ describe("shared module cache invalidation", () => {
       saveModuleRecord({
         id: 12,
         module: moduleConfig,
-        fields: moduleConfig.admin.fields,
         values: { name: "Updated" },
       }),
     ).rejects.toThrow("Audit unavailable");
@@ -112,7 +108,6 @@ describe("shared module cache invalidation", () => {
       saveModuleRecord({
         id: 12,
         module: moduleConfig,
-        fields: moduleConfig.admin.fields,
         values: { name: "Updated" },
       }),
     ).rejects.toThrow("Transaction failed");
@@ -128,7 +123,7 @@ describe("shared module cache invalidation", () => {
       admin: {
         table: users,
         fields,
-        fieldServers: {
+        serverFields: {
           name: serverField(fields.name, () => ({
             async prepareSave() {
               return {
@@ -151,7 +146,6 @@ describe("shared module cache invalidation", () => {
       saveModuleRecord({
         id: 12,
         module: moduleWithCleanup,
-        fields: moduleWithCleanup.admin.fields,
         values: { name: "Updated" },
       }),
     ).rejects.toThrow("Revalidation failed");
@@ -168,7 +162,6 @@ describe("shared module cache invalidation", () => {
       await saveModuleRecord({
         id: 12,
         module: moduleConfig,
-        fields: moduleConfig.admin.fields,
         values: { name: "Updated" },
       }),
     ).toMatchObject({ status: "error" });

@@ -8,7 +8,7 @@ Kenstack is a shared CMS/admin core for Next.js host sites. Host projects provid
 - React 19.2+
 - Node.js 24+
 - Drizzle/Postgres application tables
-- `@app/db`, `@app/email`, `@app/modules`, and `@app/deps` mapped to their host owners
+- `@app/db`, `@app/email`, `@app/modules`, `@app/deps`, and `@app/roles` mapped to their host owners
 - Kenstack modules defined with `defineModule`, `defineTable`, `defineFields`, and field helpers
 
 ## Scripts
@@ -30,10 +30,10 @@ Checks lint and formatting.
 
 ## Record Saving
 
-Use `saveModuleRecord` for authenticated site actions that update a record owned by a Kenstack module. It derives the table, persistence behavior, and cache revalidation from `module`; the action supplies its restricted server field set so the response cannot include admin-only fields. Field handlers receive restricted authority, so existing media must already belong to the record and admin-managed metadata is preserved.
+Use `saveModuleRecord` for authenticated site actions that update a record owned by a Kenstack module. It derives the table, persistence behavior, and cache revalidation from `module`. It writes the columns named in `values` and runs the handlers of the module fields among them, so the action's Zod schema is the allowlist of what the action may change and return. Field handlers receive restricted authority, so existing media must already belong to the record and admin-managed metadata is preserved.
 
 ```ts
-await saveModuleRecord({ module, fields, id, changes, values });
+await saveModuleRecord({ module, id, changes, values });
 ```
 
 Use `saveAdminRecord` for the standard admin save action. It accepts the same record input, derives the same module behavior, and gives field handlers admin-save authority. The owning pipeline must enforce `access: "admin"`; this helper does not check the current user's role.

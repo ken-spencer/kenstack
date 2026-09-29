@@ -94,7 +94,7 @@ export default async function AdminListCont({
             parent={parentRecord}
           />
           <Header canCreate={adminConfig.create} />
-          <List />
+          <List publish={adminConfig.publish} />
           <Footer />
         </section>
       </AdminListProvider>

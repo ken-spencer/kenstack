@@ -17,6 +17,18 @@ const BlockerContext = createContext<{
   setBlocked: () => {},
 });
 
+let unloadAllowed = false;
+
+// Lets this page unload without the unsaved-changes prompt, for a reload whose unsaved input must not
+// be kept, such as another account's.
+export function allowUnload() {
+  unloadAllowed = true;
+}
+
+export function isUnloadAllowed() {
+  return unloadAllowed;
+}
+
 // Shares dirty-form navigation state with links in the persistent admin shell.
 export function NavigationBlockerProvider({ children }: PropsWithChildren) {
   const [blocked, setBlocked] = useState(false);

@@ -101,7 +101,7 @@ describe("module field servers", () => {
       name: "one-off-behavior",
       admin: {
         fields: oneOffFields,
-        fieldServers: {
+        serverFields: {
           summary: serverField(oneOffFields.summary, () => ({
             load: async () => "loaded",
           })),
@@ -150,7 +150,7 @@ describe("module field servers", () => {
       name: "relationship-filter-articles",
       admin: {
         fields: relationshipFields,
-        fieldServers: {
+        serverFields: {
           topics: relationshipField(relationships.topics),
         },
         table: articles,

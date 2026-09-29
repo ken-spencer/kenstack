@@ -7,7 +7,7 @@ import { revalidateTag } from "next/cache";
 import { render } from "react-email";
 
 import { db } from "@app/db";
-import { attachments, loadEmailFrom } from "@app/email";
+import { attachments } from "@app/email";
 import { modules } from "@app/modules";
 import { adminListCacheTag, adminLoadCacheTag } from "@kenstack/admin/cache";
 import { pipelineStage, ReturnedError } from "@kenstack/api";
@@ -17,21 +17,16 @@ import type {
   EmailChangeVerificationResult,
 } from "@kenstack/auth/api";
 import {
-  loadFreshAuthState,
   loadFreshPublicAuthState,
   loadPublicAuthState,
 } from "@kenstack/auth/server/state";
 import { userSessionsCacheTag } from "@kenstack/auth/server/user";
 import { login } from "@kenstack/auth/server/auth";
-import {
-  requireRecentAuthentication,
-  serializeAuthorization,
-} from "@kenstack/auth/reauthentication/server";
+import { requireRecentAuthentication } from "@kenstack/auth/reauthentication/server";
 import { sessions } from "@kenstack/db/tables/sessions";
 import { errorTranslator } from "@kenstack/db/errorTranslator";
 import { verifications } from "@kenstack/db/tables/verification";
 import { normalizeEmail } from "@kenstack/fields/email";
-import errorLog from "@kenstack/lib/errorLog";
 import { reportError } from "@kenstack/lib/errorReporter";
 import mailer from "@kenstack/lib/mailer";
 import siteOrigin from "@kenstack/lib/siteOrigin";
@@ -53,7 +48,10 @@ import {
 } from "@kenstack/auth/email/verification/internal/repository";
 import { sendCode } from "@kenstack/auth/email/verification/sendCode";
 import { verifyCode } from "@kenstack/auth/email/verification/verifyCode";
-import { verifyLink } from "@kenstack/auth/email/verification/verifyLink";
+import {
+  checkLink,
+  verifyLink,
+} from "@kenstack/auth/email/verification/verifyLink";
 import ExistingAccountEmail from "./ExistingAccountEmail";
 import NoticeEmail from "./NoticeEmail";
 import {
@@ -93,21 +91,12 @@ async function sendNotice({
   userId: number;
 }) {
   try {
-    const from = await loadEmailFrom();
-    if (from) {
-      await mailer({
-        attachments,
-        from,
-        html: await render(html),
-        subject,
-        to,
-      });
-    } else {
-      await errorLog({
-        message: "Email change notice sender is not configured.",
-        name: "email-change-notice-sender-not-configured",
-      });
-    }
+    await mailer({
+      attachments,
+      html: await render(html),
+      subject,
+      to,
+    });
   } catch (error) {
     await reportError(error, {
       context: { userId },
@@ -117,32 +106,55 @@ async function sendNotice({
   }
 }
 
+// The code step and a resend run only in the session that issued the code, whose authorization lasts
+// as long as the code. A stale session there means the code has ended too, so the refusal is the
+// ordinary ended request, which returns the visitor to the email form without a confirmation.
+async function requireIssuingSession(request: Request, userId: number) {
+  try {
+    return await requireRecentAuthentication(request, userId);
+  } catch (error) {
+    if (
+      error instanceof ReturnedError &&
+      error.code === "reauthentication-required" &&
+      error.status === 403
+    ) {
+      throw new ReturnedError(verificationReplacedMessage, {
+        code: verificationEndedCode,
+        status: 409,
+      });
+    }
+    throw error;
+  }
+}
+
 export type EmailChangeOptions = {
   email?: Partial<VerificationEmailCopy>;
-  // The page hosting the EmailChange component, where the confirmation and
-  // cancellation links land.
-  linkPath?: `/${string}`;
+  // A public page rendering the EmailChange component, where the confirmation and cancellation links
+  // land.
+  linkPath: `/${string}`;
 };
 
-export function createEmailChange(options: EmailChangeOptions = {}) {
+export function createEmailChange(options: EmailChangeOptions) {
   const heading = options.email?.heading ?? "Confirm your new email";
   const config = {
     email: {
       actionLabel: "Confirm email",
       heading,
       introduction:
-        "Confirming this address makes it the email you sign in with. Use the button below or enter the six-digit code to continue.",
+        "Confirming this address makes it the email you sign in with. Enter this six-digit code to continue.",
       subject: heading,
       ...options.email,
     },
-    linkPath: options.linkPath ?? ("/account/profile" as const),
+    linkPath: options.linkPath,
   };
 
   return {
     request: pipelineStage(
       { access: "authenticated", schema: requestEmailChangeSchema },
       async ({ data, request, response, user }) => {
-        const session = await requireRecentAuthentication(request, user.id);
+        const session = data.challengeKey
+          ? await requireIssuingSession(request, data.userId)
+          : await requireRecentAuthentication(request, data.userId);
         if (data.email === normalizeEmail(user.email)) {
           return response.error({
             message:
@@ -166,7 +178,7 @@ export function createEmailChange(options: EmailChangeOptions = {}) {
               ),
           }),
         );
-        const { challengeKey, email, authorization } = await sendCode(
+        const { challengeKey, email } = await sendCode(
           {
             challengeKey: data.challengeKey,
             email: data.email,
@@ -174,14 +186,11 @@ export function createEmailChange(options: EmailChangeOptions = {}) {
             kind,
             linkPath: config.linkPath,
             request,
-            userId: user.id,
+            userId: session.userId,
             sessionId: session.id,
           },
           createVerificationEmail(config.email),
         );
-        if (!authorization) {
-          throw new Error("Email-change issuance did not grant authorization");
-        }
         if (isTaken) {
           await sendNotice({
             html: (
@@ -220,16 +229,21 @@ export function createEmailChange(options: EmailChangeOptions = {}) {
           authState: await loadPublicAuthState(),
           challengeKey,
           email,
-          authorization: serializeAuthorization(authorization),
         });
       },
     ),
     verifyCode: pipelineStage(
       { access: "authenticated", schema: verifyEmailChangeCodeSchema },
-      async ({ data, request, response, user }) => {
+      async ({ data, request, response }) => {
+        const session = await requireIssuingSession(request, data.userId);
         await applyEmailChange(
-          await verifyCode({ ...data, kind, userId: user.id }),
-          request,
+          await verifyCode({
+            challengeKey: data.challengeKey,
+            code: data.code,
+            kind,
+            userId: session.userId,
+          }),
+          session,
         );
 
         response.headers.set("Cache-Control", "no-store");
@@ -240,10 +254,35 @@ export function createEmailChange(options: EmailChangeOptions = {}) {
     ),
     verifyLink: pipelineStage(
       { access: "authenticated", schema: verifyEmailChangeLinkSchema },
-      async ({ data, request, response, user }) => {
+      async ({ data, request, response }) => {
+        let session;
+        try {
+          session = await requireRecentAuthentication(request, data.userId);
+        } catch (error) {
+          // The link may be opened in any session of the account, which the code's grant never
+          // touched. A stale one checks the link without writing: a link it would reject gets its
+          // ordinary refusal, and only one it would accept asks for confirmation.
+          if (
+            error instanceof ReturnedError &&
+            error.code === "reauthentication-required" &&
+            error.status === 403
+          ) {
+            const state = await checkLink(data.token, {
+              kind,
+              userId: data.userId,
+            });
+            if (state !== "acceptable") {
+              throw new ReturnedError(emailChangeLinkFailureMessages[state], {
+                code: state,
+                status: 409,
+              });
+            }
+          }
+          throw error;
+        }
         const verification = await verifyLink(data.token, {
           kind,
-          userId: user.id,
+          userId: session.userId,
         });
         if (verification.state !== "proven") {
           throw new ReturnedError(
@@ -252,7 +291,7 @@ export function createEmailChange(options: EmailChangeOptions = {}) {
           );
         }
 
-        await applyEmailChange(verification, request);
+        await applyEmailChange(verification, session);
 
         response.headers.set("Cache-Control", "no-store");
         return response.success<EmailChangeVerificationResult>({
@@ -327,6 +366,7 @@ export function createEmailChange(options: EmailChangeOptions = {}) {
   };
 }
 
+// The session is the one the guard checked before the proof was verified.
 async function applyEmailChange(
   {
     email,
@@ -335,27 +375,24 @@ async function applyEmailChange(
     email: string;
     verificationId: number;
   },
-  request: Request,
+  session: Awaited<ReturnType<typeof requireRecentAuthentication>>,
 ) {
-  // A write must not trust the cached session snapshot.
-  const authState = await loadFreshAuthState();
-  if (authState.state !== "authenticated") {
-    throw new ReturnedError("You must be signed in to change your email.", {
-      status: 401,
-    });
-  }
-
-  const session = await requireRecentAuthentication(request, authState.userId);
+  const { userId } = session;
   const users = modules.users.admin.table;
   const now = new Date();
   try {
     await db.transaction(async (tx) => {
+      const [account] = await tx
+        .select({ email: users.email })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
       // Consumed first, as this account's own change request: another tab or
       // the notice's cancel link may already have ended it.
       if (
         !(await consumeVerification(verificationId, email, tx, {
           kind,
-          userId: authState.userId,
+          userId,
         }))
       ) {
         throw new ReturnedError(verificationReplacedMessage, {
@@ -367,17 +404,17 @@ async function applyEmailChange(
       await tx
         .update(users)
         .set({ email: normalizeEmail(email), updatedAt: now })
-        .where(eq(users.id, authState.userId));
+        .where(eq(users.id, userId));
 
-      await tx.delete(sessions).where(eq(sessions.userId, authState.userId));
+      await tx.delete(sessions).where(eq(sessions.userId, userId));
 
       await audit({
         action: "email-changed",
-        data: { from: authState.email, to: normalizeEmail(email) },
+        data: { from: account?.email, to: normalizeEmail(email) },
         db: tx,
-        rowId: authState.userId,
+        rowId: userId,
         table: "users",
-        userId: authState.userId,
+        userId,
       });
     });
   } catch (error) {
@@ -394,8 +431,8 @@ async function applyEmailChange(
     throw error;
   }
 
-  revalidateTag(userSessionsCacheTag(authState.userId), { expire: 0 });
-  revalidateTag(adminLoadCacheTag("users", authState.userId), { expire: 0 });
+  revalidateTag(userSessionsCacheTag(userId), { expire: 0 });
+  revalidateTag(adminLoadCacheTag("users", userId), { expire: 0 });
   revalidateTag(adminListCacheTag("users"), { expire: 0 });
-  await login(authState.userId, session.provider);
+  await login(userId, session.provider);
 }

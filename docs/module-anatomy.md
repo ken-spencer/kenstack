@@ -57,15 +57,16 @@ never created. At volume, `queries/` members keep their own names (`queries/list
   express and maintainers might otherwise reverse. Routine decisions, implementation history, open
   plans, and task-specific reasoning stay out.
 - `index.ts` — the module definition: default-exports `defineModule({...})`, assembling the fields,
-  table, admin configuration, and property-keyed `admin.fieldServers`, with implementations imported
+  table, admin configuration, and property-keyed `admin.serverFields`, with implementations imported
   from the owning field units. For one-to-one kinds, import each kind-owned server config and register
   the map at `admin.oneToOne`; the parent leaves that kind's fields, table, and server behavior to the
   kind. Imported by the site's module registry.
 - `client.ts` or `client.tsx` as syntax requires — default-exports the module's `defineClient(...)`
   result, a Client Component boundary (see `docs/runtime-boundaries.md`). It passes the bare isomorphic
   definitions from `fields` as `admin.fields` to `defineClient(...)` for the record schema and list
-  configuration. For one-to-one kinds, import each kind-owned client config and register the map at
-  `admin.oneToOne`. A settings module likewise passes bare settings fields and a `SettingsForm`; that
+  configuration. `defineClient(...)` returns its inputs unchanged, and the client loader builds them
+  once per module, so one client can build on another's inputs. For one-to-one kinds, import each
+  kind-owned client config and register the map at `admin.oneToOne`. A settings module likewise passes bare settings fields and a `SettingsForm`; that
   form owns or imports its generated controls directly, so the client entry never imports generated
   form controls. Imported by the site's client registry aggregation.
 - `fields/formFields.ts` — optional shared boundary that named-exports `fields` from one
@@ -88,6 +89,33 @@ never created. At volume, `queries/` members keep their own names (`queries/list
   fields from their units. It is assembly code whose removal would lose the field map, not a barrel kept
   for path compatibility. Neither aggregate contains server behavior.
 
+  The users module is the exception. Its role field lists every site role, so `fields.ts` holds the
+  role-free `userFields` public forms import, and `adminFields.ts` holds the role field and the full
+  field map that `index.ts` and the admin client consume (see `docs/site-anatomy.md`).
+
+  A site defines its users module with `defineUsersModule` from `@kenstack/modules/users/module`,
+  which takes `defineModule`'s `admin` and inherits Kenstack's name, title and icon.
+  `currentUser.select: (users) => ({ … })` adds columns or SQL subqueries to the cached current-user
+  query, and `getCurrentUser()` and `requireUser()` return them, typed through the registry;
+  Kenstack's own fields replace a site field with the same name, and a site field named
+  `sessionId`, `provider`, `expiresAt` or `authorizedUntil` is dropped. The data is cached with the
+  user, so a write to data a subquery reads must clear `adminLoadCacheTag("users", userId)`.
+  `publicUser: (user) => ({ … })` adds fields to the browser's user info; it runs after the cache on
+  each request and cannot replace Kenstack's fields, and the selected fields stay server-only unless
+  it exposes them. Declare it after `currentUser`; declared first, its `user` lacks the selected
+  fields. `loginDestination: (user) => path` chooses where a sign-in without a safe `returnTo`
+  lands (default `/`), and `passwordPath` names the page hosting `ResetPasswordForm` (default
+  `/reset-password`). The client builds on Kenstack's:
+  `defineClient({ admin: { ...usersClient.admin, fields, EditForm } })`, with `usersClient` the
+  default export of `@kenstack/modules/users/client`. A users module built with plain
+  `defineModule` keeps Kenstack's defaults.
+
+  Every site also registers a site-settings module, built with `defineSiteSettingsModule({ admin })`
+  from `@kenstack/modules/siteSettings/module`: Kenstack's own, or one whose table and fields extend
+  `siteSettingsColumns` and `siteSettingsFields`. `loadSiteSettings()` and
+  `loadSiteSettingsMetadata()` read it, typed with the site's settings, and the site's schema registry
+  exports its table, since `@kenstack/db/tables` does not.
+
   A module-local `fields/<name>/` unit has the field-unit shape defined in
   `docs/kenstack-anatomy.md`: an isomorphic `index.ts`, with explicit server, component, schema, or
   helper files only when the field owns them. A separately implemented schema counts as a second file
@@ -101,14 +129,14 @@ never created. At volume, `queries/` members keep their own names (`queries/list
   One-to-one relation fields are ordinary `defineFields(...)` maps owned by their kind unit. Follow
   `docs/admin.md` for the registration contract.
 
-  Server registrations use `admin.fieldServers`, keyed by field property name. A one-to-one kind uses
-  the same `fieldServers` shape beside its table in its local `defineOneToOne(...)` config. When server
+  Server registrations use `admin.serverFields`, keyed by field property name. A one-to-one kind uses
+  the same `serverFields` shape beside its table in its local `defineOneToOne(...)` config. When server
   behavior has earned a separate file, keep it in the owning field unit's `server.ts` and import it into
   the module `index.ts` registry; an assembly-only `fields/server.ts` is never added. When a second
   module needs the field contract, promote the whole field unit (definition, schema, server behavior,
   and editor) to the reusable field library. A field-specific server implementation may earn a field
   unit without changing the isomorphic field's built-in kind or adding a custom client component; the
-  property-keyed `fieldServers` registration supplies that behavior.
+  property-keyed `serverFields` registration supplies that behavior.
 
   The client registers custom editors in `defineFormFields(...)` through its property-keyed `components`
   option, listing every property explicitly when several fields share one editor; Kenstack resolves a
@@ -136,7 +164,7 @@ for schema assembly; site schema wiring imports only the parent table entry poin
 is not a separate registration surface.
 
 - `index.ts` is server-owned and default-exports
-  `defineOneToOne({ fields, table, fieldServers?, title?, translateError? })` from
+  `defineOneToOne({ fields, table, serverFields?, title?, translateError? })` from
   `@kenstack/admin/server`. It owns the relation table binding, server behavior, and relation-specific
   error translation. The parent module imports the config and only registers `{ movie }` or another
   canonical key in `admin.oneToOne`.
@@ -155,7 +183,7 @@ Canonical assembly:
 // movie/index.ts
 export default defineOneToOne({
   fields: movieFields,
-  fieldServers: movieFieldServers,
+  serverFields: movieFieldServers,
   table: eventMovies,
 });
 
@@ -205,7 +233,7 @@ client-owned and may import its field's isomorphic entry point. `index.ts`, `tab
 `api` are server-owned; a generated form-map owner and `client.ts` start with `"use client"` and import
 only isomorphic definitions and client-owned code. A one-to-one kind's `index.ts` is server-owned and
 its `client.tsx` is client-owned. The parent `index.ts` registers server implementations through
-property-keyed `fieldServers`; the consuming form or shared `fields/formFields.ts` registers client
+property-keyed `serverFields`; the consuming form or shared `fields/formFields.ts` registers client
 implementations through `defineFormFields(...)`; `client.ts` passes the bare isomorphic field map to
 `defineClient(...)` and never imports the generated components. `fields/index.ts` only assembles
 isomorphic field entries. `index.ts` and `client.ts` do not import one another: the host registries
@@ -220,8 +248,10 @@ Add only the registrations the module's capabilities require:
   registry. Register a child module beneath its parent, preserving that product boundary. To give
   top-level modules their own sidebar heading, register them as `{ heading, children }`; its children
   may also include links to admin pages no module owns, as `{ href, title, icon }`, and show in the
-  order listed. Headings show in registry order, and entries without one share an Administration
-  group placed where the first appears.
+  order listed. Headings show in registry order, and top-level modules without one share an
+  Administration group placed where the first appears. A link may also sit at the top level, such as
+  a Dashboard link to `/admin`; it shows in place without a heading. A sidebar link is lit on every
+  page under its path, except `/admin`, which is lit only on itself.
 - When `client.ts` exists, add it to the host client registry through a lazy `() => import(...)`
   loader, keeping that registry's required Client Component boundary. Register custom editors by
   property through `defineFormFields(...)` in their consuming form, extracting a shared
@@ -252,6 +282,16 @@ uncached query.
 Use the table-driven query pair: `listQuery(...)` for collections and `pageQuery(...)` for one public
 page row. They own deletion, publication, and configured SEO behavior; module authors do not
 reconstruct it around them.
+
+Both, and the current-user query, are built on `query(table)` from `@kenstack/db/queries`; use it
+directly for a read neither fits, such as a detail page that needs a join. It takes clauses in any
+order and any number of times: `select(...)` calls merge with later keys winning, `where(...)` calls
+are ANDed, and `innerJoin`/`leftJoin` accumulate with Drizzle's join nullability. `build()` returns
+Drizzle's select without `where` or the methods that would bring it back (`$dynamic`, `$withCache`
+and the set operators), so its own methods cannot replace the combined conditions; chain `orderBy`,
+`limit` and `await` as on any Drizzle select. `isVisible(table)` is the
+published-and-not-deleted condition without the publication-time check, for join conditions and
+cached reads, where a time inside the cache would freeze the moment it ran.
 
 ### Cached lists
 
@@ -294,7 +334,7 @@ The rules the shape encodes:
   choice lists, which an admin preview cookie must never change; the command still validates a
   submitted choice against authoritative uncached state with a `listQuery(...)` call that passes no
   `cacheTags`.
-- The cache wrapper tags the cache with the module's `revalidate` tags plus every joined dependency
+- The cache wrapper tags the cache with the module's name plus every joined dependency
   whose changes can alter the result; a list passes them as `cacheTags`. Code outside the module that
   changes a dependency clears its tag itself; see
   [Caching Module Content](admin.md#caching-module-content). A dependency with no reliable

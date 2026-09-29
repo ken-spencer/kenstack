@@ -15,14 +15,12 @@ import type {
   EmailLoginRequestResult,
   EmailLoginVerificationResult,
 } from "@kenstack/auth/api";
-import {
-  getSafeReturnToPath,
-  resolveLoginDestination,
-  type LoginDestination,
-} from "@kenstack/auth/returnTo";
+import { getSafeReturnToPath } from "@kenstack/auth/returnTo";
+import { resolveLoginDestination } from "@kenstack/auth/server/loginDestination";
 import getIp from "@kenstack/lib/ip";
 import { getFreshCurrentSession } from "@kenstack/auth/server/user";
 import { hasRecentAuthentication } from "@kenstack/auth/reauthentication";
+import { refuseChangedAccount } from "@kenstack/auth/reauthentication/server";
 
 import {
   createVerificationEmail,
@@ -50,7 +48,6 @@ const emailLoginLinkFailureMessages = {
 export type EmailLoginOptions = {
   allowUnregistered?: boolean;
   email?: Partial<VerificationEmailCopy>;
-  loginDestination?: LoginDestination;
 };
 
 export function createEmailLogin(options: EmailLoginOptions = {}) {
@@ -59,8 +56,7 @@ export function createEmailLogin(options: EmailLoginOptions = {}) {
     email: {
       actionLabel: heading,
       heading,
-      introduction:
-        "Use the button below or enter the six-digit code to continue.",
+      introduction: "Enter this six-digit code to continue.",
       subject: heading,
       ...options.email,
     },
@@ -71,9 +67,15 @@ export function createEmailLogin(options: EmailLoginOptions = {}) {
     request: pipelineStage(
       { schema: requestEmailLoginSchema },
       async ({ data, request, response }) => {
+        if (data.userId !== undefined) {
+          await refuseChangedAccount(data.userId, data.email);
+        }
         const returnTo = getSafeReturnToPath(data.returnTo);
         const authState = await loadAuthState();
+        // A confirmation always sends its code: its button promises one, and must never replay the
+        // held request itself.
         if (
+          data.userId === undefined &&
           authState.state === "authenticated" &&
           authState.email === data.email &&
           hasRecentAuthentication(await getFreshCurrentSession())
@@ -82,11 +84,7 @@ export function createEmailLogin(options: EmailLoginOptions = {}) {
           response.headers.set("Cache-Control", "no-store");
           return response.success<EmailLoginRequestResult>({
             authState: publicAuthState,
-            path: await resolveLoginDestination(
-              returnTo,
-              publicAuthState,
-              options.loginDestination,
-            ),
+            path: await resolveLoginDestination(returnTo),
           });
         }
         if (authState.state === "proven" && authState.email === data.email) {
@@ -100,11 +98,7 @@ export function createEmailLogin(options: EmailLoginOptions = {}) {
           response.headers.set("Cache-Control", "no-store");
           return response.success<EmailLoginRequestResult>({
             authState: publicAuthState,
-            path: await resolveLoginDestination(
-              returnTo,
-              publicAuthState,
-              options.loginDestination,
-            ),
+            path: await resolveLoginDestination(returnTo),
           });
         }
 
@@ -154,9 +148,19 @@ export function createEmailLogin(options: EmailLoginOptions = {}) {
     verifyCode: pipelineStage(
       { schema: verifyEmailLoginCodeSchema },
       async ({ data, response }) => {
-        await redeemEmailProof(await verifyCode(data), {
-          allowUnregistered: options.allowUnregistered,
-        });
+        if (data.userId !== undefined) {
+          await refuseChangedAccount(data.userId, data.email ?? "");
+        }
+        // The account id names the confirming page, not the verification row, so only the proof goes on.
+        await redeemEmailProof(
+          await verifyCode({
+            challengeKey: data.challengeKey,
+            code: data.code,
+          }),
+          {
+            allowUnregistered: options.allowUnregistered,
+          },
+        );
 
         // The client store seeds from this state instead of fetching user-info
         // again; loaded fresh since authentication may have established a session.
@@ -164,11 +168,7 @@ export function createEmailLogin(options: EmailLoginOptions = {}) {
         response.headers.set("Cache-Control", "no-store");
         return response.success<EmailLoginVerificationResult>({
           authState: publicAuthState,
-          path: await resolveLoginDestination(
-            data.returnTo,
-            publicAuthState,
-            options.loginDestination,
-          ),
+          path: await resolveLoginDestination(data.returnTo),
         });
       },
     ),
@@ -196,11 +196,7 @@ export function createEmailLogin(options: EmailLoginOptions = {}) {
         response.headers.set("Cache-Control", "no-store");
         return response.success<EmailLoginVerificationResult>({
           authState: publicAuthState,
-          path: await resolveLoginDestination(
-            returnTo,
-            publicAuthState,
-            options.loginDestination,
-          ),
+          path: await resolveLoginDestination(returnTo),
         });
       },
     ),

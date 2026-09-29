@@ -10,6 +10,9 @@ const mocks = vi.hoisted(() => ({
   refresh: vi.fn(),
 }));
 vi.mock("server-only", () => ({}));
+vi.mock("@kenstack/auth/server/getUsersModule", () => ({
+  getUsersModule: () => ({ passwordPath: "/account/password" }),
+}));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: mocks.refresh }),
   useSearchParams: () => new URLSearchParams(),
@@ -52,9 +55,7 @@ async function resolveServer(node: ReactNode): Promise<ReactNode> {
 }
 
 async function renderLoader() {
-  const tree = await resolveServer(
-    await ResetPasswordFormLoader({ path: "/account/password" }),
-  );
+  const tree = await resolveServer(await ResetPasswordFormLoader());
   await act(async () => root.render(tree));
 }
 
@@ -117,22 +118,6 @@ it("preserves the password change confirmation when its rotated session refreshe
   expect(container.textContent).toContain(
     "Your password has successfully been set.",
   );
-});
-
-it("embeds an identity explanation and login for a stale session", async () => {
-  mocks.session.mockResolvedValue({
-    id: 1,
-    expiresAt: new Date(Date.now() + 86400_000),
-    authorizedUntil: new Date(0),
-    createdAt: new Date(0),
-    userId: 1,
-    impersonatedBy: null,
-  });
-  await renderLoader();
-  expect(
-    container.querySelector<HTMLInputElement>('input[name="email"]')?.value,
-  ).toBe("patron@example.com");
-  expect(container.querySelector('input[name="confirmPassword"]')).toBeNull();
 });
 
 it("keeps password changes unavailable while impersonating", async () => {

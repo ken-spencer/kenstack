@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   redeemEmailProof: vi.fn(),
   loadAuthState: vi.fn(),
+  getCurrentUser: vi.fn(),
   getFreshCurrentSession: vi.fn(),
+  loginDestination: vi.fn(),
   loadPublicAuthState: vi.fn(),
   loadFreshPublicAuthState: vi.fn(),
   sendCode: vi.fn(),
@@ -13,7 +15,11 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("server-only", () => ({}));
 vi.mock("@kenstack/auth/server/user", () => ({
+  getCurrentUser: mocks.getCurrentUser,
   getFreshCurrentSession: mocks.getFreshCurrentSession,
+}));
+vi.mock("@kenstack/auth/server/getUsersModule", () => ({
+  getUsersModule: () => ({ loginDestination: mocks.loginDestination }),
 }));
 vi.mock("@kenstack/lib/ip", () => ({ default: vi.fn() }));
 vi.mock("@kenstack/api", () => {
@@ -287,19 +293,18 @@ describe("verifyEmailLoginCode", () => {
     ).resolves.toEqual({ authState: signedInState, path: "/" });
   });
 
-  it("asks the host for a destination only without a return path", async () => {
+  it("asks the users module for a destination only without a return path", async () => {
     mocks.verifyCode.mockResolvedValue(provenState);
     mocks.loadFreshPublicAuthState.mockResolvedValue(signedInState);
-    const loginDestination = vi.fn().mockResolvedValue("/account");
+    mocks.getCurrentUser.mockResolvedValueOnce({ id: 12 });
+    mocks.loginDestination.mockResolvedValueOnce("/account");
 
     await expect(
-      createEmailLogin({ loginDestination }).verifyCode(stageContext()),
+      createEmailLogin().verifyCode(stageContext()),
     ).resolves.toEqual({ authState: signedInState, path: "/account" });
 
     await expect(
-      createEmailLogin({ loginDestination }).verifyCode(
-        stageContext("/membership"),
-      ),
+      createEmailLogin().verifyCode(stageContext("/membership")),
     ).resolves.toEqual({ authState: signedInState, path: "/membership" });
   });
 

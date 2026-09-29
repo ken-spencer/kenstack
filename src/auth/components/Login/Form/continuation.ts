@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback } from "react";
-import { useRouter } from "next/navigation";
 
 import { getSafeReturnToPath } from "@kenstack/auth/returnTo";
 import type { PublicAuthState } from "@kenstack/auth/server/state";
 import { useAuthorization } from "@kenstack/auth/reauthentication/context";
 import { setUserInfo } from "@kenstack/auth/useUserInfo";
+import { allowUnload } from "@kenstack/forms/NavigationBlocker";
 
 // Embedded login stays in its owning flow, including across emailed-link
 // verification, which returns to the flow's URL. Reauthentication confirms the
@@ -18,10 +18,12 @@ export type Continuation =
 
 export function resolveReturnTo({ anchor, mode }: Continuation) {
   if (mode === "reauthentication") {
-    // Keep a pending email-change token until identity confirmation finishes.
-    return (
-      window.location.pathname + window.location.search + window.location.hash
-    );
+    // An emailed link, opened in another tab, confirms and lands back on this page as it stands,
+    // marked so the page there says the held change still waits in the first tab. The
+    // confirmation wrapper reads the mark.
+    const params = new URLSearchParams(window.location.search);
+    params.set("identityConfirmed", "1");
+    return `${window.location.pathname}?${params}${window.location.hash}`;
   }
   if (mode === "embedded") {
     // Stale sign-in-link parameters must not ride along into a new request's
@@ -44,8 +46,7 @@ export function resolveReturnTo({ anchor, mode }: Continuation) {
 }
 
 export function useCompleteLogin({ mode, onComplete }: Continuation) {
-  const router = useRouter();
-  const authorization = useAuthorization();
+  const { confirm } = useAuthorization();
   return useCallback(
     (path: string, authState: PublicAuthState) => {
       if (mode === "embedded") {
@@ -54,22 +55,27 @@ export function useCompleteLogin({ mode, onComplete }: Continuation) {
         return;
       }
       if (mode === "reauthentication") {
-        // Another account must not inherit this page's unsaved client state.
-        if (
-          authState.state !== "authenticated" ||
-          authState.userId !== authorization.userId
-        ) {
-          window.location.reload();
-          return;
-        }
-        // The refreshed server tree carries the new session to the inline
-        // wrapper, keeping unsaved state elsewhere on the page.
-        setUserInfo(authState);
-        router.refresh();
+        // The wrapper replays what it held, keeping the page's unsaved state.
+        confirm(authState);
         return;
       }
       window.location.assign(path);
     },
-    [authorization.userId, mode, onComplete, router],
+    [confirm, mode, onComplete],
   );
+}
+
+// A confirmation sign-in names the account its page was rendered for, and the page reloads when
+// another account has signed in since.
+export function useReauthenticationAccount({ mode }: Continuation) {
+  const { userId } = useAuthorization();
+  return {
+    userId: mode === "reauthentication" ? userId : undefined,
+    reloadIfChanged: (result: { code?: string; status: string }) => {
+      if (result.status === "error" && result.code === "account-changed") {
+        allowUnload();
+        window.location.reload();
+      }
+    },
+  };
 }

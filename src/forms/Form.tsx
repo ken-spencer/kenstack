@@ -7,6 +7,8 @@ import * as z from "zod";
 
 import { type FetchResult } from "@kenstack/api/fetcher";
 import RecaptchaTerms from "@kenstack/components/RecaptchaTerms";
+import { getFormFieldErrors } from "@kenstack/forms/internal/fieldErrors";
+import { useSubmitFailure } from "@kenstack/forms/internal/submitFailure";
 import {
   FormProvider,
   useForm,
@@ -136,6 +138,7 @@ export function Form<
 }: FormProps<TResult, TVariables, TSchema>) {
   const { form, mutation, setStatusError, setStatusMessage, uploadingFields } =
     useForm<TResult, TVariables, z.input<TSchema>, z.output<TSchema>>();
+  const { setSubmitFailure } = useSubmitFailure();
   const {
     formState: { isDirty },
   } = form;
@@ -159,19 +162,28 @@ export function Form<
         }
 
         setStatusMessage(null);
+        setSubmitFailure(null);
         form.clearErrors();
 
-        form.handleSubmit((data, submitEvent) =>
-          onSubmit({
-            data,
-            event: submitEvent,
-            mutation,
-            isDirty,
-            changes: Object.keys(form.formState.dirtyFields),
-            form,
-            setStatusError,
-            setStatusMessage,
-          }),
+        form.handleSubmit(
+          async (data, submitEvent) => {
+            await onSubmit({
+              data,
+              event: submitEvent,
+              mutation,
+              isDirty,
+              changes: Object.keys(form.formState.dirtyFields),
+              form,
+              setStatusError,
+              setStatusMessage,
+            });
+            // A handler can refuse the submit with its own field errors, such as a limit the schema
+            // cannot know. The control holds the live errors; `formState` is the last render's.
+            if (getFormFieldErrors(form.control._formState.errors).length) {
+              setSubmitFailure({});
+            }
+          },
+          () => setSubmitFailure({}),
         )(event);
       }}
       onBlur={

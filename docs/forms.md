@@ -17,9 +17,9 @@ and client-side form validation in Kenstack and host sites.
   deliberately edit one atomic form and every submitting step should validate its complete schema. The
   surrounding workflow follows the composition, navigation, and persistence contract in
   `docs/step-flow.md`.
-- `FormProvider` supplies the React Query provider its mutation requires, so a form needs no
-  `QueryProvider` of its own; keep an outer provider only when a component calls a query hook before the
-  form provider is mounted.
+- `FormProvider` supplies the React Query provider its mutation requires, as `StepFlow` and the admin
+  sidebar do for their contents, so a form needs no `QueryProvider` of its own. Outside those, keep an
+  outer provider only when a component calls a query hook before the form provider is mounted.
 - A field whose control is a set of buttons sharing one value uses `GroupField`. Its fieldset carries
   the field's ref and ids, so an invalid group receives focus and its error message; `render` supplies
   the buttons and reads `field.value` and `field.onChange`. A hidden input is never the registered
@@ -28,6 +28,9 @@ and client-side form validation in Kenstack and host sites.
   token on each submission and sends it as `recaptchaToken`; a failed token request reports through the
   status outlet. Submit handlers do not call `executeRecaptcha` themselves. The host mounts one
   `RecaptchaProvider` site-wide so the score reflects the whole visit.
+- The reCAPTCHA terms always come last, below every button, in a page or a dialog. `Form` renders them
+  after its children; a form that requests a token outside `recaptchaAction`, such as a resend link,
+  renders `RecaptchaTerms` after its own buttons, and a dialog puts no buttons below its form.
 - Read dependent values with `watch` or `useWatch` and derive conditional UI, available options,
   validation inputs, eligibility, and displayed totals from the current form values; live form fields
   and derived form values have no second copy in component state. A validated result committed by a

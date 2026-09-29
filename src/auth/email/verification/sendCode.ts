@@ -5,11 +5,10 @@ import { lte, sql } from "drizzle-orm";
 import type { NextRequest } from "next/server";
 import { waitUntil } from "@vercel/functions";
 
-import { attachments as defaultAttachments, loadEmailFrom } from "@app/email";
+import { attachments as defaultAttachments } from "@app/email";
 import { db } from "@app/db";
 import { claimQuota, ReturnedError } from "@kenstack/api";
 import { verifications } from "@kenstack/db/tables/verification";
-import errorLog from "@kenstack/lib/errorLog";
 import getIp from "@kenstack/lib/ip";
 import { reportError } from "@kenstack/lib/errorReporter";
 import mailer, {
@@ -131,7 +130,7 @@ async function sendVerification(
     challengeKey,
     concealDeliveryFailure,
     email: unparsedEmail,
-    from: configuredFrom,
+    from,
     isDecoy,
     kind = "login",
     linkPath,
@@ -289,17 +288,6 @@ async function sendVerification(
 
   try {
     if (!isDecoy) {
-      const from = configuredFrom ?? (await loadEmailFrom());
-      if (!from) {
-        await errorLog({
-          message: "Verification email sender is not configured.",
-          name: "verification-email-sender-not-configured",
-        });
-        throw new ReturnedError("Verification email is not configured yet.", {
-          status: 503,
-        });
-      }
-
       // A login link and an email-change link can land on the same page.
       url.searchParams.set(
         kind === "email-change" ? "confirmEmailChange" : "token",

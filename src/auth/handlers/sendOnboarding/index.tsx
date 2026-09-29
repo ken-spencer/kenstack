@@ -3,7 +3,6 @@ import { render } from "react-email";
 import * as z from "zod";
 
 import { db } from "@app/db";
-import { loadEmailFrom } from "@app/email";
 import { modules } from "@app/modules";
 import { pipelineStage } from "@kenstack/api";
 import mailer from "@kenstack/lib/mailer";
@@ -15,11 +14,6 @@ import OnboardingEmail, { attachments } from "./Email";
 export const sendOnboardingEmailAction = pipelineStage(
   { access: "admin", schema: z.object({ userId: z.number() }) },
   async ({ data: { userId }, request, response, user: admin }) => {
-    const from = await loadEmailFrom();
-    if (!from) {
-      return response.error("Onboarding email sender is not configured.");
-    }
-
     const users = modules.users.admin.table;
 
     const [user] = await db
@@ -47,7 +41,6 @@ export const sendOnboardingEmailAction = pipelineStage(
     url.searchParams.set("notice", "onboarding");
     const delivery = await mailer({
       attachments,
-      from,
       html: await render(
         <OnboardingEmail
           invitedBy={admin.name.trim() || "An administrator"}

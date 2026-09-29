@@ -10,6 +10,7 @@ import {
   resolveReturnTo,
   type Continuation,
   useCompleteLogin,
+  useReauthenticationAccount,
 } from "./continuation";
 import LinkButton from "./LinkButton";
 import LoginSubmit from "./LoginSubmit";
@@ -28,6 +29,7 @@ export default function PasswordLoginForm({
   statusMessage?: StatusMessage;
 }) {
   const completeLogin = useCompleteLogin(continuation);
+  const account = useReauthenticationAccount(continuation);
 
   return (
     <Form<LoginActionResult, Record<string, unknown>, typeof loginSchema>
@@ -42,10 +44,12 @@ export default function PasswordLoginForm({
           {
             ...data,
             returnTo: resolveReturnTo(continuation),
+            userId: account.userId,
             action: "login",
           },
           {
             onSuccess: (res) => {
+              account.reloadIfChanged(res);
               if (res.status === "success") {
                 form.reset();
                 completeLogin(res.path, res.authState);
@@ -59,6 +63,7 @@ export default function PasswordLoginForm({
         autoFocus={autoFocus === "email"}
         name="email"
         label="Email"
+        readOnly={continuation.mode === "reauthentication"}
         type="email"
       />
       <PasswordField

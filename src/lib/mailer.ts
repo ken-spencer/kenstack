@@ -1,5 +1,7 @@
 import { SESClient, SendRawEmailCommand } from "@aws-sdk/client-ses";
 import { createMimeMessage, Mailbox } from "mimetext";
+
+import { loadEmailFrom } from "@app/email";
 import errorLog from "@kenstack/lib/errorLog";
 
 const ses = new SESClient();
@@ -33,7 +35,8 @@ interface MailerOptions {
   to: string;
   cc?: string;
   bcc?: string;
-  from: EmailAddress;
+  // The site's sender from @app/email when omitted.
+  from?: EmailAddress;
   replyTo?: EmailAddress;
   subject: string;
   html: string;
@@ -140,7 +143,7 @@ async function sendEmail({
   subject = "",
   html = "",
   attachments = [],
-}: MailerOptions): Promise<MailDeliveryResult> {
+}: MailerOptions & { from: EmailAddress }): Promise<MailDeliveryResult> {
   const msg = createMimeMessage();
   msg.setSender(from);
 
@@ -217,10 +220,48 @@ async function sendEmail({
   };
 }
 
-export default async function mailer(options: MailerOptions) {
+// Delivery failures stay out of reportError, so a missing or failed sender lookup is logged here
+// once.
+async function loadSiteSender() {
+  let sender;
+  let error;
+  try {
+    sender = await loadEmailFrom();
+  } catch (lookupError) {
+    error = lookupError;
+  }
+
+  if (!sender) {
+    try {
+      await errorLog({
+        error,
+        message: error
+          ? "Email was not sent: loading the site's sender with loadEmailFrom() from @app/email failed."
+          : "Email was not sent: loadEmailFrom() from @app/email gave no sender address. Configure the site's sender.",
+        name: "email-sender-unavailable",
+      });
+    } catch {
+      // eslint-disable-next-line no-console
+      console.error("[kenstack:mailer] Email sender is unavailable.");
+    }
+  }
+
+  return sender;
+}
+
+export default async function mailer({ from, ...options }: MailerOptions) {
+  const sender = from ?? (await loadSiteSender());
+  if (!sender) {
+    return {
+      attempts: 0,
+      code: "SenderUnavailable",
+      status: "operational-failure",
+    } satisfies MailDeliveryResult;
+  }
+
   let delivery: MailDeliveryResult;
   try {
-    delivery = await sendEmail(options);
+    delivery = await sendEmail({ ...options, from: sender });
   } catch (error) {
     delivery = operationalFailure(error, 0);
   }

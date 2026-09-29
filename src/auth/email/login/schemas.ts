@@ -25,6 +25,8 @@ export const requestEmailLoginSchema = z.object({
   linkToReturnTo: z.boolean().optional(),
   recaptchaToken: z.string().optional().catch(undefined),
   returnTo: z.string().optional(),
+  // Set by a confirmation sign-in: the account its page was rendered for.
+  userId: z.number().int().positive().optional(),
 });
 
 export const loginCodeSchema = z.object({
@@ -34,6 +36,9 @@ export const loginCodeSchema = z.object({
 export const verifyEmailLoginCodeSchema = loginCodeSchema.extend({
   challengeKey: challengeKeySchema,
   returnTo: z.string().optional(),
+  // Set by a confirmation sign-in: the account its page was rendered for, and that account's email.
+  email: emailSchema.optional(),
+  userId: z.number().int().positive().optional(),
 });
 
 export const verifyEmailLoginLinkSchema = z.object({

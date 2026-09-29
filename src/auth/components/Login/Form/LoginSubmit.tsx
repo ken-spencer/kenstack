@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
 
-import { StepActions } from "@kenstack/components/StepFlow/StepActions";
+import { useAuthorization } from "@kenstack/auth/reauthentication/context";
 import Submit from "@kenstack/forms/Submit";
 
 import type { Continuation } from "./continuation";
+import LinkButton from "./LinkButton";
 
-// An embedded form submits through its flow's action renderer.
+// Every sign-in form has the same action row, in a flow too; a confirmation adds Cancel.
 export default function LoginSubmit({
   children,
   continuation,
@@ -15,15 +16,16 @@ export default function LoginSubmit({
   continuation: Continuation;
   label: string;
 }) {
-  return continuation.mode === "embedded" ? (
-    <>
-      <StepActions next={label} />
-      {children}
-    </>
-  ) : (
+  const { cancel } = useAuthorization();
+  return (
     <div className="login-actions">
-      <Submit>{label}</Submit>
-      {children}
+      <div>
+        <Submit>{label}</Submit>
+        {children}
+      </div>
+      {continuation.mode === "reauthentication" ? (
+        <LinkButton onClick={cancel}>Cancel</LinkButton>
+      ) : null}
     </div>
   );
 }

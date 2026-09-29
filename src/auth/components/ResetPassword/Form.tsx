@@ -15,7 +15,7 @@ const defaultValues = {
 
 export default function ResetPasswordForm() {
   const router = useRouter();
-  const authorization = useAuthorization();
+  const { track, userId } = useAuthorization();
   return (
     <Form
       className="w-full max-w-lg space-y-4"
@@ -23,10 +23,9 @@ export default function ResetPasswordForm() {
       schema={schema}
       defaultValues={defaultValues}
       onSubmit={async ({ data, mutation, form }) => {
-        const result = await authorization
-          .track(mutation.mutateAsync({ ...data, action: "reset-password" }), {
-            rotatesSession: true,
-          })
+        const result = await track(() =>
+          mutation.mutateAsync({ ...data, action: "reset-password", userId }),
+        )
           // The form's mutation already reported the failure.
           .catch(() => undefined);
         if (result?.status === "success") {

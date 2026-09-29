@@ -3,7 +3,7 @@
 import Onboarding from "./Onboarding";
 import AvatarPlaceholder from "./AvatarPlaceholder";
 import { defineFormFields } from "@kenstack/fields/formFields";
-import { fields as definitions } from "../fields";
+import { fields as definitions } from "../adminFields";
 
 const fields = defineFormFields(definitions);
 

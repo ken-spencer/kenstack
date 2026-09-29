@@ -2,7 +2,7 @@
 
 import { defineClient } from "@kenstack/admin/client";
 import EditForm from "./components/EditForm";
-import { fields } from "./fields";
+import { fields } from "./adminFields";
 import { UserAvatarListItem, UserNameListItem } from "./components/ListItems";
 
 export default defineClient({

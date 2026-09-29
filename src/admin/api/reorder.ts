@@ -108,6 +108,7 @@ export const reorderAction = (moduleConfig: DefinedAdminModule) => {
 
       revalidator(adminConfig.revalidate);
       revalidateTag(adminListCacheTag(name), { expire: 0 });
+      revalidateTag(name, { expire: 0 });
 
       return response.success({});
     },

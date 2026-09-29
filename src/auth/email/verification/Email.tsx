@@ -31,9 +31,26 @@ export function createVerificationEmail(
           {copy.heading}
         </Heading>
         <Text
-          style={{ color: "#000000", fontSize: "14px", lineHeight: "24px" }}
+          style={{
+            color: "#000000",
+            fontSize: "14px",
+            lineHeight: "24px",
+            textAlign: "center",
+          }}
         >
           {copy.introduction}
+        </Text>
+        <Text
+          style={{
+            color: "#000000",
+            fontSize: "28px",
+            fontWeight: "bold",
+            letterSpacing: "8px",
+            lineHeight: "36px",
+            textAlign: "center",
+          }}
+        >
+          {code}
         </Text>
         <Text
           style={{
@@ -45,6 +62,16 @@ export function createVerificationEmail(
         >
           Valid for {expiresInMinutes}{" "}
           {expiresInMinutes === 1 ? "minute" : "minutes"}.
+        </Text>
+        <Text
+          style={{
+            color: "#000000",
+            fontSize: "14px",
+            lineHeight: "24px",
+            textAlign: "center",
+          }}
+        >
+          Or open this link instead
         </Text>
         <Section
           style={{
@@ -67,31 +94,14 @@ export function createVerificationEmail(
             {copy.actionLabel}
           </Button>
         </Section>
-        <Text
-          style={{
-            color: "#000000",
-            fontSize: "14px",
-            lineHeight: "24px",
-            textAlign: "center",
-          }}
-        >
-          Or enter this six-digit code
-        </Text>
-        <Text
-          style={{
-            color: "#000000",
-            fontSize: "28px",
-            fontWeight: "bold",
-            letterSpacing: "8px",
-            lineHeight: "36px",
-            textAlign: "center",
-          }}
-        >
-          {code}
-        </Text>
         <Hr style={{ borderColor: "#e5e5e5", margin: "26px 0" }} />
         <Text
-          style={{ color: "#666666", fontSize: "12px", lineHeight: "20px" }}
+          style={{
+            color: "#666666",
+            fontSize: "12px",
+            lineHeight: "20px",
+            textAlign: "center",
+          }}
         >
           If you did not request this email, you can ignore it.
         </Text>

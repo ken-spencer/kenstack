@@ -1,5 +1,3 @@
-import type { PublicAuthState } from "@kenstack/auth/server/state";
-
 export function getReauthenticationPath(returnTo?: string): `/${string}` {
   const path = getSafeReturnToPath(returnTo);
   return `/login${path ? `?returnTo=${encodeURIComponent(path)}` : ""}`;
@@ -28,26 +26,4 @@ export function getSafeReturnToPath(
   }
 
   return path as `/${string}`;
-}
-
-export type LoginDestination = (
-  user: Extract<PublicAuthState, { state: "authenticated" }>,
-) => string | Promise<string>;
-
-// A safe returnTo always wins; the host's loginDestination is consulted only
-// without one, and its answer passes the same safety check.
-export async function resolveLoginDestination(
-  returnTo: string | null | undefined,
-  authState: PublicAuthState,
-  loginDestination?: LoginDestination,
-): Promise<string> {
-  const safeReturnTo = getSafeReturnToPath(returnTo);
-  if (safeReturnTo) {
-    return safeReturnTo;
-  }
-  if (loginDestination && authState.state === "authenticated") {
-    return getSafeReturnToPath(await loginDestination(authState)) ?? "/";
-  }
-
-  return "/";
 }

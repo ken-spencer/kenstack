@@ -88,7 +88,7 @@ type ServerOneToOneDefinition<
   TTable extends AnyPgTable = AnyPgTable,
 > = {
   fields: TFields;
-  fieldServers?: ServerFields<TFields>;
+  serverFields?: ServerFields<TFields>;
   table: TTable;
   title?: string;
   translateError?: (error: unknown) => FetchError | undefined;
@@ -117,7 +117,7 @@ type AdminConfigBase<
   TFields extends ServerDefinedFields,
 > = {
   table: TTable;
-  fieldServers?: ServerFields<TFields>;
+  serverFields?: ServerFields<TFields>;
   revalidate?: RevalidateTagRule<
     SelectedFieldValues<TTable, TFields & GeneratedFields<TTable>>
   >[];
@@ -148,7 +148,7 @@ type AdminListConfig<
 };
 
 export type AnyAdminConfig = NonNullable<ReturnType<typeof resolveAdmin>>;
-type AdminConfig<
+export type AdminConfig<
   TTable extends AdminManagedTable,
   TFields extends ServerDefinedFields,
 > = TTable extends AdminTable
@@ -233,8 +233,8 @@ export type AdminNavigationLink = {
   icon?: ComponentType<SVGProps<SVGSVGElement>>;
 };
 
-// defineAdmin keeps the sidebar's headings, in registry order, beside the modules it returns;
-// each item is a top-level module's name or a link.
+// defineAdmin keeps the sidebar's groups, in registry order, beside the modules it returns;
+// each item is a top-level module's name or a link, and a group of top-level links has no heading.
 export const adminNavigation = Symbol("adminNavigation");
 
 export type DefinedAdmin = Record<
@@ -252,7 +252,7 @@ export type DefinedAdmin = Record<
   }
 > & {
   [adminNavigation]: {
-    heading: string;
+    heading?: string;
     items: (string | AdminNavigationLink)[];
   }[];
 };
@@ -300,9 +300,9 @@ function resolveOneToOne(config: ServerOneToOneConfig): ServerOneToOne {
         );
       }
 
-      const fields = relationConfig.fieldServers
+      const fields = relationConfig.serverFields
         ? resolveServerFields(relation.fields, {
-            fields: relationConfig.fieldServers,
+            fields: relationConfig.serverFields,
           })
         : resolveServerFields(relation.fields);
 
@@ -435,7 +435,7 @@ function resolveAdmin(admin: AdminConfigRuntime | undefined) {
     // place in list sort and filter order.
     const resolvedFields = resolveModuleFields(
       { ...config.fields, ...generatedFields },
-      config.fieldServers,
+      config.serverFields,
     );
     const oneToOne = config.oneToOne
       ? resolveOneToOne(config.oneToOne)
@@ -547,11 +547,11 @@ function isRecordTableAdmin(
 
 function resolveModuleFields<TFields extends DefinedFields>(
   fields: TFields,
-  fieldServers?: ServerFields<TFields>,
+  serverFields?: ServerFields<TFields>,
 ) {
-  return fieldServers
+  return serverFields
     ? resolveServerFields(fields, {
-        fields: fieldServers,
+        fields: serverFields,
       })
     : resolveServerFields(fields);
 }

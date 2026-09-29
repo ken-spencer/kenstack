@@ -1,17 +1,5 @@
-import deps from "@app/deps";
-import { defineFields } from "@kenstack/admin/fields";
-import {
-  checkboxListField,
-  emailField,
-  imageField,
-  textField,
-} from "@kenstack/fields";
+import { emailField, imageField, textField } from "@kenstack/fields";
 import * as z from "zod";
-
-const roleOptions = Object.entries(deps.roles).map(([value, { label }]) => ({
-  value,
-  label,
-}));
 
 export const userFields = {
   givenName: textField({
@@ -36,16 +24,3 @@ export const userFields = {
   }),
   avatar: imageField({ list: "square" }),
 };
-
-export const userRoleField = checkboxListField({
-  filter: true,
-  label: "Access Roles",
-  options: roleOptions,
-});
-
-export const fields = defineFields({
-  fields: {
-    ...userFields,
-    roles: userRoleField,
-  },
-});

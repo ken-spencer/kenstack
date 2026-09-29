@@ -126,6 +126,14 @@ function refreshWhenVisible() {
   }
 }
 
+function identityOf(authState: PublicAuthState) {
+  return authState.state === "authenticated"
+    ? `authenticated:${authState.userId}`
+    : authState.state === "anonymous"
+      ? "anonymous"
+      : `${authState.state}:${authState.email}`;
+}
+
 // Stable identity avoids a store-instance effect on every component render.
 function getSnapshot() {
   return snapshot;
@@ -162,8 +170,19 @@ export function useUserInfo(authState?: PublicAuthState) {
   // Writing module state during SSR could expose one request's identity to
   // another. Layout timing seeds only the browser and avoids a first-paint swap.
   useLayoutEffect(() => {
-    if (authState && snapshot.state === "loading" && !activeRequest) {
-      setSnapshot(authState);
+    if (!authState) {
+      return;
+    }
+    if (snapshot.state === "loading") {
+      if (!activeRequest) {
+        setSnapshot(authState);
+      }
+      return;
+    }
+    // A server render that sees another identity than this browser's copy, such as a session ended
+    // elsewhere, is settled by asking the server, not by trusting either.
+    if (identityOf(authState) !== identityOf(snapshot)) {
+      void refreshUserInfo();
     }
   }, [authState]);
 

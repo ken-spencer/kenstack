@@ -3,7 +3,6 @@ import { geolocation } from "@vercel/functions";
 import { render } from "react-email";
 
 import { db } from "@app/db";
-import { loadEmailFrom } from "@app/email";
 import { modules } from "@app/modules";
 import {
   checkQuota,
@@ -13,6 +12,7 @@ import {
   ReturnedError,
 } from "@kenstack/api";
 import getIp from "@kenstack/lib/ip";
+import { getUsersModule } from "@kenstack/auth/server/getUsersModule";
 
 import { sendVerificationLink } from "@kenstack/auth/email/verification/sendCode";
 import DefaultEmail, {
@@ -28,19 +28,11 @@ export type ForgotPasswordProps = {
   Email?: React.FC<ForgotPasswordEmailProps>;
   attachments?: Attachment[];
   from?: EmailAddress;
-  // The page that hosts ResetPasswordForm, where the emailed link lands
-  // after sign-in.
-  resetPath?: `/${string}`;
 };
 
 export const forgotPasswordPipeline = (props: ForgotPasswordProps) =>
   pipelineStage({ schema }, async ({ data, request, response }) => {
     const Email = props.Email ?? DefaultEmail;
-    const from = props.from ?? (await loadEmailFrom());
-    if (!from) {
-      return response.error("Password reset email sender is not configured.");
-    }
-
     const { email } = data;
 
     const startedAt = Date.now();
@@ -126,9 +118,9 @@ export const forgotPasswordPipeline = (props: ForgotPasswordProps) =>
         {
           attachments: props.attachments ?? defaultAttachments,
           email,
-          from,
+          from: props.from,
           isDecoy: !user,
-          linkPath: `/login?returnTo=${encodeURIComponent(props.resetPath ?? "/reset-password")}`,
+          linkPath: `/login?returnTo=${encodeURIComponent(getUsersModule().passwordPath)}`,
           request,
         },
         async ({ expiresInMinutes, url }) => ({

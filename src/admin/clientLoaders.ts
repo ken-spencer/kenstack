@@ -6,9 +6,9 @@
  * implementation from its canonical files, not through this entry point.
  */
 
-import type { ClientConfig } from "./client";
+import { buildClient, type ClientConfig, type ClientInput } from "./client";
 
-type ClientConfigModule = { client: ClientConfig } | { default: ClientConfig };
+type ClientConfigModule = { client: ClientInput } | { default: ClientInput };
 
 export type AdminClientLoader = () => Promise<ClientConfig>;
 export type AdminClientRegistry = Record<string, AdminClientLoader>;
@@ -23,7 +23,7 @@ export function defineAdminClients(
 
     clients[name] = () => {
       clientConfig ??= load().then((mod) =>
-        "client" in mod ? mod.client : mod.default,
+        buildClient("client" in mod ? mod.client : mod.default),
       );
 
       return clientConfig;

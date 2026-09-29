@@ -1,6 +1,7 @@
 import "server-only";
 
 import { and, desc, eq } from "drizzle-orm";
+import { io } from "next/cache";
 import { cache } from "react";
 
 import { db } from "@app/db";
@@ -8,9 +9,10 @@ import { getVerificationKey } from "@kenstack/auth/email/verification/internal/c
 import { hashVerificationKey } from "@kenstack/auth/email/verification/internal/crypto";
 import { verifications } from "@kenstack/db/tables/verification";
 import { normalizeEmail } from "@kenstack/fields/email";
-import type { User } from "@kenstack/types";
-import type { Role } from "./types";
 import { getCurrentUser, getFreshCurrentUser } from "./user";
+import { getUsersModule } from "./getUsersModule";
+
+type CurrentUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
 
 type AuthState =
   | { state: "anonymous" }
@@ -19,20 +21,7 @@ type AuthState =
   // whether an account exists is looked up where it is acted on (email login,
   // the login handlers), never carried as state.
   | { email: string; state: "proven"; verificationId: number }
-  | {
-      avatar: User["avatar"];
-      email: string;
-      familyName: string;
-      givenName: string;
-      // Present while an admin is impersonating; the rest of the payload is
-      // the impersonated user. Being signed in is one state either way.
-      impersonatedBy?: number;
-      initials: string;
-      name: string;
-      roles: Role[];
-      state: "authenticated";
-      userId: number;
-    };
+  | Awaited<ReturnType<typeof toAuthenticatedState>>;
 
 export type PublicAuthState =
   | { state: "anonymous" }
@@ -51,30 +40,42 @@ function toPublicAuthState(auth: AuthState): PublicAuthState {
   }
 }
 
+// The current-user lookup already computes the display fields, so carrying them costs nothing and
+// saves user-info consumers another lookup.
+async function toAuthenticatedState(user: CurrentUser) {
+  const { publicUser } = getUsersModule();
+  // publicUser may compare stored values with the clock, which must not run while prerendering.
+  await io();
+  return {
+    // Kenstack's own fields follow, so a site's cannot replace them.
+    ...publicUser(user),
+    avatar: user.avatar,
+    email: normalizeEmail(user.email),
+    familyName: user.familyName,
+    givenName: user.givenName,
+    // Set while an admin is impersonating; the rest of the payload is the impersonated user. Being
+    // signed in is one state either way.
+    impersonatedBy: user.impersonatedBy,
+    initials: user.initials,
+    name: user.name,
+    roles: user.roles,
+    state: "authenticated" as const,
+    userId: user.id,
+  };
+}
+
 async function resolveAuthState(
-  user: User<Role> | undefined,
+  user: CurrentUser | undefined,
 ): Promise<AuthState> {
-  // The current-user lookup already computes the display fields, so carrying
-  // them costs nothing and saves user-info consumers another lookup.
   if (user) {
-    return {
-      avatar: user.avatar,
-      email: normalizeEmail(user.email),
-      familyName: user.familyName,
-      givenName: user.givenName,
-      ...(user.impersonatedBy ? { impersonatedBy: user.impersonatedBy } : {}),
-      initials: user.initials,
-      name: user.name,
-      roles: user.roles,
-      state: "authenticated",
-      userId: user.id,
-    };
+    return toAuthenticatedState(user);
   }
 
   const verificationKey = await getVerificationKey();
   if (!verificationKey) {
     return { state: "anonymous" };
   }
+  await io();
   const now = new Date();
   const [verification] = await db
     .select({

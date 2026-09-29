@@ -10,11 +10,22 @@ construction, controls, and state follow `docs/forms.md`.
 theme. `style-guide` is a reserved admin route name; modules cannot use it. The page requires an
 administrator and returns not found outside development or with additional path segments.
 
-The host serves `/style-guide/[context]` for the iframe, validates `context` as `base`, `admin`, or
-`site`, and renders `StyleGuide` from `@kenstack/admin/style-guide/StyleGuide`. This route must also
-require an administrator and return not found outside development, because visitors can open it
-directly. Load Kenstack's admin and style-guide theme styles alongside the host's site theme so each
-context renders in isolation. Both pages should use noindex metadata.
+`/admin/style-guide` frames `/style-guide/<context>`, which `@kenstack/admin/style-guide/ContextPage`
+provides. That page requires an administrator in development, returns not found outside development
+or for a context other than `base`, `admin`, or `site`, loads Kenstack's admin and style-guide themes,
+and sets noindex metadata.
+
+The style guide is optional. A site opts in with a stub route that re-exports the page and its
+metadata, then imports the site theme so it loads after Kenstack's:
+
+```tsx
+// app/style-guide/[context]/page.tsx
+export { default, metadata } from "@kenstack/admin/style-guide/ContextPage";
+
+import "@/components/SiteShell/theme.css"; // the site's own theme
+```
+
+A site without the stub adds nothing; `/admin/style-guide` then shows a 404 inside its frame.
 
 ## One-to-Many Relationships
 
@@ -89,7 +100,7 @@ foreign keys, or generic CRUD support.
   render-site overrides. Explicit labels and descriptions are field-owned too; generated controls
   derive a label from the field name only when none is configured. Render props carry local
   presentation such as layout classes, contextual help, and interaction state.
-- Field-specific server behavior registered through `admin.fieldServers` needs no matching custom
+- Field-specific server behavior registered through `admin.serverFields` needs no matching custom
   component. Keep the field's built-in editor unless editing that field's own value requires a
   different control.
 - Configure `imageField({ selectVariant: "original" })` when record loads need the original image in
@@ -121,8 +132,8 @@ foreign keys, or generic CRUD support.
 
 Reading module content on the site:
 
-- A list: call `listQuery` in a cached function and pass `cacheTags`: the module's `admin.revalidate`
-  tags plus each joined dependency. See [Cached lists](module-anatomy.md#cached-lists).
+- A list: call `listQuery` in a cached function and pass `cacheTags`: the module's name plus each
+  joined dependency. See [Cached lists](module-anatomy.md#cached-lists).
 - A page: call `pageQuery` with the module's record tags, such as `["news", "news:" + slug]`. See
   [Cached detail pages](module-anatomy.md#cached-detail-pages).
 - One record by id: tag it with `adminLoadCacheTag(module.name, id)` from `@kenstack/admin/cache`.
@@ -131,9 +142,10 @@ Reading module content on the site:
 
 Clearing it when the content changes:
 
-- The module's own admin saves and removals expire its record and list tags and its
-  `admin.revalidate` tags. A reorder expires only the list tag and the fixed-string `admin.revalidate`
-  tags. Declare any further dependency once in `admin.revalidate`.
+- The module's own admin saves and removals expire its record and list tags, its name tag and its
+  `admin.revalidate` tags. A reorder expires only the list and name tags and the fixed-string
+  `admin.revalidate` tags. `admin.revalidate` lists only the other tags a change affects; declare each
+  once there.
 - Any other code that changes what a cached read or an admin list shows, such as another module, a
   package or a site action, expires the tag itself after its commit:
   `revalidateTag(tag, { expire: 0 })`, with `adminListCacheTag(name)` for an admin list. The email
@@ -142,12 +154,13 @@ Clearing it when the content changes:
 
 ## Record Saving
 
-- Use `saveModuleRecord({ module, fields, id, changes, values })` for authenticated site actions that
-  update records also managed in admin, such as a public profile or account-details form. Import it
-  from `@kenstack/admin/queries/save`. Authenticate and authorize the target record in the action;
-  for a self-service form, derive `id` from the authenticated user, never the submitted payload.
-  Pass only the action's permitted values and restricted server field set, preserving the relevant
-  field handlers. Return only permitted saved values, not the full admin record.
+- Use `saveModuleRecord({ module, id, changes, values })` for authenticated site actions that update
+  records also managed in admin, such as a public profile or account-details form. Import it from
+  `@kenstack/admin/queries/save`. Authenticate and authorize the target record in the action; for a
+  self-service form, derive `id` from the authenticated user, never the submitted payload. It writes
+  the columns named in `values` and runs the handlers of the module fields among them, so the action's
+  Zod schema, which strips undeclared fields, is the allowlist: a member-facing schema lists only what
+  members may change. Return only permitted saved values, not the full admin record.
 - `saveModuleRecord` and `saveAdminRecord` share the module's persistence and `admin.revalidate`
   rules. Their record and list tags expire after commit, before follow-up tasks and audit logging.
   Declare additional content dependencies once in `admin.revalidate`; public forms do not duplicate

@@ -52,10 +52,20 @@ summaries, and browser persistence in Kenstack and host sites.
   visitor signs in so the flow resumes where it was. A visit that starts signed out keeps it as an
   ordinary step, completed by signing in and continuing; if identity is lost later in that visit the
   step is not recalled automatically, but the steps that need an account require themselves and Back
-  reaches the sign-in form. Signing in updates browser identity in place, with no server refresh, and
-  the step then shows who is signed in with Continue and a way to switch accounts. Data a step needs
-  from the account, such as its saved details, reaches the browser through a query keyed by user,
-  hydrated from the server when the visit starts signed in.
+  reaches the sign-in form. Signing in updates browser identity in place, and the login step's
+  controller then refreshes the server render without waiting on it, so account menus and other
+  output that depends on identity update; the step shows who is signed in with Continue and a way to
+  switch accounts. Data a step needs from the account, such as its saved details, reaches the browser
+  through a query keyed by user, hydrated from the server when the visit starts signed in.
+- Inside a flow, the server render can run again mid-visit, as the refresh after a sign-in does. Steps
+  may vary their server-rendered content, but a refresh must not change the visit's step list, which
+  steps exist and which are skipped, because that would break Back and Forward continuity. The flow's
+  client parts own the step list for the visit: StepFlow saves the skipped values the visit started
+  with in its store, and `useStep()` exposes the step's `startedSkipped` and the `visit` id. A
+  step the saved visit started skipped comes back when the server shows it as the flow mounts, such
+  as the sign-in step for a visitor who has signed out since; the saved list never skips a step. Skip
+  overrides belong to the visit that set them; a controller that sets one includes `visit` in its
+  effect inputs, so a new visit recomputes it.
 - A terminal result step sets `final`. It is reached through `next()` like any step, which records the
   preceding step in the ledger; it omits Back and the running summary and reads the flow's values as
   any step does. Arriving there also records the result in the ledger, and the next visit that finds a
@@ -65,9 +75,10 @@ summaries, and browser persistence in Kenstack and host sites.
   on screen through browser Back.
 - A server step factory may return `null` when the step does not belong in the current flow. This is a
   composition decision made before StepFlow reaches the browser, not a completion rule. If refreshed server
-  state omits the step the flow is on, the flow returns to the first retained step; if it only skips
-  that step, the flow continues to the next retained configured step. StepFlow filters omitted
-  factories before it evaluates navigation progress, so an omitted step never blocks a retained one.
+  state omits the step the flow is on, the flow returns to the first retained step; a refreshed
+  `skipped` value does not apply until the next visit, since the visit keeps the skipped values it
+  started with. StepFlow filters omitted factories before it evaluates navigation progress, so an
+  omitted step never blocks a retained one.
 
 ## Flow ownership
 
@@ -108,8 +119,8 @@ summaries, and browser persistence in Kenstack and host sites.
   stored slice into a flow context; the flow owner reads its slices directly. Login uses its controller to
   follow browser identity and to bring its step forward for an emailed link, while server checks still
   govern protected content and operations. Until the browser hydrates, StepFlow applies server-supplied live prerequisites
-  with every stored slice absent; once hydrated it also applies the
-  completion ledger. A form whose defaults come from a restored slice reads the
+  with every stored slice absent; once hydrated it applies the visit's saved skipped values in their
+  place, and the completion ledger. A form whose defaults come from a restored slice reads the
   slice itself, not a context value a controller fills in later, since a form keeps the defaults it
   mounted with.
 - Keep step-only data and behavior out of a broad flow context. A flow owner holds a cross-step result,
@@ -153,7 +164,8 @@ meaning, and `StepActions` forwards those props unchanged to the configured `Act
 The default implementation builds the standard next control and `.step-actions` layout. A replacement
 implementation owns the complete action area, including its control components, layout, and any Previous
 or secondary actions. Because it is mounted inside the owning step, it can use `useStep()` without making
-the step opt into or wire a site-level convention.
+the step opt into or wire a site-level convention. The sign-in step's forms render their own action row
+instead of `Actions`, so a flow whose sign-in step is not first keeps Back in its `Header`.
 
 ```tsx
 import { StepActions } from "@kenstack/components/StepFlow/StepActions";
@@ -223,10 +235,15 @@ parallel API for that component.
 ## State and persistence
 
 - The flow owns its step, seeded from the first step the server composes; later steps live in memory
-  and the URL is never rewritten. StepFlow stores only the sparse ledger of steps completed through
-  `next()` so it can decide whether a requested step, such as a controller's recall, is reachable.
+  and the URL is never rewritten. StepFlow stores the sparse ledger of steps completed through
+  `next()`, so it can decide whether a requested step, such as a controller's recall, is reachable,
+  and the visit's id and starting skipped values.
 - React Hook Form owns live edits. Persist only validated, committed workflow results needed after a
   refresh or an authentication round trip.
+- `StepFlow` renders one `QueryProvider` around the whole flow, so its steps and controllers share one
+  browser data cache and need no provider of their own. A provider above the flow is reused; a page
+  adds one there only when something above the flow uses the query client, such as a query hook or a
+  `HydrationBoundary`.
 - A flow has one store of named slices, keyed on its `basePath`, provided by
   `@kenstack/hooks/storedState`. The flow owns slice names. A value used by one step only lives in a
   slice named for that step's concept; a committed result that summaries or later steps consume lives

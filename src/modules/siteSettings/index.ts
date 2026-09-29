@@ -1,16 +1,7 @@
-import { Settings } from "lucide-react";
-
-import { defineModule } from "@kenstack/admin/server";
 import { fields } from "./fields";
+import { defineSiteSettingsModule } from "./module";
 import { siteSettings } from "./tables";
 
-export default defineModule({
-  name: "site-settings",
-  title: "Site Settings",
-  icon: Settings,
-  admin: {
-    fields,
-    table: siteSettings,
-    revalidate: ["site-settings"],
-  },
+export default defineSiteSettingsModule({
+  admin: { fields, table: siteSettings },
 });

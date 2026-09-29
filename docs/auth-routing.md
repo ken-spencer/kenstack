@@ -72,3 +72,18 @@ same protected destination would loop.
 `requireUser` reads the headers only when the user is signed out and the second argument is omitted.
 Keep request reads and authorization outside shared cache scopes and under the appropriate Suspense
 boundary, as described in `runtime-boundaries.md`. The return path does not change the session cache key.
+
+## Confirming identity for sensitive actions
+
+Sensitive actions, such as changing a password or the sign-in email, need a recently authorized,
+non-impersonated session. The server guard, `requireRecentAuthentication(request, userId)`, is the only
+authority; the page asks the person to confirm their identity only when it refuses a submit.
+
+- A handler behind the guard calls it before its first write, quota claim or email.
+- A protected request names the account its wrapper was rendered for, read from the wrapper's
+  `useAuthorization().userId`, never from the live user info, which follows the cookie.
+- The held request is a function that rebuilds the whole request rather than resending a stored body,
+  so single-use contents such as a reCAPTCHA token are fresh. `Form`'s mutation already fetches its
+  token per call.
+- A Kenstack component whose endpoint uses the guard wraps itself in `ReauthenticationForm`; hosts
+  never add the wrapper. Outside it, a refusal is only a status message.

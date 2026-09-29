@@ -85,34 +85,27 @@ async function loadSession() {
   return session;
 }
 
-it("extends a live session for ten minutes without changing sign-in time or login expiry", async () => {
-  const before = await loadSession();
-  const earliest = Date.now() + 600_000;
-  const grant = await extendAuthorization(binding);
-  const latest = Date.now() + 600_000;
-  const after = await loadSession();
-  expect(after.createdAt).toEqual(before.createdAt);
-  expect(after.expiresAt).toEqual(before.expiresAt);
-  expect(after.authorizedUntil.getTime()).toBeGreaterThanOrEqual(earliest - 10);
-  expect(after.authorizedUntil.getTime()).toBeLessThanOrEqual(latest + 10);
-  expect(grant.authorizedUntil).toEqual(after.authorizedUntil);
-});
-
 it("caps the authorization grant at fixed login expiry", async () => {
   await client`update sessions set expires_at=clock_timestamp()+interval '2 minutes' where id=1`;
   const before = await loadSession();
-  await extendAuthorization(binding);
+  await db.transaction((tx) =>
+    extendAuthorization(binding, tx, new Date(Date.now() + 600_000)),
+  );
   const after = await loadSession();
   expect(after.authorizedUntil).toEqual(before.expiresAt);
   expect(after.expiresAt).toEqual(before.expiresAt);
 });
 
 it.each([0, -1, -30, -60])(
-  "refuses expired authorization including submission grace (%i seconds)",
+  "refuses expired authorization (%i seconds)",
   async (seconds) => {
     await client`update sessions set authorized_until=clock_timestamp()+${seconds}*interval '1 second' where id=1`;
     const before = await loadSession();
-    await expect(extendAuthorization(binding)).rejects.toMatchObject({
+    await expect(
+      db.transaction((tx) =>
+        extendAuthorization(binding, tx, new Date(Date.now() + 600_000)),
+      ),
+    ).rejects.toMatchObject({
       code: "reauthentication-required",
     });
     expect(await loadSession()).toEqual(before);
@@ -140,9 +133,15 @@ it.each([
     await client`update sessions set expires_at=clock_timestamp()-interval '1 second' where id=1`;
   if (scenario === "revoked") await client`delete from sessions where id=1`;
   const before = await loadSession();
-  await expect(extendAuthorization(requested)).rejects.toMatchObject({
-    code: "reauthentication-required",
-  });
+  await expect(
+    db.transaction((tx) =>
+      extendAuthorization(requested, tx, new Date(Date.now() + 600_000)),
+    ),
+  ).rejects.toMatchObject(
+    scenario === "missing-cookie"
+      ? { status: 401 }
+      : { code: "reauthentication-required" },
+  );
   expect(await loadSession()).toEqual(before);
 });
 
@@ -192,7 +191,9 @@ it("refuses a session that expires while renewal waits for an unchanged row lock
     await release.promise;
   });
   await locked.promise;
-  const renewal = extendAuthorization(binding);
+  const renewal = db.transaction((tx) =>
+    extendAuthorization(binding, tx, new Date(Date.now() + 600_000)),
+  );
   const refusal = expect(renewal).rejects.toMatchObject({
     code: "reauthentication-required",
   });

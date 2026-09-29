@@ -118,26 +118,11 @@ describe("shared recent authentication", () => {
           new Request("https://example.com/api/auth", {
             headers: referer ? { referer } : {},
           }),
+          12,
         ),
       ).rejects.toMatchObject({ redirect: "/login" });
     },
   );
-  it("uses login when a stale signed-in request has no safe return path", async () => {
-    mocks.session.mockResolvedValue({
-      createdAt: new Date(0),
-      authorizedUntil: new Date(new Date(0).getTime() + 600_000),
-      expiresAt: new Date(Date.now() + 86400_000),
-      userId: 12,
-      impersonatedBy: null,
-    });
-    await expect(
-      requireRecentAuthentication(new Request("https://example.com/api/auth")),
-    ).rejects.toMatchObject({
-      code: "reauthentication-required",
-      status: 403,
-      redirect: "/login",
-    });
-  });
   it("accepts a recent session for the requested account", async () => {
     await expect(
       requireRecentAuthentication(request, 12),
@@ -184,6 +169,7 @@ describe("password changes", () => {
   const json = {
     password: "Replacement123",
     confirmPassword: "Replacement123",
+    userId: 12,
   };
   it("returns an expired session to sign-in without changing the password", async () => {
     mocks.session.mockResolvedValue(undefined);
@@ -210,10 +196,10 @@ describe("password changes", () => {
       json: { ...json, currentPassword: "Existing123" },
     });
     expect(response.status).toBe(403);
-    await expect(response.json()).resolves.toMatchObject({
-      code: "reauthentication-required",
-      redirect: "/account/password?tab=security",
-    });
+    // No redirect: the page stays, keeping what was typed while identity is confirmed.
+    const body = await response.json();
+    expect(body).toMatchObject({ code: "reauthentication-required" });
+    expect(body).not.toHaveProperty("redirect");
     expect(mocks.hash).not.toHaveBeenCalled();
     expect(mocks.transaction).not.toHaveBeenCalled();
   });
@@ -239,7 +225,7 @@ describe("ordinary password login", () => {
     returnTo: "/account/password",
   };
   it("requires password proof and renews the same account session", async () => {
-    const response = await pipeline({ request, json }, loginPipeline({}));
+    const response = await pipeline({ request, json }, loginPipeline());
     await expect(response.json()).resolves.toMatchObject({
       status: "success",
       path: "/account/password",
@@ -248,7 +234,7 @@ describe("ordinary password login", () => {
   });
   it("does not renew the session when password proof fails", async () => {
     mocks.compare.mockResolvedValue(false);
-    const response = await pipeline({ request, json }, loginPipeline({}));
+    const response = await pipeline({ request, json }, loginPipeline());
     await expect(response.json()).resolves.toMatchObject({ status: "error" });
     expect(mocks.login).not.toHaveBeenCalled();
   });

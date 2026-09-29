@@ -62,6 +62,14 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
+function storedFlowSlices() {
+  const prefix = "stored-state:%2Fflow:";
+  return Object.keys(window.localStorage)
+    .filter((key) => key.startsWith(prefix))
+    .map((key) => key.slice(prefix.length))
+    .sort();
+}
+
 describe("StepFlow", () => {
   let container: HTMLDivElement;
   let root: Root;
@@ -577,7 +585,7 @@ describe("StepFlow", () => {
       root.render(<RetainedFlow mode="visible" />);
     });
     expect(container.querySelector("h2")?.textContent).toBe("First");
-    expect(window.localStorage).toHaveLength(0);
+    expect(storedFlowSlices()).toEqual(["$expiresAt", "$visit"]);
 
     // So is a new server render of the same mounted instance, such as a link
     // to the flow's own URL.
@@ -587,7 +595,7 @@ describe("StepFlow", () => {
       root.render(<RetainedFlow mode="visible" visitKey="second" />);
     });
     expect(container.querySelector("h2")?.textContent).toBe("First");
-    expect(window.localStorage).toHaveLength(0);
+    expect(storedFlowSlices()).toEqual(["$expiresAt", "$visit"]);
 
     // So is a reload that finds the result recorded, even when refreshed
     // server state no longer composes the final step.
@@ -601,7 +609,7 @@ describe("StepFlow", () => {
       );
     });
     expect(container.querySelector("h2")?.textContent).toBe("First");
-    expect(window.localStorage).toHaveLength(0);
+    expect(storedFlowSlices()).toEqual(["$expiresAt", "$visit"]);
   });
 
   it("returns to its entry step when hidden and shown again", () => {
@@ -701,9 +709,6 @@ describe("StepFlow", () => {
     act(() => {
       root.render(<Flow activeEffects={new Set()} />);
     });
-    expect(container.querySelector('[role="alert"]')).toBeNull();
-
-    act(() => getButton(container, "Next from First").click());
 
     expect(container.querySelector('[role="alert"]')).not.toBeNull();
     expect(container.querySelector("button")).toBeNull();
@@ -825,9 +830,6 @@ describe("StepFlow", () => {
     act(() => {
       root.render(<StoredStateFlow />);
     });
-    expect(container.querySelector('[role="alert"]')).toBeNull();
-
-    act(() => getButton(container, "Increment stored value").click());
 
     expect(container.querySelector('[role="alert"]')).not.toBeNull();
     expect(container.querySelector("button")).toBeNull();
@@ -843,6 +845,7 @@ describe("StepFlow", () => {
       root.render(<StoredStateFlow />);
     });
     expect(container.querySelector('[role="alert"]')).toBeNull();
+    const deadlineAfterVisit = window.localStorage.getItem(deadlineKey);
 
     const setItem = Storage.prototype.setItem;
     vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (
@@ -863,7 +866,7 @@ describe("StepFlow", () => {
     expect(window.localStorage.getItem(valueKey)).toBe(
       JSON.stringify({ value: 1 }),
     );
-    expect(window.localStorage.getItem(deadlineKey)).toBe(deadline);
+    expect(window.localStorage.getItem(deadlineKey)).toBe(deadlineAfterVisit);
   });
 
   it("reports a mutation when storage becomes unreadable after render", () => {
