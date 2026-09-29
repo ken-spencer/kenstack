@@ -70,7 +70,7 @@ function Select<TOption extends SelectOption = SelectOption>({
         {...props}
         ref={ref}
         className={twMerge(
-          "border-input bg-background hover:border-ring disabled:bg-muted disabled:text-muted-foreground flex h-10 w-full items-center justify-between gap-2 rounded-md border px-3 text-left text-sm shadow-sm transition outline-none focus-visible:border-fuchsia-800 focus-visible:ring-2 focus-visible:ring-fuchsia-800/30 disabled:cursor-not-allowed disabled:opacity-70",
+          "border-input bg-background hover:border-ring disabled:bg-muted disabled:text-muted-foreground flex h-8 min-h-(--control-height) w-full items-center justify-between gap-2 rounded-md border px-3 text-left text-sm shadow-sm transition outline-none focus-visible:border-fuchsia-800 focus-visible:ring-2 focus-visible:ring-fuchsia-800/30 disabled:cursor-not-allowed disabled:opacity-70",
           className,
         )}
         disabled={disabled}
