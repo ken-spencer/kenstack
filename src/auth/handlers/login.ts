@@ -12,7 +12,7 @@ import {
 import type { LoginActionResult } from "@kenstack/auth/api";
 import { login as loginUser } from "@kenstack/auth/server/auth";
 import loginSchema from "@kenstack/auth/schemas/login";
-import { refuseChangedAccount } from "@kenstack/auth/reauthentication/server";
+import { requireUnchangedAccount } from "@kenstack/auth/reauthentication/server";
 import { resolveLoginDestination } from "@kenstack/auth/server/loginDestination";
 import { loadFreshPublicAuthState } from "@kenstack/auth/server/state";
 import { audit } from "@kenstack/logger";
@@ -29,7 +29,7 @@ export const loginPipeline = () =>
       response,
     }) => {
       if (userId !== undefined) {
-        await refuseChangedAccount(userId, email);
+        await requireUnchangedAccount(userId, email);
       }
 
       // Only failures count (see recordPasswordFailure); a successful sign-in

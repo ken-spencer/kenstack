@@ -10,13 +10,8 @@ import type { FC, PropsWithChildren, ReactNode } from "react";
 import type * as z from "zod";
 import type { ZodObject } from "zod";
 import type { SelectedImage, SelectedMedia } from "@kenstack/db/queries";
-import { createSchemaFromFields } from "@kenstack/fields/createSchemaFromFields";
 import type { DefinedField, DefinedFields } from "@kenstack/admin/fields";
-import {
-  type ResolvedOneToOneDefinition,
-  resolveOneToOneDefinition,
-  withOneToOneSelectionField,
-} from "@kenstack/admin/internal/oneToOne";
+import type { ResolvedOneToOneDefinition } from "@kenstack/admin/internal/oneToOne";
 
 // Public API: consumed by host sites.
 export type OneToOneEditFormProps<
@@ -38,8 +33,6 @@ type ClientOneToOneDefinition<TFields extends DefinedFields = DefinedFields> = {
   fields: TFields;
 };
 
-type ClientOneToOneConfig = Record<string, ClientOneToOneDefinition>;
-
 export type ClientOneToOne = {
   field: ResolvedOneToOneDefinition["field"];
   relations: Record<
@@ -59,28 +52,6 @@ export function defineOneToOneClient<const TFields extends DefinedFields>(
   options: ClientOneToOneDefinition<TFields>,
 ): ClientOneToOneDefinition<TFields> {
   return options;
-}
-
-function resolveOneToOne(config: ClientOneToOneConfig): ClientOneToOne {
-  const definition = resolveOneToOneDefinition(
-    Object.fromEntries(
-      Object.entries(config).map(([name, relation]) => [name, relation.fields]),
-    ),
-  );
-
-  return {
-    field: definition.field,
-    relations: Object.fromEntries(
-      Object.entries(config).map(([name, relationConfig]) => {
-        const relation = definition.relations[name];
-        if (!relation) {
-          throw new Error(`Missing one-to-one definition "${name}".`);
-        }
-        return [name, { ...relation, EditForm: relationConfig.EditForm }];
-      }),
-    ),
-    selectionField: definition.selectionField,
-  };
 }
 
 export type BaseListItem = {
@@ -143,7 +114,7 @@ export function defineClient<
     fields: TFields & BareFieldDefinitions<TFields>;
     listItems?: ListItems<TFields>;
     EditForm: FC<PropsWithChildren>;
-    oneToOne?: ClientOneToOneConfig;
+    oneToOne?: Record<string, ClientOneToOneDefinition>;
   };
   settings?: {
     fields: TSettingsFields & BareFieldDefinitions<TSettingsFields>;
@@ -151,41 +122,6 @@ export function defineClient<
   };
 }) {
   return client;
-}
-
-// What a module registers: defineClient's inputs, built once by the client loader.
-export type ClientInput = {
-  admin?: {
-    fields: DefinedFields;
-    listItems?: ListItems<DefinedFields>;
-    EditForm: FC<PropsWithChildren>;
-    oneToOne?: ClientOneToOneConfig;
-  };
-  settings?: { fields: DefinedFields; SettingsForm: FC };
-};
-
-export function buildClient({ admin, settings }: ClientInput): ClientConfig {
-  return {
-    admin: admin
-      ? (() => {
-          const oneToOne = admin.oneToOne
-            ? resolveOneToOne(admin.oneToOne)
-            : undefined;
-          const fields = oneToOne
-            ? withOneToOneSelectionField(admin.fields, oneToOne)
-            : admin.fields;
-          return {
-            fields,
-            listItems: admin.listItems,
-            EditForm: admin.EditForm,
-            oneToOne,
-          };
-        })()
-      : undefined,
-    settings: settings
-      ? { ...settings, schema: createSchemaFromFields(settings.fields) }
-      : undefined,
-  };
 }
 
 // The registry boundary must allow modules with different relation keys.

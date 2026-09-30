@@ -67,10 +67,10 @@ export function useCompleteLogin({ mode, onComplete }: Continuation) {
 
 // A confirmation sign-in names the account its page was rendered for, and the page reloads when
 // another account has signed in since.
-export function useReauthenticationAccount({ mode }: Continuation) {
+export function useReauthenticationAccount() {
   const { userId } = useAuthorization();
   return {
-    userId: mode === "reauthentication" ? userId : undefined,
+    userId,
     reloadIfChanged: (result: { code?: string; status: string }) => {
       if (result.status === "error" && result.code === "account-changed") {
         allowUnload();

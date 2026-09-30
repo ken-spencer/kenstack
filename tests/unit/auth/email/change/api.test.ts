@@ -164,11 +164,6 @@ describe("email change request", () => {
     mocks.render.mockResolvedValue("<p>Notice</p>");
     mocks.sendCode.mockResolvedValue({
       challengeKey,
-      authorization: {
-        id: 1,
-        userId: 12,
-        authorizedUntil: new Date("2026-09-21T12:10:00.000Z"),
-      },
       email: "new@example.com",
     });
   });

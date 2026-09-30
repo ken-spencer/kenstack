@@ -31,7 +31,7 @@ class Query<
 > {
   constructor(
     private readonly table: TTable,
-    private readonly selection: TSelection,
+    private readonly selection: SelectedFields,
     private readonly conditions: SQL[],
     private readonly joins: Join[],
   ) {}
@@ -39,7 +39,7 @@ class Query<
   select<TFields extends SelectedFields>(fields: TFields) {
     return new Query<TTable, Merge<TSelection, TFields>, TNullability>(
       this.table,
-      { ...this.selection, ...fields } as Merge<TSelection, TFields>,
+      { ...this.selection, ...fields },
       this.conditions,
       this.joins,
     );
@@ -95,7 +95,7 @@ class Query<
   > {
     const built = db
       .select(this.selection)
-      .from(this.table as PgTable)
+      .from<PgTable>(this.table)
       .$dynamic();
     for (const { on, table, type } of this.joins) {
       if (type === "inner") {

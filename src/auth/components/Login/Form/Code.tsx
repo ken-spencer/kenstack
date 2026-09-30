@@ -37,7 +37,7 @@ export default function LoginCodeForm({
   statusMessage?: StatusMessage;
 }) {
   const completeLogin = useCompleteLogin(continuation);
-  const account = useReauthenticationAccount(continuation);
+  const account = useReauthenticationAccount();
   const { cancel, replay } = useAuthorization();
   // The emailed link, opened in another tab, confirms this browser, so coming back to this tab tries
   // the held change again. The server decides, and a refusal changes nothing here.

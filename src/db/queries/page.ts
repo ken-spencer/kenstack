@@ -62,23 +62,25 @@ async function queryPage<TSelection extends SelectedFields>(
   table: AdminContentTable,
   options: PageQueryOptions<TSelection>,
 ) {
-  const [page] = await selectPage(table, options).build().limit(1);
-  return page ?? null;
+  return (await selectPage(table, options).build().limit(1))[0] ?? null;
 }
 
 async function querySeoPage<TSelection extends SelectedFields>(
   table: AdminContentTable & AdminSeoTable,
   options: PageQueryOptions<TSelection>,
 ) {
-  const [page] = await selectPage(table, options)
-    .select({
-      seoTitle: table.seoTitle,
-      seoDescription: table.seoDescription,
-      ogImage: selectImageSubquery(table.ogImage),
-    })
-    .build()
-    .limit(1);
-  return page ?? null;
+  return (
+    (
+      await selectPage(table, options)
+        .select({
+          seoTitle: table.seoTitle,
+          seoDescription: table.seoDescription,
+          ogImage: selectImageSubquery(table.ogImage),
+        })
+        .build()
+        .limit(1)
+    )[0] ?? null
+  );
 }
 
 export async function resolveVisiblePage<

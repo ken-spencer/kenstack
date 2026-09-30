@@ -22,9 +22,10 @@ export default function StepLoginForm({
   email,
   isServerSignedIn = false,
   method,
+  passwordPath,
 }: Pick<
   ComponentProps<typeof LoginForm>,
-  "challengeKey" | "email" | "method"
+  "challengeKey" | "email" | "method" | "passwordPath"
 > & {
   // Whether the latest server render saw a signed-in visitor. Reaching the step signed in moves on
   // only when the server agrees, so a browser that still shows a session the server has ended stays.
@@ -152,6 +153,7 @@ export default function StepLoginForm({
       email={email}
       method={method}
       mode="embedded"
+      passwordPath={passwordPath}
       onComplete={() => {
         setRedeemedChallengeKey(challengeKey);
         if (linkToken !== null) {

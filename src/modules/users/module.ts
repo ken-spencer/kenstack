@@ -13,18 +13,17 @@ import type { AuthUsersTable, Role } from "@kenstack/auth/server/types";
 import type { ServerDefinedFields } from "@kenstack/fields/internal/serverResolution";
 import type { User } from "@kenstack/types";
 
-type UsersOptions<TTable, TSelect extends SelectedFields, TPublic> = {
+type UsersOptions<TSelect extends SelectedFields, TPublic> = {
   // Columns or SQL subqueries added to the cached current-user query; Kenstack's own fields replace
   // any with the same name, and sessionId, provider, expiresAt and authorizedUntil are dropped. Their
   // data is cached with the user, so a write to data a subquery reads must clear
   // adminLoadCacheTag("users", userId).
-  currentUser?: { select: (users: TTable) => TSelect };
+  currentUser?: { select: TSelect };
   // Fields added to the browser's user info. It runs after the cache on each request, so it can
-  // compare stored values with the current time; it cannot replace Kenstack's own fields. Declared
-  // before currentUser, its user lacks the selected fields.
+  // compare stored values with the current time; it cannot replace Kenstack's own fields.
   publicUser?: (user: User<Role> & SelectResultFields<TSelect>) => TPublic;
   // Where a sign-in lands when the request carries no safe returnTo; its answer passes the same
-  // check and falls back to "/". Declared before currentUser, its user lacks the selected fields.
+  // check and falls back to "/".
   loginDestination?: (
     user: User<Role> & SelectResultFields<TSelect>,
   ) => string | Promise<string>;
@@ -39,7 +38,7 @@ export function defineUsersModule<
   TPublic extends Record<string, unknown> = Record<never, never>,
   // What the site passed: an option it gives is typed exactly, and one it leaves out is absent, for
   // Kenstack's defaults to fill.
-  const TOptions extends UsersOptions<TTable, TSelect, TPublic> = Record<
+  const TOptions extends UsersOptions<TSelect, TPublic> = Record<
     never,
     never
   >,
@@ -47,7 +46,6 @@ export function defineUsersModule<
   admin,
   ...options
 }: TOptions & { admin: AdminConfig<TTable, TFields> } & UsersOptions<
-    TTable,
     TSelect,
     TPublic
   >) {

@@ -129,10 +129,7 @@ describe("sendCode", () => {
     mocks.createKey.mockReturnValueOnce("new-verification");
     mocks.createVerification.mockResolvedValue({ id: 3 });
     mocks.extendAuthorization.mockImplementation(
-      async (binding, _tx, expiresAt) => ({
-        id: binding.sessionId,
-        authorizedUntil: expiresAt,
-      }),
+      async (_binding, _tx, expiresAt) => expiresAt,
     );
     mocks.sendEmail.mockResolvedValue({ status: "sent" });
     mocks.transaction.mockImplementation(async (callback) => {

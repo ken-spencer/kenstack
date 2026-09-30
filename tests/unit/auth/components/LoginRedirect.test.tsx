@@ -159,6 +159,7 @@ it.each(["password", "code"] as const)(
           value={{
             cancel: () => {},
             confirm: mocks.confirm,
+            isHolding: true,
             replay: () => {},
             track: (request) => request(),
             userId: 1,

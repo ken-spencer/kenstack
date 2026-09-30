@@ -24,6 +24,8 @@ export default function LoginReturn() {
   const destinationQuery = useQuery({
     enabled: userId !== undefined,
     queryKey: ["login-destination", userId],
+    // A failure shows Continue at once instead of a blank page through the default retries.
+    retry: false,
     queryFn: async ({ signal }) => {
       const result = await fetcher<UserInfoResult>(
         "/api/auth",

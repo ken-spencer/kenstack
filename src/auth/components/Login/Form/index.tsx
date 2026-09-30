@@ -46,6 +46,9 @@ function LoginForm(
     challengeKey?: string;
     email?: string;
     method?: LoginMethod;
+    // "Forgot Your Password?" on the password form signs in by email, landing here on a standalone
+    // form or a flow that ends with the login return step.
+    passwordPath?: string;
   } & Continuation,
 ) {
   const emailParam = useSearchParams().get("email");
@@ -81,6 +84,7 @@ function LoginFormContent({
   mode,
   notice,
   onComplete,
+  passwordPath,
   token: searchToken,
 }: {
   challengeKey?: string;
@@ -88,6 +92,7 @@ function LoginFormContent({
   loginMessage: string | null;
   method?: LoginMethod;
   notice: string | null;
+  passwordPath?: string;
   token: string | null;
 } & Continuation) {
   const [challengeKey, setChallengeKey] = useState(initialChallengeKey);
@@ -95,6 +100,9 @@ function LoginFormContent({
   // A form that stays mounted through a failed send shows its error when it mounts again.
   const [failedSends, setFailedSends] = useState(0);
   const requestIdRef = useRef(0);
+  // The address's returnTo before "Forgot Your Password?" replaced it, restored when the visitor
+  // goes back to the password form; undefined while nothing is replaced.
+  const replacedReturnToRef = useRef<string | null>(undefined);
   const { executeRecaptcha } = useGoogleReCaptcha();
   const [loginMethod, setLoginMethod] = useState<LoginMethod>(
     initialMethod ?? "email",
@@ -122,7 +130,7 @@ function LoginFormContent({
   const continuation: Continuation =
     mode === "embedded" ? { anchor, mode, onComplete } : { mode };
   const completeLogin = useCompleteLogin(continuation);
-  const account = useReauthenticationAccount(continuation);
+  const account = useReauthenticationAccount();
 
   // The form that asked stays until the send completes, its button pending, and the code page then
   // shows in one change. A failed send shows its error where the request began. A result that a newer request has
@@ -213,6 +221,20 @@ function LoginFormContent({
     );
   }
 
+  function replaceReturnTo(returnTo: string | null) {
+    const params = new URLSearchParams(window.location.search);
+    if (returnTo === null) {
+      params.delete("returnTo");
+    } else {
+      params.set("returnTo", returnTo);
+    }
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${params.size ? `?${params}` : ""}${window.location.hash}`,
+    );
+  }
+
   function showLoginForm(method: LoginMethod, form: HTMLFormElement | null) {
     // A send still in flight belongs to the form being left.
     requestIdRef.current += 1;
@@ -223,6 +245,10 @@ function LoginFormContent({
     setEmailAddress(nextEmailAddress);
     setLoginMethod(method);
     rememberLoginMethod(method);
+    if (method === "password" && replacedReturnToRef.current !== undefined) {
+      replaceReturnTo(replacedReturnToRef.current);
+      replacedReturnToRef.current = undefined;
+    }
     // Continue where typing makes sense: a valid email moves focus to the
     // password; anything else returns to the email.
     setFocusField(
@@ -261,6 +287,20 @@ function LoginFormContent({
           continuation={continuation}
           emailDefaultValue={emailAddress}
           statusMessage={statusMessage}
+          onForgotPassword={
+            passwordPath
+              ? (form) => {
+                  // The email sign-in is the forgot-password path. The return path goes in the
+                  // address, which the sign-in, its emailed link and a flow's return step all read,
+                  // and which a reload keeps.
+                  replacedReturnToRef.current = new URLSearchParams(
+                    window.location.search,
+                  ).get("returnTo");
+                  replaceReturnTo(passwordPath);
+                  showLoginForm("email", form);
+                }
+              : undefined
+          }
           onShowEmailLogin={(form) => showLoginForm("email", form)}
         />
       ) : (

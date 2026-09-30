@@ -21,13 +21,15 @@ export async function loadSiteSettings() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { id, key, createdBy, createdAt, updatedAt, ...columns } =
     getTableColumns(table);
-  const [row] = await query(table)
-    .select({ ...columns, ogImage: selectMediaSubquery(table.ogImage) })
-    .where(eq(table.key, "site-settings"))
-    .build()
-    .limit(1);
-
-  return row ?? { ...createDefaultValues(fields), ogImage: null };
+  return (
+    (
+      await query(table)
+        .select({ ...columns, ogImage: selectMediaSubquery(table.ogImage) })
+        .where(eq(table.key, "site-settings"))
+        .build()
+        .limit(1)
+    )[0] ?? { ...createDefaultValues(fields), ogImage: null }
+  );
 }
 
 export async function loadSiteSettingsMetadata() {

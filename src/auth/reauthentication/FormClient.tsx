@@ -65,10 +65,6 @@ export default function ReauthenticationFormClient({
   const [hasSavedHere, setHasSavedHere] = useState(false);
 
   useEffect(() => {
-    openingRef.current = opening;
-  }, [opening]);
-
-  useEffect(() => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
@@ -100,12 +96,13 @@ export default function ReauthenticationFormClient({
     heldRef.current.push(request);
     if (heldRef.current.length === 1) {
       setIsRefusedAgain(false);
-      setOpening((current) => current + 1);
+      openingRef.current += 1;
+      setOpening(openingRef.current);
     }
     setHeldCount(heldRef.current.length);
   }
 
-  function track<T extends { code?: string; message?: string; status: string }>(
+  function track<T extends { code?: string; status: string }>(
     request: () => Promise<T>,
   ) {
     return request().then((result) => {
@@ -266,6 +263,7 @@ export default function ReauthenticationFormClient({
       value={{
         cancel: () => {},
         confirm: () => {},
+        isHolding: isOpen,
         replay: () => {},
         track,
         userId,
@@ -323,6 +321,7 @@ export default function ReauthenticationFormClient({
               value={{
                 cancel,
                 confirm: (authState) => confirm(authState, opening),
+                isHolding: isOpen,
                 replay: () => void replayHeld({ quiet: true }),
                 track: (request) => request(),
                 userId,

@@ -1,14 +1,14 @@
 import { cache } from "react";
 import { cacheLife, cacheTag, io } from "next/cache";
 import { cookies, headers } from "next/headers";
-import { isNull, eq, gt, sql } from "drizzle-orm";
+import { and, isNull, eq, gt, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import omit from "lodash-es/omit";
 
 import { modules } from "@app/modules";
 import roles from "@app/roles";
 import type { AuthAccess } from "@kenstack/auth/server/auth";
-import { getSafeReturnToPath } from "@kenstack/auth/returnTo";
+import { getLoginReturnPath } from "@kenstack/auth/returnTo";
 import { selectMediaSubquery } from "@kenstack/db/queries/media";
 import { query } from "@kenstack/db/queries/query";
 import { sessions } from "@kenstack/db/tables/sessions";
@@ -31,9 +31,8 @@ export function userSessionsCacheTag(userId: number) {
 
 async function loadUserByTokenHash(tokenHash: string) {
   const users = modules.users.admin.table;
-  const { currentUser } = getUsersModule();
   const [user] = await query(sessions)
-    .select(currentUser.select(users))
+    .select(getUsersModule().currentUser.select)
     // Kenstack's own fields follow, so a site field with the same name cannot replace them.
     .select({
       id: users.id,
@@ -50,9 +49,13 @@ async function loadUserByTokenHash(tokenHash: string) {
       authorizedUntil: sessions.authorizedUntil,
     })
     .innerJoin(users, eq(users.id, sessions.userId))
-    .where(eq(sessions.tokenHash, tokenHash))
-    .where(gt(sessions.expiresAt, sql`now()`))
-    .where(isNull(users.deletedAt))
+    .where(
+      and(
+        eq(sessions.tokenHash, tokenHash),
+        gt(sessions.expiresAt, sql`now()`),
+        isNull(users.deletedAt),
+      ),
+    )
     .build()
     .limit(1);
 
@@ -189,8 +192,7 @@ export const requireUser = cache(async function requireUser(
         ? pathname + (requestHeaders.get("x-search") ?? "")
         : undefined;
     }
-    const path = getSafeReturnToPath(returnTo);
-    redirect(path ? `/login?returnTo=${encodeURIComponent(path)}` : "/login");
+    redirect(getLoginReturnPath(returnTo));
   }
 
   const requiredAccess = Array.isArray(access) ? access : [access];

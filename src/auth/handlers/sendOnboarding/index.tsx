@@ -59,7 +59,9 @@ export const sendOnboardingEmailAction = pipelineStage(
     }
     if (delivery.status !== "sent") {
       return response.error(
-        "We could not send the onboarding email. Try again in a moment.",
+        delivery.code === "SenderUnavailable"
+          ? "We couldn’t send the onboarding email because this site’s email sender isn’t set up."
+          : "We could not send the onboarding email. Try again in a moment.",
       );
     }
 

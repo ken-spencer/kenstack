@@ -15,10 +15,7 @@ import {
 import { normalizeEmail } from "@kenstack/fields/email";
 import { ReturnedError } from "@kenstack/api";
 import { hasRecentAuthentication } from "./index";
-import {
-  getReauthenticationPath,
-  getSafeReturnToPath,
-} from "@kenstack/auth/returnTo";
+import { getLoginReturnPath } from "@kenstack/auth/returnTo";
 
 // The guard is the only authority for a protected write. It takes the account the request names, and
 // refuses before the handler writes: signed out, sign in; another account, "account-changed", on which
@@ -36,10 +33,8 @@ export async function requireRecentAuthentication(
     throw new ReturnedError("Sign in to continue.", {
       code: "reauthentication-required",
       status: 401,
-      redirect: getReauthenticationPath(
-        getSafeReturnToPath(
-          returnTo ? returnTo.pathname + returnTo.search : undefined,
-        ),
+      redirect: getLoginReturnPath(
+        returnTo ? returnTo.pathname + returnTo.search : undefined,
       ),
     });
   }
@@ -70,16 +65,15 @@ export async function requireRecentAuthentication(
 // A confirmation sign-in names the account its page was rendered for. When this browser's session
 // belongs to another account, or that account's email has changed, it is refused before a password is
 // checked or a code is sent or redeemed. Without a session nothing is compared, so the check reveals
-// no account.
-export async function refuseChangedAccount(
+// no account. The email is the request schema's normalized address.
+export async function requireUnchangedAccount(
   expectedUserId: number,
   email: string,
 ) {
   const user = await getFreshCurrentUser();
   if (
     user &&
-    (user.id !== expectedUserId ||
-      normalizeEmail(user.email) !== normalizeEmail(email))
+    (user.id !== expectedUserId || normalizeEmail(user.email) !== email)
   ) {
     throw new ReturnedError("Sign in to continue.", {
       code: "account-changed",
@@ -125,11 +119,7 @@ export async function extendAuthorization(
         sql`${sessions.authorizedUntil} > clock_timestamp()`,
       ),
     )
-    .returning({
-      id: sessions.id,
-      userId: sessions.userId,
-      authorizedUntil: sessions.authorizedUntil,
-    });
+    .returning({ authorizedUntil: sessions.authorizedUntil });
   if (!session) {
     throw new ReturnedError(
       "Nothing was changed. Submit again to confirm your identity.",
@@ -142,5 +132,5 @@ export async function extendAuthorization(
   // The cached session carries the deadline. Queued tags reach the cache after
   // the handler returns, so a caller's transaction has committed by then.
   revalidateTag(sessionCacheTag(tokenHash), { expire: 0 });
-  return session;
+  return session.authorizedUntil;
 }

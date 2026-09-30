@@ -243,16 +243,17 @@ async function sendVerification(
       verificationExpiresAt: isResending ? current.expiresAt : undefined,
       now,
     });
-    let authorization;
     if (kind === "email-change") {
       if (sessionId === undefined) {
         throw new Error(
           "Email-change issuance requires its requesting session",
         );
       }
-      authorization = await extendAuthorization({ sessionId }, tx, expiresAt);
       expiresAt = new Date(
-        Math.min(expiresAt.getTime(), authorization.authorizedUntil.getTime()),
+        Math.min(
+          (await extendAuthorization({ sessionId }, tx, expiresAt)).getTime(),
+          expiresAt.getTime(),
+        ),
       );
     }
     if (!isResending && current) {
@@ -263,7 +264,6 @@ async function sendVerification(
       challengeKey: secrets.challengeKey,
       expiresAt,
       status: "prepared" as const,
-      authorization,
       verificationId: (
         await createVerification(tx, {
           email,
@@ -318,7 +318,9 @@ async function sendVerification(
       }
       if (delivery.status !== "sent") {
         throw new ReturnedError(
-          "We could not send the verification email. Try again in a moment.",
+          delivery.code === "SenderUnavailable"
+            ? "We couldn’t send the verification email because this site’s email sender isn’t set up."
+            : "We could not send the verification email. Try again in a moment.",
           { status: 503 },
         );
       }
@@ -345,6 +347,5 @@ async function sendVerification(
   return {
     challengeKey: prepared.challengeKey,
     email,
-    authorization: prepared.authorization,
   };
 }

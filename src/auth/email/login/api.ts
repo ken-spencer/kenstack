@@ -15,12 +15,15 @@ import type {
   EmailLoginRequestResult,
   EmailLoginVerificationResult,
 } from "@kenstack/auth/api";
-import { getSafeReturnToPath } from "@kenstack/auth/returnTo";
+import {
+  getLoginReturnPath,
+  getSafeReturnToPath,
+} from "@kenstack/auth/returnTo";
 import { resolveLoginDestination } from "@kenstack/auth/server/loginDestination";
 import getIp from "@kenstack/lib/ip";
 import { getFreshCurrentSession } from "@kenstack/auth/server/user";
 import { hasRecentAuthentication } from "@kenstack/auth/reauthentication";
-import { refuseChangedAccount } from "@kenstack/auth/reauthentication/server";
+import { requireUnchangedAccount } from "@kenstack/auth/reauthentication/server";
 
 import {
   createVerificationEmail,
@@ -60,7 +63,6 @@ export function createEmailLogin(options: EmailLoginOptions = {}) {
       subject: heading,
       ...options.email,
     },
-    linkPath: "/login" as const,
   };
 
   return {
@@ -68,7 +70,7 @@ export function createEmailLogin(options: EmailLoginOptions = {}) {
       { schema: requestEmailLoginSchema },
       async ({ data, dataIn, request, response }) => {
         if (data.userId !== undefined) {
-          await refuseChangedAccount(data.userId, data.email);
+          await requireUnchangedAccount(data.userId, data.email);
         }
         const returnTo = getSafeReturnToPath(data.returnTo);
         const authState = await loadAuthState();
@@ -129,10 +131,7 @@ export function createEmailLogin(options: EmailLoginOptions = {}) {
             linkPath:
               (data.linkToReturnTo
                 ? getSafeReturnToPath(data.returnTo, { allowLogin: true })
-                : undefined) ??
-              (returnTo
-                ? `${config.linkPath}?returnTo=${encodeURIComponent(returnTo)}`
-                : config.linkPath),
+                : undefined) ?? getLoginReturnPath(returnTo),
             request,
           },
           createVerificationEmail(config.email),
@@ -149,7 +148,7 @@ export function createEmailLogin(options: EmailLoginOptions = {}) {
       { schema: verifyEmailLoginCodeSchema },
       async ({ data, response }) => {
         if (data.userId !== undefined) {
-          await refuseChangedAccount(data.userId, data.email ?? "");
+          await requireUnchangedAccount(data.userId, data.email ?? "");
         }
         // The account id names the confirming page, not the verification row, so only the proof goes on.
         await redeemEmailProof(

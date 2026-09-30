@@ -83,10 +83,11 @@ export async function checkLink(
   binding: Partial<VerificationBinding>,
 ) {
   const currentVerificationKey = await getVerificationKey();
-  const { state } = await db.transaction((tx) =>
-    inspectLink(tx, token, binding, currentVerificationKey),
-  );
-  return state;
+  return (
+    await db.transaction((tx) =>
+      inspectLink(tx, token, binding, currentVerificationKey),
+    )
+  ).state;
 }
 
 // A login link must be opened in the browser that requested it, since that
@@ -113,11 +114,10 @@ export async function verifyLink(
       return inspected;
     }
     const { isRequestingBrowser, record } = inspected;
-    const now = new Date();
     const expiresAt = record.provenAt
       ? record.expiresAt
       : await proveVerification(tx, {
-          now,
+          now: new Date(),
           verificationId: record.verificationId,
         });
     if (!expiresAt) {

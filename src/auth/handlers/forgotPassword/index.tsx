@@ -12,6 +12,7 @@ import {
   ReturnedError,
 } from "@kenstack/api";
 import getIp from "@kenstack/lib/ip";
+import { getLoginReturnPath } from "@kenstack/auth/returnTo";
 import { getUsersModule } from "@kenstack/auth/server/getUsersModule";
 
 import { sendVerificationLink } from "@kenstack/auth/email/verification/sendCode";
@@ -21,7 +22,11 @@ import DefaultEmail, {
 } from "@kenstack/auth/handlers/forgotPassword/Email";
 import schema from "@kenstack/auth/schemas/forgotPassword";
 import { audit } from "@kenstack/logger";
-import type { Attachment, EmailAddress } from "@kenstack/lib/mailer";
+import {
+  loadSiteSender,
+  type Attachment,
+  type EmailAddress,
+} from "@kenstack/lib/mailer";
 import { formatUserName } from "@kenstack/lib/user";
 
 export type ForgotPasswordProps = {
@@ -32,6 +37,16 @@ export type ForgotPasswordProps = {
 
 export const forgotPasswordPipeline = (props: ForgotPasswordProps) =>
   pipelineStage({ schema }, async ({ data, dataIn, request, response }) => {
+    // Checked before the account lookup, so the answer is the same whether or not the account exists.
+    const from = props.from ?? (await loadSiteSender());
+    if (!from) {
+      return response.error({
+        message:
+          "We couldn’t send a password reset email because this site’s email sender isn’t set up.",
+        status: 503,
+      });
+    }
+
     const Email = props.Email ?? DefaultEmail;
     const { email } = data;
 
@@ -118,9 +133,9 @@ export const forgotPasswordPipeline = (props: ForgotPasswordProps) =>
         {
           attachments: props.attachments ?? defaultAttachments,
           email,
-          from: props.from,
+          from,
           isDecoy: !user,
-          linkPath: `/login?returnTo=${encodeURIComponent(getUsersModule().passwordPath)}`,
+          linkPath: getLoginReturnPath(getUsersModule().passwordPath),
           request,
         },
         async ({ expiresInMinutes, url }) => ({

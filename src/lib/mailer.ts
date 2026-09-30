@@ -220,9 +220,10 @@ async function sendEmail({
   };
 }
 
-// Delivery failures stay out of reportError, so a missing or failed sender lookup is logged here
-// once.
-async function loadSiteSender() {
+// Delivery failures stay out of reportError, so a missing or failed sender lookup is logged here. A
+// caller that loads the sender early, such as to refuse up front, passes it on as `from`, so it is
+// logged once.
+export async function loadSiteSender() {
   let sender;
   let error;
   try {

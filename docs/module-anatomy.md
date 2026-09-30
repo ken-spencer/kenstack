@@ -95,15 +95,14 @@ never created. At volume, `queries/` members keep their own names (`queries/list
 
   A site defines its users module with `defineUsersModule` from `@kenstack/modules/users/module`,
   which takes `defineModule`'s `admin` and inherits Kenstack's name, title and icon.
-  `currentUser.select: (users) => ({ … })` adds columns or SQL subqueries to the cached current-user
+  `currentUser.select: { … }` adds columns or SQL subqueries to the cached current-user
   query, and `getCurrentUser()` and `requireUser()` return them, typed through the registry;
   Kenstack's own fields replace a site field with the same name, and a site field named
   `sessionId`, `provider`, `expiresAt` or `authorizedUntil` is dropped. The data is cached with the
   user, so a write to data a subquery reads must clear `adminLoadCacheTag("users", userId)`.
   `publicUser: (user) => ({ … })` adds fields to the browser's user info; it runs after the cache on
   each request and cannot replace Kenstack's fields, and the selected fields stay server-only unless
-  it exposes them. Declare it after `currentUser`; declared first, its `user` lacks the selected
-  fields. `loginDestination: (user) => path` chooses where a sign-in without a safe `returnTo`
+  it exposes them. `loginDestination: (user) => path` chooses where a sign-in without a safe `returnTo`
   lands (default `/`), and `passwordPath` names the page hosting `ResetPasswordForm` (default
   `/reset-password`). The client builds on Kenstack's:
   `defineClient({ admin: { ...usersClient.admin, fields, EditForm } })`, with `usersClient` the

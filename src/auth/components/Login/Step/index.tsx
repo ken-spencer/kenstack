@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 
+import { getUsersModule } from "@kenstack/auth/server/getUsersModule";
 import { loadPublicAuthState } from "@kenstack/auth/server/state";
 import type { Step } from "@kenstack/components/StepFlow";
 import { loadLoginFormProps } from "../loadFormProps";
@@ -57,5 +58,11 @@ async function RememberedStepLoginForm({
 }) {
   const formProps = await loadLoginFormProps();
 
-  return <StepLoginForm {...formProps} isServerSignedIn={isServerSignedIn} />;
+  return (
+    <StepLoginForm
+      {...formProps}
+      isServerSignedIn={isServerSignedIn}
+      passwordPath={getUsersModule().passwordPath}
+    />
+  );
 }

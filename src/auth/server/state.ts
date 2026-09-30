@@ -43,12 +43,11 @@ function toPublicAuthState(auth: AuthState): PublicAuthState {
 // The current-user lookup already computes the display fields, so carrying them costs nothing and
 // saves user-info consumers another lookup.
 async function toAuthenticatedState(user: CurrentUser) {
-  const { publicUser } = getUsersModule();
   // publicUser may compare stored values with the clock, which must not run while prerendering.
   await io();
   return {
     // Kenstack's own fields follow, so a site's cannot replace them.
-    ...publicUser(user),
+    ...getUsersModule().publicUser(user),
     avatar: user.avatar,
     email: normalizeEmail(user.email),
     familyName: user.familyName,

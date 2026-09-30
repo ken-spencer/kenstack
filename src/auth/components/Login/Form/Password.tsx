@@ -19,17 +19,19 @@ export default function PasswordLoginForm({
   autoFocus,
   continuation,
   emailDefaultValue,
+  onForgotPassword,
   onShowEmailLogin,
   statusMessage,
 }: {
   autoFocus?: "email" | "password";
   continuation: Continuation;
   emailDefaultValue: string;
+  onForgotPassword?: (form: HTMLFormElement | null) => void;
   onShowEmailLogin: (form: HTMLFormElement | null) => void;
   statusMessage?: StatusMessage;
 }) {
   const completeLogin = useCompleteLogin(continuation);
-  const account = useReauthenticationAccount(continuation);
+  const account = useReauthenticationAccount();
 
   return (
     <Form<LoginActionResult, Record<string, unknown>, typeof loginSchema>
@@ -72,7 +74,11 @@ export default function PasswordLoginForm({
         label="Password"
       />
 
-      <LoginSubmit continuation={continuation} label="Login">
+      <LoginSubmit
+        continuation={continuation}
+        label="Login"
+        onForgotPassword={onForgotPassword}
+      >
         <LinkButton
           onClick={({ currentTarget }) => onShowEmailLogin(currentTarget.form)}
         >

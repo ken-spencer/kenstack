@@ -32,14 +32,13 @@ Kenstack's users module is now `defineUsersModule({ admin: { fields, table: user
 `@kenstack/modules/users/module`, and a site defines its own with the same function: `admin` as for
 `defineModule`, with Kenstack's name, title and icon inherited.
 
-- `currentUser: { select: (users) => ({ … }) }` adds columns or SQL subqueries to the cached
-  current-user query. `getCurrentUser()` and `requireUser()` return them, typed through the module
+- `currentUser: { select: { … } }` adds columns or SQL subqueries to the cached current-user
+  query. `getCurrentUser()` and `requireUser()` return them, typed through the module
   registry. Kenstack's own fields replace a site field with the same name, and a site field named
   `sessionId`, `provider`, `expiresAt` or `authorizedUntil` is dropped. A write to data a
   subquery reads must clear `adminLoadCacheTag("users", userId)`.
 - `publicUser: (user) => ({ … })` adds fields to the browser's user info and `useUserInfo`. It runs
-  after the cache on each request and cannot replace Kenstack's fields. Declare it after
-  `currentUser`; declared first, its `user` lacks the selected fields.
+  after the cache on each request and cannot replace Kenstack's fields.
 - The signed-in user info's `impersonatedBy` is always present, `undefined` unless an admin is
   impersonating, so a test fixture that builds a `PublicAuthState` sets it.
 - `requireUser()` now returns the current user's inferred type, site fields included, instead of
@@ -50,6 +49,8 @@ Kenstack's users module is now `defineUsersModule({ admin: { fields, table: user
   default export of `@kenstack/modules/users/client`. Code that read a built client straight from a
   module's `client` file, such as its `settings.schema`, loads it through the client registry
   instead.
+- `buildClient` and `ClientInput` are no longer exported from `@kenstack/admin/client`; the client
+  loader builds each registered client itself.
 
 A users module built with plain `defineModule` keeps working with Kenstack's defaults. To adopt, wrap
 the site's users module in `defineUsersModule`, move any separate query for the signed-in user's own

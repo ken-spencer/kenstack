@@ -39,6 +39,7 @@ import {
 import {
   selectBoundHistory,
   verificationEndedCode,
+  verificationExpiredMessage,
   verificationReplacedMessage,
 } from "@kenstack/auth/email/verification/internal/policy";
 import {
@@ -107,8 +108,8 @@ async function sendNotice({
 }
 
 // The code step and a resend run only in the session that issued the code, whose authorization lasts
-// as long as the code. A stale session there means the code has ended too, so the refusal is the
-// ordinary ended request, which returns the visitor to the email form without a confirmation.
+// as long as the code. A stale session there means the code has expired too, so the refusal is the
+// ordinary expired request, which returns the visitor to the email form without a confirmation.
 async function requireIssuingSession(request: Request, userId: number) {
   try {
     return await requireRecentAuthentication(request, userId);
@@ -118,7 +119,7 @@ async function requireIssuingSession(request: Request, userId: number) {
       error.code === "reauthentication-required" &&
       error.status === 403
     ) {
-      throw new ReturnedError(verificationReplacedMessage, {
+      throw new ReturnedError(verificationExpiredMessage, {
         code: verificationEndedCode,
         status: 409,
       });
@@ -145,7 +146,6 @@ export function createEmailChange(options: EmailChangeOptions) {
       subject: heading,
       ...options.email,
     },
-    linkPath: options.linkPath,
   };
 
   return {
@@ -184,7 +184,7 @@ export function createEmailChange(options: EmailChangeOptions) {
             email: data.email,
             isDecoy: isTaken,
             kind,
-            linkPath: config.linkPath,
+            linkPath: options.linkPath,
             request,
             userId: session.userId,
             sessionId: session.id,
@@ -211,7 +211,7 @@ export function createEmailChange(options: EmailChangeOptions) {
         // The notice warns the address being replaced once per request, not
         // on resends, and never blocks the change.
         if (!data.challengeKey) {
-          const cancelUrl = new URL(config.linkPath, await siteOrigin(request));
+          const cancelUrl = new URL(options.linkPath, await siteOrigin(request));
           cancelUrl.searchParams.set("cancelEmailChange", challengeKey);
           await sendNotice({
             html: (

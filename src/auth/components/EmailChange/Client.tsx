@@ -4,6 +4,7 @@
 // session and stays untracked; a confirmation verifies when signed in, and signed out sends the visitor
 // to sign in with a return here that carries the token it kept.
 import { useEffect, useEffectEvent, useRef, useState } from "react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 
@@ -18,7 +19,7 @@ import {
   emailChangeEmailSchema,
 } from "@kenstack/auth/email/change/schemas";
 import { verificationEndedCode } from "@kenstack/auth/email/verification/internal/policy";
-import { getReauthenticationPath } from "@kenstack/auth/returnTo";
+import { getLoginReturnPath } from "@kenstack/auth/returnTo";
 import type { PublicAuthState } from "@kenstack/auth/server/state";
 import { useAuthorization } from "@kenstack/auth/reauthentication/context";
 import { setUserInfo, useUserInfo } from "@kenstack/auth/useUserInfo";
@@ -85,7 +86,7 @@ function EmailChangeContent({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { track, userId } = useAuthorization();
+  const { isHolding, track, userId } = useAuthorization();
   const userInfo = useUserInfo();
   const [view, setView] = useState<View>({ kind: "email" });
   // Outcomes independent of the form being shown: a confirmed change, a
@@ -117,7 +118,7 @@ function EmailChangeContent({
   useEffect(() => {
     if (token && userInfo.state !== "loading" && !isSignedIn) {
       router.push(
-        getReauthenticationPath(
+        getLoginReturnPath(
           `${pathname}?${new URLSearchParams({ confirmEmailChange: token })}`,
         ),
       );
@@ -255,10 +256,24 @@ function EmailChangeContent({
         <Notice message={notice.message} status={notice.status} />
       ) : null}
       {isConfirmingLink ? (
-        <p aria-live="polite" className="text-sm">
-          Confirming your new email…
-        </p>
-      ) : !canChange ? null : view.kind === "email" ? (
+        // Hidden while the confirmation dialog asks the visitor to confirm their identity.
+        isHolding ? null : (
+          <p aria-live="polite" className="text-sm">
+            Confirming your new email…
+          </p>
+        )
+      ) : !canChange ? (
+        !isSignedIn && userInfo.state !== "loading" && !token ? (
+          <p>
+            <Link
+              className="underline underline-offset-4"
+              href={getLoginReturnPath(pathname)}
+            >
+              Sign in to change your sign-in email
+            </Link>
+          </p>
+        ) : null
+      ) : view.kind === "email" ? (
         // The field starts as the current address, so changing it is one
         // edit and one click; a completed change reseeds it through the key.
         <Form<

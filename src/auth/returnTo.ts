@@ -1,4 +1,4 @@
-export function getReauthenticationPath(returnTo?: string): `/${string}` {
+export function getLoginReturnPath(returnTo?: string): `/${string}` {
   const path = getSafeReturnToPath(returnTo);
   return `/login${path ? `?returnTo=${encodeURIComponent(path)}` : ""}`;
 }

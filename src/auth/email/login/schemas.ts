@@ -1,5 +1,6 @@
 import * as z from "zod";
 
+import { protectedAccountSchema } from "@kenstack/auth/reauthentication";
 import {
   challengeKeySchema,
   codeSchema,
@@ -25,7 +26,7 @@ export const requestEmailLoginSchema = z.object({
   linkToReturnTo: z.boolean().optional(),
   returnTo: z.string().optional(),
   // Set by a confirmation sign-in: the account its page was rendered for.
-  userId: z.number().int().positive().optional(),
+  userId: protectedAccountSchema.shape.userId.optional(),
 });
 
 export const loginCodeSchema = z.object({
@@ -37,7 +38,7 @@ export const verifyEmailLoginCodeSchema = loginCodeSchema.extend({
   returnTo: z.string().optional(),
   // Set by a confirmation sign-in: the account its page was rendered for, and that account's email.
   email: emailSchema.optional(),
-  userId: z.number().int().positive().optional(),
+  userId: protectedAccountSchema.shape.userId.optional(),
 });
 
 export const verifyEmailLoginLinkSchema = z.object({
