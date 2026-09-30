@@ -9,10 +9,9 @@ type CheckedState = boolean | "indeterminate";
 
 type CheckboxProps = Omit<
   React.ComponentPropsWithRef<"input">,
-  "checked" | "defaultChecked" | "onChange" | "type"
+  "checked" | "defaultChecked" | "type"
 > & {
   checked?: CheckedState;
-  onChange?: React.ChangeEventHandler<HTMLInputElement>;
   onCheckedChange?: (checked: CheckedState) => void;
 };
 

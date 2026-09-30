@@ -31,7 +31,7 @@ function orderCountries(countries: CountryData[]) {
   return [
     ...countryPriority
       .map((code) => options.find((country) => country.code === code))
-      .filter((country): country is SupportedCountry => Boolean(country)),
+      .filter((country) => country !== undefined),
     ...options.filter((country) => !countryPriority.includes(country.code)),
   ];
 }

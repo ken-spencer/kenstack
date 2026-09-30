@@ -14,16 +14,6 @@ import { serverField, type ServerFieldResolverFor } from "../serverField";
 import { imageMetadata } from "../internal/media/attachment";
 import { prepareMediaCrop } from "../internal/media/crop";
 
-type MediaConfig = {
-  table: AnyPgTable;
-  tableIdKey: string;
-  tableId: AnyPgColumn<{ data: number }>;
-  mediaIdKey: string;
-  mediaId: AnyPgColumn<{ data: number }>;
-  sortOrderKey: string;
-  sortOrder: AnyPgColumn<{ data: number }>;
-};
-
 type MediaHandlerConfig = {
   table: AnyPgTable & {
     tableId: AnyPgColumn<{ data: number }>;
@@ -159,7 +149,7 @@ async function loadMedia({
 }: {
   db: FieldLoadContext["db"];
   tableId: number;
-  media: MediaConfig;
+  media: Required<MediaHandlerConfig>;
 }) {
   const rows = await db
     .select({
@@ -190,7 +180,7 @@ async function saveMedia({
   admin: boolean;
   db: FieldSaveContext["db"];
   tableId: number;
-  media: MediaConfig;
+  media: Required<MediaHandlerConfig>;
   selected: z.output<typeof mediaListSchema>;
   user: User;
 }) {
@@ -208,13 +198,10 @@ async function saveMedia({
 
   const oldMediaIds = oldRows
     .map((row) => row.mediaId)
-    .filter((mediaId): mediaId is number => typeof mediaId === "number");
+    .filter((mediaId) => typeof mediaId === "number");
   const mediaIds: number[] = [];
   const savedMedia: z.output<typeof mediaListSchema> = [];
-  const metadataByMediaId = new Map<
-    number,
-    { alt?: string | null; title?: string | null; caption?: string | null }
-  >();
+  const metadataByMediaId = new Map<number, ReturnType<typeof imageMetadata>>();
 
   for (const item of selected) {
     const savedItem = { ...item };

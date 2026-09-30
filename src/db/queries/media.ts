@@ -115,19 +115,9 @@ export function selectImageSubquery(
   mediaCol: AnyPgColumn,
   variant: MediaVariantName = "original",
 ) {
-  return mediaSubquery(mediaCol, variant, true);
+  return mediaSubquery(mediaCol, variant, true) as SQL<SelectedImage | null>;
 }
 
-function mediaSubquery(
-  mediaCol: AnyPgColumn,
-  variant: MediaVariantName,
-  imagesOnly: true,
-): SQL<SelectedImage | null>;
-function mediaSubquery(
-  mediaCol: AnyPgColumn,
-  variant: MediaVariantName,
-  imagesOnly: false,
-): SQL<SelectedMedia | null>;
 function mediaSubquery(
   mediaCol: AnyPgColumn,
   variant: MediaVariantName,

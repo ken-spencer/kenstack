@@ -72,17 +72,10 @@ export function defineRelationships<
       Object.entries(relationships).map(([key, relationship]) => {
         const fromColumnName = `${relationship.from[relationshipName]}Id`;
         const toColumnName = `${relationship.to[relationshipName]}Id`;
-        const fromColumn =
-          relationship.fromColumn ??
-          (relationship.through[
-            fromColumnName as keyof typeof relationship.through
-          ] as RelationshipColumn);
-        const toColumn =
-          relationship.toColumn ??
-          (relationship.through[
-            toColumnName as keyof typeof relationship.through
-          ] as RelationshipColumn);
         const throughColumns = getTableColumns(relationship.through);
+        const fromColumn =
+          relationship.fromColumn ?? throughColumns[fromColumnName];
+        const toColumn = relationship.toColumn ?? throughColumns[toColumnName];
         // A through table without the column holds one relationship.
         const hasDiscriminator = "relationship" in throughColumns;
         if (relationship.relationship !== undefined && !hasDiscriminator) {

@@ -173,7 +173,7 @@ describe("password changes", () => {
   };
   it("returns an expired session to sign-in without changing the password", async () => {
     mocks.session.mockResolvedValue(undefined);
-    const response = await resetPasswordPipeline()({ request, json });
+    const response = await pipeline({ request, json }, resetPasswordPipeline());
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toMatchObject({
       code: "reauthentication-required",
@@ -191,10 +191,10 @@ describe("password changes", () => {
       userId: 12,
       impersonatedBy: null,
     });
-    const response = await resetPasswordPipeline()({
-      request,
-      json: { ...json, currentPassword: "Existing123" },
-    });
+    const response = await pipeline(
+      { request, json: { ...json, currentPassword: "Existing123" } },
+      resetPasswordPipeline(),
+    );
     expect(response.status).toBe(403);
     // No redirect: the page stays, keeping what was typed while identity is confirmed.
     const body = await response.json();
@@ -204,7 +204,7 @@ describe("password changes", () => {
     expect(mocks.transaction).not.toHaveBeenCalled();
   });
   it("sets the password with fresh proof, revokes sessions, and signs back in", async () => {
-    const response = await resetPasswordPipeline()({ request, json });
+    const response = await pipeline({ request, json }, resetPasswordPipeline());
     await expect(response.json()).resolves.toMatchObject({ status: "success" });
     expect(mocks.hash).toHaveBeenCalledWith(json.password, expect.any(Number));
     expect(mocks.set).toHaveBeenCalledWith(

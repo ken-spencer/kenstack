@@ -51,7 +51,7 @@ export default async function fetcher<
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "";
-    throw ReturnedError(
+    throw new ReturnedError(
       `There was an unexpected problem with your request. ${message}`,
     );
   }
@@ -59,9 +59,9 @@ export default async function fetcher<
   const ct = response.headers.get("content-type") ?? "";
   if (!ct.includes("application/json")) {
     if (response.status === 404) {
-      throw ReturnedError("We were unable to find the requested resource.");
+      throw new ReturnedError("We were unable to find the requested resource.");
     }
-    throw ReturnedError(
+    throw new ReturnedError(
       `There was an unexpected problem with your request. Server error: ${response.status} ${response.statusText}`,
     );
   }
@@ -71,7 +71,7 @@ export default async function fetcher<
     json = await response.json();
   } catch (err) {
     const message = err instanceof Error ? err.message : "";
-    throw ReturnedError(
+    throw new ReturnedError(
       `There was an unexpected problem with the response from the server: ${message}`,
     );
   }
@@ -82,11 +82,11 @@ export default async function fetcher<
     (json.status !== "success" && json.status !== "error") ||
     (response.ok === false && json.status !== "error")
   ) {
-    throw ReturnedError("The response from the server was invalid");
+    throw new ReturnedError("The response from the server was invalid");
   }
 
   if (json.status === "error" && response.status >= 500) {
-    const error = ReturnedError(
+    const error = new ReturnedError(
       typeof json.message === "string"
         ? json.message
         : "There was an unexpected problem with your request.",

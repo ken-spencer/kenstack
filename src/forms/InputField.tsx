@@ -1,12 +1,11 @@
 "use client";
 
-import Field, { FormControl, type FieldProps } from "@kenstack/forms/Field";
+import Field, {
+  FormControl,
+  type FieldProps,
+  type RenderProps,
+} from "@kenstack/forms/Field";
 import { Input } from "@kenstack/forms/controls/Input";
-import {
-  type ControllerRenderProps,
-  type FieldValues,
-  type Path,
-} from "react-hook-form";
 
 type InputProps = FieldProps &
   Omit<React.ComponentProps<typeof Input>, "onChange" | "onBlur"> & {
@@ -16,14 +15,14 @@ type InputProps = FieldProps &
       field,
     }: {
       event: React.ChangeEvent<HTMLInputElement>;
-      field: ControllerRenderProps<FieldValues, Path<FieldValues>>;
+      field: RenderProps["field"];
     }) => void;
     onBlur?: ({
       event,
       field,
     }: {
       event: React.FocusEvent<HTMLInputElement>;
-      field: ControllerRenderProps<FieldValues, Path<FieldValues>>;
+      field: RenderProps["field"];
     }) => void;
   };
 

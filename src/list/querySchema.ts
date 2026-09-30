@@ -317,8 +317,7 @@ export function hasFilterValue(value: unknown) {
     return false;
   }
 
-  const range = value as { from?: unknown; to?: unknown };
-  if (range.from || range.to) {
+  if (("from" in value && value.from) || ("to" in value && value.to)) {
     return true;
   }
 

@@ -77,12 +77,7 @@ export type AdminFilterOptions = Record<
   string,
   | {
       label?: string;
-      kind: "date-range";
-      field: AdminFilterFieldReference;
-    }
-  | {
-      label?: string;
-      kind: "boolean";
+      kind: "date-range" | "boolean" | "text";
       field: AdminFilterFieldReference;
     }
   | {
@@ -90,11 +85,6 @@ export type AdminFilterOptions = Record<
       kind: "enum" | "includes";
       field: AdminFilterFieldReference;
       options: readonly AdminFilterOption[];
-    }
-  | {
-      label?: string;
-      kind: "text";
-      field: AdminFilterFieldReference;
     }
 >;
 
@@ -104,21 +94,13 @@ export type AdminFilters = Record<
     label: string;
   } & (
     | {
-        kind: "date-range";
-        field: AdminFilterField;
-      }
-    | {
-        kind: "boolean";
+        kind: "date-range" | "boolean" | "text";
         field: AdminFilterField;
       }
     | {
         kind: "enum" | "includes";
         field: AdminFilterField;
         options: readonly AdminFilterOption[];
-      }
-    | {
-        kind: "text";
-        field: AdminFilterField;
       }
   )
 >;

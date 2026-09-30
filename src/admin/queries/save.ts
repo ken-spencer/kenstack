@@ -262,7 +262,6 @@ async function prepareOneToOneSave({
   const preparation = await prepareRecordFields({
     admin: true,
     fields: binding.fields,
-    columns: getTableColumns(binding.table),
     id: expectedId ?? undefined,
     shouldSaveField: (key) => changedFields.has(key),
     table: binding.table,

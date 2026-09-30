@@ -26,8 +26,6 @@ import { adminListCacheTag } from "@kenstack/admin/cache";
 
 export { adminListCacheTag } from "@kenstack/admin/cache";
 
-export type AdminListQuery = ListQuery;
-
 export type AdminListConfig = Extract<AnyAdminConfig, { list: unknown }>;
 
 export async function loadAdminList({
@@ -112,7 +110,7 @@ export async function queryAdminList({
   adminConfig: AdminListConfig;
   moduleParent?: ModuleParentOptions;
   parentId?: number;
-  query: AdminListQuery;
+  query: ListQuery;
 }) {
   if ((moduleParent && !parentId) || (!moduleParent && parentId)) {
     return {

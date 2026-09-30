@@ -6,34 +6,24 @@ type ReturnedErrorOptions = {
   redirect?: string;
 };
 
-export interface ReturnedError extends Error {
+export class ReturnedError extends Error {
+  name = "ReturnedError";
   code?: string;
   details?: Record<string, unknown>;
   status: number;
   redirect?: string;
+
+  constructor(
+    message: string,
+    { code, details, status = 400, redirect }: ReturnedErrorOptions = {},
+  ) {
+    super(message);
+    this.code = code;
+    this.details = details;
+    this.status = status;
+    this.redirect = redirect;
+  }
 }
-
-type ReturnedErrorConstructor = {
-  (message: string, options?: ReturnedErrorOptions): ReturnedError;
-  new (message: string, options?: ReturnedErrorOptions): ReturnedError;
-  prototype: ReturnedError;
-};
-
-const createReturnedError = function (
-  message: string,
-  { code, details, status = 400, redirect }: ReturnedErrorOptions = {},
-) {
-  const error = new Error(message);
-  error.name = "ReturnedError";
-  Object.setPrototypeOf(error, ReturnedError.prototype);
-
-  return Object.assign(error, { code, details, status, redirect });
-};
-
-createReturnedError.prototype = Object.create(Error.prototype) as ReturnedError;
-createReturnedError.prototype.constructor = createReturnedError;
-
-export const ReturnedError = createReturnedError as ReturnedErrorConstructor;
 
 export const unexpectedRequestMessage =
   "There was an unexpected problem handling your request. Please try again later.";

@@ -7,12 +7,9 @@ import {
   getAdminRecordTitleSelect,
 } from "@kenstack/admin/lib/recordTitle";
 
-export type AdminParentRecord = {
-  id: number;
-  name: string;
-  title: string;
-  recordTitle: string;
-};
+export type AdminParentRecord = NonNullable<
+  Awaited<ReturnType<typeof loadAdminParentRecord>>
+>;
 
 export async function loadAdminParentRecord({
   id,
@@ -20,7 +17,7 @@ export async function loadAdminParentRecord({
 }: {
   id: number;
   name: string;
-}): Promise<AdminParentRecord | null> {
+}) {
   const moduleConfig = modules[name];
   const adminConfig = moduleConfig?.admin;
 

@@ -1,5 +1,7 @@
 import { authenticationWindowMs } from "@kenstack/auth/reauthentication";
 
+import type { VerificationBinding } from "./repository";
+
 const challengeLifetimeMinutes = 15;
 const challengeSendLimit = 3;
 
@@ -41,7 +43,7 @@ export function calculateChallengeExpiresAt({
   kind,
 }: {
   verificationExpiresAt?: Date;
-  kind?: string;
+  kind?: VerificationBinding["kind"];
   now: Date;
 }) {
   const expiry =
@@ -117,11 +119,9 @@ export function resolveCodeOutcome({
 // A browser's chain holds every kind of request it made. Each kind, and each
 // account for an email change, is read and replaced as its own stack, so a
 // login code sent while a change is pending leaves that change in place.
-export function selectBoundHistory<
-  TRecord extends { kind: string; userId: number | null },
->(
+export function selectBoundHistory<TRecord extends VerificationBinding>(
   history: readonly TRecord[],
-  { kind, userId }: { kind: string; userId: number | null },
+  { kind, userId }: VerificationBinding,
 ) {
   return history.filter(
     (record) => record.kind === kind && record.userId === userId,

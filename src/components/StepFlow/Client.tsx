@@ -15,7 +15,7 @@ export default function StepFlowClient({
   summary,
   steps,
   visitKey,
-}: Omit<StepFlowProps, "Actions" | "Header" | "id" | "params" | "steps"> & {
+}: Omit<StepFlowProps, "Actions" | "Header" | "id" | "steps"> & {
   Actions: NonNullable<StepFlowProps["Actions"]>;
   Header: NonNullable<StepFlowProps["Header"]>;
   id: NonNullable<StepFlowProps["id"]>;

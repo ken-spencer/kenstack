@@ -7,7 +7,6 @@ import {
   type ComponentProps,
   type DragEvent,
 } from "react";
-import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 import { Crop, Paperclip, Upload, X } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 
@@ -16,7 +15,11 @@ import AttachmentList, {
   type AttachmentListItem,
 } from "@kenstack/components/AttachmentList";
 import { SortableItem, SortableList } from "@kenstack/components/SortableList";
-import Field, { FormControl, type FieldProps } from "@kenstack/forms/Field";
+import Field, {
+  FormControl,
+  type FieldProps,
+  type RenderProps,
+} from "@kenstack/forms/Field";
 import AddImageIcon from "@kenstack/forms/ImageField/AddImageIcon";
 import { getReturnedErrorMessage } from "@kenstack/api/errors";
 import { useForm } from "@kenstack/forms/context";
@@ -144,11 +147,7 @@ const createMediaRender = ({
   multiple = true,
   ImageDetails,
 }: MediaRenderProps & { ImageDetails?: ImageDetailsEditor }) =>
-  function MediaListFieldRender({
-    field,
-  }: {
-    field: ControllerRenderProps<FieldValues, string>;
-  }) {
+  function MediaListFieldRender({ field }: { field: RenderProps["field"] }) {
     const {
       finishUploading,
       form,

@@ -15,7 +15,7 @@ export default function KeywordSearch<
   setFilters,
 }: {
   className?: string;
-  filters: Pick<T, "keywords">;
+  filters: T;
   id?: string;
   maxLength?: number;
   placeholder?: string;

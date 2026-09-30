@@ -109,10 +109,7 @@ export default function useQueryStore<T extends Record<string, unknown>>(
   };
 
   const set: SetQueryStore<T> = (next, debounce = true) => {
-    const resolved =
-      typeof next === "function"
-        ? (next as (p: T) => T)(valueRef.current)
-        : next;
+    const resolved = typeof next === "function" ? next(valueRef.current) : next;
 
     if (isEqual(valueRef.current, resolved)) {
       return;

@@ -1,17 +1,8 @@
 import { headers } from "next/headers";
 
-export type GeoInfo = {
-  continent: string | null;
-  country: string | null;
-  region: string | null;
-  city: string | null;
-  latitude: string | null;
-  longitude: string | null;
-  timezone: string | null;
-  postalCode: string | null;
-};
+export type GeoInfo = Awaited<ReturnType<typeof getGeo>>;
 
-export async function getGeo(): Promise<GeoInfo> {
+export async function getGeo() {
   const hdrs = await headers();
   const geo = {
     continent: hdrs.get("x-vercel-ip-continent"),

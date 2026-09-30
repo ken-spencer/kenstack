@@ -22,9 +22,7 @@ import type { AdminClient, BaseListItem } from "@kenstack/admin/client";
 import type { AdminClientRegistry } from "@kenstack/admin/clientLoaders";
 import { getAdminListQueryKey } from "./queryKey";
 
-const AdminListContext = createContext<UseListProps<
-  Record<string, unknown>
-> | null>(null);
+const AdminListContext = createContext<UseListProps | null>(null);
 
 type AdminListProps = {
   basePath?: string;
@@ -37,16 +35,14 @@ type AdminListProps = {
   children: React.ReactNode;
 };
 
-export type AdminListQueryData<
-  TDoc extends Record<string, unknown> = Record<string, unknown>,
-> = FetchResult<{
+type AdminListPayload = {
   total: number;
-  items: (BaseListItem & TDoc)[];
-}>;
+  items: (BaseListItem & Record<string, unknown>)[];
+};
 
-type UseListProps<
-  TDoc extends Record<string, unknown> = Record<string, unknown>,
-> = {
+export type AdminListQueryData = FetchResult<AdminListPayload>;
+
+type UseListProps = {
   client: AdminClient;
   sort: AdminSortMeta[];
   filter: AdminFilterMeta[];
@@ -63,7 +59,7 @@ type UseListProps<
   page: number;
   isReorderSort: boolean;
   canReorder: boolean;
-  query: UseQueryResult<AdminListQueryData<TDoc>, Error>;
+  query: UseQueryResult<AdminListQueryData, Error>;
   limit: number;
 };
 
@@ -130,10 +126,7 @@ export function AdminListProvider({
 
   const query = useQuery({
     queryFn: () =>
-      fetcher<{
-        total: number;
-        items: (BaseListItem & Record<string, unknown>)[];
-      }>(apiPath, {
+      fetcher<AdminListPayload>(apiPath, {
         action: "list",
         name,
         parentId,

@@ -104,7 +104,6 @@ export async function saveRecord<
     const preparation = await prepareRecordFields({
       admin,
       fields,
-      columns: getTableColumns(table),
       id,
       shouldSaveField,
       table,
@@ -182,10 +181,9 @@ export async function saveRecord<
 }
 
 // Prepares changed fields and collects work for the transaction, commit, and failure boundaries.
-export async function prepareRecordFields<TTable extends NumericIdTable>({
+export async function prepareRecordFields({
   admin,
   fields,
-  columns,
   id,
   shouldSaveField,
   table,
@@ -194,13 +192,13 @@ export async function prepareRecordFields<TTable extends NumericIdTable>({
 }: {
   admin: boolean;
   fields: ServerDefinedFields;
-  columns: ReturnType<typeof getTableColumns<TTable>>;
   id?: number | null;
   shouldSaveField: (key: string) => boolean;
-  table: TTable;
+  table: NumericIdTable;
   user: User;
   values: Record<string, unknown>;
 }) {
+  const columns = getTableColumns(table);
   const preparedValues = { ...values };
   const afterSave: FieldAfterSave[] = [];
   const afterCommit: FieldSaveTask[] = [];
@@ -313,7 +311,6 @@ export async function savePreparedRecord<
   const preSave = await preSaveFields({
     admin,
     fields,
-    columns: getTableColumns(table),
     data,
     handledValues,
     id,
@@ -435,10 +432,9 @@ async function runSaveTasks(tasks: FieldSaveTask[]) {
   await Promise.allSettled(tasks.map((task) => task()));
 }
 
-async function preSaveFields<TTable extends NumericIdTable>({
+async function preSaveFields({
   admin,
   fields,
-  columns,
   data,
   handledValues,
   id,
@@ -450,16 +446,16 @@ async function preSaveFields<TTable extends NumericIdTable>({
 }: {
   admin: boolean;
   fields: ServerDefinedFields;
-  columns: ReturnType<typeof getTableColumns<TTable>>;
   data: Record<string, unknown>;
   handledValues: Record<string, unknown>;
   id?: number | null;
   user: User;
-  table: TTable;
+  table: NumericIdTable;
   tx: DbTransaction;
   values: Record<string, unknown>;
   shouldSaveField: (key: string) => boolean;
 }) {
+  const columns = getTableColumns(table);
   const afterSave: FieldAfterSave[] = [];
 
   for (const key of Object.keys(values)) {

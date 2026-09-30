@@ -24,13 +24,11 @@ export type PageEditorContentProps<T extends BlockTag> = {
   placeholder?: string;
 } & React.ComponentProps<T>;
 
-export type PageEditorProps<T extends BlockTag = "div"> = T extends BlockTag
-  ? {
-      name: PageEditorFieldName;
-      placeholder?: string;
-    } & (T extends "div" ? { tag?: T } : { tag: T }) &
-      React.ComponentProps<T>
-  : never;
+export type PageEditorProps<T extends BlockTag = "div"> = {
+  name: PageEditorFieldName;
+  placeholder?: string;
+  tag?: T;
+} & React.ComponentProps<T>;
 
 export type EditorWrapperProps<T extends BlockTag = "div"> = {
   name: PageEditorFieldName;
@@ -41,15 +39,6 @@ export type EditorWrapperProps<T extends BlockTag = "div"> = {
     "name" | "tag" | "placeholder" | "content"
   >;
   placeholder?: string;
-};
-
-type NonDivBlockTag = Exclude<BlockTag, "div">;
-
-type PolymorphicEditorComponent = {
-  (props: PageEditorProps<"div">): React.ReactElement | null;
-  <TTag extends NonDivBlockTag>(
-    props: PageEditorProps<TTag> & { tag: TTag },
-  ): React.ReactElement | null;
 };
 
 export default function createEditor({
@@ -64,7 +53,7 @@ export default function createEditor({
   const PageEditor = React.lazy(editor) as React.ComponentType<
     EditorWrapperProps<BlockTag>
   >;
-  const PageEditCont = function PageEditCont<Tag extends BlockTag>({
+  const PageEditCont = function PageEditCont<Tag extends BlockTag = "div">({
     tag,
     name,
     placeholder = "Enter Text",
@@ -74,7 +63,8 @@ export default function createEditor({
     const { content } = usePageEditor();
     const displayValue = content.display[name];
 
-    // PageEditorProps permits an omitted tag only for the div variant.
+    // An omitted tag renders a div; Tag is "div" unless the call passes a type argument or a tag
+    // that may be undefined.
     const tagProp = tag ?? ("div" as Tag);
     const ComponentForTag = Component as React.ComponentType<
       PageEditorContentProps<Tag>
@@ -119,7 +109,7 @@ export default function createEditor({
     return null;
   };
 
-  return PageEditCont as PolymorphicEditorComponent;
+  return PageEditCont;
 }
 
 function EditorSkeleton({ children }: { children: React.ReactNode }) {

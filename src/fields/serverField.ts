@@ -217,13 +217,10 @@ export function defineServerField<
     TServerField & { kind?: never },
 ): ServerFieldFactory<TField, z.output<TServerField["zod"]>>;
 export function defineServerField(
-  isomorphicField: () => FieldOption,
+  isomorphicField: { readonly kind: string },
   base: ServerField,
 ) {
-  // defineField factories carry their fixed kind, while this implementation
-  // signature remains broad enough to satisfy both public overloads.
-  const kind = (isomorphicField as typeof isomorphicField & { kind: string })
-    .kind;
+  const { kind } = isomorphicField;
 
   return ((options: object = {}) =>
     Object.assign(

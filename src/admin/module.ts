@@ -8,7 +8,7 @@ import "server-only";
 
 import type { ComponentType, SVGProps } from "react";
 import startCase from "lodash-es/startCase";
-import type { AnyColumn, InferSelectModel, SQL } from "drizzle-orm";
+import type { AnyColumn, SQL } from "drizzle-orm";
 import { getTableColumns, getTableName } from "drizzle-orm";
 
 import {
@@ -159,24 +159,10 @@ type AdminConfigRuntime =
   | AdminListConfig<AdminTable, ServerDefinedFields, SelectShape | undefined>
   | AdminConfigBase<AdminKeyTable, ServerDefinedFields>;
 
-type ModuleSettingsConfig<
-  TTable extends AdminKeyTable = AdminKeyTable,
-  TFields extends ModuleSettingsFields<TTable> = ModuleSettingsFields<TTable>,
-> = {
-  table: TTable;
-  fields: TFields;
+type ModuleSettingsConfig = {
+  table: AdminKeyTable;
+  fields: ServerDefinedFields;
   cacheTag: string;
-};
-
-type ModuleSettingsRow<TTable extends AdminKeyTable> = Omit<
-  InferSelectModel<TTable>,
-  "id" | "key" | "createdBy" | "createdAt" | "updatedAt"
->;
-
-type ModuleSettingsFields<TTable extends AdminKeyTable> = {
-  [K in keyof ModuleSettingsRow<TTable>]: ServerDefinedFields[string] & {
-    default: ModuleSettingsRow<TTable>[K];
-  };
 };
 
 export type ResolvedModuleSettings = NonNullable<
@@ -563,8 +549,8 @@ function hasIdentityColumn(table: AnyPgTable): table is NumericIdTable {
   return Boolean(id && id.dataType === "number" && id.notNull);
 }
 
-function defineSort<TTable extends AdminTable>(
-  table: TTable,
+function defineSort(
+  table: AdminTable,
   fields: ServerDefinedFields,
   options: AdminSortOptions | undefined,
   reorder: ReturnType<typeof defineReorder>,
@@ -692,8 +678,8 @@ function normalizeSort(table: AdminTable, options: AdminSortOptions) {
   ) satisfies AdminSort;
 }
 
-function defineFilters<TTable extends AdminTable>(
-  table: TTable,
+function defineFilters(
+  table: AdminTable,
   fields: ServerDefinedFields,
   options: AdminFilterOptions | undefined,
 ) {

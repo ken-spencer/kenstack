@@ -1,4 +1,5 @@
 import type { Instrumentation } from "next";
+import type { EmailAddress } from "@kenstack/lib/mailer";
 
 const alertTtlSeconds = 15 * 60;
 
@@ -18,7 +19,7 @@ type ErrorReportRequest = {
 };
 
 type ErrorReportInput = ErrorReportContext & {
-  emailFrom?: string | { name: string; addr: string };
+  emailFrom?: EmailAddress;
 };
 
 export async function reportError(thrown: unknown, input: ErrorReportInput) {

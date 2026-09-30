@@ -16,9 +16,7 @@ export const userColumns = {
   passwordHash: text("password_hash"),
 };
 
-export function userTableExtraConfig<
-  TTable extends ExtraTable<typeof userColumns>,
->(t: TTable) {
+export function userTableExtraConfig(t: ExtraTable<typeof userColumns>) {
   return [
     uniqueIndex("users_email_unique_active")
       .on(sql`lower(${t.email})`)

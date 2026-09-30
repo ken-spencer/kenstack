@@ -6,8 +6,6 @@ import {
   Controller,
   useFormContext,
   useFormState,
-  type FieldValues,
-  type Path,
   type ControllerRenderProps,
   type ControllerFieldState,
 } from "react-hook-form";
@@ -16,12 +14,12 @@ import { cn } from "@kenstack/lib/utils";
 import { getFormFieldErrors } from "./internal/fieldErrors";
 
 export type RenderProps = {
-  field: ControllerRenderProps<FieldValues, Path<FieldValues>>;
+  field: ControllerRenderProps;
   fieldState: ControllerFieldState;
 };
 
 export type FieldProps = {
-  name: Path<FieldValues>;
+  name: string;
   label?: React.ReactNode;
   help?: React.ReactNode;
   description?: React.ReactNode;
@@ -66,7 +64,7 @@ export default function Field({
 }
 
 const FormFieldContext = React.createContext<{
-  name: Path<FieldValues>;
+  name: string;
 } | null>(null);
 
 const FormItemContext = React.createContext<{ id: string } | null>(null);
@@ -123,13 +121,7 @@ function FormLabel({ className, ...props }: React.ComponentProps<"label">) {
 function FormControl({
   children,
 }: {
-  children: React.ReactElement<
-    React.HTMLAttributes<HTMLElement> & {
-      "aria-describedby"?: string;
-      "aria-invalid"?: boolean;
-      id?: string;
-    }
-  >;
+  children: React.ReactElement<React.HTMLAttributes<HTMLElement>>;
 }) {
   const { error, formItemId, formDescriptionId, formMessageId } =
     useFormField();

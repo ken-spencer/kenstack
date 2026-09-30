@@ -89,5 +89,5 @@ export function defineFields<const TFields extends FieldOptions>({
   return attachFieldSetRefinements(definedFields, {
     from: fields,
     superRefine,
-  }) as DefinedFieldsFromOptions<TFields>;
+  });
 }

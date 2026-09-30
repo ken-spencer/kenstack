@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getTableColumns } from "drizzle-orm";
 import { integer, pgTable, text } from "drizzle-orm/pg-core";
 
 const mocks = vi.hoisted(() => ({
@@ -69,7 +68,6 @@ describe("record preparation lifecycle", () => {
 
     const result = await prepareRecordFields({
       admin: true,
-      columns: getTableColumns(records),
       fields,
       shouldSaveField: () => true,
       table: records,
@@ -108,7 +106,6 @@ describe("record preparation lifecycle", () => {
 
     await prepareRecordFields({
       admin: true,
-      columns: getTableColumns(records),
       fields,
       shouldSaveField: (key) => key === "first",
       table: records,
@@ -144,7 +141,6 @@ describe("record preparation lifecycle", () => {
     });
     const related = await prepareRecordFields({
       admin: true,
-      columns: getTableColumns(records),
       fields: relatedFields,
       shouldSaveField: () => true,
       table: records,
@@ -211,7 +207,6 @@ describe("record preparation lifecycle", () => {
     });
     const related = await prepareRecordFields({
       admin: true,
-      columns: getTableColumns(records),
       fields,
       shouldSaveField: () => true,
       table: records,
@@ -262,7 +257,6 @@ describe("record preparation lifecycle", () => {
     });
     const related = await prepareRecordFields({
       admin: true,
-      columns: getTableColumns(records),
       fields,
       shouldSaveField: () => true,
       table: records,

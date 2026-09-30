@@ -6,14 +6,17 @@ import {
   type DragEvent,
 } from "react";
 import Image from "next/image";
-import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 
 import AddImageIcon from "./AddImageIcon";
 import ProgressIcon from "@kenstack/icons/Progress";
 import { Crop, Upload as UploadIcon, X as CancelIcon } from "lucide-react";
 
 import { twMerge } from "tailwind-merge";
-import Field, { FormControl, type FieldProps } from "@kenstack/forms/Field";
+import Field, {
+  FormControl,
+  type FieldProps,
+  type RenderProps,
+} from "@kenstack/forms/Field";
 import Button from "@kenstack/components/Button";
 import Help from "@kenstack/components/Help";
 import { getReturnedErrorMessage } from "@kenstack/api/errors";
@@ -96,11 +99,7 @@ const createImageRender = ({
   uploadCompleteAction,
   ImageDetails,
 }: ImageRenderProps & { ImageDetails?: ImageDetailsEditor }) =>
-  function ImageFieldRender({
-    field,
-  }: {
-    field: ControllerRenderProps<FieldValues, string>;
-  }) {
+  function ImageFieldRender({ field }: { field: RenderProps["field"] }) {
     const {
       finishUploading,
       form,

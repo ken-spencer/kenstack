@@ -81,14 +81,6 @@ export type PipelineStageContext<
   user: [TAccess] extends [undefined] ? User | undefined : User;
 };
 
-type PipelineStageContextWithSchema<
-  TSchema extends ObjectSchema,
-  TAccess,
-> = PipelineContext & {
-  data: z.output<TSchema>;
-  user: [TAccess] extends [undefined] ? User | undefined : User;
-};
-
 type PipelineStageResult =
   | void
   | PipelineResponse
@@ -224,23 +216,6 @@ export default async function pipeline(
 }
 
 export function pipelineStage<
-  TSchema extends ObjectSchema,
-  const TAccess extends AuthAccess | undefined = undefined,
->(
-  options: PipelineStageOptions<TSchema, TAccess> & { schema: TSchema },
-  action: PipelineStageCallback<
-    PipelineStageContextWithSchema<TSchema, TAccess>
-  >,
-): PipelineStage & { [isStage]: PipelineStage };
-
-export function pipelineStage<
-  const TAccess extends AuthAccess | undefined = undefined,
->(
-  options: PipelineStageOptions<undefined, TAccess>,
-  action: PipelineStageCallback<PipelineStageContext<undefined, TAccess>>,
-): PipelineStage & { [isStage]: PipelineStage };
-
-export function pipelineStage<
   TSchema extends ObjectSchema | undefined = undefined,
   const TAccess extends AuthAccess | undefined = undefined,
 >(
@@ -252,7 +227,7 @@ export function pipelineStage<
     recaptcha: recaptchaAction,
   }: PipelineStageOptions<TSchema, TAccess>,
   action: PipelineStageCallback<PipelineStageContext<TSchema, TAccess>>,
-) {
+): PipelineStage & { [isStage]: PipelineStage } {
   const stage = async (ctx: PipelineContext) => {
     let data: PipelineStageContext<TSchema, TAccess>["data"];
 

@@ -31,7 +31,7 @@ export const composerMetaSchema = createSchemaFromFields(composerMetaFields);
 export type ComposerMeta = z.output<typeof composerMetaSchema>;
 
 export function createComposerMetaDefaults() {
-  return createDefaultValues(composerMetaFields) as ComposerMeta;
+  return createDefaultValues(composerMetaFields);
 }
 
 export type ComposerDocument = {
@@ -82,8 +82,7 @@ type RuntimeBlockDefinition = {
   render: (block: ComposerBlock) => ReactNode;
 };
 
-export type ComposerPage<TKey extends string = string, TBlocks = unknown> = {
-  blocks: TBlocks;
+export type ComposerPage<TKey extends string = string> = {
   definitions: Record<string, RuntimeBlockDefinition | undefined>;
   key: TKey;
   schema: z.ZodType<ComposerBlock[]>;
@@ -103,10 +102,7 @@ const archivedBlockIdentitySchema = z.object({ id: unsecureIdSchema });
 export function definePage<
   const TKey extends string,
   const TFields extends Record<string, DefinedFields>,
->(
-  key: TKey,
-  blocks: ComposerBlockDefinitions<TFields>,
-): ComposerPage<TKey, ComposerBlockDefinitions<TFields>> {
+>(key: TKey, blocks: ComposerBlockDefinitions<TFields>): ComposerPage<TKey> {
   if (!key.trim()) {
     throw new Error("A Composer page key is required.");
   }
@@ -203,7 +199,7 @@ export function definePage<
       return parsed;
     });
 
-  return { blocks, definitions, key, schema };
+  return { definitions, key, schema };
 }
 
 function createRuntimeBlockDefinition<TFields extends DefinedFields>(

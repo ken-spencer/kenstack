@@ -1,22 +1,5 @@
 import type { db } from "@app/db";
-import type {
-  AnyPgColumn,
-  AnyPgTable,
-  PgColumn,
-  PgTableWithColumns,
-} from "drizzle-orm/pg-core";
-
-type TableWithIdColumns = {
-  id: PgColumn;
-  [key: string]: PgColumn;
-};
-
-export type AnyPgTableWithId = PgTableWithColumns<{
-  name: string;
-  schema: string | undefined;
-  columns: TableWithIdColumns;
-  dialect: "pg";
-}>;
+import type { AnyPgColumn, AnyPgTable } from "drizzle-orm/pg-core";
 
 export type Database = typeof db;
 

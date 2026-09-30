@@ -74,6 +74,7 @@ import unsecureId from "@kenstack/lib/unsecureId";
 import {
   composerMetaFields,
   type ComposerBlock,
+  type ComposerDocument,
   type ComposerMeta,
   type ComposerValidationResult,
 } from "./definition";
@@ -92,8 +93,6 @@ type Definition = {
     titleField?: string;
   };
 };
-
-type ComposerFormValues = { blocks: ComposerBlock[]; meta: ComposerMeta };
 
 type EditorView = "blocks" | "preview";
 
@@ -126,7 +125,7 @@ export default function EditComposerClient({
   ) => Promise<ComposerValidationResult>;
   viewHref: string;
 }) {
-  const form = useForm<ComposerFormValues>({
+  const form = useForm<ComposerDocument>({
     defaultValues: { blocks: initialDocument, meta: initialMeta },
   });
   const { fields, insert, move, remove, update } = useFieldArray({
@@ -238,7 +237,7 @@ export default function EditComposerClient({
   ) {
     for (const issue of issues) {
       if (issue.path.length) {
-        form.setError(issue.path.join(".") as Path<ComposerFormValues>, {
+        form.setError(issue.path.join(".") as Path<ComposerDocument>, {
           message: issue.message,
         });
       } else {
@@ -890,7 +889,7 @@ function LivePreview({
   definitions,
   onSelect,
 }: {
-  control: Control<ComposerFormValues>;
+  control: Control<ComposerDocument>;
   definitions: Definition[];
   onSelect: (id: string) => void;
 }) {
@@ -958,7 +957,7 @@ function BlockSummary({
   definition,
   index,
 }: {
-  control: Control<ComposerFormValues>;
+  control: Control<ComposerDocument>;
   definition: Definition;
   index: number;
 }) {

@@ -1,13 +1,13 @@
 import {
   and,
   asc,
+  getTableColumns,
   ilike,
   inArray,
   isNull,
   notInArray,
   or,
   sql,
-  type AnyColumn,
 } from "drizzle-orm";
 import * as z from "zod";
 
@@ -58,10 +58,9 @@ export const relationshipSearchAction = (
     const orderBy = resolved.orderBy ?? [asc(sql`${label}`)];
     const where = [];
 
-    if ("deletedAt" in table) {
-      where.push(
-        isNull((table as typeof table & { deletedAt: AnyColumn }).deletedAt),
-      );
+    const { deletedAt } = getTableColumns(table);
+    if (deletedAt) {
+      where.push(isNull(deletedAt));
     }
 
     if (data.ids.length) {

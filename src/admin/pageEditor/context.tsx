@@ -19,30 +19,13 @@ import {
 } from "@kenstack/admin/components/PageControls/useAdminUi";
 import { getDisplayValues } from "./display";
 
-import { type Content } from "./loadContent";
 import { pageEditorFields } from "./fields";
 import type { PageEditorFieldName } from "./fields";
 import {
   createPageEditorStore,
-  type PageEditorStore,
+  type PageEditorInit,
   type PageEditorStoreApi,
 } from "./store";
-
-type Context = {
-  content: Content;
-  slug: string;
-  setContent: React.Dispatch<React.SetStateAction<Content>>;
-  tenant?: string;
-  editing: PageEditorFieldName | null;
-  setEditing: React.Dispatch<React.SetStateAction<PageEditorFieldName | null>>;
-};
-
-type PageContentProviderProps = {
-  slug: string;
-  tenant?: string;
-  content: Content;
-  children: ReactNode;
-};
 
 const PageEditorStoreContext = createContext<PageEditorStoreApi | null>(null);
 const FloatingError = dynamic(
@@ -57,7 +40,7 @@ export function PageEditorProvider({
   content,
   slug,
   tenant,
-}: PageContentProviderProps) {
+}: PageEditorInit & { children: ReactNode }) {
   useAdminControl();
   const [store] = useState(() =>
     createPageEditorStore({ slug, tenant, content }),
@@ -101,18 +84,12 @@ export function usePageEditor() {
     );
   }
 
-  const content = useStore(store, (state: PageEditorStore) => state.content);
-  const editing = useStore(store, (state: PageEditorStore) => state.editing);
-  const setContent = useStore(
-    store,
-    (state: PageEditorStore) => state.setContent,
-  );
-  const setEditing = useStore(
-    store,
-    (state: PageEditorStore) => state.setEditing,
-  );
-  const slug = useStore(store, (state: PageEditorStore) => state.slug);
-  const tenant = useStore(store, (state: PageEditorStore) => state.tenant);
+  const content = useStore(store, (state) => state.content);
+  const editing = useStore(store, (state) => state.editing);
+  const setContent = useStore(store, (state) => state.setContent);
+  const setEditing = useStore(store, (state) => state.setEditing);
+  const slug = useStore(store, (state) => state.slug);
+  const tenant = useStore(store, (state) => state.tenant);
 
   if (!content || !slug) {
     throw new Error(
@@ -127,7 +104,7 @@ export function usePageEditor() {
     editing,
     setContent,
     setEditing,
-  } satisfies Context;
+  };
 }
 
 export const useCommit = () => {

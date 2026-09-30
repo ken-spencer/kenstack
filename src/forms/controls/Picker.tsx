@@ -7,22 +7,20 @@ import { CheckIcon } from "lucide-react";
 import { useOverlayStack } from "@kenstack/components/overlayStack";
 import { cn } from "@kenstack/lib/utils";
 
-type AnyItem = unknown;
-
 type PickerContextValue = {
   contentRef: React.RefObject<HTMLDivElement | null>;
   dropdownSide: "bottom" | "top";
   highlightedIndex: number;
-  isItemDisabled: (item: AnyItem) => boolean;
+  isItemDisabled: (item: unknown) => boolean;
   isOpen: boolean;
-  isSelected: (item: AnyItem) => boolean;
-  items: readonly AnyItem[];
+  isSelected: (item: unknown) => boolean;
+  items: readonly unknown[];
   moveHighlight: (direction: 1 | -1, initialIndex: number) => void;
   pickerListId: string;
   optionId: (index: number) => string;
   portalTarget: HTMLElement | null;
   rootRef: React.RefObject<HTMLDivElement | null>;
-  selectItem: (item: AnyItem) => void;
+  selectItem: (item: unknown) => void;
   setDropdownSide: (side: "bottom" | "top") => void;
   setHighlightedIndex: (index: number) => void;
   setOpen: (open: boolean) => void;
@@ -43,19 +41,16 @@ type PickerProps<T> = Omit<React.ComponentProps<"div">, "onChange"> & {
 
 type PickerTriggerProps = React.ComponentPropsWithRef<"button">;
 
-type PickerListProps<T = AnyItem> = Omit<
+type PickerListProps<T = unknown> = Omit<
   React.ComponentProps<"div">,
   "children"
 > & {
   children?: React.ReactNode | ((item: T) => React.ReactNode);
 };
 
-type PickerItemProps<T = AnyItem> = Omit<
-  React.ComponentProps<"div">,
-  "value"
-> & {
+type PickerItemProps = Omit<React.ComponentProps<"div">, "value"> & {
   checkPosition?: "left" | "right" | "none";
-  value: T;
+  value: unknown;
 };
 
 const PickerContext = React.createContext<PickerContextValue | null>(null);
@@ -64,7 +59,7 @@ function isSameValue<T>(first: T, second: T) {
   return first === second;
 }
 
-function isDisabledByProperty(item: AnyItem) {
+function isDisabledByProperty(item: unknown) {
   return (
     typeof item === "object" &&
     item !== null &&
@@ -120,7 +115,7 @@ function Picker<T>({
   }, []);
 
   const isSelected = React.useCallback(
-    (item: AnyItem) =>
+    (item: unknown) =>
       value !== null &&
       value !== undefined &&
       isItemEqualToValue(item as T, value),
@@ -147,7 +142,7 @@ function Picker<T>({
   );
 
   const selectItem = React.useCallback(
-    (item: AnyItem) => {
+    (item: unknown) => {
       const typedItem = item as T;
 
       if (isItemDisabled(typedItem)) {
@@ -206,7 +201,7 @@ function Picker<T>({
             ? initialIndex
             : (nextIndex + indexOffset + count) % count;
 
-        if (!isItemDisabled(items[nextIndex] as T)) {
+        if (!isItemDisabled(items[nextIndex])) {
           setHighlightedIndexState(nextIndex);
           return;
         }
@@ -230,7 +225,7 @@ function Picker<T>({
 
   React.useEffect(() => {
     onItemHighlighted?.(
-      highlightedIndex >= 0 ? ((items[highlightedIndex] as T) ?? null) : null,
+      highlightedIndex >= 0 ? (items[highlightedIndex] ?? null) : null,
     );
   }, [highlightedIndex, items, onItemHighlighted]);
 
@@ -521,7 +516,7 @@ function PickerContent({
   );
 }
 
-function PickerList<T = AnyItem>({
+function PickerList<T = unknown>({
   className,
   children,
   ...props
@@ -548,7 +543,7 @@ function PickerList<T = AnyItem>({
   );
 }
 
-function PickerItem<T = AnyItem>({
+function PickerItem({
   checkPosition = "right",
   className,
   children,
@@ -556,7 +551,7 @@ function PickerItem<T = AnyItem>({
   onMouseEnter,
   value,
   ...props
-}: PickerItemProps<T>) {
+}: PickerItemProps) {
   const context = usePickerContext("PickerItem");
   const itemRef = React.useRef<HTMLDivElement | null>(null);
   const index = context.items.findIndex((item) => item === value);

@@ -37,13 +37,13 @@ function buttonVariants({
   variant = "default",
 }: {
   className?: string;
-  size?: ButtonSize | null;
-  variant?: ButtonVariant | null;
+  size?: ButtonSize;
+  variant?: ButtonVariant;
 } = {}) {
   return twMerge(
     "button",
-    variantClassNames[variant ?? "default"],
-    sizeClassNames[size ?? "default"],
+    variantClassNames[variant],
+    sizeClassNames[size],
     className,
   );
 }

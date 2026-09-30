@@ -1,21 +1,6 @@
 import { NextResponse } from "next/server";
 
-const PIPELINE_BRAND = Symbol("PipelineResponseBrand");
-
-export interface PipelineResponseShape {
-  /** this unique symbol makes it nominal */
-  readonly [PIPELINE_BRAND]: true;
-
-  readonly headers: NextResponse["headers"];
-  readonly cookies: NextResponse["cookies"];
-  status(code: number): this;
-  json(obj: Record<string, unknown>): this;
-  final(obj: Record<string, unknown>): this;
-  toNextResponse(): NextResponse;
-}
-
-export class PipelineResponse implements PipelineResponseShape {
-  public readonly [PIPELINE_BRAND] = true;
+export class PipelineResponse {
   private _payload: Record<string, unknown> = {};
   private _stopped = false;
   private _status = 200;

@@ -10,14 +10,11 @@ import {
 import type * as z from "zod";
 
 import { parseDuration } from "@kenstack/lib/duration";
+import { isRecord } from "@kenstack/lib/isRecord";
 
 // A store is a set of named slices in localStorage under one id, sharing one
 // 24-hour lifetime that every write refreshes. StepFlow keys its store on the
 // flow's base path; a flow owner that knows that path reads the same slices.
-
-type StoredValue<T> = {
-  value: T;
-};
 
 const storedStateChangeEvent = "stored-state-change";
 const storageAvailabilityChangeEvent = "stored-state-availability-change";
@@ -137,10 +134,7 @@ export function useStoredValue<T>(
         const didUpdate =
           nextValue === undefined
             ? removeStorageItem(key)
-            : writeStorageItem(
-                key,
-                JSON.stringify({ value: nextValue } satisfies StoredValue<T>),
-              );
+            : writeStorageItem(key, JSON.stringify({ value: nextValue }));
 
         if (!didUpdate) {
           return false;
@@ -206,17 +200,13 @@ function parseStoredValue<T>(value: string | null, schema: z.ZodType<T>) {
   if (value === null) return undefined;
 
   try {
-    const stored = JSON.parse(value) as unknown;
+    const stored: unknown = JSON.parse(value);
 
-    if (
-      stored === null ||
-      typeof stored !== "object" ||
-      !Object.hasOwn(stored, "value")
-    ) {
+    if (!isRecord(stored) || !Object.hasOwn(stored, "value")) {
       return undefined;
     }
 
-    const result = schema.safeParse((stored as StoredValue<unknown>).value);
+    const result = schema.safeParse(stored.value);
     return result.success ? result.data : undefined;
   } catch {
     return undefined;

@@ -89,7 +89,7 @@ function getTooltipPosition(
     right: "left",
     bottom: "top",
     left: "right",
-  } as const satisfies Record<TooltipSide, TooltipSide>;
+  } satisfies Record<TooltipSide, TooltipSide>;
   const opposite = oppositeSide[preferredSide];
   const side =
     !sideFits[preferredSide] && sideFits[opposite] ? opposite : preferredSide;

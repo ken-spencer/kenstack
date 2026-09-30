@@ -1,11 +1,8 @@
 "use client";
 
 import type React from "react";
-import { type UseFormReturn, type FieldValues } from "react-hook-form";
-import type { UseMutationResult } from "@tanstack/react-query";
 import * as z from "zod";
 
-import { type FetchResult } from "@kenstack/api/fetcher";
 import RecaptchaTerms from "@kenstack/components/RecaptchaTerms";
 import { getFormFieldErrors } from "@kenstack/forms/internal/fieldErrors";
 import { useSubmitFailure } from "@kenstack/forms/internal/submitFailure";
@@ -13,46 +10,44 @@ import {
   FormProvider,
   useForm,
   type FormProviderProps,
-  type SetStatusError,
-  type SetStatusMessage,
   type FormSchema,
+  type UseFormResult,
 } from "./context";
 import Notice from "./Notice";
 type SubmitData<
   TResult extends Record<string, unknown>,
   TVariables extends Record<string, unknown>,
-  TValues extends FieldValues,
-  TSubmitValues extends FieldValues,
-> = {
-  data: TSubmitValues;
+  TSchema extends FormSchema,
+> = Pick<
+  UseFormResult<TResult, TVariables, z.input<TSchema>, z.output<TSchema>>,
+  "form" | "mutation" | "setStatusError" | "setStatusMessage"
+> & {
+  data: z.output<TSchema>;
   event?: React.BaseSyntheticEvent;
-  mutation: UseMutationResult<FetchResult<TResult>, Error, TVariables>;
   isDirty: boolean;
   changes: string[];
-  form: UseFormReturn<TValues, unknown, TSubmitValues>;
-  setStatusError: SetStatusError;
-  setStatusMessage: SetStatusMessage;
 };
 
 type ChangeData<
-  TValues extends FieldValues,
-  TSubmitValues extends FieldValues,
-> = {
+  TResult extends Record<string, unknown>,
+  TVariables extends Record<string, unknown>,
+  TSchema extends FormSchema,
+> = Pick<
+  UseFormResult<TResult, TVariables, z.input<TSchema>, z.output<TSchema>>,
+  "form"
+> & {
   event: React.FormEvent<HTMLFormElement>;
-  form: UseFormReturn<TValues, unknown, TSubmitValues>;
 };
 
 type BlurData<
   TResult extends Record<string, unknown>,
   TVariables extends Record<string, unknown>,
-  TValues extends FieldValues,
-  TSubmitValues extends FieldValues,
-> = {
+  TSchema extends FormSchema,
+> = Pick<
+  UseFormResult<TResult, TVariables, z.input<TSchema>, z.output<TSchema>>,
+  "form" | "mutation" | "setStatusError" | "setStatusMessage"
+> & {
   event: React.FocusEvent<HTMLFormElement>;
-  form: UseFormReturn<TValues, unknown, TSubmitValues>;
-  mutation: UseMutationResult<FetchResult<TResult>, Error, TVariables>;
-  setStatusError: SetStatusError;
-  setStatusMessage: SetStatusMessage;
 };
 
 type FormProps<
@@ -64,13 +59,9 @@ type FormProps<
   "onSubmit" | "onChange" | "onBlur" | "onError"
 > & {
   validationMessage?: React.ReactNode;
-  onSubmit: (
-    props: SubmitData<TResult, TVariables, z.input<TSchema>, z.output<TSchema>>,
-  ) => void;
-  onChange?: (props: ChangeData<z.input<TSchema>, z.output<TSchema>>) => void;
-  onBlur?: (
-    props: BlurData<TResult, TVariables, z.input<TSchema>, z.output<TSchema>>,
-  ) => void;
+  onSubmit: (props: SubmitData<TResult, TVariables, TSchema>) => void;
+  onChange?: (props: ChangeData<TResult, TVariables, TSchema>) => void;
+  onBlur?: (props: BlurData<TResult, TVariables, TSchema>) => void;
 };
 
 export default function FormContainer<

@@ -12,8 +12,6 @@ import {
 import type { ImageDetailsValue } from "@kenstack/forms/ImageDetails";
 import { formatFileSize } from "@kenstack/lib/fileSize";
 
-export type { ImageDetailsValue } from "@kenstack/forms/ImageDetails";
-
 export default function ImageDetailsModal({
   image,
   onChange,
