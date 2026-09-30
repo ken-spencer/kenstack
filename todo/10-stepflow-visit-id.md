@@ -17,3 +17,11 @@ can only un-skip on mount" fix shipped with `07-host-wiring.md` once built.
   kept page (not a mount), and after signing in through the step, Back skips the sign-in step again.
 - Checks: the kept-page path above; Back after in-flow sign-in; an emailed link opened mid-flow in a new tab; a reload
   mid-flow; arriving from the menu after an unfinished visit.
+- Login flash, deferred here (Ken, 29 September 2026): signed out on `/login`, a code sign-in for an
+  admin with complete details paints the details step's loading pulse for one round trip, then
+  "Signed in" over LoginReturn's placeholder for two round trips (its destination lookup starts only
+  when the step shows, and `router.replace` keeps that screen until the destination arrives). The
+  sign-in refresh changes nothing on screen. Diagnosis, DOM recordings and a proven fix in Civic's
+  `tmp/login-flash/` (`fix.diff`: seed the details query from the signed-in user info so the skip is
+  decided at sign-in, look up the destination from an always-mounted return-step controller, and hold
+  the login step with its pending code form until navigation). Settle it with this StepFlow rework.
