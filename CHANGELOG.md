@@ -145,6 +145,98 @@ Apart from the changes below, calls compile unchanged.
 - `buttonVariants` no longer accepts `null` for `size` or `variant`; omit them for the defaults.
 - `userTableExtraConfig` and `ComboboxItem` (`PickerItem`) take no type argument.
 
+### `loadRecord` without `query` or typed `select`
+
+`loadRecord` takes no type arguments and no `query` option. It returns
+`row: ({ id: number } & Record<string, unknown>) | undefined` and `values: Record<string, unknown>`,
+so `select` columns and `defaults` no longer type the result. It still loads the record by `id` or
+`where`, selects its fields' columns plus any `select`, and runs each field's `load`.
+
+Migration steps:
+
+- A call that passed `query` to join tables or selected typed columns through `select` reads those
+  columns with a `query(table)` builder query from `@kenstack/db/queries` beside
+  `loadRecord`, which then loads only the record's fields and values:
+
+  ```ts
+  // Before
+  const result = await loadRecord({
+    table: issues,
+    fields: issueServerFields,
+    select: {
+      createdBy: issues.createdBy,
+      authorEmail: users.email,
+      voteCount: issueVoteCountSql,
+    },
+    query: async ({ db, select }) =>
+      (
+        await db
+          .select(select)
+          .from(issues)
+          .innerJoin(users, eq(users.id, issues.createdBy))
+          .where(where)
+          .limit(1)
+      )[0],
+  });
+
+  // After
+  const [row] = await query(issues)
+    .select({
+      id: issues.id,
+      createdBy: issues.createdBy,
+      authorEmail: users.email,
+      voteCount: issueVoteCountSql,
+    })
+    .innerJoin(users, eq(users.id, issues.createdBy))
+    .where(where)
+    .build()
+    .limit(1);
+  if (!row) {
+    return null;
+  }
+  const { values } = await loadRecord({
+    table: issues,
+    fields: issueServerFields,
+    id: row.id,
+  });
+  ```
+
+- A call that selected one typed column beside its fields runs the builder query alongside:
+
+  ```ts
+  // Before
+  const result = await loadRecord({
+    table: users,
+    fields,
+    defaults,
+    id: user.id,
+    select: {
+      visibility: sql<"draft" | "published" | "unlisted">`"users"."visibility"`,
+    },
+  });
+  const visibility = result.values.visibility;
+
+  // After
+  const [{ values }, [profile]] = await Promise.all([
+    loadRecord({ table: users, fields, defaults, id: user.id }),
+    query(users)
+      .select({
+        visibility: sql<
+          "draft" | "published" | "unlisted"
+        >`"users"."visibility"`,
+      })
+      .where(eq(users.id, user.id))
+      .build()
+      .limit(1),
+  ]);
+  const visibility = profile?.visibility;
+  ```
+
+- Parse `values` with the form's schema where code needs its typed shape, such as a form's default
+  values.
+- A `row` column read for a check, such as `createdBy` for an edit permission, comes from the builder
+  query too.
+
 ### First validation error per field
 
 `FormProvider` again shows the first failed schema rule or server error for each field, instead of
