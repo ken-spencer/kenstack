@@ -31,7 +31,7 @@ export type ForgotPasswordProps = {
 };
 
 export const forgotPasswordPipeline = (props: ForgotPasswordProps) =>
-  pipelineStage({ schema }, async ({ data, request, response }) => {
+  pipelineStage({ schema }, async ({ data, dataIn, request, response }) => {
     const Email = props.Email ?? DefaultEmail;
     const { email } = data;
 
@@ -63,9 +63,9 @@ export const forgotPasswordPipeline = (props: ForgotPasswordProps) =>
 
     const recaptchaRejection = await recaptcha({
       action: "forgottenPassword",
+      body: dataIn,
       request,
       response,
-      token: data.recaptchaToken,
     });
     if (recaptchaRejection) {
       return recaptchaRejection;

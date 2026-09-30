@@ -27,7 +27,10 @@ and client-side form validation in Kenstack and host sites.
 - A form whose API checks reCAPTCHA names its action with `recaptchaAction`. The provider requests the
   token on each submission and sends it as `recaptchaToken`; a failed token request reports through the
   status outlet. Submit handlers do not call `executeRecaptcha` themselves. The host mounts one
-  `RecaptchaProvider` site-wide so the score reflects the whole visit.
+  `RecaptchaProvider` site-wide so the score reflects the whole visit. The API checks the token with
+  `pipelineStage({ recaptcha: "<action>" })`, or by hand with
+  `recaptcha({ action, body: dataIn, request, response })`; both read it from the raw request body, so
+  schemas never declare it.
 - The reCAPTCHA terms always come last, below every button, in a page or a dialog. `Form` renders them
   after its children; a form that requests a token outside `recaptchaAction`, such as a resend link,
   renders `RecaptchaTerms` after its own buttons, and a dialog puts no buttons below its form.

@@ -66,7 +66,7 @@ export function createEmailLogin(options: EmailLoginOptions = {}) {
   return {
     request: pipelineStage(
       { schema: requestEmailLoginSchema },
-      async ({ data, request, response }) => {
+      async ({ data, dataIn, request, response }) => {
         if (data.userId !== undefined) {
           await refuseChangedAccount(data.userId, data.email);
         }
@@ -114,9 +114,9 @@ export function createEmailLogin(options: EmailLoginOptions = {}) {
 
         const recaptchaRejection = await recaptcha({
           action: "login",
+          body: dataIn,
           request,
           response,
-          token: data.recaptchaToken,
         });
         if (recaptchaRejection) {
           return recaptchaRejection;

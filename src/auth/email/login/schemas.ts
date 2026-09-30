@@ -23,7 +23,6 @@ export const requestEmailLoginSchema = z.object({
   // The requesting page declares that its returnTo destination hosts the
   // link verifier, so the emailed link can land there instead of on /login.
   linkToReturnTo: z.boolean().optional(),
-  recaptchaToken: z.string().optional().catch(undefined),
   returnTo: z.string().optional(),
   // Set by a confirmation sign-in: the account its page was rendered for.
   userId: z.number().int().positive().optional(),

@@ -86,7 +86,6 @@ function requestContext(returnTo?: string): EmailLoginStageContext {
   return {
     data: {
       email: "person@example.com",
-      recaptchaToken: undefined,
       returnTo,
     },
     request: {},

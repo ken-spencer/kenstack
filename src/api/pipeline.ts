@@ -112,12 +112,8 @@ type PipelineStageOptions<TSchema extends ObjectSchema | undefined, TAccess> = {
   fieldsKey?: string;
   // Per-IP quota scope, claimed before reCAPTCHA and the action.
   quota?: string;
-  // reCAPTCHA action, verified against the schema's recaptchaToken.
-  recaptcha?: TSchema extends ObjectSchema
-    ? "recaptchaToken" extends keyof z.output<TSchema>
-      ? string
-      : never
-    : never;
+  // reCAPTCHA action, verified against the token in the request body.
+  recaptcha?: string;
 };
 
 export default async function pipeline(
@@ -320,12 +316,9 @@ export function pipelineStage<
     if (recaptchaAction) {
       const rejection = await recaptcha({
         action: recaptchaAction,
+        body: ctx.dataIn,
         request: ctx.request,
         response: ctx.response,
-        token:
-          isRecord(data) && typeof data.recaptchaToken === "string"
-            ? data.recaptchaToken
-            : undefined,
       });
       if (rejection) {
         return rejection;

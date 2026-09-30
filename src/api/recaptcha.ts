@@ -1,5 +1,6 @@
 import { getCurrentUser } from "@kenstack/auth/server/user";
 import { reportError } from "@kenstack/lib/errorReporter";
+import { isRecord } from "@kenstack/lib/isRecord";
 import type { NextRequest } from "next/server";
 import * as z from "zod";
 
@@ -15,16 +16,18 @@ const schema = z.object({
 
 export default async function recaptcha({
   action,
+  body,
   request,
   response,
   threshold = 0.5,
-  token,
 }: {
   action?: string;
+  // The raw request body. Form sends the token beside the values, so schemas
+  // never declare it.
+  body: unknown;
   request: NextRequest;
   response: PipelineResponse;
   threshold?: number;
-  token?: string;
 }) {
   if (await getCurrentUser()) {
     /** Skip recaptcha if logged in */
@@ -48,6 +51,10 @@ export default async function recaptcha({
     return;
   }
 
+  const token =
+    isRecord(body) && typeof body.recaptchaToken === "string"
+      ? body.recaptchaToken
+      : undefined;
   if (!token) {
     return response.error(
       "reCAPTCHA didn’t complete. Refresh the page and try again.",

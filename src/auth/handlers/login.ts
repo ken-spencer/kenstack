@@ -23,7 +23,8 @@ export const loginPipeline = () =>
   pipelineStage(
     { schema: loginSchema },
     async ({
-      data: { email, password, recaptchaToken, returnTo, userId },
+      data: { email, password, returnTo, userId },
+      dataIn,
       request,
       response,
     }) => {
@@ -47,9 +48,9 @@ export const loginPipeline = () =>
 
       const recaptchaRejection = await recaptcha({
         action: "login",
+        body: dataIn,
         request,
         response,
-        token: recaptchaToken,
       });
       if (recaptchaRejection) {
         return recaptchaRejection;

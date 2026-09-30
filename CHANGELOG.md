@@ -103,7 +103,9 @@ longer includes the payment tables.
 
 `multiPipeline` accepts a `pipelineStage` result or a stage array per action and runs the pipeline
 itself; actions written as `(options) => pipeline(options, ...)` still work. `pipelineStage` takes
-`quota` (per-IP quota scope) and `recaptcha` (action checked against the schema's `recaptchaToken`).
+`quota` (per-IP quota scope) and `recaptcha` (the action, checked against the token `Form` sends).
+`recaptcha()` reads the token from the raw request body, so a hand check passes `body: dataIn` in
+place of `token: data.recaptchaToken`, and schemas drop their `recaptchaToken` field.
 `loginPipeline(opts)` and `forgotPasswordPipeline(props)` now return a stage, and `logoutPipeline` and
 `sendOnboardingEmailAction` are plain stages, so call sites drop the `()`. Email login `subject` and
 `actionLabel`, and email change `subject`, default to `heading`; hosts that set a `heading` without a
