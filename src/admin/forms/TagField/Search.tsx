@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import type { ControllerRenderProps } from "react-hook-form";
 
 import { Tag as TagIcon } from "lucide-react";
 import { Skeleton } from "@kenstack/components/Skeleton";
@@ -20,11 +21,14 @@ import {
 import type { SelectOption } from "@kenstack/forms/controls/Select";
 
 import type { Tag } from "./types";
-import { type AnyField } from "@kenstack/forms/types";
 
 type TagSearchOption = Tag & SelectOption;
 
-export default function TagSearcht({ field }: { field: AnyField }) {
+export default function TagSearcht({
+  field,
+}: {
+  field: ControllerRenderProps;
+}) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [keywords, debouncedValue, setKeywords] = useDebounce();
   const [focusing, setFocusing] = useState(false);

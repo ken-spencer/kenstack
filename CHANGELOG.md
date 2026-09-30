@@ -144,6 +144,8 @@ Apart from the changes below, calls compile unchanged.
 - `ComposerPage` has no `blocks` property or second type parameter; `definePage` still takes the blocks.
 - `buttonVariants` no longer accepts `null` for `size` or `variant`; omit them for the defaults.
 - `userTableExtraConfig` and `ComboboxItem` (`PickerItem`) take no type argument.
+- `AnyField` and its file `@kenstack/forms/types` are gone; use react-hook-form's
+  `ControllerRenderProps`.
 
 ### `loadRecord` without `query` or typed `select`
 
