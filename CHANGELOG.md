@@ -486,12 +486,12 @@ showing "Sign in" after a sign-in until a full page load.
 its controller now follows browser identity for every visit: signing in, in the flow or another tab,
 skips the step, and losing identity brings it forward. A signed-in visitor never sees the step,
 forward or Back, so its "Signed in as …" view is gone. Switching accounts goes through the account
-menu, or a sign-out control on a later step, which a flow needs where a visitor can arrive with a
-proven email and no account (the account menu offers no Logout then). The `always` option is gone.
-Signing in inside a flow updates browser identity in place and advances without waiting; the login
-step's controller then fires `router.refresh()`, so account menus and other output that depends on
-identity update. Previously the flow waited for a server refresh to compose the steps that depend on
-identity, and a retained page instance could resurface around that refresh.
+menu, which now also shows a visitor with a proven email and no account yet, with that email and
+Logout. The `always` option is gone. Signing in inside a flow updates browser identity in place and
+advances without waiting; the login step's controller then fires `router.refresh()`, so account menus
+and other output that depends on identity update. Previously the flow waited for a server refresh to
+compose the steps that depend on identity, and a retained page instance could resurface around that
+refresh.
 
 Migration steps:
 
@@ -502,8 +502,6 @@ Migration steps:
   a signed-in visit and written back on save. Civic's `AccountDetailsStep` is the reference.
 - A standalone login page no longer redirects a signed-in visitor on the server, which the sign-in
   refresh would trigger mid-flow: the visitor walks the flow, which skips what it already has.
-- A flow a visitor can reach with a proven email and no account offers a sign-out control on a later
-  step, since the sign-in step no longer offers one; Civic's `AccountDetailsStep` is the reference.
 - A step controller that calls `setSkipped` includes `visit` from `useStep()` in its effect inputs,
   so a new visit recomputes its override.
 - `useStep()` and `useFlowContext()` no longer return `startedSkipped`, and StepFlow no longer keeps

@@ -48,9 +48,8 @@ summaries, and browser persistence in Kenstack and host sites.
   allows, until the link has signed the visitor in.
 - A flow that needs an account composes the login step on every visit, as it does every other step.
   A signed-in visitor skips it, forward and Back, so Back from the step after it reaches the step
-  before it. Switching accounts goes through the account menu, or through a sign-out control on a
-  later step; a visitor who has proven an email but has no account yet gets no Logout in the account
-  menu, so a flow that can reach that state offers one. `createLoginStep()` starts the step
+  before it. Switching accounts goes through the account menu, which also offers Logout to a visitor
+  who has proven an email but has no account yet. `createLoginStep()` starts the step
   skipped for a visit the server sees signed in, and its controller follows browser identity: signing
   in, in the flow or another tab, skips the step so the flow moves on, and losing identity brings it
   forward. Signing in updates browser identity in place, and the login step's controller then
