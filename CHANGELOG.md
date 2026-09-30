@@ -112,6 +112,20 @@ place of `token: data.recaptchaToken`, and schemas drop their `recaptchaToken` f
 `actionLabel`, and email change `subject`, default to `heading`; hosts that set a `heading` without a
 `subject` now send the heading as the subject.
 
+### `listQuery` joins take the query builder
+
+`listQuery`'s `joins` callback receives Kenstack's query builder for the table instead of Drizzle's
+built query, and returns it with its joins added. `listQuery` adds the visibility filter, `select` and
+`where` to what the callback returns, so a `.where()` there narrows the rows instead of replacing the
+visibility filter. A join names a table or a subquery with an `SQL` condition; a view, an `sql`
+join or a function `on` is no longer accepted.
+
+Migration steps:
+
+- Return the builder, chaining each join: `joins: (query) => query.innerJoin(table, on)`, in place of
+  calling `query.innerJoin(...)` for its effect.
+- Express a join the builder no longer accepts as a correlated `exists(...)` in `where`.
+
 ### First validation error per field
 
 `FormProvider` again shows the first failed schema rule or server error for each field, instead of

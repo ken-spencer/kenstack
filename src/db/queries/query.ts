@@ -1,4 +1,4 @@
-import { and, eq, isNull, type SQL } from "drizzle-orm";
+import { and, eq, isNull, type SQL, type Subquery } from "drizzle-orm";
 import type {
   PgSelectBase,
   PgSelectWithout,
@@ -7,6 +7,7 @@ import type {
 } from "drizzle-orm/pg-core";
 import type {
   AppendToNullabilityMap,
+  GetSelectTableName,
   JoinNullability,
 } from "drizzle-orm/query-builders/select.types";
 
@@ -19,7 +20,11 @@ type Merge<A, B> = {
   [K in keyof A | keyof B]: K extends keyof B ? B[K] : A[K & keyof A];
 };
 
-type Join = { on: SQL | undefined; table: PgTable; type: "inner" | "left" };
+type Join = {
+  on: SQL | undefined;
+  table: PgTable | Subquery;
+  type: "inner" | "left";
+};
 
 // Collects clauses in any order and any number of times: selections merge, conditions are ANDed and
 // joins accumulate. Drizzle's own where() replaces its condition, so the Drizzle query is built only
@@ -54,22 +59,28 @@ class Query<
     );
   }
 
-  innerJoin<TJoined extends PgTable>(table: TJoined, on: SQL | undefined) {
+  innerJoin<TJoined extends PgTable | Subquery>(
+    table: TJoined,
+    on: SQL | undefined,
+  ) {
     return new Query<
       TTable,
       TSelection,
-      AppendToNullabilityMap<TNullability, TJoined["_"]["name"], "inner">
+      AppendToNullabilityMap<TNullability, GetSelectTableName<TJoined>, "inner">
     >(this.table, this.selection, this.conditions, [
       ...this.joins,
       { on, table, type: "inner" },
     ]);
   }
 
-  leftJoin<TJoined extends PgTable>(table: TJoined, on: SQL | undefined) {
+  leftJoin<TJoined extends PgTable | Subquery>(
+    table: TJoined,
+    on: SQL | undefined,
+  ) {
     return new Query<
       TTable,
       TSelection,
-      AppendToNullabilityMap<TNullability, TJoined["_"]["name"], "left">
+      AppendToNullabilityMap<TNullability, GetSelectTableName<TJoined>, "left">
     >(this.table, this.selection, this.conditions, [
       ...this.joins,
       { on, table, type: "left" },

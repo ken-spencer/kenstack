@@ -1,9 +1,5 @@
 import { asc, gt, isNull, lte, type SQL } from "drizzle-orm";
-import type {
-  AnyPgSelectQueryBuilder,
-  PgColumn,
-  SelectedFields,
-} from "drizzle-orm/pg-core";
+import type { PgColumn, SelectedFields } from "drizzle-orm/pg-core";
 import { cacheLife, cacheTag } from "next/cache";
 import { draftMode } from "next/headers";
 
@@ -27,7 +23,7 @@ export async function listQuery<TSelection extends SelectedFields>(
     cacheLife: lifetime = "max",
     cacheTags,
     draft,
-    joins,
+    joins = (query) => query,
     limit,
     orderBy,
     select,
@@ -38,9 +34,11 @@ export async function listQuery<TSelection extends SelectedFields>(
     cacheLife?: string;
     cacheTags?: string[];
     draft: boolean;
+    // Receives the table's query builder and returns it with joins added. The visibility filter is
+    // added to the returned builder, so a where() here narrows the rows instead of replacing it.
     joins?: (
-      query: Pick<AnyPgSelectQueryBuilder, "innerJoin" | "leftJoin">,
-    ) => void;
+      builder: ReturnType<typeof query<AdminContentTable>>,
+    ) => ReturnType<typeof query<AdminContentTable>>;
     limit?: number;
     orderBy?: (PgColumn | SQL | SQL.Aliased)[];
     select: TSelection;
@@ -48,15 +46,15 @@ export async function listQuery<TSelection extends SelectedFields>(
   },
 ) {
   const now = new Date();
+  const joined = joins(query(table));
   const rowQuery = (
     draft
-      ? query(table).where(isNull(table.deletedAt))
-      : query(table).where(isVisible(table)).where(lte(table.publishedAt, now))
+      ? joined.where(isNull(table.deletedAt))
+      : joined.where(isVisible(table)).where(lte(table.publishedAt, now))
   )
     .select(select)
     .where(where)
     .build();
-  joins?.(rowQuery);
 
   if (orderBy) {
     rowQuery.orderBy(...orderBy);
@@ -66,13 +64,12 @@ export async function listQuery<TSelection extends SelectedFields>(
     rowQuery.limit(limit);
   }
 
-  const nextPublicationQuery = query(table)
+  const nextPublicationQuery = joined
     .select({ publishedAt: table.publishedAt })
     .where(isVisible(table))
     .where(gt(table.publishedAt, now))
     .where(where)
     .build();
-  joins?.(nextPublicationQuery);
   const [rows, [nextPublication]] = await Promise.all([
     rowQuery,
     cacheTags && !draft

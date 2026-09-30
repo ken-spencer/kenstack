@@ -351,7 +351,9 @@ The rules the shape encodes:
   returns the rows alone.
 - For a filtered cached variant, build its SQL predicate inside the cached function from serializable
   arguments and pass it once as `where`; a Drizzle `SQL` object never crosses the cache boundary. Use
-  `joins` when an inner join is required and keep the related predicate in `where`. The joined
+  `joins` when an inner join is required: it receives the table's query builder and returns it with
+  joins added, and listQuery adds visibility to the result, so a `where()` there narrows rows and
+  never replaces the visibility filter. Keep the related predicate in `where`. The joined
   relationship must preserve one result row per listed record; otherwise use a correlated `exists(...)`
   predicate. Keep one-use predicates inline. Joined dependency changes still require their ordinary
   cache tags, and a joined publishable table's schedule needs its own cache-lifetime treatment.

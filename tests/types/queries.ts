@@ -36,8 +36,8 @@ if (false) {
   >();
   void listed;
 
-  // The joins callback adds joins in place, and rows take their type from `select` alone, so a
-  // left-joined column keeps its column type.
+  // The joins callback returns the builder with joins added, and rows take their type from `select`
+  // alone, so a left-joined column keeps its column type.
   const listTags = defineTable({
     name: "list_query_type_tags",
     columns: {
@@ -47,9 +47,7 @@ if (false) {
   });
   const joinedList = listQuery(titles, {
     draft: false,
-    joins: (query) => {
-      query.leftJoin(listTags, eq(listTags.id, titles.id));
-    },
+    joins: (query) => query.leftJoin(listTags, eq(listTags.id, titles.id)),
     select: { id: titles.id, label: listTags.label, note: listTags.note },
   });
   expectTypeOf<Awaited<typeof joinedList>>().toEqualTypeOf<
