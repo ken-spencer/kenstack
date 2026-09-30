@@ -46,26 +46,23 @@ summaries, and browser persistence in Kenstack and host sites.
 - A return to the flow after leaving the page arrives at its URL like any visit. An emailed sign-in
   link carries its token there; the login controller brings its step forward, as far as the ledger
   allows, until the link has signed the visitor in.
-- A flow that needs an account composes the login step on every visit, as it does every other step. `createLoginStep()` reads
-  the server auth state: a visit that starts signed in skips the step, and its controller brings it
-  back if identity is lost during the visit, in this tab or another, then skips it again once the
-  visitor signs in so the flow resumes where it was. A visit that starts signed out keeps it as an
-  ordinary step, completed by signing in and continuing; if identity is lost later in that visit the
-  step is not recalled automatically, but the steps that need an account require themselves and Back
-  reaches the sign-in form. Signing in updates browser identity in place, and the login step's
-  controller then refreshes the server render without waiting on it, so account menus and other
-  output that depends on identity update; the step shows who is signed in with Continue and a way to
-  switch accounts. Data a step needs from the account, such as its saved details, reaches the browser
-  through a query keyed by user, hydrated from the server when the visit starts signed in.
+- A flow that needs an account composes the login step on every visit, as it does every other step.
+  A signed-in visitor skips it, forward and Back, so Back from the step after it reaches the step
+  before it. Switching accounts goes through the account menu, or through a sign-out control on a
+  later step; a visitor who has proven an email but has no account yet gets no Logout in the account
+  menu, so a flow that can reach that state offers one. `createLoginStep()` starts the step
+  skipped for a visit the server sees signed in, and its controller follows browser identity: signing
+  in, in the flow or another tab, skips the step so the flow moves on, and losing identity brings it
+  forward. Signing in updates browser identity in place, and the login step's controller then
+  refreshes the server render without waiting on it, so account menus and other output that depends
+  on identity update. Data a step needs from the account, such as its saved details, reaches the
+  browser through a query keyed by user, hydrated from the server when the visit starts signed in.
 - Inside a flow, the server render can run again mid-visit, as the refresh after a sign-in does. Steps
-  may vary their server-rendered content, but a refresh must not change the visit's step list, which
-  steps exist and which are skipped, because that would break Back and Forward continuity. The flow's
-  client parts own the step list for the visit: StepFlow saves the skipped values the visit started
-  with in its store, and `useStep()` exposes the step's `startedSkipped` and the `visit` id. A
-  step the saved visit started skipped comes back when the server shows it as the flow mounts, such
-  as the sign-in step for a visitor who has signed out since; the saved list never skips a step. Skip
-  overrides belong to the visit that set them; a controller that sets one includes `visit` in its
-  effect inputs, so a new visit recomputes it.
+  may vary their server-rendered content. A step whose skipped value can change during a visit sets
+  it live through its controller, and that override stands over a later server render, so a refresh
+  does not move the flow. Skip overrides belong to the visit that set them; `useStep()` exposes the
+  `visit` id, and a controller that sets an override includes it in its effect inputs, so a new
+  visit recomputes it.
 - A terminal result step sets `final`. It is reached through `next()` like any step, which records the
   preceding step in the ledger; it omits Back and the running summary and reads the flow's values as
   any step does. Arriving there also records the result in the ledger, and the next visit that finds a
@@ -76,8 +73,7 @@ summaries, and browser persistence in Kenstack and host sites.
 - A server step factory may return `null` when the step does not belong in the current flow. This is a
   composition decision made before StepFlow reaches the browser, not a completion rule. If refreshed server
   state omits the step the flow is on, the flow returns to the first retained step; a refreshed
-  `skipped` value does not apply until the next visit, since the visit keeps the skipped values it
-  started with. StepFlow filters omitted factories before it evaluates navigation progress, so an
+  `skipped` value applies unless the step's controller has set its own. StepFlow filters omitted factories before it evaluates navigation progress, so an
   omitted step never blocks a retained one.
 
 ## Flow ownership
@@ -119,8 +115,8 @@ summaries, and browser persistence in Kenstack and host sites.
   stored slice into a flow context; the flow owner reads its slices directly. Login uses its controller to
   follow browser identity and to bring its step forward for an emailed link, while server checks still
   govern protected content and operations. Until the browser hydrates, StepFlow applies server-supplied live prerequisites
-  with every stored slice absent; once hydrated it applies the visit's saved skipped values in their
-  place, and the completion ledger. A form whose defaults come from a restored slice reads the
+  with every stored slice absent; once hydrated it applies the completion ledger, and controllers'
+  overrides take the place of the server's skipped values. A form whose defaults come from a restored slice reads the
   slice itself, not a context value a controller fills in later, since a form keeps the defaults it
   mounted with.
 - Keep step-only data and behavior out of a broad flow context. A flow owner holds a cross-step result,
@@ -237,7 +233,7 @@ parallel API for that component.
 - The flow owns its step, seeded from the first step the server composes; later steps live in memory
   and the URL is never rewritten. StepFlow stores the sparse ledger of steps completed through
   `next()`, so it can decide whether a requested step, such as a controller's recall, is reachable,
-  and the visit's id and starting skipped values.
+  and the visit's id.
 - React Hook Form owns live edits. Persist only validated, committed workflow results needed after a
   refresh or an authentication round trip.
 - `StepFlow` renders one `QueryProvider` around the whole flow, so its steps and controllers share one

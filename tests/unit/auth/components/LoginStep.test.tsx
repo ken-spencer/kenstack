@@ -48,7 +48,7 @@ import StepFlow from "@kenstack/components/StepFlow";
 import { StepActions } from "@kenstack/components/StepFlow/StepActions";
 import { createLoginStep } from "@kenstack/auth/components/Login/Step";
 import StepLoginForm from "@kenstack/auth/components/Login/Step/Form";
-import { logoutUser, setUserInfo } from "@kenstack/auth/useUserInfo";
+import { setUserInfo } from "@kenstack/auth/useUserInfo";
 
 const token = "a".repeat(43);
 const linkFailureMessage =
@@ -199,87 +199,6 @@ describe("Login step", () => {
     expect(mocks.refresh).not.toHaveBeenCalled();
   });
 
-  it.each(["code", "link", "already-verified"])(
-    "shows the signed-in state after a terminal %s login and resets after logout",
-    async (method) => {
-      window.history.replaceState(
-        null,
-        "",
-        `/flow/signin${method === "link" ? `?token=${token}` : ""}`,
-      );
-      const authState = {
-        state: "proven",
-        email: "patron@example.com",
-      } as const;
-      mocks.fetcher.mockResolvedValueOnce({
-        status: "success",
-        path: "/flow",
-        authState,
-      });
-      const flow = await StepFlow({
-        basePath: "/flow",
-        steps: {
-          signin: {
-            title: "Sign in",
-            content: (
-              <StepLoginForm
-                email="patron@example.com"
-                challengeKey={
-                  method === "code"
-                    ? "6f0f6dfa-7e5a-4be8-a0d5-0f1c2ff05c55"
-                    : undefined
-                }
-              />
-            ),
-          },
-        },
-      });
-      await act(async () => root.render(flow));
-      if (method === "code")
-        await act(async () =>
-          setInputValue(
-            container.querySelector('input[name="code"]'),
-            "123456",
-          ),
-        );
-      if (method === "already-verified")
-        await act(async () => {
-          container
-            .querySelector("form")!
-            .dispatchEvent(
-              new Event("submit", { bubbles: true, cancelable: true }),
-            );
-        });
-      await vi.waitFor(() =>
-        expect(container.querySelector("form")).toBeNull(),
-      );
-      expect(mocks.refresh).not.toHaveBeenCalled();
-      mocks.fetcher.mockResolvedValueOnce({
-        status: "success",
-        authState: { state: "anonymous" },
-      });
-      await act(async () => logoutUser());
-      expect(container.querySelector('input[name="email"]')).not.toBeNull();
-      expect(container.querySelector('input[name="code"]')).toBeNull();
-      const replacement = await StepFlow({
-        basePath: "/flow",
-        steps: {
-          signin: {
-            title: "Sign in",
-            content: (
-              <StepLoginForm
-                email="patron@example.com"
-                challengeKey="6f0f6dfa-7e5a-4be8-a0d5-0f1c2ff05c56"
-              />
-            ),
-          },
-        },
-      });
-      await act(async () => root.render(replacement));
-      expect(container.querySelector('input[name="code"]')).not.toBeNull();
-    },
-  );
-
   it("advances after an embedded password login from the returned auth state", async () => {
     window.history.replaceState(null, "", "/flow/signin");
     mocks.fetcher.mockResolvedValueOnce({
@@ -327,41 +246,6 @@ describe("Login step", () => {
       expect(container.querySelector("h2")?.textContent).toBe("Done"),
     );
     expect(mocks.refresh).not.toHaveBeenCalled();
-
-    // Back shows who is signed in; switching accounts waits for the sign-out
-    // and reports a failure before offering the form.
-    await act(async () => {
-      container.querySelector<HTMLButtonElement>("button.back")?.click();
-    });
-    expect(container.querySelector("h2")?.textContent).toBe("Sign in");
-    const switchAccount = () =>
-      act(async () => {
-        Array.from(container.querySelectorAll("button"))
-          .find((button) => button.textContent === "Use a different account")
-          ?.click();
-        await new Promise((resolve) => setTimeout(resolve, 0));
-      });
-
-    const logout = Promise.withResolvers<Record<string, unknown>>();
-    mocks.fetcher.mockReturnValueOnce(logout.promise);
-    await switchAccount();
-    expect(container.querySelector('input[name="email"]')).toBeNull();
-    expect(
-      container.querySelector<HTMLButtonElement>("button.next")?.disabled,
-    ).toBe(true);
-    await act(async () => {
-      logout.resolve({ status: "error", authState: { state: "anonymous" } });
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
-    expect(container.querySelector('[role="alert"]')).not.toBeNull();
-    expect(container.querySelector('input[name="email"]')).toBeNull();
-
-    mocks.fetcher.mockResolvedValueOnce({
-      status: "success",
-      authState: { state: "anonymous" },
-    });
-    await switchAccount();
-    expect(container.querySelector('input[name="email"]')).not.toBeNull();
   });
 
   it("verifies the link once on the flow page and advances on success", async () => {

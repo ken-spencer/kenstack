@@ -15,49 +15,39 @@ export default function LoginController({
   authState: PublicAuthState;
 }) {
   const userInfo = useUserInfo(initialAuthState);
-  const { activate, isActive, setSkipped, startedSkipped, visit } = useStep();
+  const { activate, isActive, setSkipped, visit } = useStep();
   const hasIdentity =
     userInfo.state === "authenticated" || userInfo.state === "proven";
 
   // A link may switch accounts, so even signed-in visits must verify it.
   // Only form completion releases this prerequisite; waiting for the step
-  // to be left would deadlock. Capture the token before the form consumes it.
+  // to be left would deadlock. Capture the token, and whether the visit
+  // arrived with an identity (signed in, or a proven email) that would
+  // otherwise skip the step, before the form consumes the token and the
+  // sign-in refresh changes the server's auth state.
   const [linkToken] = useState(useSearchParams().get("token"));
+  const [startedWithLinkSignedIn] = useState(
+    linkToken !== null &&
+      (initialAuthState.state === "authenticated" ||
+        initialAuthState.state === "proven"),
+  );
   const handledToken = useHandledLinkToken();
   const keepsStepForLink =
-    linkToken !== null &&
-    initialAuthState.state === "authenticated" &&
-    handledToken !== linkToken;
-  // Whether the visit started signed in comes from its saved step list, not the latest server render,
-  // which shows a signed-in visitor once the sign-in refresh lands. A signed-in start with an emailed
-  // link keeps the step, so the server leaves it unskipped; the mount remembers that start.
-  const [startedWithLinkSignedIn] = useState(
-    linkToken !== null && initialAuthState.state === "authenticated",
-  );
-  const startedSignedIn = startedSkipped === true || startedWithLinkSignedIn;
+    startedWithLinkSignedIn && handledToken !== linkToken;
 
-  // A visit that started signed in skips the step only while identity holds:
-  // losing it, in this tab or another, brings the step forward, and signing
-  // in again skips it and lets the flow resume where it was. A visit that
-  // started signed out keeps the step as an ordinary one.
+  // A signed-in visitor skips the step, forward and Back. Losing identity, in
+  // this tab or another, brings it forward, and signing in, in the flow or
+  // another tab, skips it again so the flow resumes where it was.
   useLayoutEffect(() => {
-    if (!startedSignedIn || userInfo.state === "loading") {
+    if (userInfo.state === "loading") {
       return;
     }
 
     setSkipped(hasIdentity && !keepsStepForLink);
-  }, [
-    hasIdentity,
-    keepsStepForLink,
-    setSkipped,
-    startedSignedIn,
-    userInfo.state,
-    visit,
-  ]);
+  }, [hasIdentity, keepsStepForLink, setSkipped, userInfo.state, visit]);
 
   // A sign-in inside the flow, by this step, an emailed link or account creation, refreshes the
   // server render without waiting, so the menus and other output that depends on identity update.
-  // The visit keeps the step list it started with.
   const router = useRouter();
   const userId =
     userInfo.state === "authenticated" ? userInfo.userId : undefined;

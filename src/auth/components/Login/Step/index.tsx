@@ -8,11 +8,11 @@ import { loadLoginFormProps } from "../loadFormProps";
 import StepLoginForm from "./Form";
 import LoginController from "./Controller";
 
-// Composed for every visit. A visit that starts signed in skips the step and
-// its controller brings it back only if identity is lost; a visit that starts
-// signed out keeps it as an ordinary step. Signing in updates browser
-// identity in place, and the controller refreshes the server render; the
-// visit keeps the step list it started with.
+// Composed for every visit. A signed-in visitor skips the step, forward and
+// Back: it starts skipped on the server, and its controller follows browser
+// identity, bringing it forward if identity is lost and skipping it again once
+// the visitor signs in. Signing in updates browser identity in place, and the
+// controller refreshes the server render.
 export async function createLoginStep({
   hasLinkToken = false,
   title = "Sign in",
@@ -31,17 +31,10 @@ export async function createLoginStep({
     content: (
       <div className="mt-7 max-w-[560px]">
         <Suspense fallback={<div className="min-h-72 animate-pulse" />}>
-          <RememberedStepLoginForm
-            isServerSignedIn={
-              authState.state === "authenticated" ||
-              authState.state === "proven"
-            }
-          />
+          <RememberedStepLoginForm />
         </Suspense>
       </div>
     ),
-    // A signed-in visit starts skipped; a signed-out visit gets an ordinary
-    // step, not a live prerequisite, so signing in and continuing completes it.
     skipped:
       !hasLinkToken &&
       (authState.state === "authenticated" || authState.state === "proven")
@@ -51,17 +44,12 @@ export async function createLoginStep({
   };
 }
 
-async function RememberedStepLoginForm({
-  isServerSignedIn,
-}: {
-  isServerSignedIn: boolean;
-}) {
+async function RememberedStepLoginForm() {
   const formProps = await loadLoginFormProps();
 
   return (
     <StepLoginForm
       {...formProps}
-      isServerSignedIn={isServerSignedIn}
       passwordPath={getUsersModule().passwordPath}
     />
   );
