@@ -76,16 +76,14 @@ function LoginForm(
 }
 
 function LoginFormContent({
-  anchor,
   challengeKey: initialChallengeKey,
   email,
   loginMessage: initialLoginMessage,
   method: initialMethod,
-  mode,
   notice,
-  onComplete,
   passwordPath,
   token: searchToken,
+  ...continuation
 }: {
   challengeKey?: string;
   email: string;
@@ -95,6 +93,7 @@ function LoginFormContent({
   passwordPath?: string;
   token: string | null;
 } & Continuation) {
+  const { mode } = continuation;
   const [challengeKey, setChallengeKey] = useState(initialChallengeKey);
   const [isResending, setIsResending] = useState(false);
   // A form that stays mounted through a failed send shows its error when it mounts again.
@@ -127,8 +126,6 @@ function LoginFormContent({
         : undefined,
   );
 
-  const continuation: Continuation =
-    mode === "embedded" ? { anchor, mode, onComplete } : { mode };
   const completeLogin = useCompleteLogin(continuation);
   const account = useReauthenticationAccount();
 

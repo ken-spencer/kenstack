@@ -211,7 +211,10 @@ export function createEmailChange(options: EmailChangeOptions) {
         // The notice warns the address being replaced once per request, not
         // on resends, and never blocks the change.
         if (!data.challengeKey) {
-          const cancelUrl = new URL(options.linkPath, await siteOrigin(request));
+          const cancelUrl = new URL(
+            options.linkPath,
+            await siteOrigin(request),
+          );
           cancelUrl.searchParams.set("cancelEmailChange", challengeKey);
           await sendNotice({
             html: (

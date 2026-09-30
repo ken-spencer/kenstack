@@ -108,9 +108,10 @@ itself; actions written as `(options) => pipeline(options, ...)` still work. `pi
 `recaptcha()` reads the token from the raw request body, so a hand check passes `body: dataIn` in
 place of `token: data.recaptchaToken`, and schemas drop their `recaptchaToken` field.
 `loginPipeline(opts)` and `forgotPasswordPipeline(props)` now return a stage, and `logoutPipeline` and
-`sendOnboardingEmailAction` are plain stages, so call sites drop the `()`. Email login `subject` and
-`actionLabel`, and email change `subject`, default to `heading`; hosts that set a `heading` without a
-`subject` now send the heading as the subject.
+`sendOnboardingEmailAction` are plain stages, so call sites drop the `()`. `pipelineStage` has one
+signature, so a hand-typed call such as `pipelineStage<"admin">(...)` no longer compiles; let the
+options type the stage. Email login `subject` and `actionLabel`, and email change `subject`, default
+to `heading`; hosts that set a `heading` without a `subject` now send the heading as the subject.
 
 ### `listQuery` joins take the query builder
 
@@ -125,6 +126,24 @@ Migration steps:
 - Return the builder, chaining each join: `joins: (query) => query.innerJoin(table, on)`, in place of
   calling `query.innerJoin(...)` for its effect.
 - Express a join the builder no longer accepts as a correlated `exists(...)` in `where`.
+
+### Public types without their machinery
+
+Several public types lost generics, overloads or casts that only restated what TypeScript infers.
+Apart from the changes below, calls compile unchanged.
+
+- `ReturnedError` is a class: construct it with `new ReturnedError(message, options)`. A call without
+  `new` is a type error and throws at runtime.
+- `PageEditorProps` and `TextEdit`/`MarkdownEdit` take one generic defaulting to `"div"`; `tag` is
+  optional for every tag.
+- `AdminFilters` and `AdminFilterOptions` merge their identical text, boolean and date-range
+  members, so `Extract<…, { kind: "text" }>` gives `never`; narrow on `filter.kind` instead.
+- `AnyPgTableWithId` is gone; use `NumericIdTable` from `@kenstack/db/types`.
+- `KeywordSearch`'s `filters` has the setter's state type, so pass the filters object its setter
+  updates; inline callbacks need no type argument.
+- `ComposerPage` has no `blocks` property or second type parameter; `definePage` still takes the blocks.
+- `buttonVariants` no longer accepts `null` for `size` or `variant`; omit them for the defaults.
+- `userTableExtraConfig` and `ComboboxItem` (`PickerItem`) take no type argument.
 
 ### First validation error per field
 

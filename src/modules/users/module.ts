@@ -38,10 +38,7 @@ export function defineUsersModule<
   TPublic extends Record<string, unknown> = Record<never, never>,
   // What the site passed: an option it gives is typed exactly, and one it leaves out is absent, for
   // Kenstack's defaults to fill.
-  const TOptions extends UsersOptions<TSelect, TPublic> = Record<
-    never,
-    never
-  >,
+  const TOptions extends UsersOptions<TSelect, TPublic> = Record<never, never>,
 >({
   admin,
   ...options
