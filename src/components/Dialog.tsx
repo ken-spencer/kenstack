@@ -226,12 +226,16 @@ function DialogContent({
   onCancel,
   onClick,
   onClose,
+  onShow,
   onSubmit,
   showCloseButton = true,
   tabIndex = -1,
   ...props
 }: Omit<ComponentProps<"dialog">, "open"> & {
   "data-slot"?: string;
+  // Runs once showModal() has opened the dialog, such as to focus a chosen control. Pass a stable
+  // function: a new one runs again.
+  onShow?: (dialog: HTMLDialogElement) => void;
   showCloseButton?: boolean;
 }) {
   const { descriptionId, open, setOpen, titleId } =
@@ -243,6 +247,7 @@ function DialogContent({
     dialogRef,
     mounted && open,
     transitionDurationMs,
+    onShow,
   );
   const { isTopOverlay } = useOverlayStack({
     onClose: () => setOpen(false),

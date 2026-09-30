@@ -237,6 +237,12 @@ Migration steps:
 - A `row` column read for a check, such as `createdBy` for an edit permission, comes from the builder
   query too.
 
+### `DialogContent` takes `onShow`
+
+`DialogContent` accepts `onShow(dialog)`, called once `showModal()` has opened the dialog, such as to
+focus a chosen control. Pass a stable function, since a new one runs again. Without it, a dialog
+behaves as before.
+
 ### First validation error per field
 
 `FormProvider` again shows the first failed schema rule or server error for each field, instead of

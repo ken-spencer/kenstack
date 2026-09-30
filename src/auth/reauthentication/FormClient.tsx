@@ -30,6 +30,12 @@ const quietRetryOffsetsMs = [2000, 5000, 10000];
 const usableControl =
   'input:not([type="hidden"]):not([readonly]):not(:disabled), textarea:not(:disabled), button:not(:disabled)';
 
+// Focus goes to the first control the person can use, such as the password field; the email field is
+// the rendered account's and read-only.
+function focusFirstUsable(dialog: HTMLDialogElement) {
+  dialog.querySelector<HTMLElement>(usableControl)?.focus();
+}
+
 export default function ReauthenticationFormClient({
   children,
   loginForm,
@@ -56,7 +62,6 @@ export default function ReauthenticationFormClient({
   // replays nothing.
   const [opening, setOpening] = useState(0);
   const openingRef = useRef(opening);
-  const dialogBodyRef = useRef<HTMLDivElement>(null);
   const protectedAreaRef = useRef<HTMLDivElement>(null);
   const isOpen = heldCount > 0;
   // Set by a confirmation link opened in a new tab; the change it confirms is held in the first one.
@@ -71,26 +76,6 @@ export default function ReauthenticationFormClient({
       window.clearTimeout(quietRetryTimerRef.current);
     };
   }, []);
-
-  // Focus goes to the first control the person can use, such as the password field; the email
-  // field is the rendered account's and read-only. Opening the dialog moves focus itself, in a later
-  // commit, so this waits until it is open.
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-    let frame = 0;
-    const focusFirstUsable = () => {
-      const body = dialogBodyRef.current;
-      if (!body?.closest("dialog")?.open) {
-        frame = requestAnimationFrame(focusFirstUsable);
-        return;
-      }
-      body.querySelector<HTMLElement>(usableControl)?.focus();
-    };
-    frame = requestAnimationFrame(focusFirstUsable);
-    return () => cancelAnimationFrame(frame);
-  }, [isOpen, opening]);
 
   function hold(request: HeldRequest) {
     heldRef.current.push(request);
@@ -290,6 +275,7 @@ export default function ReauthenticationFormClient({
       >
         <DialogContent
           showCloseButton={!isReplaying}
+          onShow={focusFirstUsable}
           onClose={() => {
             // The protected area is inert until the dialog closes, and closing restores focus to a
             // control the result may have replaced.
@@ -301,7 +287,7 @@ export default function ReauthenticationFormClient({
             }
           }}
         >
-          <div className="space-y-4" ref={dialogBodyRef}>
+          <div className="space-y-4">
             <DialogTitle>{message}</DialogTitle>
             <DialogDescription>
               Use your password or a code sent to your email.
