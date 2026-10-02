@@ -1,5 +1,5 @@
-import getGeo from "@kenstack/lib/geo";
 import getIp from "@kenstack/lib/ip";
+import { geolocation } from "@vercel/functions";
 import { headers } from "next/headers";
 
 type ErrorLogInput = {
@@ -18,8 +18,8 @@ export default async function errorLog({
 }: ErrorLogInput) {
   const headersList = await headers();
   const request = new Request("http://internal", { headers: headersList });
-  const { city, country, region } = await getGeo();
-  const location = [city, region, country].filter(Boolean).join(", ");
+  const { city, country, countryRegion } = geolocation(request);
+  const location = [city, countryRegion, country].filter(Boolean).join(", ");
   let errorDetails;
   if (error instanceof Error) {
     errorDetails = {

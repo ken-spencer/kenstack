@@ -20,35 +20,13 @@ type MediaHandlerConfig = {
     mediaId: AnyPgColumn<{ data: number }>;
     sortOrder: AnyPgColumn<{ data: number }>;
   };
-  tableIdKey?: string;
-  tableId?: AnyPgColumn<{ data: number }>;
-  mediaIdKey?: string;
-  mediaId?: AnyPgColumn<{ data: number }>;
-  sortOrderKey?: string;
-  sortOrder?: AnyPgColumn<{ data: number }>;
 };
 
 export function mediaListField({
   table,
-  tableIdKey = "tableId",
-  tableId = table.tableId,
-  mediaIdKey = "mediaId",
-  mediaId = table.mediaId,
-  sortOrderKey = "sortOrder",
-  sortOrder = table.sortOrder,
 }: MediaHandlerConfig): ServerFieldResolverFor<
   ReturnType<typeof createMediaListField>
 > {
-  const media = {
-    table,
-    tableIdKey,
-    tableId,
-    mediaIdKey,
-    mediaId,
-    sortOrderKey,
-    sortOrder,
-  };
-
   return serverField(createMediaListField(), (field) => ({
     upload: {
       accept: field.accept,
@@ -59,7 +37,7 @@ export function mediaListField({
       return loadMedia({
         db,
         tableId,
-        media,
+        table,
       });
     },
     async save({ admin = false, db, tableId, value, user }) {
@@ -67,7 +45,7 @@ export function mediaListField({
         admin,
         db,
         tableId,
-        media,
+        table,
         selected: value,
         user,
       });
@@ -85,9 +63,9 @@ export function mediaListField({
       const allowedMediaIds = new Set<number>();
       if (id) {
         const currentRows = await db
-          .select({ mediaId: media.mediaId })
-          .from(media.table)
-          .where(eq(media.tableId, id));
+          .select({ mediaId: table.mediaId })
+          .from(table)
+          .where(eq(table.tableId, id));
 
         for (const { mediaId } of currentRows) {
           if (typeof mediaId === "number") {
@@ -145,21 +123,21 @@ export function mediaListField({
 async function loadMedia({
   db,
   tableId,
-  media,
+  table,
 }: {
   db: FieldLoadContext["db"];
   tableId: number;
-  media: Required<MediaHandlerConfig>;
+  table: MediaHandlerConfig["table"];
 }) {
   const rows = await db
     .select({
-      id: media.mediaId,
-      media: selectMediaSubquery(media.mediaId, "square"),
+      id: table.mediaId,
+      media: selectMediaSubquery(table.mediaId, "square"),
     })
-    .from(media.table)
-    .innerJoin(mediaTable, eq(media.mediaId, mediaTable.id))
-    .where(eq(media.tableId, tableId))
-    .orderBy(asc(media.sortOrder));
+    .from(table)
+    .innerJoin(mediaTable, eq(table.mediaId, mediaTable.id))
+    .where(eq(table.tableId, tableId))
+    .orderBy(asc(table.sortOrder));
 
   return rows
     .filter((row) => row.media)
@@ -173,28 +151,28 @@ async function saveMedia({
   admin,
   db,
   tableId,
-  media,
+  table,
   selected,
   user,
 }: {
   admin: boolean;
   db: FieldSaveContext["db"];
   tableId: number;
-  media: Required<MediaHandlerConfig>;
+  table: MediaHandlerConfig["table"];
   selected: z.output<typeof mediaListSchema>;
   user: User;
 }) {
   const oldRows = await db
     .select({
-      mediaId: media.mediaId,
+      mediaId: table.mediaId,
       alt: mediaTable.alt,
       title: mediaTable.title,
       caption: mediaTable.caption,
     })
-    .from(media.table)
-    .innerJoin(mediaTable, eq(media.mediaId, mediaTable.id))
-    .where(eq(media.tableId, tableId))
-    .orderBy(asc(media.sortOrder));
+    .from(table)
+    .innerJoin(mediaTable, eq(table.mediaId, mediaTable.id))
+    .where(eq(table.tableId, tableId))
+    .orderBy(asc(table.sortOrder));
 
   const oldMediaIds = oldRows
     .map((row) => row.mediaId)
@@ -287,11 +265,11 @@ async function saveMedia({
   );
 
   if (addedMediaIds.length) {
-    await db.insert(media.table).values(
+    await db.insert(table).values(
       addedMediaIds.map((mediaId) => ({
-        [media.tableIdKey]: tableId,
-        [media.mediaIdKey]: mediaId,
-        [media.sortOrderKey]: mediaIds.indexOf(mediaId),
+        tableId,
+        mediaId,
+        sortOrder: mediaIds.indexOf(mediaId),
       })),
     );
 
@@ -304,9 +282,9 @@ async function saveMedia({
   await Promise.all([
     ...movedMediaIds.map((mediaId) =>
       db
-        .update(media.table)
-        .set({ [media.sortOrderKey]: mediaIds.indexOf(mediaId) })
-        .where(and(eq(media.tableId, tableId), eq(media.mediaId, mediaId))),
+        .update(table)
+        .set({ sortOrder: mediaIds.indexOf(mediaId) })
+        .where(and(eq(table.tableId, tableId), eq(table.mediaId, mediaId))),
     ),
     ...changedMetadata.map(([mediaId, metadata]) =>
       db.update(mediaTable).set(metadata).where(eq(mediaTable.id, mediaId)),
@@ -315,11 +293,11 @@ async function saveMedia({
 
   if (removedMediaIds.length) {
     await db
-      .delete(media.table)
+      .delete(table)
       .where(
         and(
-          eq(media.tableId, tableId),
-          inArray(media.mediaId, removedMediaIds),
+          eq(table.tableId, tableId),
+          inArray(table.mediaId, removedMediaIds),
         ),
       );
 

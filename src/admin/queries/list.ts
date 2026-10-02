@@ -112,7 +112,7 @@ export async function queryAdminList({
   parentId?: number;
   query: ListQuery;
 }) {
-  if ((moduleParent && !parentId) || (!moduleParent && parentId)) {
+  if (moduleParent && !parentId) {
     return {
       status: "error",
       message: "Parent ID is missing.",
@@ -200,6 +200,7 @@ export async function queryAdminList({
     status: "success",
     items: rows.map((row) => serializeValues(row)),
     total: count,
+    limit,
   } as const;
 }
 
@@ -216,13 +217,6 @@ export async function loadAdminListNeighbors({
   parentId?: number;
   queryString: string;
 }) {
-  if ((moduleParent && !parentId) || (!moduleParent && parentId)) {
-    return {
-      previousId: null,
-      nextId: null,
-    };
-  }
-
   const data = parseListSearchParams({
     filters: adminConfig.list.filters,
     searchParams: searchParamsToRecord(new URLSearchParams(queryString)),

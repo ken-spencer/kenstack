@@ -5,7 +5,7 @@ import * as z from "zod";
 import { db } from "@app/db";
 import { modules } from "@app/modules";
 import { pipelineStage } from "@kenstack/api";
-import mailer from "@kenstack/lib/mailer";
+import mailer, { senderUnavailableMessage } from "@kenstack/lib/mailer";
 import siteOrigin from "@kenstack/lib/siteOrigin";
 import { formatUserName } from "@kenstack/lib/user";
 import { audit } from "@kenstack/logger";
@@ -60,7 +60,7 @@ export const sendOnboardingEmailAction = pipelineStage(
     if (delivery.status !== "sent") {
       return response.error(
         delivery.code === "SenderUnavailable"
-          ? "We couldn’t send the onboarding email because this site’s email sender isn’t set up."
+          ? senderUnavailableMessage("the onboarding email")
           : "We could not send the onboarding email. Try again in a moment.",
       );
     }

@@ -36,7 +36,6 @@ import {
 import {
   defineServerField,
   resolveServerFields,
-  serverField,
 } from "@kenstack/fields/server";
 import { defineFields } from "@kenstack/admin/fields";
 import { getDisplayValues } from "@kenstack/admin/pageEditor/display";
@@ -207,15 +206,6 @@ describe("field definitions", () => {
     configurableServerField({ kind: "other-value" });
 
     expect(configured.kind).toBe("test-value");
-  });
-
-  it("lets a custom kind registration override built-in server behavior", () => {
-    const fields = defineFields({ fields: { date: dateField() } });
-    const resolved = resolveServerFields(fields, {
-      fieldKinds: [serverField(dateField(), () => ({ zod: z.string() }))],
-    });
-
-    expect(resolved.date.zod.parse("")).toBe("");
   });
 
   it("configures the colocated date field on both sides", () => {

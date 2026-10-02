@@ -22,14 +22,20 @@ import {
   type MutationKey,
   type UseMutationResult,
 } from "@tanstack/react-query";
-import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 import type * as z from "zod";
 
 import fetcher, {
   type FetchResult,
   type FetchSuccess,
 } from "@kenstack/api/fetcher";
-import { getReturnedErrorMessage, ReturnedError } from "@kenstack/api/errors";
+import { getReturnedErrorMessage } from "@kenstack/api/errors";
+import { accountChangedRefusal } from "@kenstack/auth/renderedAccount";
+import { useAuthorization } from "@kenstack/auth/reauthentication/context";
+import {
+  refreshUserInfo,
+  setLoginDestination,
+  setUserInfo,
+} from "@kenstack/auth/useUserInfo";
 import { formErrorName, moveRootFormError } from "./internal/fieldErrors";
 import { SubmitFailureContext } from "@kenstack/forms/internal/submitFailure";
 import { isUnloadAllowed, useNavigationBlocker } from "./NavigationBlocker";
@@ -45,6 +51,8 @@ const FormContext = createContext<UseFormResult<any, any, any> | null>(null);
 export type StatusMessage = {
   status: NonNullable<NoticeProps["status"]>;
   message: React.ReactNode;
+  // A server refusal's code, kept so the notice can offer what it asks for.
+  code?: string;
 };
 
 type StatusMessageInput =
@@ -65,9 +73,11 @@ const noticeStatuses: readonly string[] = [
 ] satisfies Array<StatusMessage["status"]>;
 
 // Untyped callers can pass anything; only a notice-shaped object is shown.
-function hasStatus(
-  value: object,
-): value is { status: StatusMessage["status"]; message?: React.ReactNode } {
+function hasStatus(value: object): value is {
+  status: StatusMessage["status"];
+  message?: React.ReactNode;
+  code?: unknown;
+} {
   return (
     "status" in value &&
     typeof value.status === "string" &&
@@ -91,7 +101,11 @@ function normalizeStatusMessage(
   }
   if (typeof message === "object" && hasStatus(message)) {
     return message.message
-      ? { status: message.status, message: message.message }
+      ? {
+          status: message.status,
+          message: message.message,
+          ...(typeof message.code === "string" && { code: message.code }),
+        }
       : null;
   }
 
@@ -113,9 +127,10 @@ export type FormProviderProps<
   mutationFn?: MutationFn<TResult, TVariables>;
   // Lets code outside the form follow its submission with `useIsMutating`.
   mutationKey?: MutationKey;
-  // Names the reCAPTCHA action this form protects. Each submission requests
-  // a token under that name and sends it as `recaptchaToken`; the site-wide
-  // RecaptchaProvider supplies the script.
+  // Names the reCAPTCHA action this form protects. Each `apiPath` submission
+  // passes it to fetcher, which sends a token under that name; a `mutationFn`
+  // passes it to its own fetcher call. The site-wide RecaptchaProvider loads
+  // the script.
   recaptchaAction?: string;
   schema: TSchema;
   defaultValues: DefaultValues<z.input<TSchema>>;
@@ -188,7 +203,7 @@ function FormContextProvider<
   recaptchaAction,
   children,
 }: FormProviderProps<TResult, TVariables, TSchema>) {
-  const { executeRecaptcha } = useGoogleReCaptcha();
+  const { track } = useAuthorization();
   const [statusMessage, setStatusMessageState] = useState<StatusMessage | null>(
     initialStatusMessage ?? null,
   );
@@ -252,35 +267,19 @@ function FormContextProvider<
 
   const mutation = useMutation({
     mutationKey,
-    mutationFn: async (variables: TVariables, context) => {
-      // Without a configured site key the provider supplies no
-      // executeRecaptcha, and the server skips the check. With no provider
-      // mounted at all the library's default throws, so the cause is kept
-      // for the console.
-      if (recaptchaAction && executeRecaptcha) {
-        let recaptchaToken;
-        try {
-          recaptchaToken = await executeRecaptcha(recaptchaAction);
-        } catch (error) {
-          throw Object.assign(
-            new ReturnedError(
-              "reCAPTCHA didn’t complete. Refresh the page and try again.",
-            ),
-            { cause: error },
-          );
+    // A request refused for stale authorization is held by a surrounding confirmation, which runs it
+    // again once the person confirms; the form stays pending, and shows only the final result.
+    mutationFn: (variables: TVariables, context) =>
+      track(async () => {
+        if (mutationFn) {
+          return mutationFn(variables, context);
         }
-        variables = { ...variables, recaptchaToken };
-      }
 
-      if (mutationFn) {
-        return await mutationFn(variables, context);
-      }
-
-      if (!apiPath) {
-        throw Error("apiPath or mutationFn is required to mutate a form");
-      }
-      return fetcher<TResult>(apiPath, variables);
-    },
+        if (!apiPath) {
+          throw Error("apiPath or mutationFn is required to mutate a form");
+        }
+        return fetcher<TResult>(apiPath, variables, { recaptchaAction });
+      }),
     onMutate: () => {
       setStatusMessage(null);
     },
@@ -298,6 +297,11 @@ function FormContextProvider<
     },
     onSuccess: (data, variables) => {
       if (data.status === "error") {
+        // A sign-in that changed elsewhere: the user-info store settles which account the tab now
+        // has. A page rendered signed out takes it; one rendered for an account asks to reload.
+        if (data.code === accountChangedRefusal.code) {
+          void refreshUserInfo();
+        }
         const { fieldErrors, formErrors = [] } = data;
         if (fieldErrors || formErrors.length) {
           clearErrors();
@@ -328,6 +332,15 @@ function FormContextProvider<
       }
 
       if (data.status === "success") {
+        // This tab's own change to the user or session, adopted in the same handler as onSuccess below,
+        // so a step's next() lands in the same render.
+        if (data.userInfo) {
+          const { authState, loginDestination } = data.userInfo;
+          if (loginDestination !== undefined) {
+            setLoginDestination(authState, loginDestination);
+          }
+          setUserInfo(authState);
+        }
         if (data.values) {
           // this will only update fields that are rendered
           Object.entries(data.values).forEach(([fieldName, value]) => {

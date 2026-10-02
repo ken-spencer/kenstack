@@ -46,8 +46,7 @@ export default function RevisionHistoryButton() {
   } | null>(null);
   const { reset, setValue } = useFormContext<Record<string, unknown>>();
   const { mutation, setStatusError, setStatusMessage } = useForm();
-  const { apiPath, defaultValues, id, isNew, name, oneToOne, schema, single } =
-    useAdminEdit();
+  const { apiPath, id, isNew, name, oneToOne, schema, single } = useAdminEdit();
   const revisionTarget = single ? name : id;
   const selectedRevisionId =
     selectedRevision && selectedRevision.selectedAt > mutation.submittedAt
@@ -89,7 +88,7 @@ export default function RevisionHistoryButton() {
         return;
       }
 
-      reset(defaultValues);
+      reset();
       if (!oneToOne) {
         for (const [fieldName, value] of Object.entries(
           data.revision.snapshot,

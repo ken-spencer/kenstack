@@ -15,6 +15,7 @@ import { sessions } from "@kenstack/db/tables/sessions";
 import { formatUserInitials, formatUserName } from "@kenstack/lib/user";
 import { adminLoadCacheTag } from "@kenstack/admin/cache";
 
+import { hasRoleAccess } from "./roleAccess";
 import { hashToken } from "./token";
 import { getUsersModule } from "./getUsersModule";
 import type { Role } from "./types";
@@ -65,7 +66,8 @@ async function loadUserByTokenHash(tokenHash: string) {
 // Cached per session for up to fifteen minutes; login, logout, impersonation,
 // password changes, and user edits revalidate the tags so a change takes
 // effect on the next request. getFreshCurrentUser and getFreshCurrentSession
-// bypass it.
+// bypass it, only to read the session or user again after this request has
+// changed it.
 async function getCachedUserByTokenHash(tokenHash: string) {
   "use cache: remote";
   cacheTag(sessionCacheTag(tokenHash));
@@ -168,8 +170,7 @@ export const getCurrentSession = cache(async () => {
     : undefined;
 });
 
-// Authorization for a write reads the session row itself: a revoked session must
-// fail at once, not once its cleared cache entry reaches the remote cache.
+// Only for reading the session or user again after this request has changed it.
 export const getFreshCurrentSession = async () => {
   const token = await getSessionToken();
   return token
@@ -195,16 +196,8 @@ export const requireUser = cache(async function requireUser(
     redirect(getLoginReturnPath(returnTo));
   }
 
-  const requiredAccess = Array.isArray(access) ? access : [access];
-
-  if (!requiredAccess.includes("authenticated")) {
-    const hasPermission = user.roles.some((userRole) =>
-      requiredAccess.includes(userRole),
-    );
-
-    if (!hasPermission) {
-      redirect("/login");
-    }
+  if (!hasRoleAccess(user.roles, access)) {
+    redirect("/login");
   }
 
   return user;

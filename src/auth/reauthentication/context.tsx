@@ -11,8 +11,6 @@ export const AuthorizationContext = createContext<{
   cancel: () => void;
   // Called by the confirmation sign-in with the state it signed in.
   confirm: (authState: PublicAuthState) => void;
-  // True while the confirmation is open, holding a refused request.
-  isHolding: boolean;
   // Quietly tries what the confirmation holds again, for a sign-in finished in another tab; a
   // refusal leaves the confirmation as it is.
   replay: () => void;
@@ -26,7 +24,6 @@ export const AuthorizationContext = createContext<{
 }>({
   cancel: () => {},
   confirm: () => {},
-  isHolding: false,
   replay: () => {},
   track: (request) => request(),
 });

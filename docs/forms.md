@@ -20,20 +20,26 @@ and client-side form validation in Kenstack and host sites.
 - `FormProvider` supplies the React Query provider its mutation requires, as `StepFlow` and the admin
   sidebar do for their contents, so a form needs no `QueryProvider` of its own. Outside those, keep an
   outer provider only when a component calls a query hook before the form provider is mounted.
+- `Form` adopts a success response's `userInfo`, which the pipeline adds for
+  `response.success({ returnUser: true })`, as this tab's own change to the user or session, just before
+  `onSuccess`.
 - A field whose control is a set of buttons sharing one value uses `GroupField`. Its fieldset carries
   the field's ref and ids, so an invalid group receives focus and its error message; `render` supplies
   the buttons and reads `field.value` and `field.onChange`. A hidden input is never the registered
   control.
-- A form whose API checks reCAPTCHA names its action with `recaptchaAction`. The provider requests the
-  token on each submission and sends it as `recaptchaToken`; a failed token request reports through the
-  status outlet. Submit handlers do not call `executeRecaptcha` themselves. The host mounts one
-  `RecaptchaProvider` site-wide so the score reflects the whole visit. The API checks the token with
-  `pipelineStage({ recaptcha: "<action>" })`, or by hand with
+- A form whose API checks reCAPTCHA names its action with `recaptchaAction`, which `Form` passes to
+  `fetcher`. `fetcher` requests the token on each submission and sends it as `recaptchaToken`; a failed
+  token request reports through the status outlet. A request outside a form, or a `mutationFn`, passes
+  `{ recaptchaAction }` to its own `fetcher` call; nothing calls `executeRecaptcha` itself. The host
+  mounts one `RecaptchaProvider` site-wide to load the script, so the score reflects the whole visit.
+  The API checks the token with `pipelineStage({ recaptcha: "<action>" })`, or by hand with
   `recaptcha({ action, body: dataIn, request, response })`; both read it from the raw request body, so
   schemas never declare it.
+- A handler with cheap refusals or shortcuts, such as a lockout, a quota read or a shortcut that sends
+  nothing, checks reCAPTCHA by hand after them, so those requests never cost an assessment.
 - The reCAPTCHA terms always come last, below every button, in a page or a dialog. `Form` renders them
-  after its children; a form that requests a token outside `recaptchaAction`, such as a resend link,
-  renders `RecaptchaTerms` after its own buttons, and a dialog puts no buttons below its form.
+  after its children; a form that requests a token through its own `fetcher` call, such as a resend
+  link, renders `RecaptchaTerms` after its own buttons, and a dialog puts no buttons below its form.
 - Read dependent values with `watch` or `useWatch` and derive conditional UI, available options,
   validation inputs, eligibility, and displayed totals from the current form values; live form fields
   and derived form values have no second copy in component state. A validated result committed by a

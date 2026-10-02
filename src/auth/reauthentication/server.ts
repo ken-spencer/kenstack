@@ -7,25 +7,17 @@ import { modules } from "@app/modules";
 import type { DbTransaction } from "@kenstack/db/types";
 import { sessions } from "@kenstack/db/tables/sessions";
 import { hashToken } from "@kenstack/auth/server/token";
-import {
-  getFreshCurrentSession,
-  getFreshCurrentUser,
-  sessionCacheTag,
-} from "@kenstack/auth/server/user";
-import { normalizeEmail } from "@kenstack/fields/email";
+import { getCurrentSession, sessionCacheTag } from "@kenstack/auth/server/user";
 import { ReturnedError } from "@kenstack/api";
 import { hasRecentAuthentication } from "./index";
 import { getLoginReturnPath } from "@kenstack/auth/returnTo";
 
-// The guard is the only authority for a protected write. It takes the account the request names, and
-// refuses before the handler writes: signed out, sign in; another account, "account-changed", on which
-// the page reloads; a stale session, "reauthentication-required", with no redirect, so the page keeps
-// what was typed and asks for confirmation.
-export async function requireRecentAuthentication(
-  request: Request,
-  expectedUserId: number,
-) {
-  const session = await getFreshCurrentSession();
+// The guard is the only authority for a protected write, and refuses before the handler writes: signed
+// out, sign in; a stale session, "reauthentication-required", with no redirect, so the page keeps what
+// was typed and asks for confirmation. The pipeline's access check already refused a page rendered for
+// another account.
+export async function requireRecentAuthentication(request: Request) {
+  const session = await getCurrentSession();
   if (!session) {
     const referer = request.headers.get("referer");
     const returnTo =
@@ -36,12 +28,6 @@ export async function requireRecentAuthentication(
       redirect: getLoginReturnPath(
         returnTo ? returnTo.pathname + returnTo.search : undefined,
       ),
-    });
-  }
-  if (session.userId !== expectedUserId) {
-    throw new ReturnedError("Sign in to continue.", {
-      code: "account-changed",
-      status: 401,
     });
   }
   if (session.impersonatedBy !== null) {
@@ -60,26 +46,6 @@ export async function requireRecentAuthentication(
     );
   }
   return session;
-}
-
-// A confirmation sign-in names the account its page was rendered for. When this browser's session
-// belongs to another account, or that account's email has changed, it is refused before a password is
-// checked or a code is sent or redeemed. Without a session nothing is compared, so the check reveals
-// no account. The email is the request schema's normalized address.
-export async function requireUnchangedAccount(
-  expectedUserId: number,
-  email: string,
-) {
-  const user = await getFreshCurrentUser();
-  if (
-    user &&
-    (user.id !== expectedUserId || normalizeEmail(user.email) !== email)
-  ) {
-    throw new ReturnedError("Sign in to continue.", {
-      code: "account-changed",
-      status: 401,
-    });
-  }
 }
 
 // Issuing an email-change code extends only authority that is still live, through the code's expiry.

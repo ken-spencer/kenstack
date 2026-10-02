@@ -1,5 +1,6 @@
 import type { Instrumentation } from "next";
 import type { EmailAddress } from "@kenstack/lib/mailer";
+import escape from "lodash-es/escape";
 
 const alertTtlSeconds = 15 * 60;
 
@@ -183,15 +184,15 @@ async function writeErrorReport(
       subject: `[${environment}] ${error.name}: ${message}`.slice(0, 180),
       html: [
         `<h1>Unexpected server error</h1>`,
-        `<p><strong>Project:</strong> ${escapeHtml(project)}</p>`,
-        `<p><strong>Environment:</strong> ${escapeHtml(environment)}</p>`,
-        `<p><strong>Time:</strong> ${escapeHtml(timestamp)}</p>`,
-        source ? `<p><strong>Source:</strong> ${escapeHtml(source)}</p>` : "",
-        `<p><strong>Route:</strong> ${escapeHtml(route)}</p>`,
-        `<p><strong>Method:</strong> ${escapeHtml(request?.method ?? "Unknown")}</p>`,
-        `<p><strong>Error:</strong> ${escapeHtml([error.name, code, message].filter(Boolean).join(" · "))}</p>`,
+        `<p><strong>Project:</strong> ${escape(project)}</p>`,
+        `<p><strong>Environment:</strong> ${escape(environment)}</p>`,
+        `<p><strong>Time:</strong> ${escape(timestamp)}</p>`,
+        source ? `<p><strong>Source:</strong> ${escape(source)}</p>` : "",
+        `<p><strong>Route:</strong> ${escape(route)}</p>`,
+        `<p><strong>Method:</strong> ${escape(request?.method ?? "Unknown")}</p>`,
+        `<p><strong>Error:</strong> ${escape([error.name, code, message].filter(Boolean).join(" · "))}</p>`,
         `<p><strong>Fingerprint:</strong> ${fingerprint}</p>`,
-        stack ? `<pre>${escapeHtml(stack)}</pre>` : "",
+        stack ? `<pre>${escape(stack)}</pre>` : "",
       ].join(""),
     });
 
@@ -375,23 +376,6 @@ function getErrorCode(error: Error) {
   return typeof code === "string" || typeof code === "number"
     ? String(code)
     : null;
-}
-
-function escapeHtml(value: string) {
-  return value.replace(/[&<>"']/g, (character) => {
-    switch (character) {
-      case "&":
-        return "&amp;";
-      case "<":
-        return "&lt;";
-      case ">":
-        return "&gt;";
-      case '"':
-        return "&quot;";
-      default:
-        return "&#039;";
-    }
-  });
 }
 
 function redactSensitiveText(value: string) {

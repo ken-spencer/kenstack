@@ -17,14 +17,13 @@ export const loadModuleSettingsAction = (
   }
 
   return pipelineStage({ access: "admin" }, async ({ response }) => {
-    const result = await loadRecord({
+    const values = await loadRecord({
       table: settings.table,
       fields: settings.fields,
-      defaults: settings.defaultValues,
       where: eq(settings.table.key, name),
     });
 
-    return response.success({ values: result.values });
+    return response.success({ values: values ?? settings.defaultValues });
   });
 };
 

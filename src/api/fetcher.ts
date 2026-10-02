@@ -1,11 +1,33 @@
 "use client";
 
+import type { UserInfoResult } from "@kenstack/auth/api";
+import {
+  getRenderedAccount,
+  renderedAccountHeader,
+} from "@kenstack/auth/renderedAccount";
+
 import { ReturnedError } from "./errors";
+
+declare global {
+  interface Window {
+    // The reCAPTCHA v3 script's global. It has only `ready` until the script has loaded.
+    grecaptcha?: {
+      ready: (callback: () => void) => void;
+      execute?: (
+        siteKey: string,
+        options: { action: string },
+      ) => Promise<string>;
+    };
+  }
+}
 
 export type FetchSuccess<T extends Record<string, unknown>> = {
   status: "success";
   message?: string;
   redirect?: string;
+  // This tab's own change to the user or session, from a server success with `returnUser`; Kenstack's
+  // Form adopts it.
+  userInfo?: UserInfoResult;
 } & T;
 
 export type FetchError = {
@@ -29,13 +51,53 @@ export default async function fetcher<
 >(
   path: RequestInfo,
   data: Record<string, unknown> | null = null,
-  options: RequestInit = {},
+  options: RequestInit & {
+    // Requests a reCAPTCHA token under this action and sends it as `recaptchaToken`, for an API stage
+    // whose `recaptcha` names the same action.
+    recaptchaAction?: string;
+  } = {},
 ): Promise<FetchResult<TExtra>> {
-  const { headers: initHeaders, method, cache = "no-store", ...rest } = options;
+  const {
+    headers: initHeaders,
+    method,
+    cache = "no-store",
+    recaptchaAction,
+    ...rest
+  } = options;
   const headers = new Headers(initHeaders);
   const isPost = data !== null;
 
-  const body = isPost ? JSON.stringify(data) : undefined;
+  const renderedAccount = getRenderedAccount();
+  if (typeof renderedAccount === "number") {
+    headers.set(renderedAccountHeader, String(renderedAccount));
+  }
+
+  // Without a site key, or before the script has loaded, there is no token to send. The server ignores
+  // one for a signed-in visitor.
+  let payload = data;
+  if (recaptchaAction && data) {
+    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY?.trim();
+    const { grecaptcha } = window;
+    if (siteKey && grecaptcha?.execute) {
+      let recaptchaToken;
+      try {
+        await new Promise<void>((resolve) => grecaptcha.ready(resolve));
+        recaptchaToken = await grecaptcha.execute(siteKey, {
+          action: recaptchaAction,
+        });
+      } catch (error) {
+        throw Object.assign(
+          new ReturnedError(
+            "reCAPTCHA didn’t complete. Refresh the page and try again.",
+          ),
+          { cause: error },
+        );
+      }
+      payload = { ...data, recaptchaToken };
+    }
+  }
+
+  const body = isPost ? JSON.stringify(payload) : undefined;
   if (isPost && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }

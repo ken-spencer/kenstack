@@ -20,10 +20,6 @@ export const listAction = ({
         return response.error("This module is not listable.");
       }
 
-      if ((parent && !data.parentId) || (!parent && data.parentId)) {
-        return response.error("Parent ID is missing.");
-      }
-
       const result = await queryAdminList({
         adminConfig,
         moduleParent: parent,
@@ -38,6 +34,7 @@ export const listAction = ({
       return response.success({
         total: result.total,
         items: result.items,
+        limit: result.limit,
       });
     },
   );

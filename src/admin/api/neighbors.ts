@@ -24,7 +24,7 @@ export const neighborsAction = ({
         return response.error("This admin config is not listable.");
       }
 
-      if ((parent && !data.parentId) || (!parent && data.parentId)) {
+      if (parent && !data.parentId) {
         return response.error("Parent ID is missing.");
       }
 

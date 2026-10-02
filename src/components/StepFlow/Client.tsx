@@ -1,11 +1,23 @@
 "use client";
 
-import { Activity, Suspense, useEffect, useId, useRef } from "react";
+import {
+  Activity,
+  Suspense,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+} from "react";
 
 import useIsHydrated from "@kenstack/hooks/useIsHydrated";
 
 import type { Step, StepFlowProps } from "./types";
-import { FlowProvider, StepScope, useFlowContext } from "./context";
+import {
+  buildResumeScript,
+  FlowProvider,
+  StepScope,
+  useFlowContext,
+} from "./context";
 
 export default function StepFlowClient({
   Actions,
@@ -43,12 +55,20 @@ function StepFlowContent({
   Header: NonNullable<StepFlowProps["Header"]>;
   steps: Record<string, Step>;
 }) {
-  const { activeStep, id, isFinalStep } = useFlowContext();
+  const { basePath, id, shownStep } = useFlowContext();
   const isHydrated = useIsHydrated();
   const stepIds = Object.keys(steps);
   const headingId = useId();
   const regionRef = useRef<HTMLDivElement>(null);
   const mountedStepRef = useRef<string | undefined>(undefined);
+
+  // The first hydrated render shows the tab's stored step, so the region the
+  // resume script hid can show.
+  useLayoutEffect(() => {
+    if (isHydrated) {
+      regionRef.current?.removeAttribute("data-resuming");
+    }
+  }, [isHydrated]);
 
   // Each step change moves focus to the new step's region, so assistive
   // technology announces it, and brings the top of the flow back into view
@@ -56,20 +76,20 @@ function StepFlowContent({
   // settled by the ledger after hydration counts as the initial one.
   useEffect(() => {
     const region = regionRef.current;
-    if (!region || !isHydrated || activeStep === undefined) {
+    if (!region || !isHydrated || shownStep === undefined) {
       return;
     }
 
     if (mountedStepRef.current === undefined) {
-      mountedStepRef.current = activeStep;
+      mountedStepRef.current = shownStep;
       return;
     }
 
-    if (mountedStepRef.current === activeStep) {
+    if (mountedStepRef.current === shownStep) {
       return;
     }
 
-    mountedStepRef.current = activeStep;
+    mountedStepRef.current = shownStep;
     const rect = region.getBoundingClientRect();
     const scrollMarginTop =
       Number.parseFloat(window.getComputedStyle(region).scrollMarginTop) || 0;
@@ -84,34 +104,45 @@ function StepFlowContent({
         block: "start",
       });
     }
-  }, [activeStep, isHydrated]);
+  }, [shownStep, isHydrated]);
 
   return (
     <div
       aria-labelledby={headingId}
-      className="step-flow scroll-mt-24 outline-none"
+      className="step-flow scroll-mt-24 outline-none data-resuming:invisible"
       id={id}
       ref={regionRef}
       role="region"
+      // The resume script marks the region before React hydrates it.
+      suppressHydrationWarning
       tabIndex={-1}
     >
+      {isHydrated ? null : (
+        <script
+          dangerouslySetInnerHTML={{
+            __html: buildResumeScript(basePath, shownStep),
+          }}
+        />
+      )}
+      {/* Controllers mount once hydrated, so none acts in the hydration commit,
+          before the flow has resumed the tab's step. */}
       {stepIds.map((stepId) =>
-        steps[stepId].controller !== undefined ? (
+        steps[stepId].controller !== undefined && isHydrated ? (
           <StepScope key={stepId} stepId={stepId}>
             {steps[stepId].controller}
           </StepScope>
         ) : null,
       )}
-      {activeStep === undefined ? (
+      {shownStep === undefined ? (
         <p id={headingId} role="status">
           Loading…
         </p>
       ) : (
-        <StepScope stepId={activeStep}>
+        <StepScope stepId={shownStep}>
           <Header
             headingId={headingId}
-            summary={isFinalStep ? undefined : summary}
-            title={steps[activeStep].title}
+            summary={steps[shownStep].final ? undefined : summary}
+            title={steps[shownStep].title}
           />
         </StepScope>
       )}
@@ -120,7 +151,7 @@ function StepFlowContent({
       {stepIds.map((stepId) => (
         <Activity
           key={stepId}
-          mode={stepId === activeStep ? "visible" : "hidden"}
+          mode={stepId === shownStep ? "visible" : "hidden"}
         >
           <StepScope stepId={stepId}>
             <Suspense

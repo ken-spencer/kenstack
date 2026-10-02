@@ -9,21 +9,28 @@ import {
 } from "react";
 import type * as z from "zod";
 
-import { parseDuration } from "@kenstack/lib/duration";
 import { isRecord } from "@kenstack/lib/isRecord";
 
-// A store is a set of named slices in localStorage under one id, sharing one
-// 24-hour lifetime that every write refreshes. StepFlow keys its store on the
-// flow's base path; a flow owner that knows that path reads the same slices.
+// A store is a set of named slices in this tab's sessionStorage under one id;
+// the tab closing clears it. StepFlow keys its store on the flow's base path;
+// a flow owner that knows that path reads the same slices.
 
 const storedStateChangeEvent = "stored-state-change";
 const storageAvailabilityChangeEvent = "stored-state-availability-change";
+const probeKey = "stored-state:$probe";
 let hasStorageMutationFailed = false;
 let storageAvailabilitySubscriberCount = 0;
 
-// Storage is assumed available until a mutation fails; the owner then stops
-// and asks the visitor to enable site data and reload.
+// A test write on mount finds blocked storage before the visitor acts, and
+// every mutation checks again. Once one fails, the owner stops and asks the
+// visitor to enable site data and reload.
 export function useStorageAvailability() {
+  useEffect(() => {
+    if (writeStorageItem(probeKey, "")) {
+      removeStorageItem(probeKey);
+    }
+  }, []);
+
   return useSyncExternalStore(
     subscribeToStorageAvailability,
     isStorageAvailable,
@@ -37,7 +44,7 @@ function isStorageAvailable() {
 
 function readStorageItem(key: string) {
   try {
-    return window.localStorage.getItem(key);
+    return window.sessionStorage.getItem(key);
   } catch {
     return null;
   }
@@ -49,7 +56,7 @@ function writeStorageItem(key: string, value: string) {
   }
 
   try {
-    window.localStorage.setItem(key, value);
+    window.sessionStorage.setItem(key, value);
     return true;
   } catch {
     notifyStorageAvailabilityChange();
@@ -63,7 +70,7 @@ function removeStorageItem(key: string) {
   }
 
   try {
-    window.localStorage.removeItem(key);
+    window.sessionStorage.removeItem(key);
     return true;
   } catch {
     notifyStorageAvailabilityChange();
@@ -80,20 +87,14 @@ export function useStoredValue<T>(
   (update: SetStateAction<T | undefined>) => boolean,
 ] {
   const key = getStorageKey(storeId, name);
-  // A slice is visible only while the store's shared deadline is in the
-  // future. It is absent on the server and during hydration; a consumer that
+  // A slice is absent on the server and during hydration; a consumer that
   // must tell that apart from "nothing stored" checks useIsHydrated().
   const stored = useSyncExternalStore(
     useCallback(
-      (notify: () => void) => subscribeToStorageKey(storeId, key, notify),
-      [storeId, key],
+      (notify: () => void) => subscribeToStorageKey(key, notify),
+      [key],
     ),
-    useCallback(() => {
-      const deadline = readStoreDeadline(storeId);
-      return deadline !== undefined && deadline > Date.now()
-        ? readStorageItem(key)
-        : null;
-    }, [storeId, key]),
+    useCallback(() => readStorageItem(key), [key]),
     absentSnapshot,
   );
   const parsedValue = useMemo(
@@ -117,13 +118,6 @@ export function useStoredValue<T>(
     parsedValue,
     useCallback(
       (update: SetStateAction<T | undefined>) => {
-        // A write to a store without a live deadline starts a fresh store: the
-        // leftovers go first, so a stale tab cannot carry old values forward.
-        const deadline = readStoreDeadline(storeId);
-        if (deadline === undefined || deadline <= Date.now()) {
-          clearStoredState(storeId);
-        }
-
         const nextValue =
           typeof update === "function"
             ? (update as (current: T | undefined) => T | undefined)(
@@ -136,32 +130,13 @@ export function useStoredValue<T>(
             ? removeStorageItem(key)
             : writeStorageItem(key, JSON.stringify({ value: nextValue }));
 
-        if (!didUpdate) {
-          return false;
+        if (didUpdate) {
+          notifyStoredStateChange(key);
         }
 
-        notifyStoredStateChange(key);
-
-        // Only a written value extends the store's lifetime; a removal leaves
-        // the deadline alone, so a cleared store stays empty.
-        if (nextValue === undefined) {
-          return true;
-        }
-
-        const deadlineKey = getStorageDeadlineKey(storeId);
-        if (
-          !writeStorageItem(
-            deadlineKey,
-            String(Date.now() + parseDuration("24 hours")),
-          )
-        ) {
-          return false;
-        }
-
-        notifyStoredStateChange(deadlineKey);
-        return true;
+        return didUpdate;
       },
-      [storeId, key, schema],
+      [key, schema],
     ),
   ];
 }
@@ -171,10 +146,10 @@ export function readStoredValue<T>(
   name: string,
   schema: z.ZodType<T>,
 ) {
-  const deadline = readStoreDeadline(storeId);
-  return deadline !== undefined && deadline > Date.now()
-    ? parseStoredValue(readStorageItem(getStorageKey(storeId, name)), schema)
-    : undefined;
+  return parseStoredValue(
+    readStorageItem(getStorageKey(storeId, name)),
+    schema,
+  );
 }
 
 export function clearStoredState(storeId: string) {
@@ -182,8 +157,8 @@ export function clearStoredState(storeId: string) {
   const removedKeys: string[] = [];
 
   try {
-    for (let index = window.localStorage.length - 1; index >= 0; index -= 1) {
-      const key = window.localStorage.key(index);
+    for (let index = window.sessionStorage.length - 1; index >= 0; index -= 1) {
+      const key = window.sessionStorage.key(index);
 
       if (key?.startsWith(prefix) && removeStorageItem(key)) {
         removedKeys.push(key);
@@ -213,17 +188,8 @@ function parseStoredValue<T>(value: string | null, schema: z.ZodType<T>) {
   }
 }
 
-function getStorageKey(storeId: string, name: string) {
+export function getStorageKey(storeId: string, name: string) {
   return `stored-state:${encodeURIComponent(storeId)}:${name}`;
-}
-
-function getStorageDeadlineKey(storeId: string) {
-  return getStorageKey(storeId, "$expiresAt");
-}
-
-function readStoreDeadline(storeId: string) {
-  const deadline = Number(readStorageItem(getStorageDeadlineKey(storeId)));
-  return Number.isSafeInteger(deadline) && deadline > 0 ? deadline : undefined;
 }
 
 function notifyStoredStateChange(key: string) {
@@ -253,35 +219,17 @@ function absentSnapshot() {
   return null;
 }
 
-function subscribeToStorageKey(
-  storeId: string,
-  key: string,
-  notify: () => void,
-) {
-  const deadlineKey = getStorageDeadlineKey(storeId);
-
-  function isRelevant(changedKey: string | null) {
-    return (
-      changedKey === null || changedKey === key || changedKey === deadlineKey
-    );
-  }
-
+// Only this tab writes its sessionStorage, so its own change event is the
+// whole subscription; no other tab's storage event can reach it.
+function subscribeToStorageKey(key: string, notify: () => void) {
   function handleStoredStateChange(event: Event) {
-    if (isRelevant((event as CustomEvent<string>).detail)) {
-      notify();
-    }
-  }
-
-  function handleStorageChange(event: StorageEvent) {
-    if (isRelevant(event.key)) {
+    if ((event as CustomEvent<string>).detail === key) {
       notify();
     }
   }
 
   window.addEventListener(storedStateChangeEvent, handleStoredStateChange);
-  window.addEventListener("storage", handleStorageChange);
   return () => {
     window.removeEventListener(storedStateChangeEvent, handleStoredStateChange);
-    window.removeEventListener("storage", handleStorageChange);
   };
 }

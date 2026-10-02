@@ -160,7 +160,12 @@ Clearing it when the content changes:
   self-service form, derive `id` from the authenticated user, never the submitted payload. It writes
   the columns named in `values` and runs the handlers of the module fields among them, so the action's
   Zod schema, which strips undeclared fields, is the allowlist: a member-facing schema lists only what
-  members may change. Return only permitted saved values, not the full admin record.
+  members may change. Return only permitted saved values, not the full admin record. A member's own
+  account uses `updateUser` from `@kenstack/auth/server`, and a proven visitor's new account
+  `createAccount`; both save through this path, `createAccount` acting as the new account.
+- A proven visitor's provisional state lives in the `verifications` table. Their users row is created
+  only when the details save succeeds, in one transaction with those details. A provisional sign-in
+  never creates one.
 - `saveModuleRecord` and `saveAdminRecord` share the module's persistence and `admin.revalidate`
   rules. Their record and list tags expire after commit, before follow-up tasks and audit logging.
   Declare additional content dependencies once in `admin.revalidate`; public forms do not duplicate

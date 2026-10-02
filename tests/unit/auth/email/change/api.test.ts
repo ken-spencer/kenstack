@@ -5,7 +5,6 @@ const mocks = vi.hoisted(() => ({
   checkLink: vi.fn(),
   consume: vi.fn(),
   endVerification: vi.fn(),
-  loadFreshPublicAuthState: vi.fn(),
   loadPublicAuthState: vi.fn(),
   loadVerifications: vi.fn(),
   mailer: vi.fn(),
@@ -66,11 +65,10 @@ vi.mock("@kenstack/api", () => {
   };
 });
 vi.mock("@kenstack/auth/server/state", () => ({
-  loadFreshPublicAuthState: mocks.loadFreshPublicAuthState,
   loadPublicAuthState: mocks.loadPublicAuthState,
 }));
 vi.mock("@kenstack/auth/server/user", () => ({
-  getFreshCurrentSession: mocks.getCurrentSession,
+  getCurrentSession: mocks.getCurrentSession,
   userSessionsCacheTag: (userId: number) => `auth-user-sessions:${userId}`,
 }));
 vi.mock("@kenstack/auth/server/auth", () => ({ login: mocks.login }));
@@ -297,12 +295,10 @@ describe("email change confirmation", () => {
     state: "proven",
     verificationId: 3,
   };
-  const changedState = { ...signedInState, email: "new@example.com" };
 
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.consume.mockResolvedValue({ id: 3 });
-    mocks.loadFreshPublicAuthState.mockResolvedValue(changedState);
     mocks.updateWhere.mockResolvedValue(undefined);
     mocks.verifyCode.mockResolvedValue(proof);
     transactionWith({
@@ -321,7 +317,7 @@ describe("email change confirmation", () => {
       createEmailChange({ linkPath: "/profile" }).verifyCode(
         context({ challengeKey, code: "123456", userId: 12 }),
       ),
-    ).resolves.toEqual({ authState: changedState });
+    ).resolves.toEqual({ returnUser: true });
     expect(mocks.consume).toHaveBeenCalledWith(
       3,
       "new@example.com",
@@ -439,7 +435,7 @@ describe("email change confirmation", () => {
       createEmailChange({ linkPath: "/profile" }).verifyLink(
         context({ token: "a".repeat(43), userId: 12 }),
       ),
-    ).resolves.toEqual({ authState: changedState });
+    ).resolves.toEqual({ returnUser: true });
     expect(mocks.consume).toHaveBeenCalledOnce();
     expect(mocks.updateWhere).toHaveBeenCalledOnce();
   });

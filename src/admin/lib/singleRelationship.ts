@@ -103,7 +103,7 @@ export function resolveSingleRelationship(
   };
 }
 
-function getAdminRecordTitleSql(
+export function getAdminRecordTitleSql(
   columns: Record<string, AnyColumn>,
   id: AnyColumn,
   moduleTitle: string,

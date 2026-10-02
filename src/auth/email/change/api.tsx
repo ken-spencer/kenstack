@@ -14,12 +14,8 @@ import { pipelineStage, ReturnedError } from "@kenstack/api";
 import type {
   EmailChangeCancelResult,
   EmailChangeRequestResult,
-  EmailChangeVerificationResult,
 } from "@kenstack/auth/api";
-import {
-  loadFreshPublicAuthState,
-  loadPublicAuthState,
-} from "@kenstack/auth/server/state";
+import { loadPublicAuthState } from "@kenstack/auth/server/state";
 import { userSessionsCacheTag } from "@kenstack/auth/server/user";
 import { login } from "@kenstack/auth/server/auth";
 import { requireRecentAuthentication } from "@kenstack/auth/reauthentication/server";
@@ -110,9 +106,9 @@ async function sendNotice({
 // The code step and a resend run only in the session that issued the code, whose authorization lasts
 // as long as the code. A stale session there means the code has expired too, so the refusal is the
 // ordinary expired request, which returns the visitor to the email form without a confirmation.
-async function requireIssuingSession(request: Request, userId: number) {
+async function requireIssuingSession(request: Request) {
   try {
-    return await requireRecentAuthentication(request, userId);
+    return await requireRecentAuthentication(request);
   } catch (error) {
     if (
       error instanceof ReturnedError &&
@@ -153,8 +149,8 @@ export function createEmailChange(options: EmailChangeOptions) {
       { access: "authenticated", schema: requestEmailChangeSchema },
       async ({ data, request, response, user }) => {
         const session = data.challengeKey
-          ? await requireIssuingSession(request, data.userId)
-          : await requireRecentAuthentication(request, data.userId);
+          ? await requireIssuingSession(request)
+          : await requireRecentAuthentication(request);
         if (data.email === normalizeEmail(user.email)) {
           return response.error({
             message:
@@ -238,7 +234,7 @@ export function createEmailChange(options: EmailChangeOptions) {
     verifyCode: pipelineStage(
       { access: "authenticated", schema: verifyEmailChangeCodeSchema },
       async ({ data, request, response }) => {
-        const session = await requireIssuingSession(request, data.userId);
+        const session = await requireIssuingSession(request);
         await applyEmailChange(
           await verifyCode({
             challengeKey: data.challengeKey,
@@ -249,18 +245,15 @@ export function createEmailChange(options: EmailChangeOptions) {
           session,
         );
 
-        response.headers.set("Cache-Control", "no-store");
-        return response.success<EmailChangeVerificationResult>({
-          authState: await loadFreshPublicAuthState(),
-        });
+        return response.success({ returnUser: true });
       },
     ),
     verifyLink: pipelineStage(
       { access: "authenticated", schema: verifyEmailChangeLinkSchema },
-      async ({ data, request, response }) => {
+      async ({ data, request, response, user }) => {
         let session;
         try {
-          session = await requireRecentAuthentication(request, data.userId);
+          session = await requireRecentAuthentication(request);
         } catch (error) {
           // The link may be opened in any session of the account, which the code's grant never
           // touched. A stale one checks the link without writing: a link it would reject gets its
@@ -272,7 +265,7 @@ export function createEmailChange(options: EmailChangeOptions) {
           ) {
             const state = await checkLink(data.token, {
               kind,
-              userId: data.userId,
+              userId: user.id,
             });
             if (state !== "acceptable") {
               throw new ReturnedError(emailChangeLinkFailureMessages[state], {
@@ -296,10 +289,7 @@ export function createEmailChange(options: EmailChangeOptions) {
 
         await applyEmailChange(verification, session);
 
-        response.headers.set("Cache-Control", "no-store");
-        return response.success<EmailChangeVerificationResult>({
-          authState: await loadFreshPublicAuthState(),
-        });
+        return response.success({ returnUser: true });
       },
     ),
     // Reached from the notice sent to the replaced address, so no session is

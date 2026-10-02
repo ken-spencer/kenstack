@@ -26,7 +26,6 @@ type AdminListProps = {
   basePath?: string;
   clients: AdminClientRegistry;
   searchParams: ListSearchParams;
-  userId: number;
   name: string;
   moduleTitle: string;
   parentId?: number;
@@ -38,7 +37,6 @@ export default async function AdminListCont({
   basePath,
   clients,
   searchParams,
-  userId,
   name,
   moduleTitle,
   parentId,
@@ -83,7 +81,6 @@ export default async function AdminListCont({
         parentId={parentId}
         basePath={basePath}
         clients={clients}
-        userId={userId}
         sort={sortMeta}
         filter={filterMeta}
       >

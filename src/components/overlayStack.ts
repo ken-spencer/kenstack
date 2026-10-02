@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useEffectEvent, useRef } from "react";
 
 type OverlayEntry = {
   close: () => void;
@@ -63,29 +63,20 @@ export function useOverlayStack({
   open: boolean;
 }) {
   const idRef = useRef(Symbol("overlay"));
-  const onCloseRef = useRef(onClose);
+  const onCloseEvent = useEffectEvent(onClose);
 
   useEffect(() => {
-    onCloseRef.current = onClose;
-  }, [onClose]);
-
-  useEffect(() => {
-    const id = idRef.current;
-
     if (!open) {
-      removeRegisteredOverlay(id);
       return;
     }
 
-    removeRegisteredOverlay(id);
+    const id = idRef.current;
     addOverlay({
-      close: () => onCloseRef.current(),
+      close: () => onCloseEvent(),
       id,
     });
 
-    return () => {
-      removeRegisteredOverlay(id);
-    };
+    return () => removeRegisteredOverlay(id);
   }, [open]);
 
   return {

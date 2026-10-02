@@ -20,7 +20,7 @@ import {
   type DefinedAdminModule,
 } from "@kenstack/admin/module";
 import type { AdminTable } from "@kenstack/admin/table";
-import { getAdminRecordTitleSelect } from "@kenstack/admin/lib/recordTitle";
+import { getAdminRecordTitleSql } from "@kenstack/admin/lib/singleRelationship";
 import {
   resolveOneToOneList,
   type ListJoin,
@@ -188,18 +188,11 @@ function relatedRecordTitle(
   relatedColumn: AnyPgColumn,
   moduleTitle: string,
 ) {
-  const titleColumns = Object.values(
-    getAdminRecordTitleSelect(getTableColumns(relatedTable)),
+  const title = getAdminRecordTitleSql(
+    getTableColumns(relatedTable),
+    relatedColumn,
+    moduleTitle,
   );
-  const fallback = sql`concat(cast(${moduleTitle + " #"} as text), ${relatedColumn})`;
-  const title = titleColumns.length
-    ? sql`coalesce(${sql.join(
-        titleColumns.map(
-          (column) => sql`nullif(btrim(cast(${column} as text)), '')`,
-        ),
-        sql`, `,
-      )}, ${fallback})`
-    : fallback;
 
   return relatedValue(sourceColumn, relatedTable, relatedColumn, title);
 }

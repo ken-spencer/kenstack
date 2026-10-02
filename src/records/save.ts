@@ -59,6 +59,9 @@ type SaveRecordOptions<
   } | void>;
   additionalPreparations?: RecordPreparation[];
   translateError?: (error: unknown) => FetchError | undefined;
+  // The acting user, when it is not the session's: Kenstack's account creation saves a new account as
+  // that account, before it signs in. Not for hosts.
+  user?: User;
 };
 
 export async function saveRecord<
@@ -100,7 +103,7 @@ export async function saveRecord<
   try {
     // Inside the try so an authentication failure still runs the failure
     // tasks of already-staged additional preparations.
-    const user = await requireUser();
+    const user = options.user ?? (await requireUser());
     const preparation = await prepareRecordFields({
       admin,
       fields,
@@ -154,6 +157,8 @@ export async function saveRecord<
 
     await audit({
       action,
+      // The acting user, which for account creation is not the session's.
+      actor: user,
       table: tableName,
       rowId: result.row?.id,
       data: { changes: revisionChanges },
@@ -223,7 +228,6 @@ export async function prepareRecordFields({
         id,
         user,
         table,
-        shouldSaveField,
       });
     } catch (error) {
       await runSaveTasks(afterFailure);
@@ -492,7 +496,6 @@ async function preSaveFields({
       id,
       user,
       table,
-      shouldSaveField,
     });
 
     if (result.status === "error") {

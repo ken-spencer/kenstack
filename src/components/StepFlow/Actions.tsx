@@ -6,7 +6,7 @@ import Button from "@kenstack/components/Button";
 import { useOptionalForm } from "@kenstack/forms/context";
 import SubmitButton from "@kenstack/forms/Submit";
 
-import { useStep } from "./context";
+import { useIsStepHeld, useStep } from "./context";
 import type { StepActionsProps } from "./types";
 
 export default function DefaultActions({ children, next }: StepActionsProps) {
@@ -20,6 +20,7 @@ export default function DefaultActions({ children, next }: StepActionsProps) {
 
 function NextAction({ next: configuredNext }: Pick<StepActionsProps, "next">) {
   const { next } = useStep();
+  const isHeld = useIsStepHeld();
   const form = useOptionalForm();
 
   if (isValidElement(configuredNext) || configuredNext === null) {
@@ -37,7 +38,7 @@ function NextAction({ next: configuredNext }: Pick<StepActionsProps, "next">) {
     <ActionButton
       className="next"
       disabled={options.disabled}
-      isPending={options.isPending}
+      isPending={options.isPending || isHeld}
       onClick={options.onClick ?? (type === "button" ? next : undefined)}
       type={type}
     >

@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Form from "@kenstack/forms/Form";
 import fetcher from "@kenstack/api/fetcher";
@@ -30,11 +29,6 @@ export default function EditForm({ children }: { children: React.ReactNode }) {
     oneToOne,
   } = useAdminEdit();
   const revisionTarget = single ? name : id;
-  const basePathname = useMemo(() => {
-    const parts = pathname.split("/").filter(Boolean);
-    parts.pop();
-    return "/" + parts.join("/");
-  }, [pathname]);
   return (
     <Form
       guardUnsaved
@@ -130,9 +124,7 @@ export default function EditForm({ children }: { children: React.ReactNode }) {
           }
         } else if (isNew) {
           router.push(
-            (parentId
-              ? `/admin/${name}/${data.id}`
-              : basePathname + "/" + data.id) +
+            `/admin/${name}/${data.id}` +
               (searchParams.size ? "?" + searchParams : ""),
           );
         }

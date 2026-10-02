@@ -1,5 +1,3 @@
-import * as z from "zod";
-
 export const authenticationWindowMs = 10 * 60 * 1000;
 
 type Session = {
@@ -16,8 +14,3 @@ export function hasRecentAuthentication(session: Session | undefined) {
     session.authorizedUntil.getTime() > Date.now()
   );
 }
-
-// A protected request names the account its page was rendered for, so it never writes to another.
-export const protectedAccountSchema = z.object({
-  userId: z.number().int().positive(),
-});

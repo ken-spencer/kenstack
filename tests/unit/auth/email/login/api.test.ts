@@ -4,7 +4,7 @@ const mocks = vi.hoisted(() => ({
   redeemEmailProof: vi.fn(),
   loadAuthState: vi.fn(),
   getCurrentUser: vi.fn(),
-  getFreshCurrentSession: vi.fn(),
+  getCurrentSession: vi.fn(),
   loginDestination: vi.fn(),
   loadPublicAuthState: vi.fn(),
   loadFreshPublicAuthState: vi.fn(),
@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("server-only", () => ({}));
 vi.mock("@kenstack/auth/server/user", () => ({
   getCurrentUser: mocks.getCurrentUser,
-  getFreshCurrentSession: mocks.getFreshCurrentSession,
+  getCurrentSession: mocks.getCurrentSession,
 }));
 vi.mock("@kenstack/auth/server/getUsersModule", () => ({
   getUsersModule: () => ({ loginDestination: mocks.loginDestination }),
@@ -40,7 +40,7 @@ vi.mock("@kenstack/api", () => {
   return {
     checkQuota: vi.fn(async () => null),
     pipelineStage: (_options: unknown, callback: unknown) => callback,
-    recaptcha: vi.fn(),
+    recaptcha: vi.fn(async () => undefined),
     ReturnedError,
   };
 });
@@ -128,7 +128,7 @@ describe("requestEmailLogin", () => {
     async (age) => {
       mocks.loadAuthState.mockResolvedValue(signedInState);
       mocks.loadPublicAuthState.mockResolvedValue(signedInState);
-      mocks.getFreshCurrentSession.mockResolvedValue({
+      mocks.getCurrentSession.mockResolvedValue({
         createdAt: new Date(Date.now() - age),
         authorizedUntil: new Date(
           new Date(Date.now() - age).getTime() + 600_000,
@@ -181,7 +181,7 @@ describe("requestEmailLogin", () => {
     await expect(
       createEmailLogin().request(requestContext("/membership")),
     ).resolves.toEqual({ authState: signedInState, path: "/membership" });
-    expect(mocks.redeemEmailProof).toHaveBeenCalledWith(provenState, {
+    expect(mocks.redeemEmailProof).toHaveBeenCalledWith({
       allowUnregistered: undefined,
     });
     expect(mocks.sendCode).not.toHaveBeenCalled();
@@ -194,7 +194,7 @@ describe("requestEmailLogin", () => {
     await expect(
       createEmailLogin({ allowUnregistered: true }).request(requestContext()),
     ).resolves.toEqual({ authState: provenState, path: "/" });
-    expect(mocks.redeemEmailProof).toHaveBeenCalledWith(provenState, {
+    expect(mocks.redeemEmailProof).toHaveBeenCalledWith({
       allowUnregistered: true,
     });
     expect(mocks.sendCode).not.toHaveBeenCalled();
@@ -255,7 +255,7 @@ describe("verifyEmailLoginCode", () => {
     await expect(
       createEmailLogin().verifyCode(stageContext()),
     ).resolves.toEqual({ authState: signedInState, path: "/" });
-    expect(mocks.redeemEmailProof).toHaveBeenCalledWith(provenState, {
+    expect(mocks.redeemEmailProof).toHaveBeenCalledWith({
       allowUnregistered: undefined,
     });
   });
@@ -314,7 +314,7 @@ describe("verifyEmailLoginCode", () => {
     await expect(
       createEmailLogin({ allowUnregistered: true }).verifyCode(stageContext()),
     ).resolves.toEqual({ authState: provenState, path: "/" });
-    expect(mocks.redeemEmailProof).toHaveBeenCalledWith(provenState, {
+    expect(mocks.redeemEmailProof).toHaveBeenCalledWith({
       allowUnregistered: true,
     });
   });
@@ -337,7 +337,7 @@ describe("verifyEmailLoginLink", () => {
       authState: signedInState,
       path: "/reset-password",
     });
-    expect(mocks.redeemEmailProof).toHaveBeenCalledWith(provenState, {
+    expect(mocks.redeemEmailProof).toHaveBeenCalledWith({
       allowUnregistered: undefined,
     });
   });
@@ -387,7 +387,7 @@ describe("verifyEmailLoginLink", () => {
         createLinkContext(),
       ),
     ).resolves.toEqual({ authState: provenState, path: "/" });
-    expect(mocks.redeemEmailProof).toHaveBeenCalledWith(provenState, {
+    expect(mocks.redeemEmailProof).toHaveBeenCalledWith({
       allowUnregistered: true,
     });
   });

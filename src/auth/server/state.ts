@@ -11,6 +11,7 @@ import { verifications } from "@kenstack/db/tables/verification";
 import { normalizeEmail } from "@kenstack/fields/email";
 import { getCurrentUser, getFreshCurrentUser } from "./user";
 import { getUsersModule } from "./getUsersModule";
+import { resolveLoginDestination } from "./loginDestination";
 
 type CurrentUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
 
@@ -63,16 +64,11 @@ async function toAuthenticatedState(user: CurrentUser) {
   };
 }
 
-async function resolveAuthState(
-  user: CurrentUser | undefined,
-): Promise<AuthState> {
-  if (user) {
-    return toAuthenticatedState(user);
-  }
-
+// This browser's latest live login verification, from its verification cookie, whatever the session.
+export async function loadLoginVerification() {
   const verificationKey = await getVerificationKey();
   if (!verificationKey) {
-    return { state: "anonymous" };
+    return undefined;
   }
   await io();
   const now = new Date();
@@ -100,7 +96,20 @@ async function resolveAuthState(
     .orderBy(desc(verifications.createdAt), desc(verifications.id))
     .limit(1);
 
-  if (!verification || verification.endedAt || verification.expiresAt <= now) {
+  return verification && !verification.endedAt && verification.expiresAt > now
+    ? verification
+    : undefined;
+}
+
+async function resolveAuthState(
+  user: CurrentUser | undefined,
+): Promise<AuthState> {
+  if (user) {
+    return toAuthenticatedState(user);
+  }
+
+  const verification = await loadLoginVerification();
+  if (!verification) {
     return { state: "anonymous" };
   }
 
@@ -119,13 +128,14 @@ async function resolveAuthState(
   };
 }
 
-// Reads the cached session snapshot. A decision that must not trust a
-// snapshot, such as authorizing a write, uses loadFreshAuthState.
+// The session snapshot for every access check, writes included. Each change to a session or its
+// user clears it at once, so it is current.
 export const loadAuthState = cache(async () =>
   resolveAuthState(await getCurrentUser()),
 );
 
-export async function loadFreshAuthState(): Promise<AuthState> {
+// Only for reading the session or user again after this request has changed it.
+async function loadFreshAuthState(): Promise<AuthState> {
   return resolveAuthState(await getFreshCurrentUser());
 }
 
@@ -133,6 +143,20 @@ export async function loadPublicAuthState(): Promise<PublicAuthState> {
   return toPublicAuthState(await loadAuthState());
 }
 
+// Only for reading the session or user again after this request has changed it.
 export async function loadFreshPublicAuthState(): Promise<PublicAuthState> {
   return toPublicAuthState(await loadFreshAuthState());
+}
+
+// The `userInfo` of a success response after this request changed the user or session. Kenstack's
+// Form adopts it as this tab's own change, with the account's login destination.
+export async function loadUserInfo() {
+  const authState = await loadFreshPublicAuthState();
+  return {
+    authState,
+    loginDestination:
+      authState.state === "authenticated"
+        ? await resolveLoginDestination(undefined)
+        : undefined,
+  };
 }

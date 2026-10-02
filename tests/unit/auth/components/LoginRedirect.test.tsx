@@ -18,9 +18,10 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(window.location.search),
 }));
 vi.mock("@kenstack/api/fetcher", () => ({ default: mocks.fetcher }));
-vi.mock("@kenstack/auth/useUserInfo", () => ({ setUserInfo: vi.fn() }));
-vi.mock("react-google-recaptcha-v3", () => ({
-  useGoogleReCaptcha: () => ({ executeRecaptcha: undefined }),
+vi.mock("@kenstack/auth/useUserInfo", () => ({
+  setUserInfo: vi.fn(),
+  useLoginDestination: () => undefined,
+  useUserInfo: () => ({ state: "anonymous" }),
 }));
 vi.mock("@kenstack/components/StepFlow/StepActions", () => ({
   StepActions: () => <button type="submit">Continue</button>,
@@ -110,7 +111,10 @@ it.each(["code", "link", "already-verified"])(
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
-    expect(mocks.assign).toHaveBeenCalledExactlyOnceWith("/account");
+    // A link waits out the answer window for a tab waiting on the same sign-in.
+    await vi.waitFor(() =>
+      expect(mocks.assign).toHaveBeenCalledExactlyOnceWith("/account"),
+    );
     // An already-verified email signs in from the email form, which stays until the page unloads.
     expect(container.querySelector('input[name="email"]') === null).toBe(
       method !== "already-verified",
@@ -120,24 +124,6 @@ it.each(["code", "link", "already-verified"])(
       expect(container.querySelector('input[name="code"]')).not.toBeNull();
   },
 );
-
-it("completes an embedded link in its owner without assigning a location or remembering a method", async () => {
-  const onComplete = vi.fn();
-  window.history.replaceState(null, "", `/flow/signin?token=${"b".repeat(43)}`);
-  await act(async () =>
-    root.render(
-      <LoginForm anchor="steps" mode="embedded" onComplete={onComplete} />,
-    ),
-  );
-  await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  });
-  expect(onComplete).toHaveBeenCalledOnce();
-  expect(mocks.refresh).not.toHaveBeenCalled();
-  expect(mocks.assign).not.toHaveBeenCalled();
-  expect(container.querySelector('input[name="email"]')).toBeNull();
-  expect(document.cookie).toContain("loginMethod=password");
-});
 
 it.each(["password", "code"] as const)(
   "returns inline %s confirmation to its owning page with pending parameters intact",
@@ -159,7 +145,6 @@ it.each(["password", "code"] as const)(
           value={{
             cancel: () => {},
             confirm: mocks.confirm,
-            isHolding: true,
             replay: () => {},
             track: (request) => request(),
             userId: 1,
@@ -211,6 +196,7 @@ it.each(["password", "code"] as const)(
         // Marked, so an emailed link opened in another tab lands with a notice.
         returnTo: path.replace("#", "&identityConfirmed=1#"),
       }),
+      expect.anything(),
     );
   },
 );

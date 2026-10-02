@@ -34,10 +34,6 @@ vi.mock("@kenstack/auth/components/Login/loadFormProps", () => ({
   loadLoginFormProps: async () => ({ method: "password" }),
 }));
 vi.mock("@kenstack/api/fetcher", () => ({ default: mocks.fetcher }));
-vi.mock("react-google-recaptcha-v3", () => ({
-  useGoogleReCaptcha: () => ({ executeRecaptcha: undefined }),
-}));
-
 import ResetPasswordFormLoader from "@kenstack/auth/components/ResetPassword/Loader";
 
 // Resolves the async server components at the top of the tree, as the server

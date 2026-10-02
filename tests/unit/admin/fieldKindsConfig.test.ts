@@ -10,7 +10,6 @@ import { defineRelationship, defineTable } from "@kenstack/admin/table";
 import {
   field,
   relationshipField as defineRelationshipField,
-  textField,
 } from "@kenstack/fields";
 import {
   defineRelationships,
@@ -22,27 +21,7 @@ import {
   serverField,
 } from "@kenstack/fields/server";
 
-const stockField = field({
-  default: 0,
-  kind: "stock-value",
-  zod: z.number().int(),
-});
-
-const fields = defineFields({
-  fields: {
-    name: textField({ filter: true }),
-    stock: stockField,
-  },
-});
 describe("module field servers", () => {
-  it("rejects registrations that do not match any declared field kind", () => {
-    expect(() =>
-      resolveServerFields(fields, {
-        fieldKinds: [{ kind: "stock-typo" }] as never,
-      }),
-    ).toThrowError();
-  });
-
   it("rejects field registrations for single relationships", () => {
     const relationshipFields = defineFields({
       fields: {
@@ -56,37 +35,6 @@ describe("module field servers", () => {
         fields: { categoryId: registration } as never,
       }),
     ).toThrowError();
-  });
-
-  it("rejects duplicate kind registrations", () => {
-    const registration = serverField(stockField, () => ({}));
-
-    expect(() =>
-      resolveServerFields(fields, {
-        fieldKinds: [registration, registration],
-      }),
-    ).toThrowError();
-  });
-
-  it("lets field-specific server behavior override kind behavior", async () => {
-    const resolvedFields = resolveServerFields(fields, {
-      fieldKinds: [
-        serverField(stockField, () => ({ load: async () => "kind" })),
-      ],
-      fields: {
-        stock: serverField(fields.stock, () => ({
-          load: async () => "field",
-        })),
-      },
-    });
-
-    await expect(
-      resolvedFields.stock.load?.({
-        db: {} as never,
-        key: "stock",
-        tableId: 1,
-      }),
-    ).resolves.toBe("field");
   });
 
   it("stitches unnamed one-off server behavior by property", async () => {

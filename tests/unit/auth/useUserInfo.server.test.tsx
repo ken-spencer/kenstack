@@ -4,31 +4,11 @@ import { describe, expect, it } from "vitest";
 import { useUserInfo } from "@kenstack/auth/useUserInfo";
 import type { PublicAuthState } from "@kenstack/auth/server/state";
 
-function createAuthenticatedState(
-  email: string,
-  userId: number,
-): PublicAuthState {
-  return {
-    avatar: null,
-    email,
-    familyName: "",
-    givenName: email,
-    impersonatedBy: undefined,
-    initials: email.slice(0, 2).toUpperCase(),
-    name: email,
-    roles: [],
-    state: "authenticated",
-    userId,
-  };
-}
-
 function AuthState({ authState }: { authState?: PublicAuthState }) {
   const auth = useUserInfo(authState);
   return (
     <span>
-      {auth.state === "authenticated"
-        ? `${auth.state}:${auth.email}`
-        : auth.state}
+      {auth.state === "proven" ? `${auth.state}:${auth.email}` : auth.state}
     </span>
   );
 }
@@ -36,19 +16,17 @@ function AuthState({ authState }: { authState?: PublicAuthState }) {
 describe("useUserInfo server rendering", () => {
   it("keeps initial auth state isolated to its request", () => {
     const firstRequest = renderToStaticMarkup(
-      <AuthState
-        authState={createAuthenticatedState("first@example.com", 1)}
-      />,
+      <AuthState authState={{ email: "first@example.com", state: "proven" }} />,
     );
     const requestWithoutAuthState = renderToStaticMarkup(<AuthState />);
     const secondRequest = renderToStaticMarkup(
       <AuthState
-        authState={createAuthenticatedState("second@example.com", 2)}
+        authState={{ email: "second@example.com", state: "proven" }}
       />,
     );
 
-    expect(firstRequest).toBe("<span>authenticated:first@example.com</span>");
+    expect(firstRequest).toBe("<span>proven:first@example.com</span>");
     expect(requestWithoutAuthState).toBe("<span>loading</span>");
-    expect(secondRequest).toBe("<span>authenticated:second@example.com</span>");
+    expect(secondRequest).toBe("<span>proven:second@example.com</span>");
   });
 });

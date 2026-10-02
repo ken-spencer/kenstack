@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { loadLoginFormProps } from "@kenstack/auth/components/Login/loadFormProps";
-import LoginForm from "@kenstack/auth/components/Login/Form";
 import { loadAuthState } from "@kenstack/auth/server/state";
 import ReauthenticationFormClient from "./FormClient";
 
@@ -21,15 +20,10 @@ export default async function ReauthenticationForm({
 
   return (
     <ReauthenticationFormClient
+      email={authState.email}
       message={message}
+      method={method}
       userId={authState.userId}
-      loginForm={
-        <LoginForm
-          email={authState.email}
-          method={method}
-          mode="reauthentication"
-        />
-      }
     >
       {children}
     </ReauthenticationFormClient>

@@ -51,8 +51,9 @@ export type EmailChangeRequestResult = {
   email: string;
 };
 
+// Its `userInfo` comes from `returnUser`.
 export type EmailChangeVerificationResult = {
-  authState: PublicAuthState;
+  userInfo: UserInfoResult;
 };
 
 export type EmailChangeCancelResult = {
@@ -67,10 +68,10 @@ export type UserInfoResult = {
 };
 
 export type LogoutResult = {
-  // The session that remains, since logging out while impersonating restores
-  // the administrator's own.
-  authState: PublicAuthState;
   path: string;
+  // The session that remains, from `returnUser`: logging out while impersonating restores the
+  // administrator's own.
+  userInfo: UserInfoResult;
 };
 
 export const authPipeline = (
@@ -110,9 +111,9 @@ export const authPipeline = (
             });
           }),
 
-          login: loginPipeline(),
+          login: loginPipeline,
           "forgot-password": forgotPasswordPipeline(forgotPassword),
-          "reset-password": resetPasswordPipeline(),
+          "reset-password": resetPasswordPipeline,
 
           "email-login": emailLogin.request,
           "verify-email-login-code": emailLogin.verifyCode,

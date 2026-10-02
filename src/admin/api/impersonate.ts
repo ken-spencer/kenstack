@@ -20,6 +20,6 @@ export const impersonateAction = () =>
 
       await impersonate(userId);
 
-      return response.success({});
+      return response.success({ returnUser: true });
     },
   );

@@ -185,7 +185,7 @@ async function sendEmail({
   const cmd = new SendRawEmailCommand({ RawMessage: { Data: buffer } });
 
   const maxRetries = 3;
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+  for (let attempt = 1; ; attempt++) {
     try {
       const result = await ses.send(cmd);
       if (!result.MessageId) {
@@ -201,23 +201,13 @@ async function sendEmail({
         return { status: "recipient-rejected" };
       }
 
-      if (!isRateLimitError(err)) {
-        return operationalFailure(err, attempt);
-      }
-
-      if (attempt === maxRetries) {
+      if (!isRateLimitError(err) || attempt === maxRetries) {
         return operationalFailure(err, attempt);
       }
 
       await new Promise((res) => setTimeout(res, 1000));
     }
   }
-
-  return {
-    attempts: maxRetries,
-    code: "RetryLoopEnded",
-    status: "operational-failure",
-  };
 }
 
 // Delivery failures stay out of reportError, so a missing or failed sender lookup is logged here. A
@@ -248,6 +238,11 @@ export async function loadSiteSender() {
   }
 
   return sender;
+}
+
+// What a form shows when the site's sender is missing, naming the email it couldn't send.
+export function senderUnavailableMessage(email: string) {
+  return `We couldn’t send ${email} because this site’s email sender isn’t set up.`;
 }
 
 export default async function mailer({ from, ...options }: MailerOptions) {

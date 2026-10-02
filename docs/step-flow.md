@@ -38,14 +38,16 @@ summaries, and browser persistence in Kenstack and host sites.
 - StepFlow renders no progress bar, step tracker, or completed/remaining-step list. Its current
   heading, relative Back control, and optional transaction summary provide the workflow context, and a
   host flow does not reconstruct progress presentation.
-- The flow's URL never names a step. Every visit enters at the first step, a refresh included, and
-  step navigation never writes the browser URL or history. StepFlow's Back control moves to the
-  preceding step; browser Back leaves the transaction, so no restorable checkout states accumulate. A
-  visit never resumes where an earlier one stopped: when Next keeps a left route instance alive and
-  shows it again, the flow returns to its first step.
-- A return to the flow after leaving the page arrives at its URL like any visit. An emailed sign-in
-  link carries its token there; the login controller brings its step forward, as far as the ledger
-  allows, until the link has signed the visitor in.
+- The flow's URL never names a step, and step navigation never writes the browser URL or history.
+  The tab stores the flow's step beside its values, so every arrival in this tab, a refresh included,
+  resumes it once hydrated, and a new tab starts at the first step. StepFlow's Back control moves to
+  the preceding step; browser Back leaves the transaction, so no restorable checkout states
+  accumulate. When Next keeps a left route instance alive and shows it again, it shows the tab's step.
+- An emailed sign-in link returns to the flow's URL with its token, and the sign-in step's controller
+  verifies it on whatever step shows; the step never comes forward for it. The token stays in the
+  address until the link settles: meanwhile the sign-in step shows "Signing you in…" in place of its
+  form, and the login return step waits. A tab waiting on that sign-in may answer and carry on instead
+  (`docs/auth-routing.md`).
 - A flow that needs an account composes the login step on every visit, as it does every other step.
   A signed-in visitor skips it, forward and Back, so Back from the step after it reaches the step
   before it. Switching accounts goes through the account menu, which also offers Logout to a visitor
@@ -54,19 +56,21 @@ summaries, and browser persistence in Kenstack and host sites.
   in, in the flow or another tab, skips the step so the flow moves on, and losing identity brings it
   forward. Signing in updates browser identity in place, and the login step's controller then
   refreshes the server render without waiting on it, so account menus and other output that depends
-  on identity update. Data a step needs from the account, such as its saved details, reaches the
-  browser through a query keyed by user, hydrated from the server when the visit starts signed in.
+  on identity update. The account menu also refreshes it when a page rendered signed out adopts a
+  sign-in made in another tab. Data a step needs from the account, such as its saved details, reaches the
+  browser in the user info, which the users module's `publicUser` extends for the signed-in person
+  only; a save that changes it answers with `returnUser: true`, whose `userInfo` `Form` adopts.
 - Inside a flow, the server render can run again mid-visit, as the refresh after a sign-in does. Steps
   may vary their server-rendered content. A step whose skipped value can change during a visit sets
   it live through its controller, and that override stands over a later server render, so a refresh
-  does not move the flow. Skip overrides belong to the visit that set them; `useStep()` exposes the
-  `visit` id, and a controller that sets an override includes it in its effect inputs, so a new
-  visit recomputes it.
+  does not move the flow. A controller sets its override from live state, such as the user info, so
+  the override follows that state.
 - A terminal result step sets `final`. It is reached through `next()` like any step, which records the
   preceding step in the ledger; it omits Back and the running summary and reads the flow's values as
-  any step does. Arriving there also records the result in the ledger, and the next visit that finds a
-  result recorded clears the flow's stored values and starts at the first step, so no visit restores a
-  finished transaction. A visit is a mount, an Activity reveal, or a new server render of the flow,
+  any step does. Arriving there also records the result in the ledger, and the next arrival that finds
+  a result recorded clears the flow's stored values and starts at the first step, so no arrival
+  restores a finished transaction. An arrival is a mount, an Activity reveal, or a new server render of
+  the flow,
   which a link to the flow's own URL produces; a bfcache restore is none of these, so a result stays
   on screen through browser Back.
 - A server step factory may return `null` when the step does not belong in the current flow. This is a
@@ -112,7 +116,7 @@ summaries, and browser persistence in Kenstack and host sites.
 - Use a step `controller` only for behavior that must remain mounted while its content is hidden, such
   as retaining a seat hold or handling an authentication return. A controller is not the way to copy a
   stored slice into a flow context; the flow owner reads its slices directly. Login uses its controller to
-  follow browser identity and to bring its step forward for an emailed link, while server checks still
+  follow browser identity and to verify an emailed link, while server checks still
   govern protected content and operations. Until the browser hydrates, StepFlow applies server-supplied live prerequisites
   with every stored slice absent; once hydrated it applies the completion ledger, and controllers'
   overrides take the place of the server's skipped values. A form whose defaults come from a restored slice reads the
@@ -229,10 +233,9 @@ parallel API for that component.
 
 ## State and persistence
 
-- The flow owns its step, seeded from the first step the server composes; later steps live in memory
-  and the URL is never rewritten. StepFlow stores the sparse ledger of steps completed through
-  `next()`, so it can decide whether a requested step, such as a controller's recall, is reachable,
-  and the visit's id.
+- The flow owns its step and stores it in the tab beside its values; the URL is never rewritten.
+  StepFlow also stores the sparse ledger of steps completed through `next()`, so it can decide whether
+  a requested step, such as a controller's recall, is reachable.
 - React Hook Form owns live edits. Persist only validated, committed workflow results needed after a
   refresh or an authentication round trip.
 - `StepFlow` renders one `QueryProvider` around the whole flow, so its steps and controllers share one
@@ -250,20 +253,14 @@ parallel API for that component.
 - The flow owner reads and commits its slices with `useStoredValue(basePath, name, schema)` from
   `@kenstack/hooks/storedState`, for committed state that must survive a refresh or an authentication
   round trip. Persisted JSON is restored only when the schema accepts it. The hook returns
-  `[value, setValue]`, keeps values for the flow's 24-hour lifetime, and clears a value when the
-  setter receives `undefined`. A value is absent until the browser hydrates; `useIsHydrated()` tells
+  `[value, setValue]`, keeps values in this tab's sessionStorage, and clears a value when the setter
+  receives `undefined`. A value is absent until the browser hydrates; `useIsHydrated()` tells
   that apart from nothing stored. A step that must own a slice nothing else reads takes the base path
   from `useFlowContext()`. Rotate a slice name only when a breaking stored-shape change requires it.
-- StepFlow keeps its completion ledger and step-owned values in one storage scope with one shared
-  24-hour lifetime. Every written value refreshes that lifetime, so the entire flow expires together
-  24 hours after the latest change; removing a value leaves the lifetime alone. Past that deadline, stored values read as absent
-  and the flow presents its first step. The first write after the deadline clears the flow's stored
-  state before it is applied, so a tab left open past the lifetime starts a fresh flow: a later step
-  returns to the first step, and the first step keeps its new value and continues. Stored values
-  without a valid shared deadline read as absent and are cleared by the next write.
+- StepFlow keeps its step, completion ledger and step-owned values in one per-tab storage scope with
+  no lifetime: closing the tab clears it, and two tabs on the same flow keep separate values.
 - Coordinate restoration before StepFlow presents the requested step. A finished transaction is never
-  restored: the visit after a recorded result clears the store, and every visit enters at the first
-  step.
+  restored: the arrival after a recorded result clears the store and starts at the first step.
 - Browser storage is required for StepFlow's route-authorization ledger. When a stored-state mutation
   fails, the flow stops and asks the visitor to enable cookies and site data, then reload. It does not
   advance with an in-memory completion fallback.

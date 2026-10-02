@@ -11,11 +11,13 @@ import LinkButton from "./LinkButton";
 export default function LoginSubmit({
   children,
   continuation,
+  isPending,
   label,
   onForgotPassword,
 }: {
   children: ReactNode;
   continuation: Continuation;
+  isPending?: boolean;
   label: string;
   onForgotPassword?: (form: HTMLFormElement | null) => void;
 }) {
@@ -23,7 +25,7 @@ export default function LoginSubmit({
   return (
     <div className="login-actions">
       <div>
-        <Submit>{label}</Submit>
+        <Submit isPending={isPending}>{label}</Submit>
         {children}
       </div>
       {continuation.mode === "reauthentication" ? (

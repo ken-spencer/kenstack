@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 
+import type { UserInfoResult } from "@kenstack/auth/api";
+
 export class PipelineResponse {
   private _payload: Record<string, unknown> = {};
+  private _returnUser = false;
   private _stopped = false;
   private _status = 200;
 
@@ -17,6 +20,12 @@ export class PipelineResponse {
     return this._stopped;
   }
 
+  // Set by `success({ returnUser: true })` and cleared by any later payload, so the pipeline adds the
+  // user info only to the success that asked for it.
+  get returnUser() {
+    return this._returnUser;
+  }
+
   status(code: number) {
     this._status = code;
     return this;
@@ -24,6 +33,7 @@ export class PipelineResponse {
 
   json(obj: Record<string, unknown>) {
     this._payload = obj;
+    this._returnUser = false;
     return this;
   }
 
@@ -42,15 +52,20 @@ export class PipelineResponse {
     });
   }
 
+  // `returnUser` is for a request that changed the user or session: the pipeline adds this request's
+  // fresh `userInfo`, which Kenstack's Form adopts as this tab's own change.
   success<TPayload extends Record<string, unknown> = Record<string, unknown>>({
     message,
+    returnUser = false,
     ...payload
-  }: { message?: string } & TPayload) {
-    return this.json({
+  }: { message?: string; returnUser?: boolean } & TPayload) {
+    this.json({
       status: "success",
       message,
       ...payload,
     });
+    this._returnUser = returnUser;
+    return this;
   }
   error(
     arg:
@@ -72,8 +87,11 @@ export class PipelineResponse {
     return this.final({ status: "error", ...payload });
   }
 
-  toNextResponse() {
-    const res = NextResponse.json(this._payload, { status: this._status });
+  toNextResponse(userInfo?: UserInfoResult) {
+    const res = NextResponse.json(
+      userInfo ? { ...this._payload, userInfo } : this._payload,
+      { status: this._status },
+    );
     for (const [key, value] of this.headers.entries()) {
       res.headers.set(key, value);
     }

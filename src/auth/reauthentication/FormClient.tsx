@@ -2,8 +2,11 @@
 
 import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
 
+import LoginForm from "@kenstack/auth/components/Login/Form";
+import type { LoginMethod } from "@kenstack/auth/components/Login/method";
+import { accountChangedRefusal } from "@kenstack/auth/renderedAccount";
 import type { PublicAuthState } from "@kenstack/auth/server/state";
-import { setUserInfo } from "@kenstack/auth/useUserInfo";
+import { setUserInfo, useUserInfo } from "@kenstack/auth/useUserInfo";
 import {
   Dialog,
   DialogContent,
@@ -11,21 +14,19 @@ import {
   DialogTitle,
 } from "@kenstack/components/Dialog";
 import Notice from "@kenstack/components/Notice";
-import { allowUnload } from "@kenstack/forms/NavigationBlocker";
 import useConsumedSearchParam from "@kenstack/hooks/useConsumedSearchParam";
 
+import { postReauthentication, useReauthenticationMessages } from "./channel";
 import { AuthorizationContext } from "./context";
 
+type Refusal = { code?: string; message: string };
+
 type HeldRequest = {
-  // Settles the caller with the original refusal.
-  cancel: () => void;
+  // Settles the caller with the original refusal, or with the one given.
+  cancel: (refusal?: Refusal) => void;
   // Runs the request again; false while it is refused again for stale authorization.
   replay: () => Promise<boolean>;
 };
-
-// A quiet check refused because the emailed link is still signing in elsewhere tries again this long
-// after the first refusal, while the tab stays in view.
-const quietRetryOffsetsMs = [2000, 5000, 10000];
 
 const usableControl =
   'input:not([type="hidden"]):not([readonly]):not(:disabled), textarea:not(:disabled), button:not(:disabled)';
@@ -38,24 +39,32 @@ function focusFirstUsable(dialog: HTMLDialogElement) {
 
 export default function ReauthenticationFormClient({
   children,
-  loginForm,
+  email: renderedEmail,
   message,
+  method,
   userId,
 }: {
   children: ReactNode;
-  loginForm: ReactNode;
+  email: string;
   message: string;
+  method?: LoginMethod;
   userId: number;
 }) {
+  const userInfo = useUserInfo();
+  // The account's current email, which a change finished in another tab moves; a code sent to the
+  // old address would sign the visitor out on Civic.
+  const email =
+    userInfo.state === "authenticated" && userInfo.userId === userId
+      ? userInfo.email
+      : renderedEmail;
   const heldRef = useRef<HeldRequest[]>([]);
   const [heldCount, setHeldCount] = useState(0);
   const [isReplaying, setIsReplaying] = useState(false);
   const replayingRef = useRef(false);
   const replayAgainRef = useRef(false);
-  const cancelRequestedRef = useRef(false);
-  const quietRetryTimerRef = useRef<number | undefined>(undefined);
-  // A page left mid-replay schedules no further retry.
-  const isMountedRef = useRef(false);
+  // Set when held requests are cancelled mid-replay, with the refusal to settle them with; none means
+  // their original refusal.
+  const cancelRequestedRef = useRef<{ refusal?: Refusal }>(undefined);
   const focusResultRef = useRef(false);
   const [isRefusedAgain, setIsRefusedAgain] = useState(false);
   // Each opening mounts the confirmation form afresh, and a confirmation from an earlier opening
@@ -70,12 +79,24 @@ export default function ReauthenticationFormClient({
   const [hasSavedHere, setHasSavedHere] = useState(false);
 
   useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-      window.clearTimeout(quietRetryTimerRef.current);
-    };
-  }, []);
+    if (isConfirmedElsewhere) {
+      postReauthentication({ type: "confirmed", userId });
+    }
+  }, [isConfirmedElsewhere, userId]);
+
+  // A confirmation in another tab confirms this browser, so what is held replays. A password reset
+  // or email change finished elsewhere signed the account in afresh, so what is held here must not
+  // run: it is dropped.
+  useReauthenticationMessages((received) => {
+    if (received.userId !== userId) {
+      return;
+    }
+    if (received.type === "confirmed") {
+      void replayHeld();
+    } else {
+      cancel(accountChangedRefusal);
+    }
+  });
 
   function hold(request: HeldRequest) {
     heldRef.current.push(request);
@@ -91,12 +112,6 @@ export default function ReauthenticationFormClient({
     request: () => Promise<T>,
   ) {
     return request().then((result) => {
-      if (result.code === "account-changed") {
-        // Another account signed in from elsewhere; nothing held may write to it.
-        allowUnload();
-        window.location.reload();
-        return new Promise<T>(() => {});
-      }
       if (result.code !== "reauthentication-required") {
         if (result.status === "success") {
           setHasSavedHere(true);
@@ -105,7 +120,8 @@ export default function ReauthenticationFormClient({
       }
       return new Promise<T>((resolve, reject) => {
         hold({
-          cancel: () => resolve(result),
+          cancel: (refusal) =>
+            resolve(refusal ? { ...result, ...refusal } : result),
           replay: async () => {
             let replayed: T;
             try {
@@ -115,17 +131,13 @@ export default function ReauthenticationFormClient({
               reject(error);
               return true;
             }
-            if (replayed.code === "account-changed") {
-              allowUnload();
-              window.location.reload();
-              return true;
-            }
             if (replayed.code === "reauthentication-required") {
               return false;
             }
             if (replayed.status === "success") {
               setHasSavedHere(true);
             }
+            // A refusal for another account or no session settles here, like any other result.
             resolve(replayed);
             return true;
           },
@@ -138,11 +150,7 @@ export default function ReauthenticationFormClient({
   // held; once nothing is held the dialog closes and focus moves to what the result shows. A quiet
   // replay, when the page comes back into view, checks whether a sign-in elsewhere confirmed this
   // session: it shows no progress and no refusal.
-  async function replayHeld({
-    quiet = false,
-    quietRetry = 0,
-    firstRefusedAt,
-  }: { firstRefusedAt?: number; quiet?: boolean; quietRetry?: number } = {}) {
+  async function replayHeld({ quiet = false }: { quiet?: boolean } = {}) {
     if (replayingRef.current) {
       // A confirmation that lands mid-replay, such as a code accepted while a quiet check runs,
       // replays again once this one settles; a second quiet check adds nothing.
@@ -154,7 +162,6 @@ export default function ReauthenticationFormClient({
     if (!heldRef.current.length) {
       return;
     }
-    window.clearTimeout(quietRetryTimerRef.current);
     replayingRef.current = true;
     let isQuietPass = quiet;
     let isRefused = false;
@@ -180,64 +187,44 @@ export default function ReauthenticationFormClient({
     } while (
       replayAgainRef.current &&
       heldRef.current.length &&
-      !cancelRequestedRef.current
+      cancelRequestedRef.current === undefined
     );
     replayingRef.current = false;
     setIsReplaying(false);
     focusResultRef.current = !heldRef.current.length;
-    if (cancelRequestedRef.current) {
-      cancelRequestedRef.current = false;
-      cancel();
+    if (cancelRequestedRef.current !== undefined) {
+      const { refusal } = cancelRequestedRef.current;
+      cancelRequestedRef.current = undefined;
+      cancel(refusal);
       return;
     }
     if (isRefused && !isQuietPass) {
       setIsRefusedAgain(true);
     }
-    if (
-      isRefused &&
-      isQuietPass &&
-      isMountedRef.current &&
-      quietRetry < quietRetryOffsetsMs.length
-    ) {
-      const refusedAt = firstRefusedAt ?? Date.now();
-      quietRetryTimerRef.current = window.setTimeout(
-        () => {
-          if (isMountedRef.current && document.visibilityState === "visible") {
-            void replayHeld({
-              firstRefusedAt: refusedAt,
-              quiet: true,
-              quietRetry: quietRetry + 1,
-            });
-          }
-        },
-        Math.max(0, refusedAt + quietRetryOffsetsMs[quietRetry] - Date.now()),
-      );
-    }
     setHeldCount(heldRef.current.length);
   }
 
   // Closing settles every held request with its original refusal, so its form reports that nothing
-  // was written. During a replay it waits for the replay to settle and applies to what is still held.
-  function cancel() {
+  // was written; a change finished elsewhere settles them with its own. During a replay it waits for
+  // the replay to settle and applies to what is still held.
+  function cancel(refusal?: Refusal) {
     if (replayingRef.current) {
-      cancelRequestedRef.current = true;
+      cancelRequestedRef.current = { refusal };
       return;
     }
-    window.clearTimeout(quietRetryTimerRef.current);
     for (const request of heldRef.current.splice(0)) {
-      request.cancel();
+      request.cancel(refusal);
     }
     setHeldCount(0);
   }
 
   function confirm(authState: PublicAuthState, fromOpening: number) {
-    if (authState.state !== "authenticated" || authState.userId !== userId) {
-      // Another account must not inherit this page's unsaved state.
-      allowUnload();
-      window.location.reload();
-      return;
+    // Another account, or none, is never this page's: replaying lets the server refuse each held
+    // request for it, and nothing is written.
+    if (authState.state === "authenticated" && authState.userId === userId) {
+      setUserInfo(authState);
+      postReauthentication({ type: "confirmed", userId });
     }
-    setUserInfo(authState);
     if (fromOpening === openingRef.current) {
       void replayHeld();
     }
@@ -248,7 +235,6 @@ export default function ReauthenticationFormClient({
       value={{
         cancel: () => {},
         confirm: () => {},
-        isHolding: isOpen,
         replay: () => {},
         track,
         userId,
@@ -307,7 +293,6 @@ export default function ReauthenticationFormClient({
               value={{
                 cancel,
                 confirm: (authState) => confirm(authState, opening),
-                isHolding: isOpen,
                 replay: () => void replayHeld({ quiet: true }),
                 track: (request) => request(),
                 userId,
@@ -316,7 +301,16 @@ export default function ReauthenticationFormClient({
               {/* Mounted only while open: the form reads the URL and must not act for a closed dialog. */}
               {isOpen ? (
                 <fieldset disabled={isReplaying}>
-                  <Fragment key={opening}>{loginForm}</Fragment>
+                  <Fragment key={opening}>
+                    {/* The form captures its email once; an email change while open starts it again
+                        for the new address, keeping what is held and the page's draft. */}
+                    <LoginForm
+                      key={email}
+                      email={email}
+                      method={method}
+                      mode="reauthentication"
+                    />
+                  </Fragment>
                 </fieldset>
               ) : null}
             </AuthorizationContext>

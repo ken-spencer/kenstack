@@ -4,7 +4,6 @@ import Header from "./Header";
 import Footer from "./Footer";
 import OneToOneTabs from "./OneToOneTabs";
 import Breadcrumbs from "@kenstack/admin/components/Breadcrumbs";
-import ChildModuleLinks from "@kenstack/admin/components/ChildModuleLinks";
 import Button from "@kenstack/components/Button";
 import { uploadsConfigured } from "@kenstack/lib/mediaStorage";
 import { io } from "next/cache";
@@ -138,9 +137,6 @@ export default async function AdminEdit({
         item={item}
         parentId={resolvedParentId}
         preview={preview}
-        childModuleLinks={
-          !isNew && item ? renderChildModuleLinks(modules, name, item.id) : null
-        }
         oneToOne={oneToOne}
         clients={clients}
         publish={adminConfig.publish}
@@ -155,7 +151,9 @@ export default async function AdminEdit({
               parent={parentRecord}
             />
             <Header canCreate={"list" in adminConfig && adminConfig.create} />
-            <ChildModuleLinks />
+            {!isNew && item
+              ? renderChildModuleLinks(modules, name, item.id)
+              : null}
             <OneToOneTabs />
             <Footer />
           </div>

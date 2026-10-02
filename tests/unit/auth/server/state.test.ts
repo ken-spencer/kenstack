@@ -27,7 +27,7 @@ vi.mock("@kenstack/auth/server/user", () => ({
 }));
 
 import {
-  loadFreshAuthState,
+  loadFreshPublicAuthState,
   loadPublicAuthState,
 } from "@kenstack/auth/server/state";
 
@@ -70,7 +70,7 @@ describe("loadAuthState", () => {
       ]),
     );
 
-    await expect(loadFreshAuthState()).resolves.toEqual({
+    await expect(loadFreshPublicAuthState()).resolves.toEqual({
       state: "anonymous",
     });
   });

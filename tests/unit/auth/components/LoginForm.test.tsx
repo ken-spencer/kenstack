@@ -17,11 +17,9 @@ vi.mock("next/navigation", () => ({
 vi.mock("@kenstack/api/fetcher", () => ({ default: mocks.fetcher }));
 vi.mock("@kenstack/auth/useUserInfo", () => ({
   setUserInfo: mocks.setUserInfo,
+  useLoginDestination: () => undefined,
+  useUserInfo: () => ({ state: "anonymous" }),
 }));
-vi.mock("react-google-recaptcha-v3", () => ({
-  useGoogleReCaptcha: () => ({ executeRecaptcha: undefined }),
-}));
-
 import LoginForm from "@kenstack/auth/components/Login/Form";
 
 const inputValueSetter = Object.getOwnPropertyDescriptor(
@@ -207,7 +205,7 @@ describe("LoginForm", () => {
 
     await act(async () =>
       Array.from(container.querySelectorAll("button"))
-        .find((button) => button.textContent === "Use a password instead")
+        .find((button) => button.textContent === "I have a password")
         ?.click(),
     );
 
@@ -305,13 +303,16 @@ describe("LoginForm", () => {
     await vi.waitFor(() =>
       expect(container.querySelector('input[name="code"]')).not.toBeNull(),
     );
-    expect(mocks.fetcher).toHaveBeenCalledWith("/api/auth", {
-      action: "email-login",
-      email: "patron@example.com",
-      linkToReturnTo: undefined,
-      recaptchaToken: null,
-      returnTo: "/account",
-    });
+    expect(mocks.fetcher).toHaveBeenCalledWith(
+      "/api/auth",
+      {
+        action: "email-login",
+        email: "patron@example.com",
+        linkToReturnTo: undefined,
+        returnTo: "/account",
+      },
+      { recaptchaAction: "login" },
+    );
   });
 
   it("keeps the email form pending while the send runs and shows its failure there", async () => {
@@ -436,7 +437,7 @@ describe("LoginForm", () => {
 
     await act(async () =>
       Array.from(container.querySelectorAll("button"))
-        .find((button) => button.textContent === "Use a password instead")
+        .find((button) => button.textContent === "I have a password")
         ?.click(),
     );
 

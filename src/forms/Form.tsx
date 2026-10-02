@@ -14,41 +14,15 @@ import {
   type UseFormResult,
 } from "./context";
 import Notice from "./Notice";
-type SubmitData<
+// What each handler gets from the form.
+type FormTools<
   TResult extends Record<string, unknown>,
   TVariables extends Record<string, unknown>,
   TSchema extends FormSchema,
 > = Pick<
   UseFormResult<TResult, TVariables, z.input<TSchema>, z.output<TSchema>>,
   "form" | "mutation" | "setStatusError" | "setStatusMessage"
-> & {
-  data: z.output<TSchema>;
-  event?: React.BaseSyntheticEvent;
-  isDirty: boolean;
-  changes: string[];
-};
-
-type ChangeData<
-  TResult extends Record<string, unknown>,
-  TVariables extends Record<string, unknown>,
-  TSchema extends FormSchema,
-> = Pick<
-  UseFormResult<TResult, TVariables, z.input<TSchema>, z.output<TSchema>>,
-  "form"
-> & {
-  event: React.FormEvent<HTMLFormElement>;
-};
-
-type BlurData<
-  TResult extends Record<string, unknown>,
-  TVariables extends Record<string, unknown>,
-  TSchema extends FormSchema,
-> = Pick<
-  UseFormResult<TResult, TVariables, z.input<TSchema>, z.output<TSchema>>,
-  "form" | "mutation" | "setStatusError" | "setStatusMessage"
-> & {
-  event: React.FocusEvent<HTMLFormElement>;
-};
+>;
 
 type FormProps<
   TResult extends Record<string, unknown>,
@@ -59,9 +33,24 @@ type FormProps<
   "onSubmit" | "onChange" | "onBlur" | "onError"
 > & {
   validationMessage?: React.ReactNode;
-  onSubmit: (props: SubmitData<TResult, TVariables, TSchema>) => void;
-  onChange?: (props: ChangeData<TResult, TVariables, TSchema>) => void;
-  onBlur?: (props: BlurData<TResult, TVariables, TSchema>) => void;
+  onSubmit: (
+    props: FormTools<TResult, TVariables, TSchema> & {
+      data: z.output<TSchema>;
+      event?: React.BaseSyntheticEvent;
+      isDirty: boolean;
+      changes: string[];
+    },
+  ) => void;
+  onChange?: (
+    props: Pick<FormTools<TResult, TVariables, TSchema>, "form"> & {
+      event: React.FormEvent<HTMLFormElement>;
+    },
+  ) => void;
+  onBlur?: (
+    props: FormTools<TResult, TVariables, TSchema> & {
+      event: React.FocusEvent<HTMLFormElement>;
+    },
+  ) => void;
 };
 
 export default function FormContainer<

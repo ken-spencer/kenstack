@@ -45,15 +45,25 @@ Stop, ask the user and wait for the answer before:
 
 - adding anything a site would call or pass to Kenstack: a new export, prop, option or parameter. Show
   the proposed shape and why the existing API cannot do the job.
-- writing site code that copies, rewrites or works around something Kenstack already provides,
-  including a wrapper, provider, check or setup step a Kenstack component needs. Say what the site
-  needs, what Kenstack offers today and the options.
-- adding type machinery to make TypeScript accept code: a cast or assertion, a hand-written type
-  restating what a query, schema or builder already infers, or a new conditional or mapped type. Say
+- writing code outside Kenstack (a site, payments or another package) that needs a Kenstack internal —
+  an auth or session state, an access check, a refusal code or message, a store — or that copies,
+  rewrites or works around something Kenstack provides, including a wrapper, provider, check or setup
+  step a Kenstack component needs. The default answer is to extend the Kenstack mechanism so the caller
+  only declares what it wants, for example an option on the call it already makes. Bring that shape,
+  and why it isn't enough, to the user and the plan for review before any export or copy. When
+  Kenstack produces something and Kenstack consumes it, such as a response field, a store, a header
+  or a refusal code, Kenstack carries it between the two ends; code outside Kenstack never passes it
+  along.
+- adding type machinery or reshaping code to make TypeScript accept it: a cast or assertion, a
+  hand-written type restating what a query, schema or builder already infers, a new conditional or
+  mapped type, or bypassing the layer that owns the job, exporting internals or copying a derivation to
+  avoid an inference failure. Say
   what TypeScript rejects, where inference stops and the options. Fixing inference at its source is the
   default; stop before writing the workaround. First have a side agent spike it on copies in `tmp/`,
   proving each option with a TypeScript run and a check that can fail. If a fix at the source needs no
-  such machinery, build it without asking; otherwise bring the spike's options and results. A
+  such machinery, build it without asking; otherwise bring the spike's options and results. This spike
+  is only for a TypeScript rejection; design and planning choices get a code-reading sketch instead,
+  and a spike only to resolve a genuine uncertainty. A
   necessary cast that states something TypeScript cannot infer, such as flattening a merge, is
   acceptable; restating in detail what it already infers is not.
 
@@ -88,14 +98,17 @@ recommendation. The "Ask first" items always go to the user.
   owns a unit, ask before building; ownership is the user's call.
 - Every edit must change requested behavior, reduce indirection, or clarify ownership. Leave equally
   clear equivalent forms alone.
-- Never rename a pre-existing symbol, prop, file, or folder unless the user requested that rename.
-  Preserve questionable names and propose them in the handoff; uncertain origin counts as pre-existing.
-  If keeping a name would force a workaround (a flag, mode branch, alias or special case that exists
-  only to avoid the rename), stop and propose the rename before building, with the workaround it removes.
-  Names introduced in the current task must satisfy `docs/naming.md`. Cleanup and review never rename.
-- Write a defensive guard against the narrowest credible reachable conflict with meaningful
-  consequences, with a message that is true for every case it blocks; otherwise narrow the condition or
-  support the broader case.
+- Never rename a settled symbol, prop, file, or folder unless the user requested that rename. A name is
+  settled once it is committed, or once the user chose it in a plan, in conversation or in their own
+  edit. An uncommitted name an agent introduced is still open: it must satisfy `docs/naming.md`, and a
+  better name replaces it. Preserve questionable settled names and propose them in the handoff. If
+  keeping a name would force a workaround (a flag, mode branch, alias or special case that exists only
+  to avoid the rename), stop and propose the rename before building, with the workaround it removes.
+  Cleanup and review never rename.
+- Write a guard only for a conflict you can reach: its comment names the path that gets there, and
+  that path is not already blocked by an access check, a step rule, a schema or a loader. If you can't
+  name such a path, don't write the guard. Its message must be true for every case it blocks;
+  otherwise narrow the condition or support the broader case.
 
 ## Public surface
 

@@ -58,14 +58,9 @@ async function prepareFileSave({
   id,
   user,
   table,
-  shouldSaveField,
 }: FieldPreSaveContext<
   z.output<typeof fileSchema>
 >): Promise<FieldPreSaveResult> {
-  if (!shouldSaveField(key)) {
-    return { status: "success", remove: true };
-  }
-
   if (!column) {
     return {
       status: "error",

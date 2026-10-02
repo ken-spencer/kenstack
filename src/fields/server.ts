@@ -27,7 +27,6 @@ export {
 } from "./serverField";
 export {
   resolveServerFields,
-  type ServerFieldKinds,
   type ServerFields,
 } from "./internal/serverResolution";
 export { dateField } from "./date/server";

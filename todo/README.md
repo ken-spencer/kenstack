@@ -6,7 +6,7 @@ Active workstreams:
 
 Deferred until the current work is reviewed and committed:
 
-2. **Record-level optimistic concurrency** — add a record version to prevent stale editor saves, then remove lower-level concurrency checks that the record guard makes redundant. The PostgreSQL integration harness under `tests/integration/` is reusable for this work. See `02-record-version-concurrency.md`.
+2. **Record-level optimistic concurrency** — a conditional update on `updatedAt` (no version column, no pre-query) refuses a stale editor save; on a miss, revisions decide whether the edits touch different fields (merge) or the same field (refuse, naming who). Design ruled 30 September 2026 and plan reviewed; every decision ruled. Ready to build. The PostgreSQL integration harness under `tests/integration/` is reusable for this work. See `02-record-version-concurrency.md`.
 
 3. **Admin post-mutation list freshness** — determine and correct the brief stale-list flash after save, trash, or restore navigation. See `03-admin-list-cache-freshness.md`.
 
@@ -16,19 +16,15 @@ Planned work:
 
 5. **Email log and address suppression** — add reusable staff views for outgoing messages and suppressed addresses, with SES delivery feedback updating message status. The message records also provide the basis for a future newsletter queue. See `05-email-log-and-suppression.md`.
 
-6. **Confirm identity on submit** — sensitive forms render normally; a stale submit opens an identity dialog and replays once confirmed, replacing the reauthentication timer. Reviewed design, not scheduled. See `06-reauthentication-on-submit.md`.
+8. **Per-module admin access** — let a role be granted access to individual admin modules, so someone can edit only news and spotlight, for example. A module's custom admin actions inherit that module's access. About 20 Civic admin action stages each declare `access: "admin"` today, so a forgotten line leaves an action open. Waiting for a use case.
 
-7. **Host wiring work order** — decisions on the places sites rewrite, copy or set up Kenstack's work, from the 28 September 2026 sweep, plus site-only fixes. All decisions ruled and the build plan reviewed clean, 28 September 2026; ready to build. See `07-host-wiring.md`.
+9. **Account change detection** — every `fetcher` request states the account its page was rendered for, every access-checked pipeline refuses a mismatch with a message and a Reload action, and the account menu opens a "Your sign-in changed" dialog when the tab regains focus under a different account. Built 30 September to 1 October 2026; remove this entry and its file once committed. See `09-account-change-detection.md`.
 
-8. **Per-module admin access** — let a role be granted access to individual admin modules, so someone can edit only news and spotlight, for example. A module's custom admin actions inherit that module's access (deferred from `07-host-wiring.md`). Waiting for a use case.
+10. **StepFlow per-tab state and sign-in hand-off** — flow state moves to sessionStorage and every same-tab arrival resumes the tab's step with no flash; an emailed link hands the sign-in back to the waiting tab ("close this tab"); the sign-in step's controller verifies links quietly; everything after a sign-in decides from its response, with the account details in the user info. Built 30 September to 1 October 2026; remove this entry and its file once committed. See `10-stepflow-visit-id.md`.
 
-9. **Account change detection** — every `fetcher` request states the account its page was rendered for, the pipeline refuses a mismatch, and the page reloads with a notice; a tab also reloads when it regains focus under a different account. Replaces the per-form account binding from `06`. Proposed 29 September 2026; queue after `07` is committed. See `09-account-change-detection.md`.
-
-10. **StepFlow visits keyed by id** — store each visit under its id, carried in the URL and the emailed link's return path, so a fresh arrival starts clean and a link or reload resumes. Idea, 29 September 2026. See `10-stepflow-visit-id.md`.
-
-11. **TypeScript improvement sweep** — parallel Opus workers review all committed TypeScript for casts, restated types and machinery that inference could replace, spiking each candidate in `tmp/` before proposing it. Launch only when Ken asks, after his 29 September 2026 presentation. See `11-typescript-improvement-sweep.md`.
-
-12. **Remove the sign-in step's signed-in view** — a signed-in visitor skips the sign-in step both ways; account switching goes through the account menu. Build after the 29 September 2026 presentation, together with 10. See `12-remove-signed-in-step-view.md`.
+Deferred decision: whether the page editor's settings mount themselves. The page editor may be replaced by
+the Composer (Civic plan 09); decide then. Today every editable page places both `PageEditor` and
+`PageEditorSettings`.
 
 Resolved review and bug lists are removed after their durable outcomes are retained in
 code, tests, migration notes, or active policy. Completed plans are archived only when

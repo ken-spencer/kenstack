@@ -2,75 +2,95 @@
 
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
 
-import fetcher from "@kenstack/api/fetcher";
-import type { UserInfoResult } from "@kenstack/auth/api";
+import { accountChangedRefusal } from "@kenstack/auth/renderedAccount";
 import { getSafeReturnToPath } from "@kenstack/auth/returnTo";
-import { useUserInfo } from "@kenstack/auth/useUserInfo";
+import {
+  isUserInfoCurrent,
+  useLoginDestination,
+  useSignInChange,
+  useUserInfo,
+} from "@kenstack/auth/useUserInfo";
 import Button from "@kenstack/components/Button";
+import Notice from "@kenstack/components/Notice";
+import {
+  useStep,
+  useStepLeavesPage,
+} from "@kenstack/components/StepFlow/context";
 
-export default function LoginReturn() {
+// Leaves as soon as the flow reaches this step, while the step before it stays on screen. The
+// destination comes from the sign-in, or the user-info reload that adopted it; a signed-in arrival
+// uses the one the server resolved for the step.
+export function LoginReturnController({
+  destination: arrivalDestination,
+}: {
+  destination?: { path: string; userId: number };
+}) {
   const router = useRouter();
-  const returnTo = getSafeReturnToPath(useSearchParams().get("returnTo"));
+  const searchParams = useSearchParams();
+  const returnTo = getSafeReturnToPath(searchParams.get("returnTo"));
+  // An emailed link in the address is still being verified by the sign-in step's controller, its
+  // failure dialog is open, or a waiting tab answered it and this tab stays where it is.
+  const isVerifyingLink = searchParams.has("token");
+  const { isActive } = useStep();
   const userInfo = useUserInfo();
-  // A kept route can show this step again after another account signs in, so the destination is
-  // looked up per account and only for a signed-in visitor.
   const userId =
     userInfo.state === "authenticated" ? userInfo.userId : undefined;
-  // The users module is server-only, so the server resolves the account's destination. It also
-  // confirms the account, so a browser that still shows a session the server has ended reloads
-  // instead of bouncing between this page and a returnTo that sends it back.
-  const destinationQuery = useQuery({
-    enabled: userId !== undefined,
-    queryKey: ["login-destination", userId],
-    // A failure shows Continue at once instead of a blank page through the default retries.
-    retry: false,
-    queryFn: async ({ signal }) => {
-      const result = await fetcher<UserInfoResult>(
-        "/api/auth",
-        { action: "user-info" },
-        { signal },
-      );
-      if (result.status === "error") {
-        throw new Error(result.message);
-      }
-      return result.authState.state === "authenticated" &&
-        result.authState.userId === userId
-        ? (result.loginDestination ?? null)
-        : null;
-    },
-  });
+  const signInDestination = useLoginDestination();
+  const destination =
+    returnTo ??
+    signInDestination ??
+    (arrivalDestination?.userId === userId
+      ? arrivalDestination?.path
+      : undefined);
+  // A sign-in that changed in another tab since this page took its account keeps the visitor here:
+  // going on would bounce between this page and a destination that needs the session.
+  const { hasChanged } = useSignInChange();
+  useStepLeavesPage(!hasChanged);
 
   useEffect(() => {
-    if (userId === undefined) {
+    if (
+      !isActive ||
+      isVerifyingLink ||
+      hasChanged ||
+      userId === undefined ||
+      destination === undefined
+    ) {
       return;
     }
-    const destination = destinationQuery.data;
-    if (destination) {
-      router.replace(returnTo ?? destination);
-    } else if (destination === null) {
-      // The server no longer sees the session this browser signed in, such as one revoked since; a
-      // full load shows the page as it stands, sign-in included.
-      window.location.reload();
-    }
-  }, [destinationQuery.data, returnTo, router, userId]);
+    let isCurrent = true;
+    // A check in flight, such as the one a server render that no longer sees the session starts,
+    // settles first; one that finds another account or none keeps the visitor here.
+    void isUserInfoCurrent().then((isUnchanged) => {
+      if (isCurrent && isUnchanged) {
+        router.replace(destination);
+      }
+    });
+    return () => {
+      isCurrent = false;
+    };
+  }, [destination, hasChanged, isActive, isVerifyingLink, router, userId]);
 
-  // The visitor leaves as soon as the destination is known, so nothing shows on the way.
-  return destinationQuery.isError ? (
-    <div className="mt-7">
-      <p>You’re signed in.</p>
-      <Button
-        className="mt-4"
-        disabled={destinationQuery.isFetching}
-        type="button"
-        variant="outline"
-        onClick={() => void destinationQuery.refetch()}
-      >
-        Continue
-      </Button>
-    </div>
-  ) : (
-    <div aria-busy="true" className="mt-7 min-h-72" />
-  );
+  return null;
+}
+
+export default function LoginReturn() {
+  const { hasChanged } = useSignInChange();
+
+  // The refusal line and Reload a form shows.
+  return hasChanged ? (
+    <Notice className="mt-7" role="alert">
+      <div className="flex items-center gap-3">
+        <div className="grow">{accountChangedRefusal.message}</div>
+        <Button
+          className="shrink-0"
+          size="sm"
+          type="button"
+          onClick={() => window.location.reload()}
+        >
+          Reload
+        </Button>
+      </div>
+    </Notice>
+  ) : null;
 }

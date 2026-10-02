@@ -20,7 +20,6 @@ body:has([data-admin-theme="light"]) {
   --admin-divider: rgb(24 24 27 / 24%);
   --border: #d9dee7;
   --input: #cfd6e3;
-  --input-border: #cfd6e3;
   --ring: #0a84ff;
   --tooltip: #27272a;
   --tooltip-border: #3f3f46;
@@ -54,7 +53,6 @@ body:has([data-admin-theme="dark"]) {
   --admin-divider: rgb(255 255 255 / 38%);
   --border: rgb(255 255 255 / 12%);
   --input: #606060;
-  --input-border: #606060;
   --ring: #0a84ff;
   --tooltip: #242424;
   --tooltip-border: rgb(255 255 255 / 14%);

@@ -64,7 +64,7 @@ vi.mock("next/navigation", () => ({
 
 function storedFlowSlices() {
   const prefix = "stored-state:%2Fflow:";
-  return Object.keys(window.localStorage)
+  return Object.keys(window.sessionStorage)
     .filter((key) => key.startsWith(prefix))
     .map((key) => key.slice(prefix.length))
     .sort();
@@ -76,7 +76,7 @@ describe("StepFlow", () => {
 
   beforeEach(() => {
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
-    window.localStorage.clear();
+    window.sessionStorage.clear();
     window.history.replaceState(null, "", "/flow");
     container = document.createElement("div");
     root = createRoot(container);
@@ -168,11 +168,11 @@ describe("StepFlow", () => {
   });
 
   it("requires a live prerequisite despite stored completion and before hydration", () => {
-    window.localStorage.setItem(
+    window.sessionStorage.setItem(
       "stored-state:%2Fflow:$completedSteps",
       JSON.stringify({ value: { account: true } }),
     );
-    window.localStorage.setItem(
+    window.sessionStorage.setItem(
       "stored-state:%2Fflow:$expiresAt",
       String(Date.now() + 60_000),
     );
@@ -585,7 +585,7 @@ describe("StepFlow", () => {
       root.render(<RetainedFlow mode="visible" />);
     });
     expect(container.querySelector("h2")?.textContent).toBe("First");
-    expect(storedFlowSlices()).toEqual(["$expiresAt", "$visit"]);
+    expect(storedFlowSlices()).toEqual([]);
 
     // So is a new server render of the same mounted instance, such as a link
     // to the flow's own URL.
@@ -595,7 +595,7 @@ describe("StepFlow", () => {
       root.render(<RetainedFlow mode="visible" visitKey="second" />);
     });
     expect(container.querySelector("h2")?.textContent).toBe("First");
-    expect(storedFlowSlices()).toEqual(["$expiresAt", "$visit"]);
+    expect(storedFlowSlices()).toEqual([]);
 
     // So is a reload that finds the result recorded, even when refreshed
     // server state no longer composes the final step.
@@ -609,33 +609,7 @@ describe("StepFlow", () => {
       );
     });
     expect(container.querySelector("h2")?.textContent).toBe("First");
-    expect(storedFlowSlices()).toEqual(["$expiresAt", "$visit"]);
-  });
-
-  it("returns to its entry step when hidden and shown again", () => {
-    function RetainedFlow({ mode }: { mode: "hidden" | "visible" }) {
-      return (
-        <Activity mode={mode}>
-          <Flow activeEffects={new Set()} />
-        </Activity>
-      );
-    }
-
-    act(() => {
-      root.render(<RetainedFlow mode="visible" />);
-    });
-    act(() => getButton(container, "Next from First").click());
-    expect(container.querySelector("h2")?.textContent).toBe("Second");
-
-    // Next keeps a left route instance alive and may show it again on a
-    // later visit; that visit starts at the entry step.
-    act(() => {
-      root.render(<RetainedFlow mode="hidden" />);
-    });
-    act(() => {
-      root.render(<RetainedFlow mode="visible" />);
-    });
-    expect(container.querySelector("h2")?.textContent).toBe("First");
+    expect(storedFlowSlices()).toEqual([]);
   });
 
   it("preserves a step-owned form while the step is hidden", () => {
@@ -673,11 +647,11 @@ describe("StepFlow", () => {
   });
 
   it("lets a controller activate its step once the preceding steps are complete", () => {
-    window.localStorage.setItem(
+    window.sessionStorage.setItem(
       "stored-state:%2Fflow:$completedSteps",
       JSON.stringify({ value: { tickets: true } }),
     );
-    window.localStorage.setItem(
+    window.sessionStorage.setItem(
       "stored-state:%2Fflow:$expiresAt",
       String(Date.now() + 60_000),
     );
@@ -755,49 +729,6 @@ describe("StepFlow", () => {
     expect(container.querySelector('[role="alert"]')).not.toBeNull();
   });
 
-  it("resets in-memory progress when another tab clears the flow", () => {
-    act(() => {
-      root.render(<Flow activeEffects={new Set()} />);
-    });
-    act(() => getButton(container, "Next from First").click());
-    expect(container.querySelector("h2")?.textContent).toBe("Second");
-
-    const progressKey = "stored-state:%2Fflow:$completedSteps";
-    const oldValue = window.localStorage.getItem(progressKey);
-    act(() => {
-      window.localStorage.removeItem(progressKey);
-      window.localStorage.removeItem("stored-state:%2Fflow:$expiresAt");
-      window.dispatchEvent(
-        new StorageEvent("storage", {
-          key: progressKey,
-          newValue: null,
-          oldValue,
-          storageArea: window.localStorage,
-        }),
-      );
-    });
-
-    expect(container.querySelector("h2")?.textContent).toBe("First");
-  });
-
-  it("does not reset progress when another tab clears session storage", () => {
-    act(() => {
-      root.render(<Flow activeEffects={new Set()} />);
-    });
-    act(() => getButton(container, "Next from First").click());
-
-    act(() => {
-      window.dispatchEvent(
-        new StorageEvent("storage", {
-          key: null,
-          storageArea: window.sessionStorage,
-        }),
-      );
-    });
-
-    expect(container.querySelector("h2")?.textContent).toBe("Second");
-  });
-
   it("restores step-scoped state", () => {
     act(() => {
       root.render(<StoredStateFlow />);
@@ -811,7 +742,7 @@ describe("StepFlow", () => {
     act(() => getButton(container, "Clear stored value").click());
     expect(container.querySelector("output")?.textContent).toBe("Empty");
     expect(
-      window.localStorage.getItem("stored-state:%2Fstored-flow:count"),
+      window.sessionStorage.getItem("stored-state:%2Fstored-flow:count"),
     ).toBeNull();
 
     act(() => getButton(container, "Increment stored value").click());
@@ -823,7 +754,7 @@ describe("StepFlow", () => {
   });
 
   it("blocks the flow when browser storage access throws", () => {
-    vi.spyOn(window, "localStorage", "get").mockImplementation(() => {
+    vi.spyOn(window, "sessionStorage", "get").mockImplementation(() => {
       throw new Error("Storage access is blocked");
     });
 
@@ -839,13 +770,13 @@ describe("StepFlow", () => {
     const valueKey = "stored-state:%2Fstored-flow:count";
     const deadlineKey = "stored-state:%2Fstored-flow:$expiresAt";
     const deadline = String(Date.now() + 60_000);
-    window.localStorage.setItem(valueKey, JSON.stringify({ value: 1 }));
-    window.localStorage.setItem(deadlineKey, deadline);
+    window.sessionStorage.setItem(valueKey, JSON.stringify({ value: 1 }));
+    window.sessionStorage.setItem(deadlineKey, deadline);
     act(() => {
       root.render(<StoredStateFlow />);
     });
     expect(container.querySelector('[role="alert"]')).toBeNull();
-    const deadlineAfterVisit = window.localStorage.getItem(deadlineKey);
+    const deadlineAfterVisit = window.sessionStorage.getItem(deadlineKey);
 
     const setItem = Storage.prototype.setItem;
     vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (
@@ -863,10 +794,10 @@ describe("StepFlow", () => {
 
     expect(container.querySelector('[role="alert"]')).not.toBeNull();
     expect(container.querySelector("button")).toBeNull();
-    expect(window.localStorage.getItem(valueKey)).toBe(
+    expect(window.sessionStorage.getItem(valueKey)).toBe(
       JSON.stringify({ value: 1 }),
     );
-    expect(window.localStorage.getItem(deadlineKey)).toBe(deadlineAfterVisit);
+    expect(window.sessionStorage.getItem(deadlineKey)).toBe(deadlineAfterVisit);
   });
 
   it("reports a mutation when storage becomes unreadable after render", () => {
@@ -876,7 +807,7 @@ describe("StepFlow", () => {
     expect(container.querySelector('[role="alert"]')).toBeNull();
 
     const storageGetter = vi
-      .spyOn(window, "localStorage", "get")
+      .spyOn(window, "sessionStorage", "get")
       .mockImplementation(() => {
         throw new Error("Storage access changed");
       });
@@ -895,7 +826,7 @@ describe("StepFlow", () => {
     expect(container.querySelector('[role="alert"]')).toBeNull();
 
     const storageGetter = vi
-      .spyOn(window, "localStorage", "get")
+      .spyOn(window, "sessionStorage", "get")
       .mockImplementation(() => {
         throw new Error("Storage access changed");
       });
@@ -906,11 +837,11 @@ describe("StepFlow", () => {
   });
 
   it("does not restore a stored value rejected by its owner schema", () => {
-    window.localStorage.setItem(
+    window.sessionStorage.setItem(
       "stored-state:%2Fstored-flow:count",
       JSON.stringify({ value: "wrong" }),
     );
-    window.localStorage.setItem(
+    window.sessionStorage.setItem(
       "stored-state:%2Fstored-flow:$expiresAt",
       String(Date.now() + 60_000),
     );
@@ -921,22 +852,8 @@ describe("StepFlow", () => {
 
     expect(container.querySelector("output")?.textContent).toBe("Empty");
     expect(
-      window.localStorage.getItem("stored-state:%2Fstored-flow:count"),
+      window.sessionStorage.getItem("stored-state:%2Fstored-flow:count"),
     ).toBeNull();
-  });
-
-  it("reacts when another tab clears local storage", () => {
-    act(() => {
-      root.render(<StoredStateFlow />);
-    });
-    act(() => getButton(container, "Increment stored value").click());
-
-    act(() => {
-      window.localStorage.clear();
-      window.dispatchEvent(new StorageEvent("storage", { key: null }));
-    });
-
-    expect(container.querySelector("output")?.textContent).toBe("Empty");
   });
 
   it("lets a flow owner outside the flow read a slice a step wrote", () => {
@@ -949,126 +866,27 @@ describe("StepFlow", () => {
     expect(container.querySelector("h2")?.textContent).toBe("Second");
     expect(container.querySelector("[data-owner]")?.textContent).toBe("Stored");
 
-    // A remount re-enters at the entry step; the stored slice is unaffected.
+    // A remount resumes the tab's step; the stored slice is unaffected.
     act(() => root.render(<OwnerReadFlow key="remounted" />));
     expect(container.querySelector("[data-owner]")?.textContent).toBe("Stored");
-    expect(container.querySelector("h2")?.textContent).toBe("First");
+    expect(container.querySelector("h2")?.textContent).toBe("Second");
 
-    act(() => getButton(container, "Store first value").click());
     act(() => getButton(container, "Next from Second").click());
     expect(container.querySelector("h2")?.textContent).toBe("Complete");
     expect(container.querySelector("[data-owner]")?.textContent).toBe("Stored");
   });
 
-  it("returns to the first step when a write follows the flow's 24-hour lifetime", () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-08-01T12:00:00.000Z"));
-    window.history.replaceState(null, "", "/expiring-flow/first");
-
-    act(() => root.render(<ExpiringStoredStateFlow />));
-    act(() => getButton(container, "Store first value").click());
-    expect(container.querySelector("h2")?.textContent).toBe("Second");
-
-    const deadlineKey = "stored-state:%2Fexpiring-flow:$expiresAt";
-    const firstDeadline = window.localStorage.getItem(deadlineKey);
-
-    act(() => vi.advanceTimersByTime(60 * 60 * 1000));
-    act(() => getButton(container, "Store second value").click());
-    expect(Number(window.localStorage.getItem(deadlineKey))).toBe(
-      Number(firstDeadline) + 60 * 60 * 1000,
-    );
-
-    act(() => vi.advanceTimersByTime(24 * 60 * 60 * 1000));
-    expect(container.querySelector("h2")?.textContent).toBe("Second");
-
-    act(() => getButton(container, "Store second value").click());
-    expect(container.querySelector("h2")?.textContent).toBe("First");
-    expect(
-      window.localStorage.getItem("stored-state:%2Fexpiring-flow:selection"),
-    ).toBeNull();
-    expect(
-      window.localStorage.getItem(
-        "stored-state:%2Fexpiring-flow:$completedSteps",
-      ),
-    ).toBeNull();
-  });
-
-  it("continues from the first step of an expired flow with a fresh value", () => {
-    window.history.replaceState(null, "", "/expiring-flow/second");
-    window.localStorage.setItem(
-      "stored-state:%2Fexpiring-flow:$completedSteps",
-      JSON.stringify({ value: { first: true } }),
-    );
-    window.localStorage.setItem(
-      "stored-state:%2Fexpiring-flow:confirmation",
-      JSON.stringify({ value: true }),
-    );
-    window.localStorage.setItem(
-      "stored-state:%2Fexpiring-flow:$expiresAt",
-      String(Date.now() - 1),
-    );
-
-    act(() => root.render(<ExpiringStoredStateFlow />));
-    expect(container.querySelector("h2")?.textContent).toBe("First");
-
-    act(() => getButton(container, "Store first value").click());
-
-    expect(container.querySelector("h2")?.textContent).toBe("Second");
-    expect(
-      window.localStorage.getItem("stored-state:%2Fexpiring-flow:selection"),
-    ).toBe(JSON.stringify({ value: true }));
-    expect(
-      window.localStorage.getItem("stored-state:%2Fexpiring-flow:confirmation"),
-    ).toBeNull();
-  });
-
-  it("returns to the first step when an expired step commits and continues", () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-08-01T12:00:00.000Z"));
-    window.history.replaceState(null, "", "/expiring-flow/first");
-
-    act(() => root.render(<ExpiringStoredStateFlow />));
-    act(() => getButton(container, "Store first value").click());
-    expect(container.querySelector("h2")?.textContent).toBe("Second");
-
-    act(() => vi.advanceTimersByTime(25 * 60 * 60 * 1000));
-    act(() => getButton(container, "Continue with second value").click());
-
-    expect(container.querySelector("h2")?.textContent).toBe("First");
-    expect(
-      window.localStorage.getItem("stored-state:%2Fexpiring-flow:selection"),
-    ).toBeNull();
-  });
-
-  it("does not publish expired stored values to workflow owners", () => {
-    window.localStorage.setItem(
-      "stored-state:%2Fexpired-restore:selection",
-      JSON.stringify({ value: true }),
-    );
-    window.localStorage.setItem(
-      "stored-state:%2Fexpired-restore:$expiresAt",
-      String(Date.now() - 1),
-    );
-
-    act(() => root.render(<ExpiredRestoreFlow />));
-
-    expect(container.querySelector("[data-restored]")?.textContent).toBe(
-      "Empty",
-    );
-    expect(container.querySelector("h2")?.textContent).toBe("First");
-  });
-
   it("restores controller state before showing a hydrated route", async () => {
     act(() => root.unmount());
-    window.localStorage.setItem(
+    window.sessionStorage.setItem(
       "stored-state:%2Fexpired-restore:selection",
       JSON.stringify({ value: true }),
     );
-    window.localStorage.setItem(
+    window.sessionStorage.setItem(
       "stored-state:%2Fexpired-restore:$completedSteps",
       JSON.stringify({ value: { first: true } }),
     );
-    window.localStorage.setItem(
+    window.sessionStorage.setItem(
       "stored-state:%2Fexpired-restore:$expiresAt",
       String(Date.now() + 60_000),
     );

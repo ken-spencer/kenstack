@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
+// Reads a search parameter once and removes it from the address, so a reload, a shared address or Back
+// never brings it again; it keeps returning the value until the address carries a new one. Use it for
+// one-time values such as a notice or a link's token. It only reads; to run a request for the value,
+// pass it to useParamAction.
 export default function useConsumedSearchParam(name: string) {
   const searchParams = useSearchParams();
   const value = searchParams.get(name);

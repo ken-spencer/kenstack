@@ -39,15 +39,31 @@ type ModuleRecordSave = {
 // what a member may change.
 export function saveModuleRecord(options: ModuleRecordSave) {
   return saveModule(
-    {
-      ...options,
-      fields: Object.fromEntries(
-        Object.entries(options.module.admin.fields).filter(([key]) =>
-          Object.hasOwn(options.values, key),
-        ),
-      ),
-    },
+    { ...options, fields: pickSubmittedFields(options.module, options.values) },
     false,
+  );
+}
+
+// Kenstack's account creation: a member save acting as the new account, through its own insert.
+export function saveModuleRecordAs(
+  options: ModuleRecordSave,
+  extensions: Parameters<typeof saveModule>[2],
+) {
+  return saveModule(
+    { ...options, fields: pickSubmittedFields(options.module, options.values) },
+    false,
+    extensions,
+  );
+}
+
+function pickSubmittedFields(
+  module: DefinedAdminModule,
+  values: Record<string, unknown>,
+) {
+  return Object.fromEntries(
+    Object.entries(module.admin.fields).filter(([key]) =>
+      Object.hasOwn(values, key),
+    ),
   );
 }
 
@@ -300,12 +316,19 @@ async function saveModule(
   }: ModuleRecordSave & { fields: ServerDefinedFields },
   admin: boolean,
   extensions: Pick<
-    Parameters<typeof saveRecord>[0],
+    Parameters<
+      typeof saveRecord<
+        DefinedAdminModule["admin"]["table"],
+        ServerDefinedFields
+      >
+    >[0],
     | "additionalPreparations"
     | "afterSave"
+    | "query"
     | "revisionChanges"
     | "revisionRelations"
     | "translateError"
+    | "user"
   > = {},
 ) {
   const { name, admin: adminConfig } = module;
@@ -596,7 +619,7 @@ async function loadActiveRelatedValues(
   db: Pick<typeof appDb, "select"> = appDb,
 ) {
   const columns = getTableColumns(binding.table);
-  const result = await loadRecord({
+  return loadRecord({
     db,
     table: binding.table,
     fields: binding.fields,
@@ -605,8 +628,6 @@ async function loadActiveRelatedValues(
         ? and(eq(binding.table.id, id), isNull(columns.deletedAt))
         : eq(binding.table.id, id),
   });
-
-  return result.row ? result.values : undefined;
 }
 
 // Builds snapshots of active relations for inclusion in the parent revision.

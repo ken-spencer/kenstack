@@ -96,8 +96,9 @@ barrel's runtime boundary is determined by its consumers, not only by its direct
   `"use cache: remote"`. It stays coherent only because every mutation that changes a session's
   authority (login, logout, impersonation, password reset, user save or removal) revalidates the
   session or user tag with blocking expiration immediately after its write, before any audit or
-  follow-up task. A new mutation that touches sessions or user roles must do the same, and a decision
-  that must not trust the snapshot uses `getFreshCurrentUser` or `loadFreshAuthState`.
+  follow-up task. A new mutation that touches sessions or user roles must do the same. Every access
+  check reads this snapshot, writes included; it is current. A fresh read is only for reading the
+  session or user again after the same request changed it.
   Module saves and removals expire the users record tag carried by session snapshots automatically;
   direct writes still need explicit invalidation. See `docs/admin.md#record-saving`.
 - Shared admin content reads may use regular or remote caching. Perform authorization outside the

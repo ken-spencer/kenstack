@@ -1,10 +1,10 @@
 import "server-only";
 
-import { eq, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { db } from "@app/db";
 import { login, logout } from "@kenstack/auth/server/auth";
-import { verifications } from "@kenstack/db/tables/verification";
-import { loadFreshAuthState } from "@kenstack/auth/server/state";
+import { loadLoginVerification } from "@kenstack/auth/server/state";
+import { getFreshCurrentUser } from "@kenstack/auth/server/user";
 import { ReturnedError } from "@kenstack/api";
 import { normalizeEmail } from "@kenstack/fields/email";
 
@@ -22,38 +22,29 @@ import {
 } from "@kenstack/auth/email/verification/internal/policy";
 
 // Public entry point for host account flows and Kenstack email login. Converts
-// a proven email into an ordinary session, consuming the proof only once the
-// account exists. A signed-in user, impersonating or not, who proves another
-// address switches to that address's account; login() ends the current
-// session first.
-export async function redeemEmailProof(
-  {
-    email,
-    verificationId,
-  }: {
-    email: string;
-    verificationId: number;
-  },
-  { allowUnregistered = false }: { allowUnregistered?: boolean } = {},
-) {
-  const authState = await loadFreshAuthState();
+// the email this browser has proven into an ordinary session, consuming the
+// proof only once the account exists. A signed-in user, impersonating or not,
+// who proves another address switches to that address's account; login() ends
+// the current session first.
+export async function redeemEmailProof({
+  allowUnregistered = false,
+}: { allowUnregistered?: boolean } = {}) {
+  // Read afresh: code and link verification mark the proof proven earlier in
+  // this request. A proof replaced since then by a new request is not this one.
+  const verification = await loadLoginVerification();
+  if (!verification?.provenAt) {
+    throw new ReturnedError(verificationReplacedMessage, {
+      code: verificationEndedCode,
+      status: 409,
+    });
+  }
+  const { email, id: verificationId } = verification;
+  const user = await getFreshCurrentUser();
   let userId: number | undefined;
 
-  if (authState.state === "authenticated" && authState.email === email) {
-    userId = authState.userId;
+  if (user && normalizeEmail(user.email) === email) {
+    userId = user.id;
   } else {
-    if (
-      authState.state !== "authenticated" &&
-      (authState.state !== "proven" ||
-        authState.email !== email ||
-        authState.verificationId !== verificationId)
-    ) {
-      throw new ReturnedError(verificationReplacedMessage, {
-        code: verificationEndedCode,
-        status: 409,
-      });
-    }
-
     userId = (
       await db.query.users.findFirst({
         columns: { id: true },
@@ -70,18 +61,13 @@ export async function redeemEmailProof(
         // create one. A signed-in visitor leaves their current account first,
         // or that flow would edit it; logout drops the verification cookie,
         // so the proof is put back for the new account's creation.
-        if (authState.state === "authenticated") {
+        if (user) {
           const verificationKey = await getVerificationKey();
-          const [verification] = await db
-            .select({ expiresAt: verifications.expiresAt })
-            .from(verifications)
-            .where(eq(verifications.id, verificationId))
-            .limit(1);
           await logout();
-          if (authState.impersonatedBy) {
+          if (user.impersonatedBy) {
             await logout();
           }
-          if (verificationKey && verification) {
+          if (verificationKey) {
             await setVerificationCookie(
               verificationKey,
               verification.expiresAt,
@@ -98,8 +84,8 @@ export async function redeemEmailProof(
 
   // Another request (a second tab, another flow) consumed this proof first, so
   // that sign-in has happened; this tab only needs to reload.
-  const verification = await consumeVerification(verificationId, email);
-  if (!verification) {
+  const consumed = await consumeVerification(verificationId, email);
+  if (!consumed) {
     throw new ReturnedError(
       "You've already signed in. Refresh the page to continue.",
       { status: 409 },
@@ -112,7 +98,7 @@ export async function redeemEmailProof(
   } catch (error) {
     await restoreVerification(verificationId);
     if (verificationKey) {
-      await setVerificationCookie(verificationKey, verification.expiresAt);
+      await setVerificationCookie(verificationKey, consumed.expiresAt);
     }
     throw error;
   }

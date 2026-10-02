@@ -4,14 +4,14 @@ import PaginationCont from "@kenstack/list/Pagination";
 import { useAdminList } from "./context";
 
 export default function AdminListFooter() {
-  const { isReorderSort, page, query, limit } = useAdminList();
+  const { isReorderSort, page, query } = useAdminList();
 
   if (query.isPending || query.error || "error" === query.data.status) {
     return;
   }
 
   const total = query.data.total ?? 0;
-  const totalPages = Math.ceil(total / limit);
+  const totalPages = Math.ceil(total / query.data.limit);
 
   return (
     <div className="flex items-center">

@@ -12,82 +12,76 @@ import {
 import type { LoginActionResult } from "@kenstack/auth/api";
 import { login as loginUser } from "@kenstack/auth/server/auth";
 import loginSchema from "@kenstack/auth/schemas/login";
-import { requireUnchangedAccount } from "@kenstack/auth/reauthentication/server";
 import { resolveLoginDestination } from "@kenstack/auth/server/loginDestination";
 import { loadFreshPublicAuthState } from "@kenstack/auth/server/state";
 import { audit } from "@kenstack/logger";
 
 export const passwordFailureLimit = [3, "15 minutes"] as const;
 
-export const loginPipeline = () =>
-  pipelineStage(
-    { schema: loginSchema },
-    async ({
-      data: { email, password, returnTo, userId },
-      dataIn,
+export const loginPipeline = pipelineStage(
+  { schema: loginSchema },
+  async ({
+    data: { email, password, returnTo },
+    dataIn,
+    request,
+    response,
+  }) => {
+    // Only failures count (see recordPasswordFailure); a successful sign-in
+    // consumes nothing. Locked after 3 failures per account in 15 minutes.
+    const locked = await checkQuota("password-failure", {
+      email,
+      limits: { email: passwordFailureLimit },
+    });
+    if (locked) {
+      return response.error({
+        message:
+          "Sign-in is temporarily unavailable because too many recent requests were made. Please wait and try again.",
+        status: 429,
+      });
+    }
+
+    const recaptchaRejection = await recaptcha({
+      action: "login",
+      body: dataIn,
       request,
       response,
-    }) => {
-      if (userId !== undefined) {
-        await requireUnchangedAccount(userId, email);
-      }
+    });
+    if (recaptchaRejection) {
+      return recaptchaRejection;
+    }
 
-      // Only failures count (see recordPasswordFailure); a successful sign-in
-      // consumes nothing. Locked after 3 failures per account in 15 minutes.
-      const locked = await checkQuota("password-failure", {
-        email,
-        limits: { email: passwordFailureLimit },
-      });
-      if (locked) {
-        return response.error({
-          message:
-            "Sign-in is temporarily unavailable because too many recent requests were made. Please wait and try again.",
-          status: 429,
-        });
-      }
+    const user = await db.query.users.findFirst({
+      columns: { id: true, passwordHash: true },
+      where: (u, { and, isNull }) =>
+        and(sql`lower(${u.email}) = ${email}`, isNull(u.deletedAt)),
+    });
 
-      const recaptchaRejection = await recaptcha({
-        action: "login",
-        body: dataIn,
-        request,
-        response,
-      });
-      if (recaptchaRejection) {
-        return recaptchaRejection;
-      }
+    if (!user || !user.passwordHash) {
+      // prevent introspection using timing.
+      await bcrypt.compare(
+        "fake-to-delay",
+        "$2b$12$vU8SBwjV2ZMjNFqpESF7lug7JWrU3A3EfBFpT.lqUal5tlqvdIcV",
+      );
 
-      const user = await db.query.users.findFirst({
-        columns: { id: true, passwordHash: true },
-        where: (u, { and, isNull }) =>
-          and(sql`lower(${u.email}) = ${email}`, isNull(u.deletedAt)),
-      });
+      await recordPasswordFailure(email, null);
+      return response.error(passwordFailureMessage);
+    }
 
-      if (!user || !user.passwordHash) {
-        // prevent introspection using timing.
-        await bcrypt.compare(
-          "fake-to-delay",
-          "$2b$12$vU8SBwjV2ZMjNFqpESF7lug7JWrU3A3EfBFpT.lqUal5tlqvdIcV",
-        );
+    if (!(await bcrypt.compare(password, user.passwordHash))) {
+      await recordPasswordFailure(email, user.id);
+      return response.error(passwordFailureMessage);
+    }
 
-        await recordPasswordFailure(email, null);
-        return response.error(passwordFailureMessage);
-      }
+    await loginUser(user.id);
 
-      if (!(await bcrypt.compare(password, user.passwordHash))) {
-        await recordPasswordFailure(email, user.id);
-        return response.error(passwordFailureMessage);
-      }
-
-      await loginUser(user.id);
-
-      const authState = await loadFreshPublicAuthState();
-      return response.success<LoginActionResult>({
-        authenticated: true,
-        authState,
-        path: await resolveLoginDestination(returnTo),
-      });
-    },
-  );
+    const authState = await loadFreshPublicAuthState();
+    return response.success<LoginActionResult>({
+      authenticated: true,
+      authState,
+      path: await resolveLoginDestination(returnTo),
+    });
+  },
+);
 
 export async function recordPasswordFailure(
   email: string,

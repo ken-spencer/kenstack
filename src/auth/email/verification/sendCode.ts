@@ -12,6 +12,7 @@ import { verifications } from "@kenstack/db/tables/verification";
 import getIp from "@kenstack/lib/ip";
 import { reportError } from "@kenstack/lib/errorReporter";
 import mailer, {
+  senderUnavailableMessage,
   type Attachment,
   type EmailAddress,
 } from "@kenstack/lib/mailer";
@@ -249,11 +250,13 @@ async function sendVerification(
           "Email-change issuance requires its requesting session",
         );
       }
+      const authorizedUntil = await extendAuthorization(
+        { sessionId },
+        tx,
+        expiresAt,
+      );
       expiresAt = new Date(
-        Math.min(
-          (await extendAuthorization({ sessionId }, tx, expiresAt)).getTime(),
-          expiresAt.getTime(),
-        ),
+        Math.min(authorizedUntil.getTime(), expiresAt.getTime()),
       );
     }
     if (!isResending && current) {
@@ -319,7 +322,7 @@ async function sendVerification(
       if (delivery.status !== "sent") {
         throw new ReturnedError(
           delivery.code === "SenderUnavailable"
-            ? "We couldn’t send the verification email because this site’s email sender isn’t set up."
+            ? senderUnavailableMessage("the verification email")
             : "We could not send the verification email. Try again in a moment.",
           { status: 503 },
         );

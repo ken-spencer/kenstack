@@ -7,7 +7,6 @@ import type { PipelineStage } from "@kenstack/api/pipeline";
 const mocks = vi.hoisted(() => ({
   checkQuota: vi.fn(),
   claimQuota: vi.fn(),
-  recaptcha: vi.fn(),
   render: vi.fn(),
   selectWhere: vi.fn(),
   sendVerificationLink: vi.fn(),
@@ -47,7 +46,7 @@ vi.mock("@kenstack/api", () => {
     claimQuota: mocks.claimQuota,
     pipelineStage: (_options: unknown, action: (context: unknown) => unknown) =>
       action,
-    recaptcha: mocks.recaptcha,
+    recaptcha: vi.fn(async () => undefined),
     ReturnedError,
   };
 });
@@ -102,7 +101,7 @@ async function runForgottenPassword() {
   const response = await runPipeline(
     {
       request,
-      json: { email: customer.email, recaptchaToken: "token" },
+      json: { email: customer.email },
     },
     forgotPasswordPipeline({ from: "sender@example.com" }),
   );
@@ -115,7 +114,6 @@ describe("password recovery email delivery", () => {
     vi.spyOn(Date, "now").mockReturnValueOnce(0).mockReturnValue(6_000);
     mocks.checkQuota.mockResolvedValue(null);
     mocks.claimQuota.mockResolvedValue(null);
-    mocks.recaptcha.mockResolvedValue(undefined);
     mocks.render.mockResolvedValue("<p>Reset password</p>");
     mocks.selectWhere.mockResolvedValue([customer]);
     mocks.sendVerificationLink.mockResolvedValue(undefined);

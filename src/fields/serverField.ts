@@ -82,7 +82,6 @@ export type FieldPreSaveContext<TValue = unknown> = {
   id?: number | null;
   user: User;
   table: NumericIdTable;
-  shouldSaveField: (key: string) => boolean;
 };
 
 export type FieldPrepareSaveContext<TValue = unknown> = Omit<

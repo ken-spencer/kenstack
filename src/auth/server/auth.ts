@@ -9,6 +9,7 @@ import { verificationCookie } from "@kenstack/auth/email/verification/internal/c
 import { sessions, type LoginProvider } from "@kenstack/db/tables/sessions";
 import { audit } from "@kenstack/logger";
 
+import { hasRoleAccess } from "./roleAccess";
 import { generateToken, hashToken } from "./token";
 import type { Role } from "./types";
 import { getCurrentUser, sessionCacheTag } from "./user";
@@ -168,14 +169,7 @@ export const isAuthenticated = cache(async () =>
 
 export const hasRole = cache(async (role: Role | readonly Role[]) => {
   const user = await getCurrentUser();
-
-  if (!user) {
-    return false;
-  }
-
-  const requiredRoles = Array.isArray(role) ? role : [role];
-
-  return user.roles.some((userRole) => requiredRoles.includes(userRole));
+  return user ? hasRoleAccess(user.roles, role) : false;
 });
 
 export const hasAccess = cache(async (access: AuthAccess) => {

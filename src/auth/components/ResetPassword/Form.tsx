@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 
+import { postReauthentication } from "@kenstack/auth/reauthentication/channel";
 import { useAuthorization } from "@kenstack/auth/reauthentication/context";
 import schema from "@kenstack/auth/schemas/resetPassword";
 import Form from "@kenstack/forms/Form";
@@ -15,22 +16,21 @@ const defaultValues = {
 
 export default function ResetPasswordForm() {
   const router = useRouter();
-  const { track, userId } = useAuthorization();
+  const { userId } = useAuthorization();
   return (
     <Form
       className="w-full max-w-lg space-y-4"
       apiPath="/api/auth"
       schema={schema}
       defaultValues={defaultValues}
-      onSubmit={async ({ data, mutation, form }) => {
-        const result = await track(() =>
-          mutation.mutateAsync({ ...data, action: "reset-password", userId }),
-        )
-          // The form's mutation already reported the failure.
-          .catch(() => undefined);
-        if (result?.status === "success") {
-          form.reset();
-          router.refresh();
+      onSubmit={({ data, mutation }) =>
+        mutation.mutate({ ...data, action: "reset-password" })
+      }
+      onSuccess={(_result, _variables, { form }) => {
+        form.reset();
+        router.refresh();
+        if (userId !== undefined) {
+          postReauthentication({ type: "saved", userId });
         }
       }}
     >

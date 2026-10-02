@@ -13,7 +13,7 @@ export async function audit({
   ...props
 }: {
   action: string;
-  // Pass an already-resolved session actor to avoid a lookup inside a transaction.
+  // The acting user, when already resolved or not the session's.
   actor?: Pick<
     NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>,
     "id" | "impersonatedBy"

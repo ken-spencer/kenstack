@@ -4,7 +4,8 @@ const mocks = vi.hoisted(() => ({
   consume: vi.fn(),
   findUser: vi.fn(),
   getVerificationKey: vi.fn(),
-  loadFreshAuthState: vi.fn(),
+  freshUser: vi.fn(),
+  loadLoginVerification: vi.fn(),
   login: vi.fn(),
   logout: vi.fn(),
   restoreConsumed: vi.fn(),
@@ -25,23 +26,17 @@ vi.mock("@kenstack/api", () => {
   return { ReturnedError };
 });
 vi.mock("@app/db", () => ({
-  db: {
-    query: { users: { findFirst: mocks.findUser } },
-    select: () => ({
-      from: () => ({
-        where: () => ({
-          limit: async () => [{ expiresAt: new Date("2026-09-16T13:00:00Z") }],
-        }),
-      }),
-    }),
-  },
+  db: { query: { users: { findFirst: mocks.findUser } } },
 }));
 vi.mock("@kenstack/auth/server/auth", () => ({
   login: mocks.login,
   logout: mocks.logout,
 }));
 vi.mock("@kenstack/auth/server/state", () => ({
-  loadFreshAuthState: mocks.loadFreshAuthState,
+  loadLoginVerification: mocks.loadLoginVerification,
+}));
+vi.mock("@kenstack/auth/server/user", () => ({
+  getFreshCurrentUser: mocks.freshUser,
 }));
 vi.mock("@kenstack/auth/email/verification/internal/repository", () => ({
   consumeVerification: mocks.consume,
@@ -54,9 +49,14 @@ vi.mock("@kenstack/auth/email/verification/internal/cookie", () => ({
 
 import { redeemEmailProof } from "@kenstack/auth/email/login/redeemProof";
 
-const verification = {
+// The browser's proven login verification.
+const provenVerification = {
+  challengeKey: "challenge",
   email: "person@example.com",
-  verificationId: 3,
+  endedAt: null,
+  expiresAt: new Date("2026-09-16T13:00:00Z"),
+  id: 3,
+  provenAt: new Date("2026-09-16T12:00:00Z"),
 };
 
 describe("redeemEmailProof", () => {
@@ -67,29 +67,24 @@ describe("redeemEmailProof", () => {
       id: 3,
     });
     mocks.getVerificationKey.mockResolvedValue("verification-key");
+    mocks.loadLoginVerification.mockResolvedValue(provenVerification);
     mocks.login.mockResolvedValue(undefined);
   });
 
   it("consumes proven state and establishes the user session", async () => {
     mocks.findUser.mockResolvedValue({ id: 12 });
-    mocks.loadFreshAuthState.mockResolvedValue({
-      ...verification,
-      state: "proven",
-    });
+    mocks.freshUser.mockResolvedValue(undefined);
 
-    await expect(redeemEmailProof(verification)).resolves.toBe(12);
+    await expect(redeemEmailProof()).resolves.toBe(12);
     expect(mocks.consume).toHaveBeenCalledWith(3, "person@example.com");
     expect(mocks.login).toHaveBeenCalledWith(12, "email");
   });
 
   it("throws without consuming proof when no account exists", async () => {
     mocks.findUser.mockResolvedValue(undefined);
-    mocks.loadFreshAuthState.mockResolvedValue({
-      ...verification,
-      state: "proven",
-    });
+    mocks.freshUser.mockResolvedValue(undefined);
 
-    await expect(redeemEmailProof(verification)).rejects.toMatchObject({
+    await expect(redeemEmailProof()).rejects.toMatchObject({
       status: 409,
     });
     expect(mocks.consume).not.toHaveBeenCalled();
@@ -98,13 +93,10 @@ describe("redeemEmailProof", () => {
 
   it("preserves proven state when enrollment allows a missing account", async () => {
     mocks.findUser.mockResolvedValue(undefined);
-    mocks.loadFreshAuthState.mockResolvedValue({
-      ...verification,
-      state: "proven",
-    });
+    mocks.freshUser.mockResolvedValue(undefined);
 
     await expect(
-      redeemEmailProof(verification, { allowUnregistered: true }),
+      redeemEmailProof({ allowUnregistered: true }),
     ).resolves.toBeUndefined();
     expect(mocks.consume).not.toHaveBeenCalled();
     expect(mocks.login).not.toHaveBeenCalled();
@@ -113,14 +105,10 @@ describe("redeemEmailProof", () => {
   it("ends the current session before an unregistered address goes on to account creation", async () => {
     mocks.findUser.mockResolvedValue(undefined);
     mocks.getVerificationKey.mockResolvedValue("browser-key");
-    mocks.loadFreshAuthState.mockResolvedValue({
-      email: "other@example.com",
-      state: "authenticated",
-      userId: 7,
-    });
+    mocks.freshUser.mockResolvedValue({ email: "other@example.com", id: 7 });
 
     await expect(
-      redeemEmailProof(verification, { allowUnregistered: true }),
+      redeemEmailProof({ allowUnregistered: true }),
     ).resolves.toBeUndefined();
     expect(mocks.logout).toHaveBeenCalledOnce();
     expect(mocks.setVerificationCookie).toHaveBeenCalledWith(
@@ -133,25 +121,28 @@ describe("redeemEmailProof", () => {
   it("also ends an impersonation before account creation", async () => {
     mocks.findUser.mockResolvedValue(undefined);
     mocks.getVerificationKey.mockResolvedValue("browser-key");
-    mocks.loadFreshAuthState.mockResolvedValue({
+    mocks.freshUser.mockResolvedValue({
       email: "other@example.com",
+      id: 7,
       impersonatedBy: 1,
-      state: "authenticated",
-      userId: 7,
     });
 
-    await redeemEmailProof(verification, { allowUnregistered: true });
+    await redeemEmailProof({ allowUnregistered: true });
     expect(mocks.logout).toHaveBeenCalledTimes(2);
   });
 
   it("returns a conflict when the proven request was replaced", async () => {
-    mocks.loadFreshAuthState.mockResolvedValue({
+    // Signed out with an account to sign into, so only the replaced proof refuses.
+    mocks.findUser.mockResolvedValue({ id: 12 });
+    mocks.freshUser.mockResolvedValue(undefined);
+    mocks.loadLoginVerification.mockResolvedValue({
+      ...provenVerification,
       challengeKey: "replacement",
-      email: "person@example.com",
-      state: "code-sent",
+      id: 4,
+      provenAt: null,
     });
 
-    await expect(redeemEmailProof(verification)).rejects.toMatchObject({
+    await expect(redeemEmailProof()).rejects.toMatchObject({
       status: 409,
     });
     expect(mocks.consume).not.toHaveBeenCalled();
@@ -161,13 +152,10 @@ describe("redeemEmailProof", () => {
   it("restores proof when establishing the user session fails", async () => {
     const failure = new Error("session failed");
     mocks.findUser.mockResolvedValue({ id: 12 });
-    mocks.loadFreshAuthState.mockResolvedValue({
-      ...verification,
-      state: "proven",
-    });
+    mocks.freshUser.mockResolvedValue(undefined);
     mocks.login.mockRejectedValue(failure);
 
-    await expect(redeemEmailProof(verification)).rejects.toBe(failure);
+    await expect(redeemEmailProof()).rejects.toBe(failure);
     expect(mocks.restoreConsumed).toHaveBeenCalledOnce();
     expect(mocks.setVerificationCookie).toHaveBeenCalledWith(
       "verification-key",
@@ -176,42 +164,27 @@ describe("redeemEmailProof", () => {
   });
 
   it("consumes a matching proof and refreshes an authenticated session", async () => {
-    mocks.loadFreshAuthState.mockResolvedValue({
-      email: "person@example.com",
-      roles: [],
-      state: "authenticated",
-      userId: 12,
-    });
+    mocks.freshUser.mockResolvedValue({ email: "person@example.com", id: 12 });
 
-    await expect(redeemEmailProof(verification)).resolves.toBe(12);
+    await expect(redeemEmailProof()).resolves.toBe(12);
     expect(mocks.consume).toHaveBeenCalledWith(3, "person@example.com");
     expect(mocks.login).toHaveBeenCalledWith(12, "email");
   });
 
   it("switches a signed-in user to the proven email's account", async () => {
     mocks.findUser.mockResolvedValue({ id: 12 });
-    mocks.loadFreshAuthState.mockResolvedValue({
-      email: "other@example.com",
-      roles: [],
-      state: "authenticated",
-      userId: 24,
-    });
+    mocks.freshUser.mockResolvedValue({ email: "other@example.com", id: 24 });
 
-    await expect(redeemEmailProof(verification)).resolves.toBe(12);
+    await expect(redeemEmailProof()).resolves.toBe(12);
     expect(mocks.consume).toHaveBeenCalledWith(3, "person@example.com");
     expect(mocks.login).toHaveBeenCalledWith(12, "email");
   });
 
   it("does not switch a signed-in user to an email without an account", async () => {
     mocks.findUser.mockResolvedValue(undefined);
-    mocks.loadFreshAuthState.mockResolvedValue({
-      email: "other@example.com",
-      roles: [],
-      state: "authenticated",
-      userId: 24,
-    });
+    mocks.freshUser.mockResolvedValue({ email: "other@example.com", id: 24 });
 
-    await expect(redeemEmailProof(verification)).rejects.toMatchObject({
+    await expect(redeemEmailProof()).rejects.toMatchObject({
       status: 409,
     });
     expect(mocks.consume).not.toHaveBeenCalled();

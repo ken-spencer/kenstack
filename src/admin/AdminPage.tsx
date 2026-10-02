@@ -131,7 +131,6 @@ export function createAdminPage() {
                 }
                 clients={clients}
                 searchParams={searchIn}
-                userId={user.id}
                 parentId={parentId}
                 moduleParent={moduleParent}
               />

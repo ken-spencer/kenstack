@@ -27,7 +27,6 @@ const AdminListContext = createContext<UseListProps | null>(null);
 type AdminListProps = {
   basePath?: string;
   clients: AdminClientRegistry;
-  userId: number;
   name: string;
   parentId?: number;
   sort: AdminSortMeta[];
@@ -37,6 +36,7 @@ type AdminListProps = {
 
 type AdminListPayload = {
   total: number;
+  limit: number;
   items: (BaseListItem & Record<string, unknown>)[];
 };
 
@@ -55,18 +55,15 @@ type UseListProps = {
   queryKey: ReturnType<typeof getAdminListQueryKey>;
   filters: ListQueryStoreState;
   setFilters: SetQueryStore<ListQueryStoreState>;
-  userId: number;
   page: number;
   isReorderSort: boolean;
   canReorder: boolean;
   query: UseQueryResult<AdminListQueryData, Error>;
-  limit: number;
 };
 
 export function AdminListProvider({
   basePath,
   clients,
-  userId,
   name,
   parentId,
   sort,
@@ -152,12 +149,10 @@ export function AdminListProvider({
     queryKey,
     filters,
     setFilters,
-    userId,
     page,
     isReorderSort,
     canReorder,
     query,
-    limit: 25,
   };
   return (
     <AdminListContext.Provider value={values}>

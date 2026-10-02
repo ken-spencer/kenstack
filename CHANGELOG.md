@@ -5,6 +5,148 @@ contract lives in `docs/upgrading.md`.
 
 ## Unreleased
 
+### Sign-In Step Wording
+
+`createLoginStep()`'s default `title` is now "Your email", in place of "Sign in", and the step's
+email form shows a fixed line above it until the code is sent: "We’ll email you a code to confirm
+your address." The email form's "Use a password instead" link now reads "I have a password", in
+the standalone `Login` too.
+
+Migration steps:
+
+- A site that relies on the default title and wants "Sign in" passes `createLoginStep({ title: "Sign in" })`.
+
+### Form Control Theme Variables
+
+Kenstack's Input, Textarea, Checkbox and Combobox read three optional variables: `--input-background`,
+`--input-radius` and `--input-placeholder`. Unset, they keep today's look: a transparent background (in
+dark mode `--input` at 30%), `--radius` corners and the `--muted-foreground` placeholder. A site that
+restyled these controls with `[data-slot="input"]` or similar rules can set the variables instead, so a
+caller's own utilities still apply. Nothing else changes.
+
+### Server Field Kind Registrations Removed
+
+`resolveServerFields(fields, { fieldKinds })` no longer takes `fieldKinds`, and `@kenstack/fields/server`
+no longer exports `ServerFieldKinds`. Server behavior comes from the built-in kinds plus the
+per-field registrations in `fields`.
+
+Migration steps:
+
+- Move each `fieldKinds` registration into `fields`, under the name of each field of that kind:
+  `fields: { stock: serverField(stockField, () => ({ ... })) }`.
+
+### `mediaListField` Uses the Media-List Columns
+
+`mediaListField({ table })` no longer takes `tableId`, `tableIdKey`, `mediaId`, `mediaIdKey`,
+`sortOrder` or `sortOrderKey`. It always uses the table's `tableId`, `mediaId` and `sortOrder`
+columns, the names `defineMediaList` produces.
+
+Migration steps:
+
+- Remove those options from `mediaListField(...)`, and build its table with `defineMediaList`.
+
+### Field Save Hooks Without `shouldSaveField`
+
+`FieldPreSaveContext` and `FieldPrepareSaveContext` no longer carry `shouldSaveField`. Kenstack calls a
+field's `prepareSave` and `preSave` only for fields the save changes.
+
+Migration steps:
+
+- Remove `shouldSaveField` checks from a host field's `preSave` and `prepareSave`.
+
+### `redeemEmailProof` Reads the Request's Proof
+
+`redeemEmailProof()` no longer takes the proof. It reads the email this browser has proven from its
+verification cookie, the proof `access: "proven"` checked, and redeems that. Its options stay:
+`redeemEmailProof({ allowUnregistered })`.
+
+Migration steps:
+
+- Replace `redeemEmailProof(proof)` with `redeemEmailProof()`, and `redeemEmailProof(proof, options)`
+  with `redeemEmailProof(options)`. A stage with `access: "proven"` still reads the email from `proof`.
+
+### `createAccount` and `updateUser`
+
+`@kenstack/auth/server` exports two account saves through the users module's record save, so its
+audit, revision and cache tags, `admin.revalidate` included, apply.
+
+- `createAccount(values)`, from a stage with `access: "proven"`, creates the account for the proven
+  email with `values` in one save, then signs into it. A failed save leaves no account and no sign-in,
+  so the visitor can submit again; it returns `{ status: "error", error }` for field and validation
+  errors and throws otherwise. When the email already has an
+  account, it signs into that one and leaves its details alone. The row holds the email and `values`,
+  so every other required column of the site's users table needs a default.
+- `updateUser({ values, changes })` saves the signed-in user's own fields; without `changes`, every
+  value saves.
+
+In both, the stage's schema is the allowlist of what is saved.
+
+Migration steps:
+
+- Replace a host's hand-built account insert, its audit and cache expiry, and its
+  `redeemEmailProof()` call with `createAccount(values)`, answering with
+  `response.success({ returnUser: true })`.
+- Replace `saveModuleRecord({ id: user.id, module: usersModule, ... })` in a member's own save with
+  `updateUser({ values, changes })`.
+
+### Responses Carry This Tab's User Info
+
+A handler whose request changes the user or session answers with
+`response.success({ returnUser: true, ... })`. After the handler, the pipeline drops the flag and adds
+`userInfo: { authState, loginDestination }`, read fresh, with `Cache-Control: no-store`. Kenstack
+`Form` adopts `userInfo` as this tab's own change just before the form's `onSuccess`, so a step's
+`next()` lands in the same render. Kenstack's logout, email-change confirmation and admin switch-user
+responses carry it, and `LogoutResult` and `EmailChangeVerificationResult` hold `userInfo` in place of
+`authState`. `loadFreshAuthState`, `loadFreshPublicAuthState` and `getFreshCurrentUser` are no longer
+exported from `@kenstack/auth/server`, and `setUserInfo` is for Kenstack's own use.
+
+Migration steps:
+
+- Replace `authState: await loadFreshPublicAuthState()` in a success response with `returnUser: true`.
+- Remove `setUserInfo(result.authState)` from the form's `onSuccess`.
+- Where a host read `loadFreshAuthState`, `loadFreshPublicAuthState` or `getFreshCurrentUser` after its
+  own write, use the committed row the write returned, or `returnUser: true` when the browser needs the
+  public state.
+
+### `fetcher` Requests reCAPTCHA Tokens
+
+`fetcher` takes a `recaptchaAction` option. It requests a reCAPTCHA token under that action through the
+script `RecaptchaProvider` loads and sends it as `recaptchaToken`; a failed token request throws a
+`ReturnedError`. It sends none when there is no site key or the script has not loaded, and the server
+ignores the token for a signed-in visitor. `Form`'s `recaptchaAction` is unchanged and now passes
+through to `fetcher` for an `apiPath` submission, so a form with a `mutationFn` no longer receives a
+token in its variables.
+
+Migration steps:
+
+- Replace a hand-written `executeRecaptcha` call and its `recaptchaToken` field with
+  `fetcher(path, body, { recaptchaAction: "<action>" })`, and drop the `useGoogleReCaptcha` hook.
+- A `Form` with both `mutationFn` and `recaptchaAction` passes `{ recaptchaAction }` to the `fetcher`
+  call inside its `mutationFn`.
+
+### A Page Acts Only for Its Own Account
+
+`fetcher` now sends the account the tab's page was rendered for, and every access-checked pipeline
+stage, and the admin API, refuses a request from a page rendered for another account with `409` and
+`code: "account-changed"`, before anything runs: "Your sign-in changed in another tab. Nothing here was
+saved. Reload the page to continue." A page rendered signed out sends nothing until it takes on a
+sign-in, and a page with no `useUserInfo(authState)` seed (the account menu, the account links or the
+login step) sends nothing at all. Kenstack `Form`
+shows the refusal with a Reload button, and `StatusMessage` gains an optional `code`. The account menus
+open a "Your sign-in changed" dialog when a page rendered for an account sees another account or none,
+and the user-info store no longer follows another tab's change on such a page. The admin API now
+refuses a non-admin with a `401` or `403` error instead of `{ redirect: "/login" }`.
+
+Migration steps:
+
+- Move a host API that checks access by hand (`getCurrentUser` or `requireUser` in the handler) onto its
+  stage's `access`, so it is compared, and use the stage's `user`. Every access check reads the cached
+  session, which each change to a session or its user clears at once.
+- A host API that writes for a proven email from a page rendered signed out, such as creating the
+  account, takes `access: "proven"`. It refuses a full session as `account-changed`, since a session
+  that appeared meanwhile may be another account's, and passes the proven email to the stage as
+  `proof`.
+
 ### Admin root link in the registry
 
 `AdminSidebarNavLink` no longer takes `exact`. The sidebar now always lights a link to `/admin` only
@@ -104,7 +246,7 @@ longer includes the payment tables.
 
 `multiPipeline` accepts a `pipelineStage` result or a stage array per action and runs the pipeline
 itself; actions written as `(options) => pipeline(options, ...)` still work. `pipelineStage` takes
-`quota` (per-IP quota scope) and `recaptcha` (the action, checked against the token `Form` sends).
+`quota` (per-IP quota scope) and `recaptcha` (the action, checked against the token `fetcher` sends).
 `recaptcha()` reads the token from the raw request body, so a hand check passes `body: dataIn` in
 place of `token: data.recaptchaToken`, and schemas drop their `recaptchaToken` field.
 `loginPipeline(opts)` and `forgotPasswordPipeline(props)` now return a stage, and `logoutPipeline` and
@@ -149,10 +291,10 @@ Apart from the changes below, calls compile unchanged.
 
 ### `loadRecord` without `query` or typed `select`
 
-`loadRecord` takes no type arguments and no `query` option. It returns
-`row: ({ id: number } & Record<string, unknown>) | undefined` and `values: Record<string, unknown>`,
-so `select` columns and `defaults` no longer type the result. It still loads the record by `id` or
-`where`, selects its fields' columns plus any `select`, and runs each field's `load`.
+`loadRecord` takes no type arguments and no `query` or `defaults` option. It returns the record's
+values, `Record<string, unknown>`, or `undefined` when no row matches; it no longer returns `row`, and
+`select` columns no longer type the result. It still loads the record by `id` or `where`, selects its
+fields' columns plus any `select`, and runs each field's `load`.
 
 Migration steps:
 
@@ -196,7 +338,7 @@ Migration steps:
   if (!row) {
     return null;
   }
-  const { values } = await loadRecord({
+  const values = await loadRecord({
     table: issues,
     fields: issueServerFields,
     id: row.id,
@@ -219,8 +361,8 @@ Migration steps:
   const visibility = result.values.visibility;
 
   // After
-  const [{ values }, [profile]] = await Promise.all([
-    loadRecord({ table: users, fields, defaults, id: user.id }),
+  const [values = defaults, [profile]] = await Promise.all([
+    loadRecord({ table: users, fields, id: user.id }),
     query(users)
       .select({
         visibility: sql<
@@ -234,6 +376,8 @@ Migration steps:
   const visibility = profile?.visibility;
   ```
 
+- A call that read `result.values` reads the returned values, and treats `undefined` as no record. A
+  call that passed `defaults` uses them when no row matches: `(await loadRecord(...)) ?? defaults`.
 - Parse `values` with the form's schema where code needs its typed shape, such as a form's default
   values.
 - A `row` column read for a check, such as `createdBy` for an edit permission, comes from the builder
@@ -307,8 +451,10 @@ server guard and confirmation wrapper now live together under `auth/reauthentica
 `hasRecentAuthentication(session)` reads the current time itself and takes the session alone: remove any
 `now` or grace argument. `getCurrentSession` now reads the per-session cache, which holds a session for
 up to fifteen minutes, and returns `id`, `userId`, `expiresAt`, `authorizedUntil`, `impersonatedBy` and
-`provider`; `createdAt` has been removed. Authorize writes with the new uncached
-`getFreshCurrentSession`, and replace any `createdAt` recency check with `hasRecentAuthentication`.
+`provider`; `createdAt` has been removed. Every access check reads it, writes included: each change
+to a session or its user clears it at once. The new uncached `getFreshCurrentSession` is only for
+reading the session again after this request has changed it. Replace any `createdAt` recency check
+with `hasRecentAuthentication`.
 
 Password and email changes require recent authentication in a non-impersonated session: signing in,
 or confirming identity, authorizes the session for ten minutes. The required
@@ -327,26 +473,23 @@ verification and proof lifetimes are unchanged.
 Sensitive forms render normally and ask for confirmation only when the server refuses a submit.
 `ReauthenticationForm` from `@kenstack/auth/reauthentication/Form` is a Server Component that wraps a
 sensitive area for a signed-in visitor; pass an explanatory `message` and the protected form as
-children. Inside it, run each protected request through `track(() => request)` from
-`useAuthorization()` and send the wrapper's `userId` with it. When the server refuses with
+children. Inside it, a Kenstack `Form` tracks its own request; run any other protected request
+through `track(() => request)` from `useAuthorization()`, never around a `Form`'s `mutateAsync`, which
+would hold it twice. When the server refuses with
 `code: "reauthentication-required"`, the wrapper holds the request and opens a dialog with the
 confirmation sign-in: a password or an emailed code, for the rendered account's email, which cannot be
 edited. Confirming replays the held requests one at a time, each rebuilt from its function, and
 settles `track` with the result; Cancel settles it with the original refusal, and nothing is written.
-A refusal with `code: "account-changed"`, meaning another account signed in elsewhere, reloads the
-page. `track` now takes a function, not a promise; `setAuthorization`, the `rotatesSession` option
+A refusal with `code: "account-changed"` settles the held request with that refusal. `track` now takes a function, not a promise; `setAuthorization`, the `rotatesSession` option
 and the `extend-authorization` action have been removed.
 
-`requireRecentAuthentication(request, userId)` requires the account id the request names. A signed-in
-stale session is refused with 403 and `code: "reauthentication-required"` and no redirect, so the
-page keeps what was typed; another account is refused with 401 and `code: "account-changed"`; a
-signed-out visitor still gets 401 with a redirect to `/login`. The one-minute submission grace is gone.
+`requireRecentAuthentication(request)` refuses a signed-in stale session with 403 and
+`code: "reauthentication-required"` and no redirect, so the page keeps what was typed; a signed-out
+visitor still gets 401 with a redirect to `/login`. The one-minute submission grace is gone.
 Call it before a handler's first write, quota claim or email. `extendAuthorization` requires its
 transaction and expiry, and `serializeAuthorization` and the `Authorization` type have been removed.
-`EmailChangeRequestResult` no longer carries `authorization`. Password-change, email-change and
-confirmation sign-in requests carry the account id; a confirmation sign-in from a browser whose
-session now belongs to another account, or whose account's email changed, is refused with
-`account-changed` before a password is checked or a code is sent or redeemed.
+`EmailChangeRequestResult` no longer carries `authorization`. A page rendered for another account is
+refused by the access check (see "A Page Acts Only for Its Own Account").
 
 `@kenstack/auth/components/EmailChange` is now a Server Component that wraps itself in
 `ReauthenticationForm` for a signed-in visitor, and it has lost its `apiPath` prop. Remove the host's
@@ -359,10 +502,11 @@ renders `<EmailChange />`.
 `reset-password` no longer accepts current-password confirmation in place of fresh authentication,
 including for accounts that have no password yet. Remove `requiresCurrentPassword` imports and the
 corresponding prop from direct users of `ResetPassword/Form`; that field and helper have been removed.
-To protect another sensitive action, call `requireRecentAuthentication` from its handler and wrap its
-form in `ReauthenticationForm`. A login page no longer needs a recency check before sending a
+To protect another sensitive action, call `requireRecentAuthentication` from the handler of a stage
+with `access`, which refuses a page rendered for another account, and wrap its form in
+`ReauthenticationForm`. A login page no longer needs a recency check before sending a
 signed-in visitor on: the guard never sends a signed-in visitor there. The email-login shortcut still
-requires a recent session, so "Email me a code" in the confirmation always sends a code.
+requires a recent session, and "Email me a code" in the confirmation always sends a code.
 
 ### Error Alerts Without Redis
 
@@ -459,19 +603,19 @@ Migration steps:
 
 ### Forms Request Their Own reCAPTCHA Token
 
-`Form` and `FormProvider` accept `recaptchaAction`. When set, the mutation requests a token under that
-action and sends it as `recaptchaToken` with the variables; a rejected token request surfaces in the
-form's status outlet. Previously each submit handler called `useGoogleReCaptcha` and merged the token
+`Form` and `FormProvider` accept `recaptchaAction`. When set, an `apiPath` submission passes it to
+`fetcher`, which requests a token under that action and sends it as `recaptchaToken` (see "`fetcher`
+Requests reCAPTCHA Tokens"); a rejected token request surfaces in the form's status outlet. Previously each submit handler called `useGoogleReCaptcha` and merged the token
 into the mutation variables itself, and a rejected request left the form silent.
 
 Migration steps:
 
 - Mount `RecaptchaProvider` from `@kenstack/context/RecaptchaProvider` once, above every form that
-  names an action; a form with `recaptchaAction` and no provider fails every submission.
+  names an action; without it no token is sent, and the server refuses every signed-out submission.
 - Add `recaptchaAction="<action>"` to each `Form` whose API calls `recaptcha()`, and remove the
   `useGoogleReCaptcha` hook and the `recaptchaToken` merge from its submit handler.
-- A request made outside a form mutation, such as the email login's direct `fetcher` call, keeps its
-  own `executeRecaptcha` call.
+- A request made outside a form mutation passes `recaptchaAction` to `fetcher` (see "`fetcher`
+  Requests reCAPTCHA Tokens").
 
 ### Account Links for a Mobile Menu
 
@@ -489,7 +633,8 @@ forward or Back, so its "Signed in as …" view is gone. Switching accounts goes
 menu, which now also shows a visitor with a proven email and no account yet, with that email and
 Logout. The `always` option is gone. Signing in inside a flow updates browser identity in place and
 advances without waiting; the login step's controller then fires `router.refresh()`, so account menus
-and other output that depends on identity update. Previously the flow waited for a server refresh to
+and other output that depends on identity update. The account menu also fires it when a page rendered
+signed out adopts a sign-in made in another tab. Previously the flow waited for a server refresh to
 compose the steps that depend on identity, and a retained page instance could resurface around that
 refresh.
 
@@ -498,12 +643,14 @@ Migration steps:
 - Compose `signin: createLoginStep({ title })` and every other step unconditionally; the ledger and
   the login step's live prerequisite gate progress.
 - Anything a step took from the server because it needed identity, such as the account's saved
-  details, must reach the browser through a client query keyed by user id, hydrated from the server for
-  a signed-in visit and written back on save. Civic's `AccountDetailsStep` is the reference.
+  details, reaches the browser in the user info: the users module's `publicUser` adds it for the
+  signed-in person only, and a save that changes it answers with `loadUserInfo()`. Civic's
+  `AccountDetailsStep` is the reference.
 - A standalone login page no longer redirects a signed-in visitor on the server, which the sign-in
   refresh would trigger mid-flow: the visitor walks the flow, which skips what it already has.
-- A step controller that calls `setSkipped` includes `visit` from `useStep()` in its effect inputs,
-  so a new visit recomputes its override.
+- `useStep()` and `useFlowContext()` no longer return `visit`: remove it from a controller's effect
+  inputs. A controller
+  sets its override from live state, such as the user info.
 - `useStep()` and `useFlowContext()` no longer return `startedSkipped`, and StepFlow no longer keeps
   the skipped values a visit started with. A controller decides its step's skip from live state, such as the user info, and
   sets it with `setSkipped`; that override stands over later server renders.
@@ -513,26 +660,31 @@ Migration steps:
 
 ### Flow URLs Never Name a Step
 
-StepFlow no longer reads or writes a step in the URL. Every visit enters at the first step, a refresh
-included, and in-flow navigation, Back, and completion keep the URL that opened the flow. Previously each
-step change called `history.replaceState`, which Next intercepts under `cacheComponents`: it could fetch
-the route again and keep the earlier page instance alive, so a later visit surfaced a stale instance of
-the flow. When Next keeps an instance alive and shows it again, the flow now returns to its first step.
+StepFlow no longer reads or writes a step in the URL. The tab stores the flow's step beside its values in
+sessionStorage, so every arrival in the tab, a refresh included, resumes it once hydrated, and a new tab
+starts at the first step; in-flow navigation, Back, and completion keep the URL that opened the flow.
+Previously each step change called `history.replaceState`, which Next intercepts under `cacheComponents`:
+it could fetch the route again and keep the earlier page instance alive, so a later visit surfaced a
+stale instance of the flow. When Next keeps an instance alive and shows it again, it shows the tab's step.
+`@kenstack/hooks/storedState` keeps its exports, but its values now live per tab in sessionStorage with
+no lifetime, in place of a 24-hour localStorage lifetime shared across tabs.
 
 A `final` step is reached through `next()` like any other step. Arriving records the result itself, and
 the next visit that finds a result recorded (a reload, a later visit, or a link to the flow's own URL,
 which re-renders the flow on the server) clears the stored values, so the result step reads the flow's
 values like any other step and a finished transaction is never restored.
 
-An emailed sign-in link returns to the flow's URL. `LoginController` requires its step and brings it
-forward, as far as the ledger allows, while a `token` is in the URL, so the form verifies the link
-wherever the visitor lands.
+An emailed sign-in link returns to the flow's URL, where the sign-in step's controller verifies it on
+whatever step shows; the step never comes forward for it. While the token is in the address, the
+sign-in step shows "Signing you in…" and the login return step waits. A tab waiting on that sign-in
+can answer, and the link tab then asks the visitor to close it.
 
 Migration steps:
 
 - Remove `params` from `StepFlow` and the `StepFlowParams` type; a flow's route takes no step segment,
   so move `[[...step]]/page.tsx` to `page.tsx` and drop any route that existed only to name a step.
-- Remove `index: true` from step compositions and `createLoginStep({ index })`.
+- Remove `index: true` from step compositions and `createLoginStep({ index })`, and
+  `createLoginStep({ hasLinkToken })`.
 - A flow that kept a live copy of a result for its final step, because entering it cleared the store,
   reads the stored value directly instead.
 
@@ -598,9 +750,13 @@ login flow at `/login`. Final post-login redirects retain the default check to a
 
 ### Automatic Child-Module Navigation
 
-Kenstack now renders child-module links below the edit toolbar for saved parent records. Remove
-manual `ChildModuleLinks` placements from host edit forms to avoid duplicate navigation. The component
-remains available, and child lists and edit pages retain their breadcrumbs back to the parent record.
+Kenstack now renders child-module links below the edit toolbar for saved parent records. The
+`ChildModuleLinks` component is removed, and `useAdminEdit()` no longer returns `childModuleLinks`.
+Child lists and edit pages retain their breadcrumbs back to the parent record.
+
+Migration steps:
+
+- Remove `ChildModuleLinks` placements and `childModuleLinks` reads from host edit forms.
 
 ### Shared Module Cache Invalidation
 
@@ -1244,12 +1400,13 @@ Migration steps:
   request/IP quotas, delivery, and cleanup of undelivered challenges. The host callback owns only the
   subject and rendered email design. `verifyCode` and the Login form's link action produce the same
   proven browser state. `loadAuthState` includes the active user's normalized email, roles, and user ID
-  and is React-cached for duplicate reads in one request; mutators call `loadFreshAuthState` instead.
+  and is React-cached for duplicate reads in one request. Access checks read it, writes included;
+  a response after a write reads the user info again with `loadUserInfo()`.
 - `verifyCode` returns the proven email and verification ID captured inside its transaction. It does
   not reread aggregate auth state after committing: a concurrent request may legitimately supersede or
-  consume that proof, and must not turn the already-recorded success into a server error. Pass that
-  proven value to `redeemEmailProof(...)`; a handler that may establish a session performs one final fresh
-  public-auth read for its response.
+  consume that proof, and must not turn the already-recorded success into a server error. Then call
+  `redeemEmailProof()`, which reads that proof itself; a handler that may establish a session performs
+  one final fresh public-auth read for its response.
 - Codes and links expire after 15 minutes. Successful proof starts a separate one-hour browser window
   for site-owned account creation or authentication. Logout clears that verification cookie. Expired
   verification rows remain available for older-code diagnostics for 24 hours, then `sendCode`'s sampled
@@ -1262,7 +1419,7 @@ Migration steps:
 - Email login sends the same challenge whether an account already exists. After proof, an existing
   account is authenticated and an unknown address reports the missing account by default. A host with
   an account-creation flow may enable `emailLogin.allowUnregistered`; the auth pipeline then preserves
-  the proven state until the host creates the account and passes that proof to `redeemEmailProof(...)`.
+  the proven state until the host creates the account and calls `redeemEmailProof()`.
 - Generate an append-only migration for `verifications`. Host workflows should not reference
   verification rows: use `createLoginStep(...)` in StepFlow, protect authenticated server boundaries
   with `requireUser`, and keep workflow expiry independent of the shared verification proof.

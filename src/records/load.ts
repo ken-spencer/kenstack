@@ -8,10 +8,10 @@ import type { ServerDefinedFields } from "@kenstack/fields/internal/serverResolu
 import { eq, type SQL } from "drizzle-orm";
 import type { SelectedFields } from "drizzle-orm/pg-core/query-builders/select.types";
 
+// The record's values with each field's own load, or undefined when no row matches.
 export async function loadRecord(options: {
   table: NumericIdTable;
   fields: ServerDefinedFields;
-  defaults?: Record<string, unknown>;
   db?: FieldLoadContext["db"];
   id?: number | null;
   select?: SelectedFields;
@@ -29,21 +29,20 @@ export async function loadRecord(options: {
       .limit(1);
   }
 
-  const values: Record<string, unknown> = row
-    ? { ...row }
-    : { ...options.defaults };
+  if (!row) {
+    return undefined;
+  }
 
-  if (row) {
-    for (const [fieldKey, field] of Object.entries(fields)) {
-      if (field.load) {
-        values[fieldKey] = await field.load({
-          db,
-          key: fieldKey,
-          tableId: row.id,
-        });
-      }
+  const values: Record<string, unknown> = { ...row };
+  for (const [fieldKey, field] of Object.entries(fields)) {
+    if (field.load) {
+      values[fieldKey] = await field.load({
+        db,
+        key: fieldKey,
+        tableId: row.id,
+      });
     }
   }
 
-  return { row, values };
+  return values;
 }

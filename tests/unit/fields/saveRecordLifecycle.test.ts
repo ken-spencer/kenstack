@@ -46,8 +46,8 @@ describe("record preparation lifecycle", () => {
       },
     });
     const fields = resolveServerFields(configuredFields, {
-      fieldKinds: [
-        serverField(firstField, () => ({
+      fields: {
+        first: serverField(firstField, () => ({
           async prepareSave() {
             return {
               status: "success" as const,
@@ -55,7 +55,7 @@ describe("record preparation lifecycle", () => {
             };
           },
         })),
-        serverField(secondField, () => ({
+        second: serverField(secondField, () => ({
           async prepareSave() {
             return {
               status: "error" as const,
@@ -63,7 +63,7 @@ describe("record preparation lifecycle", () => {
             };
           },
         })),
-      ],
+      },
     });
 
     const result = await prepareRecordFields({
@@ -101,7 +101,7 @@ describe("record preparation lifecycle", () => {
       },
     });
     const fields = resolveServerFields(configuredFields, {
-      fieldKinds: [serverField(firstField, () => ({ prepareSave }))],
+      fields: { first: serverField(firstField, () => ({ prepareSave })) },
     });
 
     await prepareRecordFields({
@@ -128,8 +128,8 @@ describe("record preparation lifecycle", () => {
       },
     });
     const relatedFields = resolveServerFields(configuredRelatedFields, {
-      fieldKinds: [
-        serverField(firstField, () => ({
+      fields: {
+        first: serverField(firstField, () => ({
           async prepareSave() {
             return {
               status: "success" as const,
@@ -137,7 +137,7 @@ describe("record preparation lifecycle", () => {
             };
           },
         })),
-      ],
+      },
     });
     const related = await prepareRecordFields({
       admin: true,
@@ -157,8 +157,8 @@ describe("record preparation lifecycle", () => {
       },
     });
     const parentFields = resolveServerFields(configuredParentFields, {
-      fieldKinds: [
-        serverField(titleField, () => ({
+      fields: {
+        title: serverField(titleField, () => ({
           async prepareSave() {
             return {
               status: "error" as const,
@@ -166,7 +166,7 @@ describe("record preparation lifecycle", () => {
             };
           },
         })),
-      ],
+      },
     });
 
     const result = await saveRecord({
@@ -194,8 +194,8 @@ describe("record preparation lifecycle", () => {
       },
     });
     const fields = resolveServerFields(configuredFields, {
-      fieldKinds: [
-        serverField(firstField, () => ({
+      fields: {
+        first: serverField(firstField, () => ({
           async prepareSave() {
             return {
               status: "success" as const,
@@ -203,7 +203,7 @@ describe("record preparation lifecycle", () => {
             };
           },
         })),
-      ],
+      },
     });
     const related = await prepareRecordFields({
       admin: true,
@@ -243,8 +243,8 @@ describe("record preparation lifecycle", () => {
       },
     });
     const fields = resolveServerFields(configuredFields, {
-      fieldKinds: [
-        serverField(firstField, () => ({
+      fields: {
+        first: serverField(firstField, () => ({
           async prepareSave() {
             return {
               status: "success" as const,
@@ -253,7 +253,7 @@ describe("record preparation lifecycle", () => {
             };
           },
         })),
-      ],
+      },
     });
     const related = await prepareRecordFields({
       admin: true,

@@ -26,11 +26,6 @@ type ServerRegistrableField<TField> = TField extends {
   ? never
   : TField;
 
-export type ServerFieldKinds<TFields extends DefinedFields> =
-  readonly (ServerFieldRegistration & {
-    readonly kind: TFields[keyof TFields]["kind"];
-  })[];
-
 export type ServerFields<TFields extends DefinedFields> = {
   [TKey in keyof TFields]?: ServerRegistrableField<TFields[TKey]> extends never
     ? never
@@ -48,13 +43,6 @@ type ResolveServerFieldRegistration<TRegistration> = [TRegistration] extends [
       ? TRegistration
       : Record<never, never>;
 
-type RegisteredServerField<
-  TField extends DefinedFields[string],
-  TFieldKinds extends readonly { kind: string }[],
-> = ResolveServerFieldRegistration<
-  Extract<TFieldKinds[number], { kind: TField["kind"] }>
->;
-
 type BuiltInServerField<TField extends DefinedFields[string]> =
   ResolveServerFieldRegistration<
     (typeof builtInFieldKinds)[TField["kind"] & keyof typeof builtInFieldKinds]
@@ -67,31 +55,24 @@ type ResolvedZod<TRegistration, TFallback> =
 
 type ResolvedServerFieldFrom<
   TField extends DefinedFields[string],
-  TFieldKinds extends readonly { kind: string }[],
   TFieldRegistration,
 > = Omit<TField, "zod"> &
   ServerDefinedFields[string] &
   Omit<BuiltInServerField<TField>, "zod"> &
-  Omit<RegisteredServerField<TField, TFieldKinds>, "zod"> &
   Omit<ResolveServerFieldRegistration<TFieldRegistration>, "zod"> & {
     kind: TField["kind"];
     zod: ResolvedZod<
       TFieldRegistration,
-      ResolvedZod<
-        Extract<TFieldKinds[number], { kind: TField["kind"] }>,
-        ResolvedZod<BuiltInServerField<TField>, TField["zod"]>
-      >
+      ResolvedZod<BuiltInServerField<TField>, TField["zod"]>
     >;
   };
 
 type ServerDefinedFieldsFrom<
   TFields extends DefinedFields,
-  TFieldKinds extends readonly { kind: string }[] = readonly [],
   TFieldRegistrations extends ServerFields<TFields> = Record<never, never>,
 > = {
   [TKey in keyof TFields]: ResolvedServerFieldFrom<
     TFields[TKey],
-    TFieldKinds,
     TKey extends keyof TFieldRegistrations
       ? NonNullable<TFieldRegistrations[TKey]>
       : never
@@ -110,26 +91,20 @@ export function resolveServerFields<const TFields extends DefinedFields>(
 ): ServerDefinedFieldsFrom<TFields>;
 export function resolveServerFields<
   const TFields extends DefinedFields,
-  const TFieldKinds extends ServerFieldKinds<TFields>,
   const TFieldRegistrations extends ServerFields<TFields>,
 >(
   fields: TFields,
   options: {
-    fieldKinds?: TFieldKinds;
     fields?: TFieldRegistrations;
   },
-): ServerDefinedFieldsFrom<TFields, TFieldKinds, TFieldRegistrations>;
+): ServerDefinedFieldsFrom<TFields, TFieldRegistrations>;
 export function resolveServerFields(
   fields: DefinedFields,
   options: {
-    fieldKinds?: readonly ServerFieldRegistration[];
     fields?: Record<string, ServerFieldResolver | undefined>;
   } = {},
 ) {
-  const fieldKinds = options.fieldKinds ?? [];
   const fieldRegistrations = options.fields ?? {};
-  const fieldKindRegistry = createServerFieldKindRegistry(fieldKinds);
-  assertKnownServerFieldKindRegistrations(fields, fieldKinds);
   assertKnownServerFieldRegistrations(fields, fieldRegistrations);
 
   const resolvedFields = Object.fromEntries(
@@ -141,9 +116,6 @@ export function resolveServerFields(
           ? builtInFieldKinds[field.kind]
           : undefined,
       );
-      const kindRegistration = isDirectRelationship
-        ? {}
-        : resolveServerField(field, fieldKindRegistry[field.kind]);
       const fieldRegistration = isDirectRelationship
         ? {}
         : resolveServerField(field, fieldRegistrations[key]);
@@ -153,7 +125,6 @@ export function resolveServerFields(
         {
           ...field,
           ...builtIn,
-          ...kindRegistration,
           ...fieldRegistration,
           kind: field.kind,
         },
@@ -162,22 +133,6 @@ export function resolveServerFields(
   );
 
   return attachFieldSetRefinements(resolvedFields, { from: fields });
-}
-
-export function assertKnownServerFieldKindRegistrations(
-  fields: DefinedFields,
-  fieldKinds: readonly { kind: string }[],
-) {
-  const declaredKinds = new Set<string>();
-  collectFieldKinds(fields, declaredKinds);
-
-  for (const { kind } of fieldKinds) {
-    if (!declaredKinds.has(kind)) {
-      throw new Error(
-        `Unknown server field kind registration "${kind}". No configured field uses that kind.`,
-      );
-    }
-  }
 }
 
 function assertKnownServerFieldRegistrations(
@@ -205,29 +160,6 @@ function assertKnownServerFieldRegistrations(
         `Server field registration "${name}" has kind "${registration.kind}", but the field uses kind "${fields[name].kind}".`,
       );
     }
-  }
-}
-
-function createServerFieldKindRegistry(
-  fieldKinds: readonly ServerFieldRegistration[],
-) {
-  const registry: Record<string, ServerFieldRegistration> = {};
-
-  for (const registration of fieldKinds) {
-    if (registration.kind in registry) {
-      throw new Error(
-        `Duplicate server field kind registration "${registration.kind}".`,
-      );
-    }
-    registry[registration.kind] = registration;
-  }
-
-  return registry;
-}
-
-function collectFieldKinds(fields: DefinedFields, kinds: Set<string>) {
-  for (const field of Object.values(fields)) {
-    kinds.add(field.kind);
   }
 }
 

@@ -1,6 +1,5 @@
 import * as z from "zod";
 
-import { protectedAccountSchema } from "@kenstack/auth/reauthentication";
 import {
   challengeKeySchema,
   codeSchema,
@@ -20,13 +19,13 @@ export type EmailLoginLinkFailureCode = z.infer<
 
 export const requestEmailLoginSchema = z.object({
   challengeKey: challengeKeySchema.optional(),
+  // Set by a confirmation sign-in, which always sends its code.
+  confirmation: z.literal(true).optional(),
   email: emailSchema,
   // The requesting page declares that its returnTo destination hosts the
   // link verifier, so the emailed link can land there instead of on /login.
   linkToReturnTo: z.boolean().optional(),
   returnTo: z.string().optional(),
-  // Set by a confirmation sign-in: the account its page was rendered for.
-  userId: protectedAccountSchema.shape.userId.optional(),
 });
 
 export const loginCodeSchema = z.object({
@@ -36,9 +35,6 @@ export const loginCodeSchema = z.object({
 export const verifyEmailLoginCodeSchema = loginCodeSchema.extend({
   challengeKey: challengeKeySchema,
   returnTo: z.string().optional(),
-  // Set by a confirmation sign-in: the account its page was rendered for, and that account's email.
-  email: emailSchema.optional(),
-  userId: protectedAccountSchema.shape.userId.optional(),
 });
 
 export const verifyEmailLoginLinkSchema = z.object({

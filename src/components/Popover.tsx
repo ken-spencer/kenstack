@@ -14,7 +14,6 @@ import {
   useId,
   useMemo,
   useRef,
-  useState,
   type ComponentProps,
   type MouseEvent,
   type ReactNode,
@@ -22,6 +21,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
+import useIsHydrated from "@kenstack/hooks/useIsHydrated";
 import { cn } from "@kenstack/lib/utils";
 import { useControllableOpen, useDialogTransition } from "./overlay";
 import { useOverlayStack } from "./overlayStack";
@@ -147,7 +147,9 @@ function PopoverContent({
 }) {
   const { contentId, open, setOpen } = usePopoverContext("PopoverContent");
   const dialogRef = useRef<HTMLDialogElement | null>(null);
-  const [mounted, setMounted] = useState(false);
+  // A press that starts inside the box never dismisses it, even if it is released outside.
+  const pressStartedInsideRef = useRef(false);
+  const mounted = useIsHydrated();
   const positionCurrentDialog = useCallback(
     (dialog: HTMLDialogElement) => {
       positionDialog(dialog, contentId, align, sideOffset, anchorRef?.current);
@@ -167,11 +169,6 @@ function PopoverContent({
     },
     open,
   });
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Portals require a browser document after hydration.
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -275,6 +272,10 @@ function PopoverContent({
       data-slot="popover-content"
       data-state={visibleOpen ? "open" : "closed"}
       id={contentId}
+      onPointerDown={(event) => {
+        props.onPointerDown?.(event);
+        pressStartedInsideRef.current = isInsideBox(event);
+      }}
       onCancel={(event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -292,6 +293,10 @@ function PopoverContent({
         }
 
         if (event.target !== event.currentTarget) {
+          return;
+        }
+
+        if (pressStartedInsideRef.current || isInsideBox(event)) {
           return;
         }
 
@@ -398,3 +403,17 @@ function getTriggerElement(contentId: string) {
 }
 
 export { Popover, PopoverTrigger, PopoverContent };
+
+function isInsideBox(event: {
+  clientX: number;
+  clientY: number;
+  currentTarget: Element;
+}) {
+  const bounds = event.currentTarget.getBoundingClientRect();
+  return (
+    event.clientX >= bounds.left &&
+    event.clientX <= bounds.right &&
+    event.clientY >= bounds.top &&
+    event.clientY <= bounds.bottom
+  );
+}

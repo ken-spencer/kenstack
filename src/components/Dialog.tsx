@@ -14,7 +14,6 @@ import {
   useId,
   useMemo,
   useRef,
-  useState,
   type ComponentProps,
   type MouseEvent,
   type ReactNode,
@@ -22,6 +21,7 @@ import {
 import { createPortal } from "react-dom";
 import { XIcon } from "lucide-react";
 
+import useIsHydrated from "@kenstack/hooks/useIsHydrated";
 import { cn } from "@kenstack/lib/utils";
 import { useControllableOpen, useDialogTransition } from "./overlay";
 import { useOverlayStack } from "./overlayStack";
@@ -242,7 +242,7 @@ function DialogContent({
     useDialogContext("DialogContent");
   const dialogRef = useRef<HTMLDialogElement | null>(null);
   const releaseScrollLockRef = useRef<(() => void) | null>(null);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useIsHydrated();
   const visibleOpen = useDialogTransition(
     dialogRef,
     mounted && open,
@@ -253,11 +253,6 @@ function DialogContent({
     onClose: () => setOpen(false),
     open,
   });
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Portals require a browser document after hydration.
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     if (!mounted || !open || releaseScrollLockRef.current) {

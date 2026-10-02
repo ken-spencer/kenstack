@@ -141,14 +141,9 @@ async function prepareImageSave({
   id,
   user,
   table,
-  shouldSaveField,
 }: FieldPreSaveContext<
   z.output<typeof imageSchema>
 >): Promise<FieldPreSaveResult> {
-  if (!shouldSaveField(key)) {
-    return { status: "success", remove: true };
-  }
-
   if (!column) {
     return {
       status: "error",
@@ -253,55 +248,45 @@ async function prepareImageSave({
     };
   }
 
-  if (value.action === "upload") {
-    const [uploadedImage] = await db
-      .select({ id: media.id, status: media.status })
-      .from(media)
-      .where(
-        and(
-          eq(media.publicId, value.imageId),
-          eq(media.createdBy, user.id),
-          ne(media.kind, "file"),
-        ),
-      )
-      .limit(1);
+  const [uploadedImage] = await db
+    .select({ id: media.id, status: media.status })
+    .from(media)
+    .where(
+      and(
+        eq(media.publicId, value.imageId),
+        eq(media.createdBy, user.id),
+        ne(media.kind, "file"),
+      ),
+    )
+    .limit(1);
 
-    if (!uploadedImage) {
-      return {
-        status: "error",
-        message: "Could not find the uploaded image.",
-      };
-    }
-
-    if (
-      uploadedImage.id !== oldMediaId &&
-      uploadedImage.status !== "uploaded"
-    ) {
-      return {
-        status: "error",
-        message: "The selected image has not finished uploading.",
-      };
-    }
-
-    if (uploadedImage.id === oldMediaId) {
-      return { status: "success", remove: true };
-    }
-
+  if (!uploadedImage) {
     return {
-      status: "success",
-      value: uploadedImage.id,
-      afterSave: [
-        attachMediaAfterSave(
-          uploadedImage.id,
-          oldMediaId,
-          admin ? imageMetadata(value) : undefined,
-        ),
-      ],
+      status: "error",
+      message: "Could not find the uploaded image.",
     };
   }
 
+  if (uploadedImage.id !== oldMediaId && uploadedImage.status !== "uploaded") {
+    return {
+      status: "error",
+      message: "The selected image has not finished uploading.",
+    };
+  }
+
+  if (uploadedImage.id === oldMediaId) {
+    return { status: "success", remove: true };
+  }
+
   return {
-    status: "error",
-    message: "invalid image data",
+    status: "success",
+    value: uploadedImage.id,
+    afterSave: [
+      attachMediaAfterSave(
+        uploadedImage.id,
+        oldMediaId,
+        admin ? imageMetadata(value) : undefined,
+      ),
+    ],
   };
 }

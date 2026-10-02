@@ -1,7 +1,5 @@
 import { Suspense } from "react";
 
-import { getUsersModule } from "@kenstack/auth/server/getUsersModule";
-
 import { loadLoginFormProps } from "./loadFormProps";
 
 import Form from "./Form";
@@ -20,5 +18,5 @@ export default function LoginForm() {
 async function RememberedForm() {
   const formProps = await loadLoginFormProps();
 
-  return <Form {...formProps} passwordPath={getUsersModule().passwordPath} />;
+  return <Form {...formProps} />;
 }

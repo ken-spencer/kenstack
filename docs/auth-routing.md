@@ -73,17 +73,60 @@ same protected destination would loop.
 Keep request reads and authorization outside shared cache scopes and under the appropriate Suspense
 boundary, as described in `runtime-boundaries.md`. The return path does not change the session cache key.
 
+## The page's account
+
+- `fetcher` sends the account the tab's page was rendered for (`x-rendered-account`). The first
+  `useUserInfo(authState)` seed in the document sets it: the account menu, the account links or the
+  login step. After that only this tab's own sign-in or sign-out changes it, or a sign-in that a page
+  rendered signed out takes on. A page with none of these seeds (such as a point-of-sale screen) sends nothing and is
+  never compared.
+- Every access-checked pipeline stage, and the admin API, compares it with the session before anything
+  runs, and answers `409` with `code: "account-changed"` when they differ. A page rendered signed out
+  sends nothing until it takes on a sign-in; a session that has ended gets the usual `401`.
+- `Form` shows that refusal with a Reload button. A host API that checks access by hand moves onto its
+  stage's `access`, so it is compared too.
+- The user-info store follows the page's account. A page rendered for an account takes a user-info
+  reload or a later server render only for that account; anything else opens the account menu's "Your
+  sign-in changed" dialog and leaves the page as it is. A page rendered signed out takes a sign-in
+  silently.
+- A handler whose request changes the user or session, such as an account save, answers with
+  `response.success({ returnUser: true })`. After the handler, the pipeline adds the fresh `userInfo`,
+  and Kenstack `Form` adopts it as this tab's own change just before the form's `onSuccess`, so a
+  step's `next()` lands in the same render. Hosts never set the store themselves.
+
+## Emailed sign-in links between tabs
+
+- A sign-in link opens in a new tab, often while the tab that asked for it still waits on its code
+  form. As the link verifies, the link tab asks the site's other tabs on the `kenstack-sign-in`
+  channel. Each code form on screen that can take the sign-in answers with its email, a confirmation's
+  included, and the link tab matches the verified email against the answers. The messages never carry
+  a token, challenge key or code.
+- With a match, the link tab shows "You're signed in. Close this tab to continue." and leaves the user
+  info and the flow alone. The waiting tab moves on at focus, when its user-info reload adopts the
+  sign-in; a confirmation replays what it held.
+- In a flow, an unanswered link carries on signed in, at this tab's step or the first step in a new
+  tab, and on /login to its return step. A failed link (used, expired, or opened in another browser,
+  which is refused) shows a dialog with Close, or "You're already signed in." when signed in; with no
+  identity yet, a wrong-browser failure also offers "Request a new link". A failed confirmation link
+  drops `identityConfirmed` from where the flow returns to, so that page never says "You're confirmed".
+- Standalone Login, outside a flow, leaves for the server's destination once the link signs in, and a
+  failure shows its message and leads back to its email form.
+
 ## Confirming identity for sensitive actions
 
 Sensitive actions, such as changing a password or the sign-in email, need a recently authorized,
-non-impersonated session. The server guard, `requireRecentAuthentication(request, userId)`, is the only
+non-impersonated session. The server guard, `requireRecentAuthentication(request)`, is the only
 authority; the page asks the person to confirm their identity only when it refuses a submit.
 
-- A handler behind the guard calls it before its first write, quota claim or email.
-- A protected request names the account its wrapper was rendered for, read from the wrapper's
-  `useAuthorization().userId`, never from the live user info, which follows the cookie.
+- A handler behind the guard calls it before its first write, quota claim or email, on a stage with
+  `access`: the guard does not check the account, and the access check refuses a page rendered for
+  another account.
+- A protected request runs under the page's account (above), so a held request never replays for
+  another account: the server refuses it.
+- A confirmation or a completed password or email change in one tab reaches the account's other tabs
+  over a `BroadcastChannel`: a confirmation replays what they hold, and a completed change drops it.
 - The held request is a function that rebuilds the whole request rather than resending a stored body,
-  so single-use contents such as a reCAPTCHA token are fresh. `Form`'s mutation already fetches its
-  token per call.
+  so single-use contents such as a reCAPTCHA token are fresh. `Form`'s mutation tracks itself and
+  fetches its token per call.
 - A Kenstack component whose endpoint uses the guard wraps itself in `ReauthenticationForm`; hosts
   never add the wrapper. Outside it, a refusal is only a status message.

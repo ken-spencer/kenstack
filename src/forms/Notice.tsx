@@ -1,5 +1,6 @@
 "use client";
 
+import { accountChangedRefusal } from "@kenstack/auth/renderedAccount";
 import Notice from "@kenstack/components/Notice";
 import { useForm } from "@kenstack/forms/context";
 import { useSubmitFailure } from "@kenstack/forms/internal/submitFailure";
@@ -118,6 +119,16 @@ export default function NoticeList({
             }}
           >
             View error
+          </Button>
+        ) : null}
+        {statusMessage?.code === accountChangedRefusal.code ? (
+          <Button
+            className="shrink-0"
+            size="sm"
+            type="button"
+            onClick={() => window.location.reload()}
+          >
+            Reload
           </Button>
         ) : null}
         {statusMessage ? (

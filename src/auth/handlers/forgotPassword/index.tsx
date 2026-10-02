@@ -24,6 +24,7 @@ import schema from "@kenstack/auth/schemas/forgotPassword";
 import { audit } from "@kenstack/logger";
 import {
   loadSiteSender,
+  senderUnavailableMessage,
   type Attachment,
   type EmailAddress,
 } from "@kenstack/lib/mailer";
@@ -41,8 +42,7 @@ export const forgotPasswordPipeline = (props: ForgotPasswordProps) =>
     const from = props.from ?? (await loadSiteSender());
     if (!from) {
       return response.error({
-        message:
-          "We couldn’t send a password reset email because this site’s email sender isn’t set up.",
+        message: senderUnavailableMessage("a password reset email"),
         status: 503,
       });
     }

@@ -3,12 +3,11 @@
 // The client part of EmailChange. It owns its two link parameters: a cancellation works without a
 // session and stays untracked; a confirmation verifies when signed in, and signed out sends the visitor
 // to sign in with a return here that carries the token it kept.
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useMutation } from "@tanstack/react-query";
 
-import fetcher, { type FetchResult } from "@kenstack/api/fetcher";
+import fetcher from "@kenstack/api/fetcher";
 import type {
   EmailChangeCancelResult,
   EmailChangeRequestResult,
@@ -21,14 +20,15 @@ import {
 import { verificationEndedCode } from "@kenstack/auth/email/verification/internal/policy";
 import { getLoginReturnPath } from "@kenstack/auth/returnTo";
 import type { PublicAuthState } from "@kenstack/auth/server/state";
+import { postReauthentication } from "@kenstack/auth/reauthentication/channel";
 import { useAuthorization } from "@kenstack/auth/reauthentication/context";
+import useParamAction from "@kenstack/hooks/useParamAction";
 import { setUserInfo, useUserInfo } from "@kenstack/auth/useUserInfo";
 import type { StatusMessage } from "@kenstack/forms/context";
 
 import LinkButton from "@kenstack/auth/components/Login/Form/LinkButton";
 import VerificationCodeField from "@kenstack/auth/components/VerificationCodeField";
 import Notice from "@kenstack/components/Notice";
-import QueryProvider from "@kenstack/context/QueryProvider";
 import Form from "@kenstack/forms/Form";
 import InputField from "@kenstack/forms/InputField";
 import Submit from "@kenstack/forms/Submit";
@@ -68,12 +68,7 @@ export default function EmailChangeClient() {
   const cancelChallengeKey = useConsumedSearchParam("cancelEmailChange");
 
   return (
-    <QueryProvider>
-      <EmailChangeContent
-        cancelChallengeKey={cancelChallengeKey}
-        token={token}
-      />
-    </QueryProvider>
+    <EmailChangeContent cancelChallengeKey={cancelChallengeKey} token={token} />
   );
 }
 
@@ -86,7 +81,7 @@ function EmailChangeContent({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { isHolding, track, userId } = useAuthorization();
+  const { track, userId } = useAuthorization();
   const userInfo = useUserInfo();
   const [view, setView] = useState<View>({ kind: "email" });
   // Outcomes independent of the form being shown: a confirmed change, a
@@ -125,9 +120,12 @@ function EmailChangeContent({
     }
   }, [isSignedIn, pathname, router, token, userInfo.state]);
 
+  // The code form adopts the response's user info itself; the link's callback adopts it before calling this.
   function complete(authState: PublicAuthState) {
-    setUserInfo(authState);
     router.refresh();
+    if (authState.state === "authenticated") {
+      postReauthentication({ type: "saved", userId: authState.userId });
+    }
     setView({ kind: "email" });
     setNotice({
       message:
@@ -149,13 +147,13 @@ function EmailChangeContent({
         fetcher<EmailChangeVerificationResult>(apiPath, {
           action: "verify-email-change-link",
           token: activeToken,
-          userId,
         }),
       ),
     (activeToken, result) => {
       setDismissedToken(activeToken);
       if (result?.status === "success") {
-        complete(result.authState);
+        setUserInfo(result.userInfo.authState);
+        complete(result.userInfo.authState);
         return;
       }
       setNotice({
@@ -212,7 +210,6 @@ function EmailChangeContent({
           action: "email-change",
           challengeKey,
           email,
-          userId,
         }),
       );
       if (result.status === "error" && result.code === verificationEndedCode) {
@@ -256,12 +253,9 @@ function EmailChangeContent({
         <Notice message={notice.message} status={notice.status} />
       ) : null}
       {isConfirmingLink ? (
-        // Hidden while the confirmation dialog asks the visitor to confirm their identity.
-        isHolding ? null : (
-          <p aria-live="polite" className="text-sm">
-            Confirming your new email…
-          </p>
-        )
+        <p aria-live="polite" className="text-sm">
+          Confirming your new email…
+        </p>
       ) : !canChange ? (
         !isSignedIn && userInfo.state !== "loading" && !token ? (
           <p>
@@ -286,25 +280,17 @@ function EmailChangeContent({
           defaultValues={{ email: userInfo.email }}
           key={userInfo.email}
           schema={emailChangeEmailSchema}
-          onSubmit={async ({ data, mutation }) => {
+          onSubmit={({ data, mutation }) => {
             setNotice(undefined);
-            const result = await track(() =>
-              mutation.mutateAsync({
-                action: "email-change",
-                email: data.email,
-                userId,
-              }),
-            )
-              // The form's mutation already reported the failure.
-              .catch(() => undefined);
-            if (result?.status === "success") {
-              setView({
-                challengeKey: result.challengeKey,
-                email: result.email,
-                kind: "code",
-              });
-            }
+            mutation.mutate({ action: "email-change", email: data.email });
           }}
+          onSuccess={(result) =>
+            setView({
+              challengeKey: result.challengeKey,
+              email: result.email,
+              kind: "code",
+            })
+          }
         >
           <InputField
             autoComplete="email"
@@ -349,13 +335,7 @@ function EmailChangeCodeForm({
   onShowEmailForm: () => void;
   statusMessage?: StatusMessage;
 }) {
-  const { track, userId } = useAuthorization();
   const isSending = challengeKey === null;
-  // A resend can replace the challenge while an older code is still verifying.
-  const currentChallengeKey = useRef(challengeKey);
-  useEffect(() => {
-    currentChallengeKey.current = challengeKey;
-  }, [challengeKey]);
 
   return (
     <div className="space-y-4">
@@ -383,33 +363,33 @@ function EmailChangeCodeForm({
         initialStatusMessage={statusMessage}
         key={challengeKey ?? "sending"}
         schema={emailChangeCodeSchema}
-        onSubmit={async ({ data, mutation }) => {
+        onSubmit={({ data, mutation }) => {
           if (challengeKey === null) {
             return;
           }
 
-          const result = await track(() =>
-            mutation.mutateAsync({
+          mutation.mutate(
+            {
               action: "verify-email-change-code",
               challengeKey,
               code: data.code,
-              userId,
-            }),
-          )
-            // The form's mutation already reported the failure.
-            .catch(() => undefined);
-          if (result?.status === "success") {
-            onComplete(result.authState);
-          } else if (
-            result?.code === verificationEndedCode &&
-            currentChallengeKey.current === challengeKey
-          ) {
-            onEnded(
-              result.message ??
-                "That request has ended. Enter the email again to start over.",
-            );
-          }
+            },
+            {
+              onSuccess: (result) => {
+                if (
+                  result.status === "error" &&
+                  result.code === verificationEndedCode
+                ) {
+                  onEnded(
+                    result.message ??
+                      "That request has ended. Enter the email again to start over.",
+                  );
+                }
+              },
+            },
+          );
         }}
+        onSuccess={(result) => onComplete(result.userInfo.authState)}
       >
         <VerificationCodeField disabled={isSending} name="code" />
         <div className="flex flex-wrap items-center gap-4">
@@ -433,38 +413,4 @@ function EmailChangeCodeForm({
       </Form>
     </div>
   );
-}
-
-// Runs the action once per parameter value and reports its result, or
-// undefined when the request itself failed, for the latest value only.
-// Returns whether that request is still pending.
-function useParamAction<TResult extends Record<string, unknown>>(
-  value: string | null,
-  action: (value: string) => Promise<FetchResult<TResult>>,
-  onResult: (value: string, result: FetchResult<TResult> | undefined) => void,
-) {
-  const mutation = useMutation({ mutationFn: action });
-  const { mutateAsync } = mutation;
-  const startedRef = useRef<string | null>(null);
-  const settle = useEffectEvent(
-    (activeValue: string, result: FetchResult<TResult> | undefined) => {
-      if (startedRef.current === activeValue) {
-        onResult(activeValue, result);
-      }
-    },
-  );
-
-  useEffect(() => {
-    if (value === null || startedRef.current === value) {
-      return;
-    }
-
-    startedRef.current = value;
-    mutateAsync(value).then(
-      (result) => settle(value, result),
-      () => settle(value, undefined),
-    );
-  }, [mutateAsync, value]);
-
-  return value !== null && mutation.variables === value && mutation.isPending;
 }

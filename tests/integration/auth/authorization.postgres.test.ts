@@ -25,7 +25,7 @@ vi.mock("@app/modules", async () => ({
   },
 }));
 vi.mock("@kenstack/auth/server/user", () => ({
-  getFreshCurrentSession: vi.fn(),
+  getCurrentSession: vi.fn(),
   sessionCacheTag: (hash: string) => `session:${hash}`,
 }));
 vi.mock("@kenstack/api", async () => await import("@kenstack/api/errors"));

@@ -16,7 +16,7 @@ function render(userId: number) {
   return act(async () =>
     root.render(
       <ReauthenticationFormClient
-        loginForm={<form data-login />}
+        email="patron@example.test"
         message="Confirm your identity."
         userId={userId}
       >

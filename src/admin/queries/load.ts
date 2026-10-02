@@ -72,10 +72,9 @@ async function loadCachedAdminRecord(
       ? getTableColumns(adminConfig.table)[parentForeignKey]
       : undefined;
 
-    const result = await loadRecord({
+    const values = await loadRecord({
       table: adminConfig.table,
       fields: adminConfig.fields,
-      defaults: adminConfig.defaultValues,
       id: target,
       select: {
         ...(adminConfig.select ?? {}),
@@ -84,21 +83,18 @@ async function loadCachedAdminRecord(
     });
 
     // loadRecord always selects identity and timestamps, which serializeValues preserves by key.
-    return result.row
-      ? (serializeValues(result.values) as AdminEditItem)
-      : null;
+    return values ? (serializeValues(values) as AdminEditItem) : null;
   }
 
-  const result = await loadRecord({
+  const values = await loadRecord({
     table: adminConfig.table,
     fields: adminConfig.fields,
-    defaults: adminConfig.defaultValues,
     select: adminConfig.select,
     where: eq(adminConfig.table.key, name),
   });
 
   // loadRecord always selects identity and timestamps, which serializeValues preserves by key.
-  return result.row ? (serializeValues(result.values) as AdminEditItem) : null;
+  return values ? (serializeValues(values) as AdminEditItem) : null;
 }
 
 // Loads one configured relation separately so relation panels do not expand the parent query.
@@ -119,16 +115,11 @@ export async function loadOneToOne({
   if (!binding) {
     return null;
   }
-  const result = await loadRecord({
+  const values = await loadRecord({
     table: binding.table,
     fields: binding.fields,
-    defaults: binding.defaultValues,
     where: eq(binding.foreignKey, parentId),
   });
 
-  if (!result.row) {
-    return null;
-  }
-
-  return serializeValues(result.values);
+  return values ? serializeValues(values) : null;
 }

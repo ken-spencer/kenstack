@@ -2,20 +2,21 @@
 
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as z from "zod";
 
-const mocks = vi.hoisted(() => ({
-  executeRecaptcha: vi.fn<(action: string) => Promise<string>>(),
-  fetcher: vi.fn(async () => ({ status: "success" as const })),
-}));
-
-vi.mock("@kenstack/api/fetcher", () => ({ default: mocks.fetcher }));
-vi.mock("react-google-recaptcha-v3", () => ({
-  useGoogleReCaptcha: () => ({ executeRecaptcha: mocks.executeRecaptcha }),
-}));
-
 import Form from "@kenstack/forms/Form";
+
+const mocks = vi.hoisted(() => ({
+  execute:
+    vi.fn<(siteKey: string, options: { action: string }) => Promise<string>>(),
+  fetch: vi.fn<(input: RequestInfo, init?: RequestInit) => Promise<Response>>(
+    async () =>
+      new Response(JSON.stringify({ status: "success" }), {
+        headers: { "Content-Type": "application/json" },
+      }),
+  ),
+}));
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 // The status outlet scrolls itself into view; jsdom has no layout.
@@ -54,19 +55,33 @@ function renderForm() {
 
 describe("Form recaptchaAction", () => {
   beforeEach(() => {
-    mocks.executeRecaptcha.mockReset();
-    mocks.fetcher.mockClear();
+    mocks.execute.mockReset();
+    mocks.fetch.mockClear();
+    vi.stubEnv("NEXT_PUBLIC_RECAPTCHA_SITE_KEY", "site-key");
+    vi.stubGlobal("fetch", mocks.fetch);
+    window.grecaptcha = {
+      ready: (callback) => callback(),
+      execute: mocks.execute,
+    };
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    delete window.grecaptcha;
   });
 
   it("sends the token requested under the action with the submission", async () => {
-    mocks.executeRecaptcha.mockResolvedValue("token-123");
+    mocks.execute.mockResolvedValue("token-123");
     const { submit, unmount } = renderForm();
 
     await submit();
-    await vi.waitFor(() => expect(mocks.fetcher).toHaveBeenCalledOnce());
+    await vi.waitFor(() => expect(mocks.fetch).toHaveBeenCalledOnce());
 
-    expect(mocks.executeRecaptcha).toHaveBeenCalledWith("contact");
-    expect(mocks.fetcher).toHaveBeenCalledWith("/api/contact", {
+    expect(mocks.execute).toHaveBeenCalledWith("site-key", {
+      action: "contact",
+    });
+    expect(JSON.parse(String(mocks.fetch.mock.calls[0][1]?.body))).toEqual({
       name: "Ada",
       recaptchaToken: "token-123",
     });
@@ -74,7 +89,7 @@ describe("Form recaptchaAction", () => {
   });
 
   it("reports a failed token request instead of submitting", async () => {
-    mocks.executeRecaptcha.mockRejectedValue(new Error("script blocked"));
+    mocks.execute.mockRejectedValue(new Error("script blocked"));
     const { container, submit, unmount } = renderForm();
 
     await submit();
@@ -82,7 +97,7 @@ describe("Form recaptchaAction", () => {
       expect(container.querySelector('[role="alert"]')).not.toBeNull(),
     );
 
-    expect(mocks.fetcher).not.toHaveBeenCalled();
+    expect(mocks.fetch).not.toHaveBeenCalled();
     unmount();
   });
 });

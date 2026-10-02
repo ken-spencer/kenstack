@@ -1,12 +1,9 @@
 "use client";
 
-import { useCallback } from "react";
-
 import { getSafeReturnToPath } from "@kenstack/auth/returnTo";
 import type { PublicAuthState } from "@kenstack/auth/server/state";
 import { useAuthorization } from "@kenstack/auth/reauthentication/context";
-import { setUserInfo } from "@kenstack/auth/useUserInfo";
-import { allowUnload } from "@kenstack/forms/NavigationBlocker";
+import { setLoginDestination, setUserInfo } from "@kenstack/auth/useUserInfo";
 
 // Embedded login stays in its owning flow, including across emailed-link
 // verification, which returns to the flow's URL. Reauthentication confirms the
@@ -45,37 +42,24 @@ export function resolveReturnTo({ anchor, mode }: Continuation) {
   );
 }
 
-export function useCompleteLogin({ mode, onComplete }: Continuation) {
+export function useCompleteLogin(continuation: Continuation) {
   const { confirm } = useAuthorization();
-  return useCallback(
-    (path: string, authState: PublicAuthState) => {
-      if (mode === "embedded") {
-        setUserInfo(authState);
-        onComplete();
-        return;
+  return (path: string, authState: PublicAuthState) => {
+    if (continuation.mode === "embedded") {
+      // The server answers with the page's own address unless it refused it as returnTo, as on
+      // /login; only then is the path where the account's sign-ins lead.
+      if (getSafeReturnToPath(resolveReturnTo(continuation)) === undefined) {
+        setLoginDestination(authState, path);
       }
-      if (mode === "reauthentication") {
-        // The wrapper replays what it held, keeping the page's unsaved state.
-        confirm(authState);
-        return;
-      }
-      window.location.assign(path);
-    },
-    [confirm, mode, onComplete],
-  );
-}
-
-// A confirmation sign-in names the account its page was rendered for, and the page reloads when
-// another account has signed in since.
-export function useReauthenticationAccount() {
-  const { userId } = useAuthorization();
-  return {
-    userId,
-    reloadIfChanged: (result: { code?: string; status: string }) => {
-      if (result.status === "error" && result.code === "account-changed") {
-        allowUnload();
-        window.location.reload();
-      }
-    },
+      setUserInfo(authState);
+      continuation.onComplete();
+      return;
+    }
+    if (continuation.mode === "reauthentication") {
+      // The wrapper replays what it held, keeping the page's unsaved state.
+      confirm(authState);
+      return;
+    }
+    window.location.assign(path);
   };
 }

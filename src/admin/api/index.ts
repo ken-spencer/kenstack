@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { modules } from "@app/modules";
 import { pipeline } from "@kenstack/api";
-import { hasRole } from "@kenstack/auth/server/auth";
+import { resolveAccess } from "@kenstack/api/access";
 import { content } from "@kenstack/db/tables/content";
 import { isRecord } from "@kenstack/lib/isRecord";
 
@@ -59,8 +59,13 @@ const runAdminGet = async (request: NextRequest) => {
 };
 
 const runAdminPipeline = async (request: NextRequest) => {
-  if (!(await hasRole("admin"))) {
-    return NextResponse.json({ redirect: "/login" });
+  const { refusal } = await resolveAccess(request, "admin");
+  if (refusal) {
+    const { status, ...error } = refusal;
+    return NextResponse.json(
+      { status: "error", ...error } satisfies FetchError,
+      { status },
+    );
   }
 
   const contentType = request.headers.get("content-type");
@@ -129,32 +134,16 @@ const runAdminPipeline = async (request: NextRequest) => {
   }
 
   switch (action) {
-    case "load-module-settings": {
-      if (!moduleConfig.settings) {
-        return NextResponse.json({
-          status: "error",
-          message: `Module "${name}" does not have settings.`,
-        });
-      }
-
+    case "load-module-settings":
       return pipeline(
         { request, json },
         loadModuleSettingsAction(moduleConfig),
       );
-    }
-    case "save-module-settings": {
-      if (!moduleConfig.settings) {
-        return NextResponse.json({
-          status: "error",
-          message: `Module "${name}" does not have settings.`,
-        });
-      }
-
+    case "save-module-settings":
       return pipeline(
         { request, json },
         saveModuleSettingsAction(moduleConfig),
       );
-    }
   }
 
   const adminConfig = moduleConfig.admin;

@@ -10,7 +10,7 @@ import type { Step, StepFlowProps } from "./types";
 export type { Step, StepActionsProps, StepHeaderProps } from "./types";
 
 // The server entry resolves the composed steps before handing browser-owned
-// navigation to the client flow. Every visit enters at the first step.
+// navigation to the client flow, which resumes the tab's step once hydrated.
 export default async function StepFlow({
   Actions = DefaultActions,
   Header = StepHeading,

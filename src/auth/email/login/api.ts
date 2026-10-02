@@ -21,9 +21,8 @@ import {
 } from "@kenstack/auth/returnTo";
 import { resolveLoginDestination } from "@kenstack/auth/server/loginDestination";
 import getIp from "@kenstack/lib/ip";
-import { getFreshCurrentSession } from "@kenstack/auth/server/user";
+import { getCurrentSession } from "@kenstack/auth/server/user";
 import { hasRecentAuthentication } from "@kenstack/auth/reauthentication";
-import { requireUnchangedAccount } from "@kenstack/auth/reauthentication/server";
 
 import {
   createVerificationEmail,
@@ -45,7 +44,7 @@ const emailLoginLinkFailureMessages = {
   invalid:
     "This sign-in link is no longer valid. Request a new email to continue.",
   "wrong-browser":
-    "This link was opened in a different browser. Open it in the browser where you requested it, or request a new email here. The link is still valid.",
+    "Sign-in links only work in the browser that requested them. To sign in here, request a new link.",
 } satisfies Record<EmailLoginLinkFailureCode, string>;
 
 export type EmailLoginOptions = {
@@ -69,18 +68,15 @@ export function createEmailLogin(options: EmailLoginOptions = {}) {
     request: pipelineStage(
       { schema: requestEmailLoginSchema },
       async ({ data, dataIn, request, response }) => {
-        if (data.userId !== undefined) {
-          await requireUnchangedAccount(data.userId, data.email);
-        }
         const returnTo = getSafeReturnToPath(data.returnTo);
         const authState = await loadAuthState();
         // A confirmation always sends its code: its button promises one, and must never replay the
         // held request itself.
         if (
-          data.userId === undefined &&
+          !data.confirmation &&
           authState.state === "authenticated" &&
           authState.email === data.email &&
-          hasRecentAuthentication(await getFreshCurrentSession())
+          hasRecentAuthentication(await getCurrentSession())
         ) {
           const publicAuthState = await loadPublicAuthState();
           response.headers.set("Cache-Control", "no-store");
@@ -90,7 +86,7 @@ export function createEmailLogin(options: EmailLoginOptions = {}) {
           });
         }
         if (authState.state === "proven" && authState.email === data.email) {
-          await redeemEmailProof(authState, {
+          await redeemEmailProof({
             allowUnregistered: options.allowUnregistered,
           });
 
@@ -147,19 +143,13 @@ export function createEmailLogin(options: EmailLoginOptions = {}) {
     verifyCode: pipelineStage(
       { schema: verifyEmailLoginCodeSchema },
       async ({ data, response }) => {
-        if (data.userId !== undefined) {
-          await requireUnchangedAccount(data.userId, data.email ?? "");
-        }
-        // The account id names the confirming page, not the verification row, so only the proof goes on.
-        await redeemEmailProof(
-          await verifyCode({
-            challengeKey: data.challengeKey,
-            code: data.code,
-          }),
-          {
-            allowUnregistered: options.allowUnregistered,
-          },
-        );
+        await verifyCode({
+          challengeKey: data.challengeKey,
+          code: data.code,
+        });
+        await redeemEmailProof({
+          allowUnregistered: options.allowUnregistered,
+        });
 
         // The client store seeds from this state instead of fetching user-info
         // again; loaded fresh since authentication may have established a session.
@@ -187,7 +177,7 @@ export function createEmailLogin(options: EmailLoginOptions = {}) {
           );
         }
 
-        await redeemEmailProof(verification, {
+        await redeemEmailProof({
           allowUnregistered: options.allowUnregistered,
         });
 

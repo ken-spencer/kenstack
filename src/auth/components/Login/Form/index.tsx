@@ -1,44 +1,37 @@
 "use client";
 
 // Hosts and the Step adapter import this client entry point; sibling files are
-// internal to the Login form, except LinkButton, which EmailChange shares.
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+// internal to the Login form, except LinkButton, which EmailChange shares, and
+// useEmailLoginLink and AnsweredDialog, which the sign-in step's controller
+// shares.
+import { useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useMutation } from "@tanstack/react-query";
-import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 
-import fetcher, {
-  type FetchError,
-  type FetchSuccess,
-} from "@kenstack/api/fetcher";
+import fetcher, { type FetchSuccess } from "@kenstack/api/fetcher";
 import type {
   EmailLoginRequestResult,
   EmailLoginVerificationResult,
 } from "@kenstack/auth/api";
-import {
-  emailLoginLinkFailureCodeSchema,
-  requestEmailLoginSchema,
-  type EmailLoginLinkFailureCode,
-} from "@kenstack/auth/email/login/schemas";
+import { requestEmailLoginSchema } from "@kenstack/auth/email/login/schemas";
 import { verificationEndedCode } from "@kenstack/auth/email/verification/internal/policy";
 import { setUserInfo } from "@kenstack/auth/useUserInfo";
 
-import QueryProvider from "@kenstack/context/QueryProvider";
 import type { StatusMessage } from "@kenstack/forms/context";
 
 import CookieTest from "@kenstack/components/CookieTest";
 import useConsumedSearchParam from "@kenstack/hooks/useConsumedSearchParam";
 
 import { rememberLoginMethod, type LoginMethod } from "../method";
+import AnsweredDialog from "./AnsweredDialog";
 import LoginCodeForm from "./Code";
 import EmailLoginForm from "./Email";
 import LinkButton from "./LinkButton";
 import PasswordLoginForm from "./Password";
+import useEmailLoginLink from "./useEmailLoginLink";
 import {
   resolveReturnTo,
   type Continuation,
   useCompleteLogin,
-  useReauthenticationAccount,
 } from "./continuation";
 
 function LoginForm(
@@ -54,8 +47,8 @@ function LoginForm(
   const emailParam = useSearchParams().get("email");
   const loginMessage = useConsumedSearchParam("loginMessage");
   const notice = useConsumedSearchParam("notice");
-  // A hidden StepFlow step pauses effects, so an emailed link that lands on
-  // another step waits in the URL until this step is shown.
+  // Only a standalone form verifies an emailed link: in a flow the sign-in
+  // step's controller does, and a confirmation's link lands on /login's flow.
   const token = useConsumedSearchParam("token");
 
   return (
@@ -69,7 +62,7 @@ function LoginForm(
         email={props.email ?? emailParam?.trim().toLowerCase() ?? ""}
         loginMessage={loginMessage}
         notice={notice}
-        token={token}
+        token={props.mode ? null : token}
       />
     </>
   );
@@ -99,10 +92,6 @@ function LoginFormContent({
   // A form that stays mounted through a failed send shows its error when it mounts again.
   const [failedSends, setFailedSends] = useState(0);
   const requestIdRef = useRef(0);
-  // The address's returnTo before "Forgot Your Password?" replaced it, restored when the visitor
-  // goes back to the password form; undefined while nothing is replaced.
-  const replacedReturnToRef = useRef<string | null>(undefined);
-  const { executeRecaptcha } = useGoogleReCaptcha();
   const [loginMethod, setLoginMethod] = useState<LoginMethod>(
     initialMethod ?? "email",
   );
@@ -127,7 +116,6 @@ function LoginFormContent({
   );
 
   const completeLogin = useCompleteLogin(continuation);
-  const account = useReauthenticationAccount();
 
   // The form that asked stays until the send completes, its button pending, and the code page then
   // shows in one change. A failed send shows its error where the request began. A result that a newer request has
@@ -150,24 +138,25 @@ function LoginFormContent({
     }
 
     try {
-      const result = await fetcher<EmailLoginRequestResult>("/api/auth", {
-        action: "email-login",
-        challengeKey: resendChallengeKey,
-        email: emailAddress,
-        // An embedded form's page hosts the link verifier, so the emailed
-        // link can land there directly instead of on /login.
-        linkToReturnTo: mode === "embedded" || undefined,
-        recaptchaToken: executeRecaptcha
-          ? await executeRecaptcha("login")
-          : null,
-        returnTo: resolveReturnTo(continuation),
-        userId: account.userId,
-      });
+      const result = await fetcher<EmailLoginRequestResult>(
+        "/api/auth",
+        {
+          action: "email-login",
+          challengeKey: resendChallengeKey,
+          // A confirmation always sends its code, since its button promises one.
+          confirmation: mode === "reauthentication" || undefined,
+          email: emailAddress,
+          // An embedded form's page hosts the link verifier, so the emailed
+          // link can land there directly instead of on /login.
+          linkToReturnTo: mode === "embedded" || undefined,
+          returnTo: resolveReturnTo(continuation),
+        },
+        { recaptchaAction: "login" },
+      );
 
       if (requestIdRef.current !== requestId) {
         return;
       }
-      account.reloadIfChanged(result);
       if (result.status === "error") {
         // A request the server no longer knows cannot continue from the code
         // page; the email page is the only place a new one starts.
@@ -205,30 +194,14 @@ function LoginFormContent({
 
   if (token) {
     return (
-      <QueryProvider>
-        <LoginLinkContent
-          continuation={continuation}
-          token={token}
-          onShowEmailLogin={showEmailLogin}
-          onSuccess={({ path, authState }) => {
-            completeLogin(path, authState);
-          }}
-        />
-      </QueryProvider>
-    );
-  }
-
-  function replaceReturnTo(returnTo: string | null) {
-    const params = new URLSearchParams(window.location.search);
-    if (returnTo === null) {
-      params.delete("returnTo");
-    } else {
-      params.set("returnTo", returnTo);
-    }
-    window.history.replaceState(
-      null,
-      "",
-      `${window.location.pathname}${params.size ? `?${params}` : ""}${window.location.hash}`,
+      <LoginLinkContent
+        continuation={continuation}
+        token={token}
+        onShowEmailLogin={showEmailLogin}
+        onSuccess={({ path, authState }) => {
+          completeLogin(path, authState);
+        }}
+      />
     );
   }
 
@@ -242,10 +215,6 @@ function LoginFormContent({
     setEmailAddress(nextEmailAddress);
     setLoginMethod(method);
     rememberLoginMethod(method);
-    if (method === "password" && replacedReturnToRef.current !== undefined) {
-      replaceReturnTo(replacedReturnToRef.current);
-      replacedReturnToRef.current = undefined;
-    }
     // Continue where typing makes sense: a valid email moves focus to the
     // password; anything else returns to the email.
     setFocusField(
@@ -284,32 +253,25 @@ function LoginFormContent({
           continuation={continuation}
           emailDefaultValue={emailAddress}
           statusMessage={statusMessage}
-          onForgotPassword={
-            passwordPath
-              ? (form) => {
-                  // The email sign-in is the forgot-password path. The return path goes in the
-                  // address, which the sign-in, its emailed link and a flow's return step all read,
-                  // and which a reload keeps.
-                  replacedReturnToRef.current = new URLSearchParams(
-                    window.location.search,
-                  ).get("returnTo");
-                  replaceReturnTo(passwordPath);
-                  showLoginForm("email", form);
-                }
-              : undefined
-          }
+          passwordPath={passwordPath}
           onShowEmailLogin={(form) => showLoginForm("email", form)}
         />
       ) : (
-        <EmailLoginForm
-          autoFocus={focusField === "email"}
-          key={failedSends}
-          continuation={continuation}
-          emailDefaultValue={emailAddress}
-          statusMessage={statusMessage}
-          onEmailLogin={sendEmailCode}
-          onShowPasswordLogin={(form) => showLoginForm("password", form)}
-        />
+        <>
+          {/* In a flow step, until the code form's own instructions take over. */}
+          {mode === "embedded" ? (
+            <p>We’ll email you a code to confirm your address.</p>
+          ) : null}
+          <EmailLoginForm
+            autoFocus={focusField === "email"}
+            key={failedSends}
+            continuation={continuation}
+            emailDefaultValue={emailAddress}
+            statusMessage={statusMessage}
+            onEmailLogin={sendEmailCode}
+            onShowPasswordLogin={(form) => showLoginForm("password", form)}
+          />
+        </>
       )}
     </div>
   );
@@ -326,17 +288,26 @@ function LoginLinkContent({
   onShowEmailLogin: (message?: string) => void;
   onSuccess: (result: FetchSuccess<EmailLoginVerificationResult>) => void;
 }) {
-  const failure = useEmailLoginLink(token, {
+  // Answered by a tab waiting on this sign-in, or a failure with nothing to return to; a failure the
+  // email form can answer goes back to it with its message.
+  const [outcome, setOutcome] = useState<"answered" | { message: string }>();
+  useEmailLoginLink(token, {
+    onAnswered: () => setOutcome("answered"),
     onFailure: ({ code, message }) => {
       if (code) {
         onShowEmailLogin(message);
+      } else {
+        setOutcome({ message });
       }
     },
     onSuccess,
     returnTo: () => resolveReturnTo(continuation),
   });
 
-  if (failure === null || failure.code) {
+  if (outcome === "answered") {
+    return <AnsweredDialog />;
+  }
+  if (outcome === undefined) {
     return (
       <p aria-live="polite" className="text-sm">
         Signing you in…
@@ -347,107 +318,13 @@ function LoginLinkContent({
   return (
     <div className="w-full space-y-4">
       <p role="alert" className="text-sm">
-        {failure.message}
+        {outcome.message}
       </p>
       <LinkButton onClick={() => onShowEmailLogin()}>
         Return to login
       </LinkButton>
     </div>
   );
-}
-
-type EmailLoginLinkFailure = {
-  code?: EmailLoginLinkFailureCode;
-  message: string;
-};
-
-const linkRequestFailureMessage =
-  "We couldn’t finish signing you in. Try the link again.";
-
-function toLinkFailure(result: FetchError): EmailLoginLinkFailure {
-  const code = emailLoginLinkFailureCodeSchema.safeParse(result.code);
-
-  return {
-    code: code.success ? code.data : undefined,
-    message: result.message ?? "We couldn’t finish signing you in.",
-  };
-}
-
-// Each token is verified once; the callbacks and the returned failure follow
-// only the latest token.
-function useEmailLoginLink(
-  token: string,
-  {
-    onFailure,
-    onSuccess,
-    returnTo,
-  }: {
-    onFailure: (failure: EmailLoginLinkFailure) => void;
-    onSuccess: (result: FetchSuccess<EmailLoginVerificationResult>) => void;
-    returnTo: () => string;
-  },
-) {
-  const verification = useMutation({
-    mutationFn: (activeToken: string) => {
-      const path = returnTo();
-      return fetcher<EmailLoginVerificationResult>("/api/auth", {
-        action: "verify-email-login-link",
-        ...(path ? { returnTo: path } : {}),
-        token: activeToken,
-      });
-    },
-  });
-  const { mutateAsync } = verification;
-  const startedTokenRef = useRef<string | null>(null);
-  const fail = useEffectEvent(
-    (activeToken: string, failure: EmailLoginLinkFailure) => {
-      if (startedTokenRef.current === activeToken) {
-        onFailure(failure);
-      }
-    },
-  );
-  const succeed = useEffectEvent(
-    (
-      activeToken: string,
-      result: FetchSuccess<EmailLoginVerificationResult>,
-    ) => {
-      if (startedTokenRef.current === activeToken) {
-        onSuccess(result);
-      }
-    },
-  );
-
-  useEffect(() => {
-    if (startedTokenRef.current === token) {
-      return;
-    }
-
-    startedTokenRef.current = token;
-    // The promise settles even if a StepFlow step hides this form mid-flight
-    // and pauses its subscriptions, which would drop observer callbacks.
-    mutateAsync(token).then(
-      (result) => {
-        if (result.status === "success") {
-          succeed(token, result);
-        } else {
-          fail(token, toLinkFailure(result));
-        }
-      },
-      () => fail(token, { message: linkRequestFailureMessage }),
-    );
-  }, [mutateAsync, token]);
-
-  if (verification.variables !== token) {
-    return null;
-  }
-  if (verification.isError) {
-    return { message: linkRequestFailureMessage };
-  }
-  if (verification.data?.status === "error") {
-    return toLinkFailure(verification.data);
-  }
-
-  return null;
 }
 
 export default LoginForm;

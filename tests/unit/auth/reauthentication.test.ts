@@ -31,20 +31,22 @@ vi.mock("@app/modules", () => ({
 }));
 vi.mock("@kenstack/logger", () => ({ audit: mocks.audit }));
 vi.mock("@kenstack/auth/server/user", () => ({
-  getFreshCurrentSession: mocks.session,
+  // The access check reads the user; the session mock stands in for it.
+  getCurrentUser: async () => {
+    const session = await mocks.session();
+    return session && { id: session.userId, roles: [] };
+  },
+  getCurrentSession: mocks.session,
   userSessionsCacheTag: (id: number) => `auth-user-sessions:${id}`,
-  requireUser: vi.fn(),
 }));
 vi.mock("@kenstack/auth/server/state", () => ({
-  loadFreshAuthState: mocks.authState,
   loadFreshPublicAuthState: mocks.authState,
 }));
 vi.mock("@kenstack/auth/server/auth", () => ({
   login: mocks.login,
-  hasAccess: vi.fn(),
-  isAuthenticated: vi.fn(),
 }));
 vi.mock("@kenstack/lib/errorReporter", () => ({ reportError: vi.fn() }));
+vi.mock("@kenstack/api/recaptcha", () => ({ default: vi.fn() }));
 vi.mock("@kenstack/api", async () => {
   const { default: pipeline, pipelineStage } =
     await import("@kenstack/api/pipeline");
@@ -54,7 +56,7 @@ vi.mock("@kenstack/api", async () => {
     ...(await import("@kenstack/api/errors")),
     checkQuota: vi.fn(async () => null),
     consumeQuota: vi.fn(),
-    recaptcha: vi.fn(),
+    recaptcha: (await import("@kenstack/api/recaptcha")).default,
   };
 });
 
@@ -118,15 +120,12 @@ describe("shared recent authentication", () => {
           new Request("https://example.com/api/auth", {
             headers: referer ? { referer } : {},
           }),
-          12,
         ),
       ).rejects.toMatchObject({ redirect: "/login" });
     },
   );
-  it("accepts a recent session for the requested account", async () => {
-    await expect(
-      requireRecentAuthentication(request, 12),
-    ).resolves.toMatchObject({
+  it("accepts a recent session", async () => {
+    await expect(requireRecentAuthentication(request)).resolves.toMatchObject({
       userId: 12,
     });
   });
@@ -137,32 +136,17 @@ describe("shared recent authentication", () => {
         createdAt: now,
         authorizedUntil: new Date(now.getTime() + 600_000),
         expiresAt: new Date(Date.now() + 86400_000),
-        userId: 13,
-        impersonatedBy: null,
-      },
-      401,
-    ],
-    [
-      {
-        createdAt: now,
-        authorizedUntil: new Date(now.getTime() + 600_000),
-        expiresAt: new Date(Date.now() + 86400_000),
         userId: 12,
         impersonatedBy: 1,
       },
       403,
     ],
-  ])(
-    "rejects missing, changed, or impersonated sessions",
-    async (session, status) => {
-      mocks.session.mockResolvedValue(session);
-      await expect(
-        requireRecentAuthentication(request, 12),
-      ).rejects.toMatchObject({
-        status,
-      });
-    },
-  );
+  ])("rejects missing or impersonated sessions", async (session, status) => {
+    mocks.session.mockResolvedValue(session);
+    await expect(requireRecentAuthentication(request)).rejects.toMatchObject({
+      status,
+    });
+  });
 });
 
 describe("password changes", () => {
@@ -171,13 +155,12 @@ describe("password changes", () => {
     confirmPassword: "Replacement123",
     userId: 12,
   };
-  it("returns an expired session to sign-in without changing the password", async () => {
+  it("refuses an expired session without changing the password", async () => {
     mocks.session.mockResolvedValue(undefined);
-    const response = await pipeline({ request, json }, resetPasswordPipeline());
+    const response = await pipeline({ request, json }, resetPasswordPipeline);
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toMatchObject({
-      code: "reauthentication-required",
-      redirect: "/login?returnTo=%2Faccount%2Fpassword%3Ftab%3Dsecurity",
+      message: "You must be signed in to perform this action.",
     });
     expect(mocks.transaction).not.toHaveBeenCalled();
   });
@@ -193,7 +176,7 @@ describe("password changes", () => {
     });
     const response = await pipeline(
       { request, json: { ...json, currentPassword: "Existing123" } },
-      resetPasswordPipeline(),
+      resetPasswordPipeline,
     );
     expect(response.status).toBe(403);
     // No redirect: the page stays, keeping what was typed while identity is confirmed.
@@ -204,7 +187,7 @@ describe("password changes", () => {
     expect(mocks.transaction).not.toHaveBeenCalled();
   });
   it("sets the password with fresh proof, revokes sessions, and signs back in", async () => {
-    const response = await pipeline({ request, json }, resetPasswordPipeline());
+    const response = await pipeline({ request, json }, resetPasswordPipeline);
     await expect(response.json()).resolves.toMatchObject({ status: "success" });
     expect(mocks.hash).toHaveBeenCalledWith(json.password, expect.any(Number));
     expect(mocks.set).toHaveBeenCalledWith(
@@ -225,7 +208,7 @@ describe("ordinary password login", () => {
     returnTo: "/account/password",
   };
   it("requires password proof and renews the same account session", async () => {
-    const response = await pipeline({ request, json }, loginPipeline());
+    const response = await pipeline({ request, json }, loginPipeline);
     await expect(response.json()).resolves.toMatchObject({
       status: "success",
       path: "/account/password",
@@ -234,7 +217,7 @@ describe("ordinary password login", () => {
   });
   it("does not renew the session when password proof fails", async () => {
     mocks.compare.mockResolvedValue(false);
-    const response = await pipeline({ request, json }, loginPipeline());
+    const response = await pipeline({ request, json }, loginPipeline);
     await expect(response.json()).resolves.toMatchObject({ status: "error" });
     expect(mocks.login).not.toHaveBeenCalled();
   });

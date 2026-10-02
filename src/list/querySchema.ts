@@ -208,18 +208,19 @@ export function createListRequestSchema({
       parentId: z.coerce.number().int().positive().optional(),
     })
     .transform((value) => {
-      const sortValue = value.sort ?? defaults.sort;
-      const selectedSort = sortMeta.find((option) => option.name === sortValue);
+      const selectedSort = sortMeta.find(
+        (option) => option.name === value.sort,
+      );
 
       return {
-        keywords: value.keywords ?? defaults.keywords,
-        trash: value.trash ?? defaults.trash,
-        sort: sortValue,
+        keywords: value.keywords,
+        trash: value.trash,
+        sort: value.sort,
         direction:
           selectedSort?.direction === false
             ? selectedSort.defaultDirection
-            : (value.direction ?? defaults.direction),
-        filters: value.filters ?? defaults.filters,
+            : value.direction,
+        filters: value.filters,
         page: selectedSort?.direction === false ? 1 : value.page,
         parentId: value.parentId,
       };
@@ -242,16 +243,15 @@ function getBooleanSchema(defaultValue: boolean) {
   return z.preprocess(parseBooleanInput, z.boolean()).catch(defaultValue);
 }
 
-function getSortSchema(sortNames: string[], defaultValue?: string) {
+function getSortSchema(sortNames: string[], defaultValue: string) {
   return z
     .string()
     .refine((value) => sortNames.includes(value))
-    .optional()
     .catch(defaultValue);
 }
 
-function getDirectionSchema(defaultValue?: SortDirection) {
-  return z.enum(["asc", "desc"]).optional().catch(defaultValue);
+function getDirectionSchema(defaultValue: SortDirection) {
+  return z.enum(["asc", "desc"]).catch(defaultValue);
 }
 
 function getPageSchema() {
@@ -265,8 +265,6 @@ function getFilterObjectSchema(filters: AdminFilterMeta[]) {
         filters.map((filter) => [filter.name, getFilterInputSchema(filter)]),
       ),
     )
-    .partial()
-    .strip()
     .transform((filters) =>
       Object.fromEntries(
         Object.entries(filters).filter(([, value]) => hasFilterValue(value)),

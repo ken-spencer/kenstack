@@ -1,6 +1,5 @@
 import React from "react";
 import { usePageEditor } from "@kenstack/admin/pageEditor/context";
-import { useAdminUi } from "@kenstack/admin/components/PageControls/useAdminUi";
 import Tooltip from "@kenstack/components/Tooltip";
 import { PageEditorForm } from "../Form";
 import type { PageEditorFieldName } from "@kenstack/admin/pageEditor/fields";
@@ -27,19 +26,7 @@ export function makeEditorWrapper(
     componentProps,
   }: EditorWrapperProps) {
     const { content, editing } = usePageEditor();
-    const { showAdminControls } = useAdminUi();
     const displayValue = content.display[name];
-
-    if (!showAdminControls) {
-      return (
-        <Component
-          tag={tag}
-          {...componentProps}
-          placeholder={placeholder}
-          content={displayValue}
-        />
-      );
-    }
 
     if (editing === name) {
       return (

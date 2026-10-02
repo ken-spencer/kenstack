@@ -5,21 +5,19 @@ import { revalidateTag } from "next/cache";
 import { db } from "@app/db";
 import { modules } from "@app/modules";
 import { pipelineStage } from "@kenstack/api";
-import { protectedAccountSchema } from "@kenstack/auth/reauthentication";
 import { requireRecentAuthentication } from "@kenstack/auth/reauthentication/server";
-import passwordSchema from "@kenstack/auth/schemas/resetPassword";
+import schema from "@kenstack/auth/schemas/resetPassword";
 import { login } from "@kenstack/auth/server/auth";
 import { userSessionsCacheTag } from "@kenstack/auth/server/user";
 import { sessions } from "@kenstack/db/tables/sessions";
 import { audit } from "@kenstack/logger";
 
-const schema = passwordSchema.safeExtend(protectedAccountSchema.shape);
-
-export const resetPasswordPipeline = () =>
-  pipelineStage({ schema }, async ({ data, request, response }) => {
+export const resetPasswordPipeline = pipelineStage(
+  { access: "authenticated", schema },
+  async ({ data, request, response }) => {
     const now = new Date();
     const users = modules.users.admin.table;
-    const session = await requireRecentAuthentication(request, data.userId);
+    const session = await requireRecentAuthentication(request);
 
     const passwordHash = await bcrypt.hash(data.password, 12);
     if (
@@ -57,4 +55,5 @@ export const resetPasswordPipeline = () =>
     return response.success({
       message: "Your password has successfully been set.",
     });
-  });
+  },
+);

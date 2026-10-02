@@ -46,7 +46,7 @@ export default function EmailLoginForm({
             onShowPasswordLogin(currentTarget.form)
           }
         >
-          Use a password instead
+          I have a password
         </LinkButton>
       </LoginSubmit>
       {/* Sending the email requests a reCAPTCHA token. */}

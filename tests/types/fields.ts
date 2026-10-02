@@ -30,7 +30,6 @@ import {
   defineServerField,
   resolveServerFields,
   serverField,
-  type ServerFieldKinds,
 } from "@kenstack/fields/server";
 import {
   defineRelationships,
@@ -42,15 +41,6 @@ const configurableField = defineField({
   zod: z.string(),
   kind: "test-value",
 });
-const stockField = field({
-  default: 0,
-  kind: "stock-value",
-  zod: z.number(),
-});
-const stockFields = defineFields({
-  fields: { name: textField(), stock: stockField },
-});
-const stockFieldKinds = [serverField(stockField, () => ({}))];
 
 // TypeScript compiles this block; Vitest does not treat these contracts as runtime tests.
 if (false) {
@@ -240,7 +230,7 @@ if (false) {
       return value;
     },
   }));
-  resolveServerFields(configurableFields, { fieldKinds: [registration] });
+  resolveServerFields(configurableFields, { fields: { value: registration } });
   configurableServerField({
     preSave: async ({ value }) => {
       expectTypeOf(value).toEqualTypeOf<number>();
@@ -249,29 +239,6 @@ if (false) {
   });
   // @ts-expect-error serverField pairs behavior with a configured field, not its factory.
   serverField(configurableField, () => ({}));
-  resolveServerFields(configurableFields, {
-    // @ts-expect-error Resolver registrations must be created by a server-field helper.
-    fieldKinds: [() => ({})],
-  });
-  resolveServerFields(configurableFields, {
-    // @ts-expect-error Raw server behavior is not a field-kind registration.
-    fieldKinds: [{}],
-  });
-  const rawFieldKinds = [
-    // @ts-expect-error ServerFieldKinds accepts only branded resolver registrations.
-    {},
-  ] satisfies ServerFieldKinds<typeof configurableFields>;
-  void rawFieldKinds;
-  const otherField = defineField({
-    default: "",
-    kind: "other-value",
-    zod: z.string(),
-  });
-  const otherRegistration = serverField(otherField(), () => ({}));
-  resolveServerFields(configurableFields, {
-    // @ts-expect-error Registrations must preserve their semantic kind.
-    fieldKinds: [otherRegistration],
-  });
   // @ts-expect-error The field factory owns its implementation kind.
   configurableField({ kind: "other-value" });
   // @ts-expect-error The server-field factory owns its implementation kind.
@@ -362,10 +329,6 @@ if (false) {
       toColumn: overrideThrough.topicReference,
     },
   });
-
-  resolveServerFields(stockFields, { fieldKinds: stockFieldKinds });
-  // @ts-expect-error A nonempty registry type requires the matching value argument.
-  resolveServerFields<typeof stockFields, typeof stockFieldKinds>(stockFields);
 }
 
 // A declared field keeps its own type in superRefine even when it shares a

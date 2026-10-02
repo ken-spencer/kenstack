@@ -2,7 +2,6 @@ import { useRef, useState } from "react";
 import type { ControllerRenderProps } from "react-hook-form";
 
 import { Tag as TagIcon } from "lucide-react";
-import { Skeleton } from "@kenstack/components/Skeleton";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import Notice from "@kenstack/components/Notice";
 import fetcher from "@kenstack/api/fetcher";
@@ -12,7 +11,6 @@ import kebabCase from "lodash-es/kebabCase";
 
 import {
   ComboboxContent,
-  ComboboxEmpty,
   ComboboxInput,
   ComboboxItem,
   ComboboxList,
@@ -37,7 +35,7 @@ export default function TagSearcht({
   );
   const { apiPath, name: adminName } = useAdminEdit();
 
-  const { data, error, isPending } = useQuery({
+  const { data, error } = useQuery({
     queryKey: ["tags", debouncedValue, field.value],
     queryFn: async () => {
       const result = await fetcher<{ tags: Tag[] }>(apiPath, {
@@ -66,7 +64,7 @@ export default function TagSearcht({
 
   const tags = data?.status === "success" ? data.tags : [];
   const open =
-    focusing && !isPending && data?.status === "success" && !!tags.length;
+    focusing && (!!error || data?.status === "error" || tags.length > 0);
 
   function addTag(tag: TagSearchOption) {
     const newTag = { name: tag.name, slug: tag.slug };
@@ -154,37 +152,24 @@ export default function TagSearcht({
             return <Notice>{error.message}</Notice>;
           }
 
-          if (!focusing || isPending || !data) {
-            return (
-              <div className="space-y-2 p-2">
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-5/6" />
-                <Skeleton className="h-8 w-2/3" />
-              </div>
-            );
-          }
-
-          if (data.status === "error") {
+          if (data?.status === "error") {
             return <Notice>{data.message}</Notice>;
           }
 
           return (
-            <>
-              <ComboboxEmpty>No tags found.</ComboboxEmpty>
-              <ComboboxList>
-                {(tag: TagSearchOption) => (
-                  <ComboboxItem
-                    key={tag.slug}
-                    className="block cursor-pointer"
-                    value={tag}
-                  >
-                    <div className="flex justify-between">
-                      <span>{tag.label}</span> <span>{tag.count}</span>
-                    </div>
-                  </ComboboxItem>
-                )}
-              </ComboboxList>
-            </>
+            <ComboboxList>
+              {(tag: TagSearchOption) => (
+                <ComboboxItem
+                  key={tag.slug}
+                  className="block cursor-pointer"
+                  value={tag}
+                >
+                  <div className="flex justify-between">
+                    <span>{tag.label}</span> <span>{tag.count}</span>
+                  </div>
+                </ComboboxItem>
+              )}
+            </ComboboxList>
           );
         })()}
       </ComboboxContent>

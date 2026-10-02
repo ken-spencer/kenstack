@@ -391,23 +391,15 @@ export async function completeMediaUpload({
       },
     })
     .where(eq(media.id, id))
-    .returning({ imageId: media.publicId, variants: media.variants });
-
-  if (!image.variants) {
-    throw Error("No variants on image");
-  }
-
-  const {
-    variants: { square },
-  } = image;
+    .returning({ imageId: media.publicId });
 
   return mediaUploadSuccess({
     imageId: image.imageId,
     kind: "raster",
     mediaId: image.imageId,
-    url: square.url,
-    width: square.width,
-    height: square.height,
+    url: squareWebp.variant.url,
+    width: squareWebp.variant.width,
+    height: squareWebp.variant.height,
     filename,
     sourceType: type,
     sourceSize: originalBuffer.length,

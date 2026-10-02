@@ -12,8 +12,10 @@ import isPlainObject from "lodash-es/isPlainObject";
 
 import { unstable_rethrow } from "next/navigation";
 import { PipelineResponse } from "./PipelineResponse";
-import { hasAccess, isAuthenticated } from "@kenstack/auth/server/auth";
-import { requireUser } from "@kenstack/auth/server/user";
+import { resolveAccess } from "@kenstack/api/access";
+import { verificationMissingMessage } from "@kenstack/auth/email/verification/internal/policy";
+import { accountChangedRefusal } from "@kenstack/auth/renderedAccount";
+import { loadAuthState, loadUserInfo } from "@kenstack/auth/server/state";
 import { reportError } from "@kenstack/lib/errorReporter";
 import type { AuthAccess } from "@kenstack/auth/server/auth";
 import type { User } from "@kenstack/types";
@@ -78,7 +80,9 @@ export type PipelineStageContext<
   TAccess = undefined,
 > = PipelineContext & {
   data: TSchema extends ObjectSchema ? z.output<TSchema> : undefined;
-  user: [TAccess] extends [undefined] ? User | undefined : User;
+  // The proven email a stage with access "proven" acts for.
+  proof: [TAccess] extends ["proven"] ? { email: string } : undefined;
+  user: [TAccess] extends [undefined | "proven"] ? User | undefined : User;
 };
 
 type PipelineStageResult =
@@ -89,6 +93,7 @@ type PipelineStageResult =
       response?: never;
       dataIn?: never;
       data?: never;
+      proof?: never;
       user?: never;
     });
 
@@ -208,12 +213,17 @@ export default async function pipeline(
     }
   }
 
+  if (response.returnUser) {
+    // Read after every stage, so it reflects all of this request's changes to the user or session.
+    response.headers.set("Cache-Control", "no-store");
+    return response.toNextResponse(await loadUserInfo());
+  }
   return response.toNextResponse();
 }
 
 export function pipelineStage<
   TSchema extends ObjectSchema | undefined = undefined,
-  const TAccess extends AuthAccess | undefined = undefined,
+  const TAccess extends AuthAccess | "proven" | undefined = undefined,
 >(
   {
     schema,
@@ -284,23 +294,26 @@ export function pipelineStage<
       data = undefined as PipelineStageContext<TSchema, TAccess>["data"];
     }
 
+    let proof: { email: string } | undefined;
     let user: User | undefined;
-    if (access !== undefined) {
-      if (!(await hasAccess(access))) {
-        if (!(await isAuthenticated())) {
-          return ctx.response.error({
-            message: "You must be signed in to perform this action.",
-            status: 401,
-          });
-        }
-
-        return ctx.response.error({
-          message: "You do not have permission to perform this action.",
-          status: 403,
-        });
+    if (access === "proven") {
+      // Acts for a proven email. A session that appeared since the page rendered may be another
+      // account's, so any session is refused as a changed sign-in. One read decides both.
+      const authState = await loadAuthState();
+      if (authState.state !== "proven") {
+        return ctx.response.error(
+          authState.state === "authenticated"
+            ? { ...accountChangedRefusal, status: 409 }
+            : { message: verificationMissingMessage, status: 401 },
+        );
       }
-
-      user = await requireUser();
+      proof = { email: authState.email };
+    } else if (access !== undefined) {
+      const resolved = await resolveAccess(ctx.request, access);
+      if (resolved.refusal) {
+        return ctx.response.error(resolved.refusal);
+      }
+      user = resolved.user;
     }
 
     // Quota first: cheaper than the reCAPTCHA assessment and the action.
@@ -327,6 +340,7 @@ export function pipelineStage<
 
     const arg = {
       ...ctx,
+      proof: proof as PipelineStageContext<TSchema, TAccess>["proof"],
       user: user as PipelineStageContext<TSchema, TAccess>["user"],
       data,
     } satisfies PipelineStageContext<TSchema, TAccess>;

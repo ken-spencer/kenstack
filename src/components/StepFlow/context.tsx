@@ -6,8 +6,9 @@ import {
   useContext,
   useEffect,
   useEffectEvent,
-  useRef,
+  useLayoutEffect,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import * as z from "zod";
@@ -15,11 +16,11 @@ import * as z from "zod";
 import Notice from "@kenstack/components/Notice";
 import {
   clearStoredState,
+  getStorageKey,
   useStorageAvailability,
   useStoredValue,
 } from "@kenstack/hooks/storedState";
 import useIsHydrated from "@kenstack/hooks/useIsHydrated";
-import unsecureId from "@kenstack/lib/unsecureId";
 
 import type { Step, StepFlowProps } from "./types";
 
@@ -33,22 +34,53 @@ type FlowContextValue = {
   next: () => void;
   previous: () => void;
   setActiveStep: (stepId: string) => void;
+  setLeavingStep: (stepId: string | undefined) => void;
   setStepSkipped: (stepId: string, skipped: boolean) => void;
+  // The step on screen: the active one, unless it leaves the page (see useStepLeavesPage).
+  shownStep: string | undefined;
   stepIds: string[];
-  visit: string | undefined;
 };
 
 const FlowContext = createContext<FlowContextValue | null>(null);
 
 const StepScopeContext = createContext<string | null>(null);
 
+const completedStepsKey = "$completedSteps";
 const completedStepsSchema = z.record(z.string().min(1), z.literal(true));
 // Recorded alongside completed steps when a result is reached; a fixed key,
 // so a later visit finds it even when server state no longer composes the
 // final step.
 const finishedKey = "$finished";
-// A visit's id. Skip overrides belong to the visit that set them.
-const visitSchema = z.object({ id: z.string().min(1) });
+const stepKey = "$step";
+const stepSchema = z.string().min(1);
+
+// StepFlow's stored slices change through useSyncExternalStore, which React renders at once. A plain
+// state update made outside a React event, such as in a save's response, renders later, so a step
+// change could show one without the other for a frame. The flow's own state changes the same way.
+function useFlowState<T>() {
+  const [store] = useState(() => {
+    let value: T | undefined;
+    const listeners = new Set<() => void>();
+    return {
+      get: () => value,
+      set: (next: T | undefined) => {
+        value = next;
+        listeners.forEach((listener) => listener());
+      },
+      subscribe: (listener: () => void) => {
+        listeners.add(listener);
+        return () => {
+          listeners.delete(listener);
+        };
+      },
+    };
+  });
+
+  return [
+    useSyncExternalStore(store.subscribe, store.get, store.get),
+    store.set,
+  ] as const;
+}
 
 export function useFlowContext() {
   const context = useContext(FlowContext);
@@ -79,50 +111,36 @@ export function FlowProvider({
   const isStorageAvailable = useStorageAvailability();
   const [completedSteps = {}, setCompletedSteps] = useStoredValue(
     basePath,
-    "$completedSteps",
+    completedStepsKey,
     completedStepsSchema,
   );
-  // The flow owns its step, seeded from the first step the server composed;
-  // later steps live here and never touch the URL. If a server refresh omits
-  // the step the flow navigated to, the fresh first step stands in for it.
+  // The flow owns its step. The tab stores it beside the flow's values, so
+  // every arrival in this tab, a reload included, resumes it once hydrated;
+  // the URL never names it. If a server refresh omits the stored step, the
+  // fresh first step stands in for it.
   const firstStep = Object.keys(steps)[0];
-  const [navigatedStep, setNavigatedStep] = useState(firstStep);
-  const [savedVisit, setSavedVisit] = useStoredValue(
+  const [savedStep, setSavedStep] = useStoredValue(
     basePath,
-    "$visit",
-    visitSchema,
+    stepKey,
+    stepSchema,
   );
+  // A result is shown only by the instance that reached it; an arrival at a
+  // finished store starts at the first step.
+  const [result, setResult] = useFlowState<string>();
+  const [leavingStep, setLeavingStep] = useState<string>();
+  // The step the visitor last completed with next(). When the flow then reaches a step that leaves
+  // the page, it stays on screen meanwhile; with none, as for an emailed link or a signed-in
+  // arrival, the leaving step shows.
+  const [completedStep, setCompletedStep] = useFlowState<string>();
   const isFinished = completedSteps[finishedKey] === true;
-  // Readable after hydration, and ignored while a finished flow waits to be cleared.
-  const currentVisit = isHydrated && !isFinished ? savedVisit : undefined;
-  const visit = currentVisit?.id;
-  // Skip overrides belong to the visit they were set in, so a new visit starts without the previous
-  // one's; controllers that set them recompute when the visit changes, without remounting.
-  const [skipOverrides, setSkipOverrides] = useState<{
-    skipped: Record<string, boolean>;
-    visit: string | undefined;
-  }>({ skipped: {}, visit: undefined });
-  const skippedSteps =
-    skipOverrides.visit === visit ? skipOverrides.skipped : {};
-  // Next may keep a left instance alive and show it again on a later visit.
-  // Hiding the instance returns it to the first step, so a visit never
-  // resumes where an earlier one stopped.
-  const firstStepRef = useRef(firstStep);
-  useEffect(() => {
-    firstStepRef.current = firstStep;
-  }, [firstStep]);
-  useEffect(() => () => setNavigatedStep(firstStepRef.current), []);
-  const setStepSkipped = useCallback(
-    (stepId: string, skipped: boolean) => {
-      setSkipOverrides((current) => {
-        const currentSkipped = current.visit === visit ? current.skipped : {};
-        return current.visit === visit && currentSkipped[stepId] === skipped
-          ? current
-          : { skipped: { ...currentSkipped, [stepId]: skipped }, visit };
-      });
-    },
-    [visit],
-  );
+  const navigatedStep =
+    result ?? (isFinished ? undefined : savedStep) ?? firstStep;
+  const [skippedSteps, setSkippedSteps] = useState<Record<string, boolean>>({});
+  const setStepSkipped = useCallback((stepId: string, skipped: boolean) => {
+    setSkippedSteps((current) =>
+      current[stepId] === skipped ? current : { ...current, [stepId]: skipped },
+    );
+  }, []);
   const configuredStepIds = Object.keys(steps);
   // A step whose skipped value can change during a visit sets it live through its controller, and
   // that override stands over a later server render, such as the refresh after a sign-in.
@@ -158,39 +176,40 @@ export function FlowProvider({
         ];
   const activeStepIndex =
     activeStep === undefined ? -1 : stepIds.indexOf(activeStep);
-  // Arriving at a result records it in the ledger. The next visit that finds
-  // a result recorded clears the flow's stored values and starts afresh, so
-  // no visit restores a finished transaction. A visit is a mount, an Activity
-  // reveal, or a new server render (a link to the flow's own URL). A bfcache
-  // restore is none of these, so a result stays on screen through browser
-  // Back. A store that is finished or expired starts a new visit; one that
-  // expires while open does so at its next render.
-  const startVisit = useEffectEvent(() => {
+  const shownStep =
+    activeStep !== undefined &&
+    activeStep === leavingStep &&
+    completedStep !== undefined &&
+    Object.hasOwn(steps, completedStep)
+      ? completedStep
+      : activeStep;
+  // Arriving at a result records it in the ledger. The next arrival that
+  // finds a result recorded clears the flow's stored values and starts
+  // afresh, so no arrival restores a finished transaction. An arrival is a
+  // mount, an Activity reveal, or a new server render (a link to the flow's
+  // own URL). A bfcache restore is none of these, so a result stays on screen
+  // through browser Back.
+  const clearFinishedStore = useEffectEvent(() => {
     if (isFinished) {
       clearStoredState(basePath);
-    } else if (savedVisit !== undefined) {
-      return;
     }
-
-    setSavedVisit({ id: unsecureId() });
   });
-  const hasSavedVisit = savedVisit !== undefined;
   useEffect(() => {
     if (isHydrated) {
-      startVisit();
+      clearFinishedStore();
     }
-  }, [hasSavedVisit, isHydrated, visitKey]);
+    // Hiding a kept instance drops its result, so it is not shown again.
+    return () => setResult(undefined);
+  }, [isHydrated, setResult, visitKey]);
   const setActiveStep = useCallback(
     (stepId: string) => {
       const requestedIndex = stepIds.indexOf(stepId);
 
       if (requestedIndex !== -1) {
-        setNavigatedStep(
-          stepIds[Math.min(requestedIndex, lastReachableStepIndex)],
-        );
+        setSavedStep(stepIds[Math.min(requestedIndex, lastReachableStepIndex)]);
       }
     },
-    [lastReachableStepIndex, stepIds],
+    [lastReachableStepIndex, setSavedStep, stepIds],
   );
 
   if (!isStorageAvailable) {
@@ -227,8 +246,6 @@ export function FlowProvider({
           if (nextStepId === undefined) {
             return;
           }
-          // The ledger is read back at write time so an expired flow
-          // cleared by this write cannot resurrect the old ledger.
           if (
             !setCompletedSteps((current) => ({
               ...current,
@@ -238,23 +255,47 @@ export function FlowProvider({
           ) {
             return;
           }
-          setNavigatedStep(nextStepId);
+          setCompletedStep(activeStep);
+          if (steps[nextStepId].final) {
+            setResult(nextStepId);
+          } else {
+            setSavedStep(nextStepId);
+          }
         },
         previous: () => {
           const previousStepId = stepIds[activeStepIndex - 1];
           if (previousStepId !== undefined) {
-            setNavigatedStep(previousStepId);
+            setSavedStep(previousStepId);
           }
         },
         setActiveStep,
+        setLeavingStep,
         setStepSkipped,
+        shownStep,
         stepIds,
-        visit,
       }}
     >
       {children}
     </FlowContext.Provider>
   );
+}
+
+// Before hydration the server's step shows, and the tab's stored step replaces
+// it once hydrated. Run by the parser at the top of the flow's region, this
+// script hides the region when the tab stored another step of an unfinished
+// flow, until StepFlow has shown it, or for a second if hydration never comes.
+export function buildResumeScript(
+  basePath: string,
+  shownStep: string | undefined,
+) {
+  const [step, completedSteps, finished, shown] = [
+    getStorageKey(basePath, stepKey),
+    getStorageKey(basePath, completedStepsKey),
+    finishedKey,
+    shownStep ?? null,
+  ].map((value) => JSON.stringify(value).replaceAll("<", "\\u003c"));
+
+  return `{const flow=document.currentScript.parentElement;try{const read=(key)=>JSON.parse(sessionStorage.getItem(key))?.value;const step=read(${step});if(step!==undefined&&step!==${shown}&&read(${completedSteps})?.[${finished}]!==true){flow.setAttribute("data-resuming","");setTimeout(()=>flow.removeAttribute("data-resuming"),1000)}}catch{}}`;
 }
 
 export function StepScope({
@@ -269,6 +310,28 @@ export function StepScope({
       {children}
     </StepScopeContext.Provider>
   );
+}
+
+// Kenstack's login return step only: while its controller says so, reaching the step leaves the
+// page, and the flow keeps the step before it on screen meanwhile.
+export function useStepLeavesPage(isLeaving: boolean) {
+  const { setLeavingStep } = useFlowContext();
+  const stepId = useContext(StepScopeContext);
+
+  useLayoutEffect(() => {
+    if (!isLeaving || stepId === null) {
+      return;
+    }
+    setLeavingStep(stepId);
+    return () => setLeavingStep(undefined);
+  }, [isLeaving, setLeavingStep, stepId]);
+}
+
+// The default actions stay pending while their step, completed, stays on screen as the page leaves.
+export function useIsStepHeld() {
+  const { activeStep, shownStep } = useFlowContext();
+  const stepId = useContext(StepScopeContext);
+  return stepId !== null && shownStep === stepId && activeStep !== stepId;
 }
 
 export function useStep() {
@@ -301,6 +364,5 @@ export function useStep() {
     next: context.next,
     previous: context.previous,
     setSkipped,
-    visit: context.visit,
   };
 }

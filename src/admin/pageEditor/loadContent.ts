@@ -3,7 +3,6 @@ import { db } from "@app/db";
 import { eq, type SQL } from "drizzle-orm";
 import { type Prettify } from "@kenstack/types";
 
-import { cache } from "react";
 import { cacheLife, cacheTag } from "next/cache";
 import { selectImageSubquery } from "@kenstack/db/queries/media";
 import { content } from "@kenstack/db/tables/content";
@@ -31,43 +30,41 @@ export type ContentData = Prettify<
 
 export type DefaultValues = Prettify<Partial<ContentData>>;
 
-export const loadContent = cache(
-  async (
-    slug: string,
-    {
-      defaultValues = {},
-    }: { tenant?: string; defaultValues?: DefaultValues } = {},
-  ) => {
-    "use cache: remote";
-    cacheLife("max");
-    cacheTag("content:" + slug);
+export const loadContent = async (
+  slug: string,
+  {
+    defaultValues = {},
+  }: { tenant?: string; defaultValues?: DefaultValues } = {},
+) => {
+  "use cache: remote";
+  cacheLife("max");
+  cacheTag("content:" + slug);
 
-    if (!slug) {
-      throw Error("slug is required");
-    }
+  if (!slug) {
+    throw Error("slug is required");
+  }
 
-    const defaults = {
-      ...createDefaultValues(pageEditorFields),
-      ...defaultValues,
-    } satisfies ContentData;
+  const defaults = {
+    ...createDefaultValues(pageEditorFields),
+    ...defaultValues,
+  } satisfies ContentData;
 
-    const { values } = await loadRecord({
+  const values =
+    (await loadRecord({
       table: content,
       fields: pageEditorServerFields,
-      defaults,
       where: eq(content.slug, slug),
-    });
+    })) ?? {};
 
-    const data = Object.fromEntries(
-      pageEditorFieldNames.map((key) => [key, values[key] ?? defaults[key]]),
-    ) as ContentData;
+  const data = Object.fromEntries(
+    pageEditorFieldNames.map((key) => [key, values[key] ?? defaults[key]]),
+  ) as ContentData;
 
-    return {
-      data,
-      display: await getDisplayValues(pageEditorServerFields, data),
-    };
-  },
-);
+  return {
+    data,
+    display: await getDisplayValues(pageEditorServerFields, data),
+  };
+};
 
 export type Content = Awaited<ReturnType<typeof loadContent>>;
 

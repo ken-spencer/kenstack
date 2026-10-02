@@ -3,7 +3,6 @@
 import { type ZodObject } from "zod";
 
 import React, { createContext, use, useContext, useMemo } from "react";
-import { usePathname } from "next/navigation";
 
 import type { AdminClient } from "@kenstack/admin/client";
 import type { AdminClientRegistry } from "@kenstack/admin/clientLoaders";
@@ -25,7 +24,6 @@ type AdminEditProps = {
   children: React.ReactNode;
   parentId?: number;
   preview?: PreviewPath;
-  childModuleLinks?: React.ReactNode;
   oneToOne?: OneToOneEdit;
   // The table flags from defineTable({ publish, seo }).
   publish: boolean;
@@ -59,7 +57,6 @@ type AdminEditContext = {
   hasPublicationControl: boolean;
   hasSeoDialog: boolean;
   preview?: PreviewPath;
-  childModuleLinks?: React.ReactNode;
   oneToOne?: OneToOneEdit;
 };
 
@@ -77,7 +74,6 @@ export function AdminEditProvider({
   clients,
   parentId,
   preview,
-  childModuleLinks,
   oneToOne,
   publish,
   seo,
@@ -95,16 +91,7 @@ export function AdminEditProvider({
     throw new Error("Admin client config is required for admin edit routes.");
   }
 
-  const pathname = usePathname();
-  const listPath = useMemo(() => {
-    if (parentId) {
-      return `/admin/${parentId}/${name}`;
-    }
-
-    const parts = pathname.split("/").filter(Boolean);
-    parts.pop();
-    return "/" + parts.join("/");
-  }, [name, parentId, pathname]);
+  const listPath = parentId ? `/admin/${parentId}/${name}` : `/admin/${name}`;
 
   const schema = useMemo(
     () =>
@@ -132,7 +119,6 @@ export function AdminEditProvider({
     hasPublicationControl: publish,
     hasSeoDialog: seo,
     preview,
-    childModuleLinks,
     oneToOne,
   };
   return (

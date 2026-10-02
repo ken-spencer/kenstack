@@ -48,18 +48,15 @@ export function resolveListWhere(
     ...resolveFilters(filters, data.filters),
   ];
 
-  const keywordTerms = keywords.trim().split(/\s+/).filter(Boolean);
+  const keywordTerms = keywords.split(/\s+/).filter(Boolean);
   if (keywordTerms.length && searchable.length) {
     for (const term of keywordTerms) {
       const searchConditions = searchable.map((field) =>
         ilike(sql`${field}`, `%${term}%`),
       );
 
-      if (searchConditions.length === 1) {
-        where.push(searchConditions[0]);
-      } else if (searchConditions.length > 1) {
-        where.push(or(...searchConditions) ?? searchConditions[0]);
-      }
+      const condition = or(...searchConditions);
+      if (condition) where.push(condition);
     }
   }
 
