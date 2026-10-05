@@ -21,6 +21,7 @@ vi.mock("@app/db", () => ({
 }));
 vi.mock("@kenstack/lib/ip", () => ({ default: async () => undefined }));
 vi.mock("@vercel/functions", () => ({
+  geolocation: () => ({}),
   waitUntil: () => {},
 }));
 
@@ -120,18 +121,18 @@ describe("quota PostgreSQL boundary", () => {
 
   it("checks password failures without counting successes", async () => {
     const check = () =>
-      checkQuota("password-failure", {
+      checkQuota("passwordFailure", {
         email: "person@example.com",
         ip: "203.0.113.7",
         limits: { email: [2, "15 minutes"] },
       });
 
     await expect(check()).resolves.toBeNull();
-    await consumeQuota("password-failure", {
+    await consumeQuota("passwordFailure", {
       email: "person@example.com",
       ip: "203.0.113.7",
     });
-    await consumeQuota("password-failure", {
+    await consumeQuota("passwordFailure", {
       email: "person@example.com",
       ip: "203.0.113.7",
     });

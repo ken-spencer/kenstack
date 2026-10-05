@@ -30,11 +30,11 @@ describe("audit", () => {
     const db = { insert: vi.fn(() => ({ values })) };
     mocks.getCurrentUser.mockResolvedValue({ id: 42 });
 
-    await audit({ action: "password-failure", db, userId: null });
+    await audit({ action: "passwordFailure", db, userId: null });
 
     expect(values).toHaveBeenCalledWith(
       expect.objectContaining({
-        action: "password-failure",
+        action: "passwordFailure",
         impersonatedBy: null,
         userId: null,
       }),

@@ -34,13 +34,7 @@ export const pageEditAction = () =>
               createdBy: user.id,
               ...data,
             })
-            .onConflictDoUpdate({
-              target: content.slug,
-              set: {
-                ...data,
-                updatedAt: new Date(),
-              },
-            })
+            .onConflictDoUpdate({ target: content.slug, set: data })
             .returning(select);
 
           return row;

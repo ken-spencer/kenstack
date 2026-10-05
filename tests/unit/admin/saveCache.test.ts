@@ -46,7 +46,11 @@ function useDatabaseRows(rows = [{ id: 12, name: "Updated" }]) {
   };
   const tx = {
     update: vi.fn(() => update),
-    insert: vi.fn(() => ({ values: vi.fn().mockResolvedValue([]) })),
+    insert: vi.fn(() => ({
+      values: () => ({
+        returning: vi.fn().mockResolvedValue([{ createdAt: new Date() }]),
+      }),
+    })),
   };
   mocks.transaction.mockImplementation(
     async (run: (database: typeof tx) => Promise<unknown>) => {
@@ -73,7 +77,10 @@ describe("shared module cache invalidation", () => {
       const result =
         source === "public"
           ? await saveModuleRecord(options)
-          : await saveAdminRecord(options);
+          : await saveAdminRecord({
+              ...options,
+              updatedAt: new Date("2026-10-02T12:00:00.000Z"),
+            });
       expect(result).toMatchObject({ status: "success" });
       for (const tag of [
         "admin-load:users:12",

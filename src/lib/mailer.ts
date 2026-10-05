@@ -1,19 +1,23 @@
 import { SESClient, SendRawEmailCommand } from "@aws-sdk/client-ses";
+import { waitUntil } from "@vercel/functions";
+import { eq, getTableName, lt, sql, type Table } from "drizzle-orm";
 import { createMimeMessage, Mailbox } from "mimetext";
 
+import { db } from "@app/db";
 import { loadEmailFrom } from "@app/email";
+import { emailMessages } from "@kenstack/db/tables/emailMessages";
 import errorLog from "@kenstack/lib/errorLog";
 
 const ses = new SESClient();
 
-function isRateLimitError(error: unknown) {
+function isRateLimitError(name: string) {
   // SES can return error.name = "Throttling" or "ThrottlingException"
   return [
     "Throttling",
     "ThrottlingException",
     "TooManyRequestsException",
     "TooManyRequests",
-  ].includes(errorName(error));
+  ].includes(name);
 }
 
 export interface Attachment {
@@ -31,7 +35,10 @@ export interface Attachment {
 
 export type EmailAddress = string | { name: string; addr: string };
 
-interface MailerOptions {
+// The error reporter's alerts, which the Email Log leaves out.
+export const errorReportKind = "errorReport";
+
+type MailMessage = {
   to: string;
   cc?: string;
   bcc?: string;
@@ -41,7 +48,20 @@ interface MailerOptions {
   subject: string;
   html: string;
   attachments?: Attachment[];
-}
+};
+
+type MailerOptions = MailMessage & {
+  // What the email is, in camel case, recorded in the Email Log: the operation's quota or reCAPTCHA
+  // key where it has one, such as `contact` or `verification`, otherwise a name such as `receipt`.
+  kind: string;
+} & (
+    | {
+        // The site record the email is about, such as an order, which the Email Log links to.
+        table: Table;
+        rowId: number;
+      }
+    | { table?: undefined; rowId?: undefined }
+  );
 
 export type MailDeliveryResult =
   | { messageId: string; status: "sent" }
@@ -143,7 +163,7 @@ async function sendEmail({
   subject = "",
   html = "",
   attachments = [],
-}: MailerOptions & { from: EmailAddress }): Promise<MailDeliveryResult> {
+}: MailMessage & { from: EmailAddress }): Promise<MailDeliveryResult> {
   const msg = createMimeMessage();
   msg.setSender(from);
 
@@ -201,7 +221,7 @@ async function sendEmail({
         return { status: "recipient-rejected" };
       }
 
-      if (!isRateLimitError(err) || attempt === maxRetries) {
+      if (!isRateLimitError(errorName(err)) || attempt === maxRetries) {
         return operationalFailure(err, attempt);
       }
 
@@ -245,7 +265,13 @@ export function senderUnavailableMessage(email: string) {
   return `We couldn’t send ${email} because this site’s email sender isn’t set up.`;
 }
 
-export default async function mailer({ from, ...options }: MailerOptions) {
+export default async function mailer({
+  from,
+  kind,
+  table,
+  rowId,
+  ...options
+}: MailerOptions) {
   const sender = from ?? (await loadSiteSender());
   if (!sender) {
     return {
@@ -253,6 +279,54 @@ export default async function mailer({ from, ...options }: MailerOptions) {
       code: "SenderUnavailable",
       status: "operational-failure",
     } satisfies MailDeliveryResult;
+  }
+
+  // Logged before SES is contacted, so every send has a row; one still `sending` afterwards is a send
+  // whose outcome is unknown. Without its row, the email is not sent. Error reports stay out of the
+  // log, which staff read: they carry the monitoring address and the exception.
+  let emailMessageId: number | undefined;
+  if (kind !== errorReportKind) {
+    try {
+      [{ id: emailMessageId }] = await db
+        .insert(emailMessages)
+        .values({
+          to: options.to.toLowerCase(),
+          from:
+            typeof sender === "string"
+              ? sender
+              : `${sender.name} <${sender.addr}>`,
+          subject: options.subject,
+          kind,
+          status: "sending",
+          table: table && getTableName(table),
+          rowId,
+        })
+        .returning({ id: emailMessages.id });
+    } catch (error) {
+      await logMailError(
+        "email-log-unavailable",
+        "Email was not sent: its Email Log row could not be written.",
+        error,
+      );
+      return operationalFailure(error, 0);
+    }
+  }
+
+  // Serverless has no cleanup timer; a small sample of sends prunes rows past retention. The catch
+  // starts the query, which waitUntil alone does not, and outside Vercel waitUntil does nothing.
+  if (Math.random() < 0.01) {
+    waitUntil(
+      db
+        .delete(emailMessages)
+        .where(lt(emailMessages.createdAt, sql`now() - interval '13 months'`))
+        .catch((error) =>
+          logMailError(
+            "email-log-prune-failed",
+            "Old Email Log rows could not be pruned.",
+            error,
+          ),
+        ),
+    );
   }
 
   let delivery: MailDeliveryResult;
@@ -266,5 +340,58 @@ export default async function mailer({ from, ...options }: MailerOptions) {
     await logOperationalFailure(delivery);
   }
 
+  // The SDK retries a send after a reset, a timeout, a throttle or a server error, and the mailer
+  // retries throttles, so one row can stand for a retried send. Only SES's acceptance, its refusal (a
+  // 4xx other than a throttle), or a failure before anything was sent settles the row. A final throttle
+  // can follow an earlier request SES accepted but whose reply was lost, and after a dropped
+  // connection, a reply without an id, a success reply whose body was lost, or a final server error,
+  // SES may also have accepted the email, so the row stays `sending` and the Email Log shows it as not
+  // confirmed.
+  const isSettled =
+    delivery.status !== "operational-failure" ||
+    (delivery.httpStatusCode !== undefined &&
+      delivery.httpStatusCode >= 400 &&
+      delivery.httpStatusCode < 500 &&
+      !isRateLimitError(delivery.code)) ||
+    delivery.attempts === 0;
+  if (emailMessageId !== undefined && isSettled) {
+    try {
+      await db
+        .update(emailMessages)
+        .set(
+          delivery.status === "sent"
+            ? {
+                status: "sent",
+                sesMessageId: delivery.messageId,
+                sentAt: new Date(),
+              }
+            : {
+                status: "failed",
+                error:
+                  delivery.status === "recipient-rejected"
+                    ? "Recipient rejected"
+                    : delivery.code,
+              },
+        )
+        .where(eq(emailMessages.id, emailMessageId));
+    } catch (error) {
+      await logMailError(
+        "email-log-update-failed",
+        "An email's outcome could not be recorded in the Email Log.",
+        error,
+      );
+    }
+  }
+
   return delivery;
+}
+
+// Mail problems stay out of reportError, which sends alerts by email.
+async function logMailError(name: string, message: string, error: unknown) {
+  try {
+    await errorLog({ error, message, name });
+  } catch {
+    // eslint-disable-next-line no-console
+    console.error(`[kenstack:mailer] ${message}`);
+  }
 }

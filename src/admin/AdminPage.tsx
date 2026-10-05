@@ -10,6 +10,8 @@ import { modules } from "@app/modules";
 import { pageRoute } from "@kenstack/pageRoute";
 import { parseAdminRouteSegments } from "@kenstack/admin/lib/route";
 import StyleGuidePage from "@kenstack/admin/style-guide/Page";
+import EmailLogPage from "@kenstack/admin/emailLog/ListPage";
+import EmailMessagePage from "@kenstack/admin/emailLog/MessagePage";
 
 const adminRouteSchema = z.array(z.string()).transform((segments, ctx) => {
   const route = parseAdminRouteSegments(segments);
@@ -48,6 +50,9 @@ export async function generateMetadata({
   }
 
   const route = parseAdminRouteSegments(admin);
+  if (route?.name === "email-log") {
+    return { title: { absolute: "Email Log · Admin" } };
+  }
   const moduleConfig = route ? modules[route.name] : undefined;
 
   return {
@@ -80,6 +85,17 @@ export function createAdminPage() {
                 : "base"
             }
           />
+        );
+      }
+
+      if (name === "email-log") {
+        if (isNew || parentId) {
+          notFound();
+        }
+        return id === undefined ? (
+          <EmailLogPage search={searchIn} />
+        ) : (
+          <EmailMessagePage id={id} search={searchIn} />
         );
       }
 

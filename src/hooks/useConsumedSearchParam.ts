@@ -30,10 +30,14 @@ export default function useConsumedSearchParam(name: string) {
   }
 
   useEffect(() => {
-    if (value === null) return;
+    if (value === null) {
+      return;
+    }
 
     const params = new URLSearchParams(window.location.search);
-    if (params.get(name) !== value) return;
+    if (params.get(name) !== value) {
+      return;
+    }
 
     params.delete(name);
     window.history.replaceState(

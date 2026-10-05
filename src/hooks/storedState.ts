@@ -172,7 +172,9 @@ export function clearStoredState(storeId: string) {
 }
 
 function parseStoredValue<T>(value: string | null, schema: z.ZodType<T>) {
-  if (value === null) return undefined;
+  if (value === null) {
+    return undefined;
+  }
 
   try {
     const stored: unknown = JSON.parse(value);

@@ -15,7 +15,10 @@ const mailer = vi.hoisted(() =>
     messageId: "test-message",
   })),
 );
-vi.mock("@kenstack/lib/mailer", () => ({ default: mailer }));
+vi.mock("@kenstack/lib/mailer", () => ({
+  default: mailer,
+  errorReportKind: "errorReport",
+}));
 
 test("normalizes changing database details before fingerprinting", async () => {
   const first = Object.assign(
@@ -216,7 +219,9 @@ test.each([
   );
   vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", redis ? "test-token" : "");
   vi.stubGlobal("fetch", async () => {
-    if (redis instanceof Error) throw redis;
+    if (redis instanceof Error) {
+      throw redis;
+    }
     return Response.json(redis);
   });
   vi.spyOn(console, "error").mockImplementation(() => undefined);

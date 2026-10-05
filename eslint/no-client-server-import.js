@@ -2,6 +2,7 @@ const clientSafeServerPathExceptions = new Set([
   "@kenstack/api/errors",
   "@kenstack/api/fetcher",
   "@kenstack/db/tables/media/mimeTypes",
+  "@kenstack/records/conflict",
 ]);
 
 const serverOnlyPrefixes = [

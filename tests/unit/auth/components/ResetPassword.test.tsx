@@ -43,10 +43,11 @@ async function resolveServer(node: ReactNode): Promise<ReactNode> {
     isValidElement(node) &&
     typeof node.type === "function" &&
     node.type.constructor.name === "AsyncFunction"
-  )
+  ) {
     return resolveServer(
       await (node.type as (props: unknown) => Promise<ReactNode>)(node.props),
     );
+  }
   return node;
 }
 

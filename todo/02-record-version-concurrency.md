@@ -2,9 +2,9 @@
 
 ## Status
 
-Design ruled with Ken, 30 September 2026. Plan reviewed by Opus and Astra; one decision is open for
-Ken (below). Build after todos 09 and 10 land, by a separate agent, through the development workflow
-with Opus and Astra review.
+Design ruled with Ken, 30 September 2026, including the cross-field decision (A, below). Plan
+reviewed by Opus and Astra. Build after todos 09 and 10 land, by a separate agent, through the
+development workflow with Opus and Astra review.
 
 ## Problem
 
@@ -34,11 +34,11 @@ persistence comparing the previously loaded variant key, but they cannot protect
 - **Different fields merge silently. The same field refuses**, writing nothing and naming the field(s)
   and person, optionally with a count: "Mira changed the date after you opened this record. Reload to
   see their change." The code and message are Kenstack-owned.
-- **Optional heads-up, no polling** (below).
+- **Optional heads-up, no polling** (below). Deferred; see Decisions.
 
 ## Token rules
 
-1. **One database timestamp per write, taken after the row lock.** `$onUpdate` in `admin/table.ts`
+1. **One database timestamp per write, past the row version it replaces.** `$onUpdate` in `admin/table.ts`
    returns SQL instead of a JavaScript `Date`:
 
    ```sql
@@ -46,8 +46,9 @@ persistence comparing the previously loaded variant key, but they cannot protect
             date_trunc('milliseconds', updated_at) + interval '1 millisecond')
    ```
 
-   Postgres evaluates `SET` after it locks the row, so the token strictly advances, even for two saves
-   in the same millisecond or a transaction that started earlier. `now()` is transaction start and is
+   The token is at least a millisecond past the row version the write replaces (Postgres recomputes
+   `SET` when a concurrent update changed the row; the clock reading may predate a lock wait), so it
+   strictly advances, even for two saves in the same millisecond or a transaction that started earlier. `now()` is transaction start and is
    not used. Keep the timezone-aware column and UTC serialization.
 
 2. **No writer sets `updatedAt` itself.** Remove the explicit sets so `$onUpdate` applies:
@@ -147,7 +148,7 @@ owned relationship. If none does, the workflow is independent. If one does, the 
 parent's token (the default class). Revisions from site writers would need a new Kenstack export, which
 this plan does not add.
 
-## Heads-up (optional)
+## Heads-up (optional, deferred)
 
 When the editor's tab regains focus, one request asks for the row's revisions after the loaded token.
 If there are any, a bar says "Mira saved changes to this record" with Reload. It keys on revisions, not
@@ -166,10 +167,34 @@ completion, media integrity).
 
 ## Decisions
 
+### Heads-up bar — deferred (Ken, 2 October 2026)
+
+Not in this build. The likely case is an editor who never leaves the tab, so a check on focus rarely
+helps, and catching that case would need polling, which this plan excludes.
+
+### Key-based records and custom writes — ruled during the build (2 October 2026)
+
+- **Saves go by id.** The singleton, page-editor and module-settings loaders return the row's id with
+  its token, so a row that existed at load saves through the default conditional update. A first save
+  inserts with `ON CONFLICT DO NOTHING`; one that finds the row already created by someone else
+  refuses with the generic message, since it has no id to reconcile by. This replaces the line under
+  Custom save paths that a null token meeting an existing row is reconciled: the case is very rare,
+  and refusing is safe.
+- **Custom writes claim the token first.** With a token, a save with a custom `query` runs one
+  conditional update of the parent row before the custom write, and reconciles on a miss. The custom
+  write takes no condition. That is one extra statement for custom-query saves only, such as the
+  scoped reorder update; default saves add none.
+- **The page editor does not adopt a save's token.** Its `router.refresh()` reloads the id and token,
+  so a second commit inside that sub-second window sends the old token: a different field merges, the
+  same field refuses naming the editor, and a page's first save then refuses generically.
+
 ### Cross-field rules after a merge — ruled A (Ken, 30 September 2026)
 
 Ruled: option A. It is an edge case; refusing is always safe. B can replace it later if refusals on
 these modules prove annoying.
+
+Address fields' postal-code refinement (`defineAddressFields`) brings users, siteSettings and locations
+under rule A too. The upgrade path is to scope address refinements to the address keys.
 
 **Situation.** A disjoint merge produces a row neither editor saw, and each save was validated alone. A
 field-set `superRefine` that checks fields against each other can then be broken. Civic has three:

@@ -14,12 +14,20 @@ vi.mock("@aws-sdk/client-ses", async (importOriginal) => {
   };
 });
 vi.mock("@kenstack/lib/errorLog", () => ({ default: errorLog }));
+vi.mock("@app/db", () => ({
+  db: {
+    insert: () => ({ values: () => ({ returning: async () => [{ id: 1 }] }) }),
+    update: () => ({ set: () => ({ where: async () => undefined }) }),
+    delete: () => ({ where: async () => undefined }),
+  },
+}));
 
 import mailer from "@kenstack/lib/mailer";
 
 const options = {
   from: "sender@example.com",
   html: "<p>Hello</p>",
+  kind: "test",
   subject: "Test",
   to: "recipient@example.com",
 };

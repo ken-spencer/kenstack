@@ -3,5 +3,6 @@ export * from "@kenstack/db/tables/audit";
 export * from "@kenstack/db/tables/revisions";
 export * from "@kenstack/db/tables/content";
 export * from "@kenstack/db/tables/quotas";
+export * from "@kenstack/db/tables/emailMessages";
 export * from "./media";
 export * from "./tags";

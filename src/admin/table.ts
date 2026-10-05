@@ -27,13 +27,15 @@ import {
 import type { BuildColumns } from "drizzle-orm/column-builder";
 import { createId } from "@paralleldrive/cuid2";
 
+import { nextUpdatedAt } from "@kenstack/db/updatedAt";
+
 declare const definedTableBrand: unique symbol;
 
 type DefinedTableBrand = {
   readonly [definedTableBrand]: true;
 };
 
-const baseTableColumns = () => ({
+const baseTableColumns = (name: string) => ({
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
   createdBy: integer("created_by"),
   createdAt: timestamp("created_at", { withTimezone: true })
@@ -42,7 +44,7 @@ const baseTableColumns = () => ({
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .defaultNow()
     .notNull()
-    .$onUpdate(() => new Date()),
+    .$onUpdate(() => nextUpdatedAt(name)),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
 });
 const publicIdColumn = () =>
@@ -225,7 +227,7 @@ export const defineTable = <
   TSeo
 >): DefinedPgTable<TName, TColumnsMap, TPublicId, TReorder, TPublish, TSeo> => {
   const tableColumns = {
-    ...baseTableColumns(),
+    ...baseTableColumns(name),
     ...(publicId ? { publicId: publicIdColumn() } : {}),
     ...(reorder ? { sortOrder: sortOrderColumn() } : {}),
     ...(publish ? publishColumns() : {}),
@@ -292,7 +294,7 @@ export const defineKeyTable = <
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
       .notNull()
-      .$onUpdate(() => new Date()),
+      .$onUpdate(() => nextUpdatedAt(name)),
     ...columns,
   });
 

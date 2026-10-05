@@ -5,6 +5,59 @@ contract lives in `docs/upgrading.md`.
 
 ## Unreleased
 
+### Supported Postgres Extensions
+
+`db:migrate` now enables Kenstack's supported Postgres extensions, `pg_trgm` and `btree_gist`, before
+it runs the site's migrations.
+
+### Notice Corners
+
+`Notice` rounds its corners with `--radius-lg`, as Kenstack's buttons and menu items do, in place of a
+fixed 0.25rem: 0.5rem with Tailwind's default theme, and square on a site that sets `--radius-lg: 0`.
+
+### camelCase Keys
+
+Kenstack's reCAPTCHA actions, quota names, audit actions and email kinds are now camelCase, such as
+`passwordFailure`, `startImpersonation`, `softDelete` and a record save's `adminUpdate`. A site that
+reads these keys, for example in an audit report, uses the new names.
+
+### Email Log
+
+`mailer()` now requires `kind`, and takes an optional `table` and `rowId` pair for the record an email
+is about. Every send except an error report records a row in a new `email_messages` table,
+written before SES is contacted; a send whose row can't be written isn't sent. Kenstack's admin shows the log at `/admin/email-log`,
+and `email-log` is now a reserved admin route name.
+
+Migration steps:
+
+- Add `export * from "@kenstack/db/tables/emailMessages";` to the site's schema, then generate and run
+  its migration.
+- Pass `kind` to every `mailer()` call: the operation's quota or reCAPTCHA key in camelCase where
+  it has one, otherwise a camelCase name such as `receipt`. Pass the record's Drizzle `table` and its `rowId` when the
+  email is about a record.
+- To show the log, add a sidebar link to `/admin/email-log` in `defineAdmin`, such as in a "Logs"
+  group.
+
+### Record Saves Compare the Loaded `updatedAt`
+
+A record's `updatedAt` is now its concurrency token. `saveRecord({ updatedAt })` takes the token the
+editor loaded: when the record changed since, changes to other fields merge and a change to the same
+field refuses, naming the field and the person, with the `record-changed` code. `null` means the
+record did not exist at load; leaving it out skips the comparison, as for a site form.
+`saveAdminRecord({ updatedAt })` requires it. Its result returns `updatedAt`, the record's token
+after the save, for the editor's next save; a save that merged returns the whole record in `values`.
+With a token, a save with a custom `query` first claims it with one conditional update of the row.
+Admin saves now refuse a trashed record, and a save with no `revisionChanges` writes nothing.
+
+The table builders' `updatedAt` moves to one database timestamp per write, which always advances.
+
+Migration steps:
+
+- Remove `updatedAt: new Date()` (or `now()`) from host writes to `defineTable` and `defineKeyTable`
+  tables, so the builder sets the token.
+- A host calling `saveAdminRecord` passes the record's `updatedAt` from load, or `null` for a new
+  record.
+
 ### Sign-In Step Wording
 
 `createLoginStep()`'s default `title` is now "Your email", in place of "Sign in", and the step's

@@ -14,13 +14,11 @@ Deferred until the current work is reviewed and committed:
 
 Planned work:
 
-5. **Email log and address suppression** — add reusable staff views for outgoing messages and suppressed addresses, with SES delivery feedback updating message status. The message records also provide the basis for a future newsletter queue. See `05-email-log-and-suppression.md`.
+5. **Email log and blocked emails** — an "Email Log" of every outgoing message and a "Blocked Emails" admin module, with SES delivery feedback updating message status and blocking bounced or complaining addresses. The message table doubles as the future newsletter queue. Schema ruled 2 October 2026; built in three slices. See `05-email-log-and-suppression.md`.
 
-8. **Per-module admin access** — let a role be granted access to individual admin modules, so someone can edit only news and spotlight, for example. A module's custom admin actions inherit that module's access. About 20 Civic admin action stages each declare `access: "admin"` today, so a forgotten line leaves an action open. Waiting for a use case.
+6. **Admin Logs area** — a "Logs" group in the admin holding the Email Log (item 5) and an Audit Log viewer: a read-only list over the existing `audit_logs` table, filtered by person, action, record and date, answering "who changed this?" across the site. No Error Log for now: errors go to Vercel's logs, and serious ones email an alert; storing them would need a table, privacy rules and retention, for a developer audience. Revisit after launch if Vercel's logs prove painful. Planned 2 October 2026; needs a short plan before building.
 
-9. **Account change detection** — every `fetcher` request states the account its page was rendered for, every access-checked pipeline refuses a mismatch with a message and a Reload action, and the account menu opens a "Your sign-in changed" dialog when the tab regains focus under a different account. Built 30 September to 1 October 2026; remove this entry and its file once committed. See `09-account-change-detection.md`.
-
-10. **StepFlow per-tab state and sign-in hand-off** — flow state moves to sessionStorage and every same-tab arrival resumes the tab's step with no flash; an emailed link hands the sign-in back to the waiting tab ("close this tab"); the sign-in step's controller verifies links quietly; everything after a sign-in decides from its response, with the account details in the user info. Built 30 September to 1 October 2026; remove this entry and its file once committed. See `10-stepflow-visit-id.md`.
+7. **Per-module admin access** — let a role be granted access to individual admin modules, so someone can edit only news and spotlight, for example. A module's custom admin actions inherit that module's access. About 20 Civic admin action stages each declare `access: "admin"` today, so a forgotten line leaves an action open. Use case found 3 October 2026: staff roles such as volunteer coordinator and finance (Civic plan 27). Needs its own design next.
 
 Deferred decision: whether the page editor's settings mount themselves. The page editor may be replaced by
 the Composer (Civic plan 09); decide then. Today every editable page places both `PageEditor` and

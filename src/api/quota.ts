@@ -90,7 +90,9 @@ function resolveQuota(scope: string, options: QuotaOptions): ResolvedQuota {
 function listSubjects({ email, ip, limits }: ResolvedQuota, now: number) {
   return quotaSubjects.flatMap((subject) => {
     const value = subject === "email" ? email : ip;
-    if (!value) return [];
+    if (!value) {
+      return [];
+    }
     const [max, within] = limits[subject];
     const [siteMax, siteWithin] = siteLimits[subject];
     return [
@@ -248,7 +250,9 @@ export async function claimQuota(
       )
       select counts.*, (select count(*) from claimed)::int as claimed from counts
     `);
-    if (!counts.claimed) return findExceeded(counts, quota);
+    if (!counts.claimed) {
+      return findExceeded(counts, quota);
+    }
     scheduleCleanup(new Date(now));
     return null;
   };

@@ -116,13 +116,13 @@ export const forgotPasswordPipeline = (props: ForgotPasswordProps) =>
 
     if (user) {
       await audit({
-        action: "password-reset-request",
+        action: "passwordResetRequest",
         userId: null,
         data: { email },
       });
     } else {
       await audit({
-        action: "password-reset-miss",
+        action: "passwordResetMiss",
         userId: null,
         data: { email },
       });

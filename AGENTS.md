@@ -91,6 +91,12 @@ recommendation. The "Ask first" items always go to the user.
 - Prefer inferred internal types; `docs/typescript.md` owns annotations, assertions, and boundary
   contracts.
 - Use `===` and `!==`; use `Object.is` only when `NaN` or signed-zero semantics matter for a real case.
+- Store every asset an import, migration, seed or integration brings in (image, file, document) through
+  Kenstack's media upload path, exactly as an admin upload would, so it lives in the site's own storage
+  with its variants. Never save or render a third-party asset URL in its place; the source host can
+  disappear, as Webflow's will after launch. External embeds such as a YouTube trailer are not assets.
+  Content from a licensed API whose terms forbid lasting copies, such as TMDB's (no caching beyond six
+  months), is the exception: it stays on the provider's CDN with the attribution its terms require.
 - Code goes on the site by default. When site work needs a change to something in Kenstack, and that
   change would likely benefit another site, make it in Kenstack. Reusable does not mean Kenstack:
   another shared package (such as payments) owns its own domain. Keep each unit whole in one

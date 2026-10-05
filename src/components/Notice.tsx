@@ -38,7 +38,7 @@ const Notice: React.FC<NoticeProps> = ({
     <div
       {...props}
       className={twMerge(
-        "flex items-center gap-2 rounded border p-2 transition",
+        "flex items-center gap-2 rounded-[var(--radius-lg,0.5rem)] border p-2 transition",
         classes,
         className,
       )}

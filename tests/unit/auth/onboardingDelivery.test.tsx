@@ -99,7 +99,7 @@ describe("admin onboarding email", () => {
       }),
     );
     expect(mocks.audit).toHaveBeenCalledWith({
-      action: "onboarding-email-sent",
+      action: "onboardingEmailSent",
       data: { userId: 42 },
       userId: 7,
     });

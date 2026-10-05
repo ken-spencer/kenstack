@@ -33,8 +33,12 @@ function parseFormDate(value: string) {
     instant: new Date(now),
     timezone: -now.getTimezoneOffset(),
   })[0];
-  if (!result) return null;
-  if (result.start.isCertain("timezoneOffset")) return result.date();
+  if (!result) {
+    return null;
+  }
+  if (result.start.isCertain("timezoneOffset")) {
+    return result.date();
+  }
   const date = new Date(
     result.date().getTime() - now.getTimezoneOffset() * 60_000,
   );

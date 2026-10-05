@@ -27,6 +27,14 @@ import "@/components/SiteShell/theme.css"; // the site's own theme
 
 A site without the stub adds nothing; `/admin/style-guide` then shows a 404 inside its frame.
 
+## Email Log
+
+`createAdminPage()` owns `/admin/email-log`, a read-only list of every email `@kenstack/lib/mailer`
+sent except error reports, and `/admin/email-log/<id>` for one message. `email-log` is a reserved
+admin route name. The site registers `@kenstack/db/tables/emailMessages` in its schema and links the
+page from its sidebar, in a "Logs" group. Each `mailer()` call names its `kind` and, when the email is about a record, its
+Drizzle `table` and `rowId`; a message links to that record when a list module edits its table.
+
 ## One-to-Many Relationships
 
 Before implementing a new one-to-many admin relationship, decide whether staff should manage it as a
@@ -173,12 +181,19 @@ Clearing it when the content changes:
   no site-level session-invalidation callback.
 - `loadRecord` does not cache reads; to cache one, see
   [Caching Module Content](#caching-module-content).
-- Use `saveAdminRecord({ module, id, changes, values })` for the standard admin module save path after
-  the pipeline has enforced `access: "admin"`. It supplies admin-save authority to field handlers and
-  never infers authority from the user's roles.
+- Use `saveAdminRecord({ module, id, changes, values, updatedAt })` for the standard admin module save
+  path after the pipeline has enforced `access: "admin"`. It supplies admin-save authority to field
+  handlers and never infers authority from the user's roles.
 - Use `saveRecord(...)` directly for custom persistence no module represents, such as settings or
-  page-editor upserts. It is restricted by default; set `admin: true` only in a backend admin action,
+  page-editor saves. It is restricted by default; set `admin: true` only in a backend admin action,
   never from request data or user roles.
+- A record's `updatedAt` is its concurrency token. An editor loads the record's id and `updatedAt`,
+  sends both with each save, and adopts the `updatedAt` the save returns. When the record changed
+  since, changes to other fields merge and a change to the same field refuses with the
+  `record-changed` code; a site form and the page editor pass no token and do not compare. The table
+  builders set the token on every write, so no write sets `updatedAt` itself. A write that moves it
+  without a revision, such as a restore, refuses every stale editor; one that must not, such as a
+  reorder, keeps `updatedAt: table.updatedAt`.
 - Keep direct writes when the module save cannot express a required transaction, unauthenticated
   submission, or conflict-handling contract. They bypass module revalidation: expire the affected
   module, record, and list dependencies explicitly after commit, before follow-up work. Do not split

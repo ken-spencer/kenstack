@@ -40,6 +40,7 @@ describe("admin creation policy", () => {
   it("rejects creation before persistence for an update-only module", async () => {
     expect(
       await saveAdminRecord({
+        updatedAt: null,
         module: updateOnly,
         values: { note: "Staff note" },
       }),
@@ -50,6 +51,7 @@ describe("admin creation policy", () => {
   it("preserves updates in an update-only module", async () => {
     expect(
       await saveAdminRecord({
+        updatedAt: null,
         id: 1,
         module: updateOnly,
         values: { note: "Staff note" },
@@ -67,6 +69,7 @@ describe("admin creation policy", () => {
     });
     expect(
       await saveAdminRecord({
+        updatedAt: null,
         module: moduleConfig,
         values: { note: "New note" },
       }),

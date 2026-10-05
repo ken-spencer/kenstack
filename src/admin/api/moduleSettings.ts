@@ -23,7 +23,12 @@ export const loadModuleSettingsAction = (
       where: eq(settings.table.key, name),
     });
 
-    return response.success({ values: values ?? settings.defaultValues });
+    // The row and token the editor sends back with each save. Null before the first save.
+    return response.success({
+      values: values ?? settings.defaultValues,
+      id: values?.id ?? null,
+      updatedAt: values?.updatedAt ?? null,
+    });
   });
 };
 
@@ -41,45 +46,57 @@ export const saveModuleSettingsAction = (
   return pipelineStage(
     {
       schema: z.object({
+        id: z.int().positive().nullable(),
+        updatedAt: z.iso
+          .datetime()
+          .transform((value) => new Date(value))
+          .nullable(),
+        changes: z.array(z.string()),
         values: settings.schema,
       }),
       access: "admin",
       fieldsKey: "values",
     },
     async ({ response, data }) => {
+      const { id } = data;
       const result = await saveRecord({
         actionPrefix: "module-settings",
         admin: true,
         table: settings.table,
         fields: settings.fields,
         values: data.values,
+        // The first save inserts the full row, since Postgres checks NOT NULL on the proposed row.
+        changes: id ? data.changes : undefined,
+        id,
+        updatedAt: data.updatedAt,
         revalidate: [settings.cacheTag],
-        query: async ({ tx, data, select, user }) => {
-          const [row] = await tx
-            .insert(settings.table)
-            .values({
-              key: name,
-              createdBy: user.id,
-              ...data,
-            })
-            .onConflictDoUpdate({
-              target: settings.table.key,
-              set: {
-                ...data,
-                updatedAt: new Date(),
-              },
-            })
-            .returning(select);
+        // One that finds the row already created by someone else inserts nothing and refuses.
+        query: id
+          ? undefined
+          : async ({ tx, data, select, user }) => {
+              const [row] = await tx
+                .insert(settings.table)
+                .values({
+                  key: name,
+                  createdBy: user.id,
+                  ...data,
+                })
+                .onConflictDoNothing({ target: settings.table.key })
+                .returning(select);
 
-          return row;
-        },
+              return row;
+            },
       });
 
       if (result.status === "error") {
         return response.error(result.error);
       }
 
-      return response.success({ values: result.values });
+      return response.success({
+        values: result.values,
+        id: result.row?.id ?? id,
+        updatedAt: result.updatedAt,
+      });
     },
   );
 };

@@ -100,7 +100,7 @@ it.each(["code", "link", "already-verified"])(
         input?.dispatchEvent(new Event("input", { bubbles: true }));
       });
     }
-    if (method === "already-verified")
+    if (method === "already-verified") {
       await act(async () =>
         container
           .querySelector("form")!
@@ -108,6 +108,7 @@ it.each(["code", "link", "already-verified"])(
             new Event("submit", { bubbles: true, cancelable: true }),
           ),
       );
+    }
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
@@ -120,8 +121,9 @@ it.each(["code", "link", "already-verified"])(
       method !== "already-verified",
     );
     expect(document.cookie).toContain("loginMethod=password");
-    if (method === "code")
+    if (method === "code") {
       expect(container.querySelector('input[name="code"]')).not.toBeNull();
+    }
   },
 );
 

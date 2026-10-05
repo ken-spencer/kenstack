@@ -1,5 +1,5 @@
 import { and, eq, getTableColumns, isNull, sql } from "drizzle-orm";
-import isEqual from "lodash-es/isEqual";
+import { revalidateTag } from "next/cache";
 
 import { db as appDb } from "@app/db";
 import { requireUser } from "@kenstack/auth/server/user";
@@ -12,6 +12,7 @@ import {
   type RecordPreparation,
   type SavedRow,
 } from "@kenstack/records";
+import { recordChangedCode } from "@kenstack/records/conflict";
 import { selectFields } from "@kenstack/records/select";
 import { errorTranslator } from "@kenstack/db/errorTranslator";
 import type { User } from "@kenstack/types";
@@ -71,8 +72,9 @@ export async function saveAdminRecord({
   changes,
   id,
   module,
+  updatedAt,
   values,
-}: ModuleRecordSave) {
+}: ModuleRecordSave & { updatedAt: Date | null }) {
   const { admin: adminConfig } = module;
   if (!id && "list" in adminConfig && !adminConfig.create) {
     return {
@@ -91,6 +93,7 @@ export async function saveAdminRecord({
         values,
       },
       true,
+      { updatedAt },
     );
   }
 
@@ -124,6 +127,7 @@ export async function saveAdminRecord({
   const submittedRelation = submittedRelations[0];
   const preparedRelation = submittedRelation
     ? await prepareOneToOneSave({
+        changes,
         id,
         selectedRelationName,
         submittedRelation,
@@ -135,14 +139,12 @@ export async function saveAdminRecord({
   }
   const parentValues = preparedRelation?.parentValues ?? values;
   const relatedSave = preparedRelation?.relatedSave;
-  const relationName = relatedSave?.name;
 
   let parentChanges: string[] | undefined;
   const revisionChanges: string[] = [];
   if (id) {
-    parentChanges = changes
-      ? changes.filter((key) => key !== relationName)
-      : [];
+    // A relation's changes arrive as dotted subfield keys.
+    parentChanges = changes ? changes.filter((key) => !key.includes(".")) : [];
     revisionChanges.push(...parentChanges);
   } else {
     revisionChanges.push(...Object.keys(parentValues));
@@ -165,7 +167,7 @@ export async function saveAdminRecord({
     user: User;
   }) => {
     if (relatedSave) {
-      const relatedValues = await saveOneToOne({
+      await saveOneToOne({
         binding: relatedSave.binding,
         changes: relatedSave.changes,
         expectedId: relatedSave.expectedId,
@@ -178,19 +180,21 @@ export async function saveAdminRecord({
         tx,
         user,
       });
-      savedValues[relatedSave.name] = {
-        ...relatedSave.baseline,
-        ...relatedValues,
-      };
     }
 
-    return {
-      revisionValues: await loadRelationSnapshots(
-        oneToOne.relations,
-        row.id,
-        tx,
-      ),
-    };
+    const relationValues = await loadRelationSnapshots(
+      oneToOne.relations,
+      row.id,
+      tx,
+    );
+    // The live relation goes back with every save, so a merged save's editor adopts it too.
+    const liveRelation = Object.entries(oneToOne.relations).find(
+      ([, binding]) => binding.value === row[oneToOne.field],
+    )?.[0];
+    if (liveRelation) {
+      savedValues[liveRelation] = relationValues[liveRelation];
+    }
+    return { revisionValues: relationValues };
   };
   const translateError = (error: unknown) =>
     error instanceof OneToOneSaveError
@@ -212,17 +216,20 @@ export async function saveAdminRecord({
       afterSave,
       revisionChanges,
       translateError,
+      updatedAt,
     },
   );
 }
 
 // Validates and prepares one submitted relation while retaining its full field context.
 async function prepareOneToOneSave({
+  changes: submittedChanges = [],
   id,
   selectedRelationName,
   submittedRelation: [name, binding],
   values,
 }: {
+  changes?: string[];
   id?: number | null;
   selectedRelationName: string;
   submittedRelation: [string, AdminOneToOneBinding];
@@ -253,27 +260,21 @@ async function prepareOneToOneSave({
   const relatedInput = Object.fromEntries(
     Object.entries(relatedValues).filter(([key]) => key !== "id"),
   );
-  let expectedId: number | null = null;
-  let baseline: Record<string, unknown> | undefined;
-  if (id) {
-    expectedId = await loadRelationId({
-      parentId: id,
-      binding,
-      db: appDb,
-    });
-    if (expectedId) {
-      baseline = await loadActiveRelatedValues(binding, expectedId);
-    }
-  }
+  const expectedId = id
+    ? await loadRelationId({ parentId: id, binding, db: appDb })
+    : null;
 
-  const relatedChanges = baseline
-    ? Object.fromEntries(
-        Object.entries(relatedInput).filter(
-          ([key, value]) => !isEqual(value, baseline[key]),
-        ),
-      )
-    : relatedInput;
-  const changes = Object.keys(relatedChanges);
+  // An existing relation saves only the subfields the editor changed, so a stale untouched subfield
+  // is never written; a new one saves them all.
+  const changes = expectedId
+    ? submittedChanges.flatMap((key) => {
+        const subfield = key.slice(name.length + 1);
+        return key.startsWith(name + ".") &&
+          Object.hasOwn(relatedInput, subfield)
+          ? [subfield]
+          : [];
+      })
+    : Object.keys(relatedInput);
   const changedFields = new Set(changes);
   const preparation = await prepareRecordFields({
     admin: true,
@@ -295,7 +296,6 @@ async function prepareOneToOneSave({
     status: "success" as const,
     parentValues,
     relatedSave: {
-      baseline,
       binding,
       changes,
       expectedId,
@@ -328,6 +328,7 @@ async function saveModule(
     | "revisionChanges"
     | "revisionRelations"
     | "translateError"
+    | "updatedAt"
     | "user"
   > = {},
 ) {
@@ -358,29 +359,28 @@ async function saveModule(
   let result;
   if (!("list" in adminConfig)) {
     // A known id updates only the changed columns through the default path.
-    // The first save inserts the full row; the upsert only covers a client
-    // that saves again before it learns the id. A partial upsert cannot
-    // work: Postgres checks NOT NULL on the proposed row before the conflict.
+    // The first save inserts the full row, since Postgres checks NOT NULL on
+    // the proposed row. An editor's first save that finds the row already
+    // created by someone else inserts nothing and refuses; a site form, which
+    // sends no token, updates that row.
     result = await saveRecord({
       ...saveOptions,
       query: id
         ? undefined
         : async ({ tx, data, select, user }) => {
-            const [row] = await tx
-              .insert(adminConfig.table)
-              .values({
-                key: name,
-                createdBy: user.id,
-                ...data,
-              })
-              .onConflictDoUpdate({
-                target: adminConfig.table.key,
-                set: {
-                  ...data,
-                  updatedAt: new Date(),
-                },
-              })
-              .returning(select);
+            const insert = tx.insert(adminConfig.table).values({
+              key: name,
+              createdBy: user.id,
+              ...data,
+            });
+            const [row] = await (
+              saveOptions.updatedAt === undefined
+                ? insert.onConflictDoUpdate({
+                    target: adminConfig.table.key,
+                    set: data,
+                  })
+                : insert.onConflictDoNothing({ target: adminConfig.table.key })
+            ).returning(select);
 
             return row;
           },
@@ -442,10 +442,7 @@ async function saveModule(
           const [row] = id
             ? await tx
                 .update(adminConfig.table)
-                .set({
-                  ...orderedData,
-                  updatedAt: new Date(),
-                })
+                .set(orderedData)
                 .where(eq(adminConfig.table.id, id))
                 .returning(select)
             : await tx
@@ -460,6 +457,17 @@ async function saveModule(
         },
       });
     }
+  }
+
+  // A refused save committed nothing; only the record the editor reloads may be stale.
+  const target = "list" in adminConfig ? id : "single";
+  if (
+    result.status === "error" &&
+    typeof result.error === "object" &&
+    result.error.code === recordChangedCode &&
+    target
+  ) {
+    revalidateTag(adminLoadCacheTag(name, target), { expire: 0 });
   }
 
   return result;
@@ -515,7 +523,7 @@ async function saveOneToOne({
   }
 
   if (!changes.length && existing) {
-    return existing;
+    return;
   }
 
   let saved;
@@ -567,8 +575,6 @@ async function saveOneToOne({
           : "Unable to save this related record.",
     });
   }
-
-  return saved.values;
 }
 
 // Loads the related record ID and locks an existing row when requested by a transactional save.
@@ -612,11 +618,11 @@ async function loadActiveRelated(
   return row;
 }
 
-// Loads a relation through its field lifecycle for normalized comparisons and revision data.
+// Loads a relation through its field lifecycle for the revision snapshot and the saved values.
 async function loadActiveRelatedValues(
   binding: AdminOneToOneBinding,
   id: number,
-  db: Pick<typeof appDb, "select"> = appDb,
+  db: Pick<typeof appDb, "select">,
 ) {
   const columns = getTableColumns(binding.table);
   return loadRecord({

@@ -83,6 +83,7 @@ vi.mock("@kenstack/lib/errorReporter", () => ({
 }));
 vi.mock("@kenstack/lib/mailer", () => ({ default: mocks.mailer }));
 vi.mock("@kenstack/logger", () => ({ audit: mocks.audit }));
+vi.mock("@kenstack/records/revisions", () => ({ insertRevision: vi.fn() }));
 vi.mock("@kenstack/auth/email/verification/Email", () => ({
   createVerificationEmail: vi.fn(),
 }));
@@ -342,7 +343,7 @@ describe("email change confirmation", () => {
     );
     expect(mocks.audit).toHaveBeenCalledWith(
       expect.objectContaining({
-        action: "email-changed",
+        action: "emailChanged",
         data: { from: "old@example.com", to: "new@example.com" },
         userId: 12,
       }),

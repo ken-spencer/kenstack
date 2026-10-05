@@ -74,6 +74,9 @@ export const reorderAction = (moduleConfig: DefinedAdminModule) => {
         await tx
           .update(table)
           .set({
+            // Outside the token: no form saves sortOrder from what it loaded, and one reorder
+            // must not refuse every editor open on the list.
+            updatedAt: table.updatedAt,
             [reorder.fieldKey]: sql`case ${sql.join(
               data.ids.map(
                 (id, index) =>

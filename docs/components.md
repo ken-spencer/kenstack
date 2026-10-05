@@ -58,4 +58,9 @@ These apply to every Kenstack site. Do not use:
   copy;
 - italic accent words inside headings; the heading's wording carries the emphasis;
 - numbered section labels such as `01` or `02`; the heading names the section;
-- monospace labels; use the site's body or heading font.
+- monospace labels; use the site's body or heading font;
+- a label at one edge of a wide screen and its value, amount or time at the other; keep line items,
+  totals, label–value lists and lists of items with amounts or times in a column of at most about
+  45rem (about 60rem for a list with several columns), or in a main column beside a sidebar. Kenstack's
+  shared admin module list is the exception: its status column stays at the right edge, so it sits in
+  the same place in every module.

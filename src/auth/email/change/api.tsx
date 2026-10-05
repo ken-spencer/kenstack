@@ -27,6 +27,7 @@ import { reportError } from "@kenstack/lib/errorReporter";
 import mailer from "@kenstack/lib/mailer";
 import siteOrigin from "@kenstack/lib/siteOrigin";
 import { audit } from "@kenstack/logger";
+import { insertRevision } from "@kenstack/records/revisions";
 
 import {
   createVerificationEmail,
@@ -91,6 +92,7 @@ async function sendNotice({
     await mailer({
       attachments,
       html: await render(html),
+      kind: "emailChange",
       subject,
       to,
     });
@@ -396,13 +398,21 @@ async function applyEmailChange(
 
       await tx
         .update(users)
-        .set({ email: normalizeEmail(email), updatedAt: now })
+        .set({ email: normalizeEmail(email) })
         .where(eq(users.id, userId));
+      // Its revision lets an admin editing this user keep their other changes.
+      await insertRevision(tx, {
+        changes: ["email"],
+        createdBy: userId,
+        rowId: userId,
+        snapshot: { email: normalizeEmail(email) },
+        table: users,
+      });
 
       await tx.delete(sessions).where(eq(sessions.userId, userId));
 
       await audit({
-        action: "email-changed",
+        action: "emailChanged",
         data: { from: account?.email, to: normalizeEmail(email) },
         db: tx,
         rowId: userId,

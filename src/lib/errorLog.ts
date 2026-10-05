@@ -1,5 +1,6 @@
 import getIp from "@kenstack/lib/ip";
 import { geolocation } from "@vercel/functions";
+import { DrizzleQueryError } from "drizzle-orm";
 import { headers } from "next/headers";
 
 type ErrorLogInput = {
@@ -20,15 +21,18 @@ export default async function errorLog({
   const request = new Request("http://internal", { headers: headersList });
   const { city, country, countryRegion } = geolocation(request);
   const location = [city, countryRegion, country].filter(Boolean).join(", ");
+  // A failed query's message lists its parameters, which can be personal details such as an email
+  // address; the database's own error, its cause, does not.
+  const logged = error instanceof DrizzleQueryError ? error.cause : error;
   let errorDetails;
-  if (error instanceof Error) {
+  if (logged instanceof Error) {
     errorDetails = {
-      message: error.message,
-      name: error.name,
-      stack: error.stack?.split("\n").slice(1, 6).join("\n"),
+      message: logged.message,
+      name: logged.name,
+      stack: logged.stack?.split("\n").slice(1, 6).join("\n"),
     };
-  } else if (error !== undefined) {
-    errorDetails = { type: typeof error };
+  } else if (logged !== undefined) {
+    errorDetails = { type: typeof logged };
   }
 
   const details: Record<string, unknown> = {

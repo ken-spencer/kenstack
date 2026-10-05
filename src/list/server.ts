@@ -56,14 +56,16 @@ export function resolveListWhere(
       );
 
       const condition = or(...searchConditions);
-      if (condition) where.push(condition);
+      if (condition) {
+        where.push(condition);
+      }
     }
   }
 
   return where;
 }
 
-function resolveFilters(
+export function resolveFilters(
   filters: AdminFilters,
   values: Record<string, unknown>,
 ) {
@@ -92,8 +94,12 @@ function resolveFilters(
           (filter.field.columnType === "PgDate" ||
             filter.field.columnType === "PgDateString")
         ) {
-          if (from) where.push(gte(field, from));
-          if (to) where.push(lte(field, to));
+          if (from) {
+            where.push(gte(field, from));
+          }
+          if (to) {
+            where.push(lte(field, to));
+          }
         } else {
           // A timestamp range covers whole days in the host's time zone.
           if (from) {
@@ -219,7 +225,7 @@ function parseTextFilter(value: unknown) {
 }
 
 export function resolveListOrderBy(
-  { sort, table }: Pick<ListConfig, "sort" | "table">,
+  { sort, table }: { sort: AdminSort; table: Pick<AdminTable, "id"> },
   data: Pick<ListQueryStoreState, "direction" | "sort">,
 ) {
   const { direction: requestedDirection, sort: requestedSort } = data;
@@ -237,7 +243,7 @@ export function resolveListOrderBy(
 
 // Exposes the canonical ID tie-break policy to server features that compose list ordering.
 export function resolveListSortFields(
-  table: AdminTable,
+  table: Pick<AdminTable, "id">,
   option: AdminSort[string],
   direction: SortDirection,
 ): { field: AnyColumn | SQL; direction: SortDirection }[] {

@@ -47,7 +47,7 @@ describe("key table save", () => {
     mocks.audit.mockResolvedValue(undefined);
     const row = { id: 1, ...values };
     mocks.insertValues.mockReturnValue({
-      onConflictDoUpdate: vi.fn().mockReturnThis(),
+      onConflictDoNothing: vi.fn().mockReturnThis(),
       returning: vi.fn().mockResolvedValue([row]),
     });
     mocks.updateSet.mockReturnValue({
@@ -65,6 +65,7 @@ describe("key table save", () => {
 
   it("inserts the full row when the record does not exist yet", async () => {
     const result = await saveAdminRecord({
+      updatedAt: null,
       changes: ["contactEmail"],
       module: moduleConfig,
       values,
@@ -79,6 +80,7 @@ describe("key table save", () => {
 
   it("updates only the changed columns once the record exists", async () => {
     const result = await saveAdminRecord({
+      updatedAt: new Date("2026-10-02T12:00:00.000Z"),
       changes: ["contactEmail"],
       id: 1,
       module: moduleConfig,

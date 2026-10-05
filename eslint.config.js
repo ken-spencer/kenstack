@@ -63,6 +63,7 @@ export default defineConfig([
         "error",
         { ignoreParameters: true, ignoreProperties: true },
       ],
+      curly: ["error", "all"],
       "import/no-cycle": [
         "error",
         { disableScc: true, ignoreExternal: true, maxDepth: 1 },

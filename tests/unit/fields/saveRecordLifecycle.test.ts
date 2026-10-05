@@ -269,7 +269,9 @@ describe("record preparation lifecycle", () => {
 
     const tx = {
       insert: () => ({
-        values: vi.fn(async () => []),
+        values: () => ({
+          returning: vi.fn(async () => [{ createdAt: new Date() }]),
+        }),
       }),
     };
     mocks.transaction.mockImplementation(async (callback) => callback(tx));

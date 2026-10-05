@@ -46,6 +46,9 @@ import siteOrigin from "@kenstack/lib/siteOrigin";
 import { emailSchema } from "./schemas";
 import { setVerificationCookie, verificationCookie } from "./internal/cookie";
 
+// The Email Log leaves these out of "needs attention": people request a new code themselves.
+export const verificationEmailKind = "verification";
+
 export type CreateVerificationEmail = (input: {
   code: string;
   email: string;
@@ -309,6 +312,7 @@ async function sendVerification(
         attachments,
         from,
         html: message.html,
+        kind: verificationEmailKind,
         subject: message.subject,
         to: email,
       });

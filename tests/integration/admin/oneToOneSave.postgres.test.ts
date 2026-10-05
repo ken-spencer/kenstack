@@ -30,6 +30,24 @@ vi.mock("@kenstack/auth/server/user", () => ({
   requireUser: mocks.requireUser,
 }));
 vi.mock("@kenstack/logger", () => ({ audit: mocks.audit }));
+// A refused save names the people whose revisions it read, from the users table.
+vi.mock("@app/modules", async () => {
+  const { integer, pgTable, text } = await import("drizzle-orm/pg-core");
+  return {
+    modules: {
+      users: {
+        admin: {
+          table: pgTable("users", {
+            id: integer().primaryKey(),
+            email: text(),
+            familyName: text("family_name"),
+            givenName: text("given_name"),
+          }),
+        },
+      },
+    },
+  };
+});
 
 import { defineFields } from "@kenstack/admin/fields";
 import { defineModule, defineOneToOne } from "@kenstack/admin/module";
@@ -127,6 +145,14 @@ beforeAll(async () => {
     )
   `);
   await sqlClient.unsafe(`
+    create table users (
+      id integer primary key,
+      email text,
+      family_name text,
+      given_name text
+    )
+  `);
+  await sqlClient.unsafe(`
     create table revisions (
       id integer generated always as identity primary key,
       "table" varchar(64) not null,
@@ -162,11 +188,12 @@ describe("one-to-one PostgreSQL save boundary", () => {
     const [parent] = await database
       .insert(parents)
       .values({ kind: "movie", title: "Original" })
-      .returning({ id: parents.id });
+      .returning({ id: parents.id, updatedAt: parents.updatedAt });
 
     const result = await saveAdminRecord({
-      changes: ["movie"],
+      changes: ["movie.overview"],
       id: parent.id,
+      updatedAt: parent.updatedAt,
       module: moduleConfig,
       values: {
         kind: "movie",
@@ -211,7 +238,7 @@ describe("one-to-one PostgreSQL save boundary", () => {
     const [parent] = await database
       .insert(parents)
       .values({ kind: "movie", title: "Original" })
-      .returning({ id: parents.id });
+      .returning({ id: parents.id, updatedAt: parents.updatedAt });
     await sqlClient.unsafe(`
       create function reject_integration_revision() returns trigger
       language plpgsql as $$
@@ -229,8 +256,9 @@ describe("one-to-one PostgreSQL save boundary", () => {
     try {
       await expect(
         saveAdminRecord({
-          changes: ["title", "movie"],
+          changes: ["title", "movie.overview"],
           id: parent.id,
+          updatedAt: parent.updatedAt,
           module: moduleConfig,
           values: {
             kind: "movie",
@@ -263,7 +291,7 @@ describe("one-to-one PostgreSQL save boundary", () => {
     const [parent] = await database
       .insert(parents)
       .values({ kind: "movie", title: "Original" })
-      .returning({ id: parents.id });
+      .returning({ id: parents.id, updatedAt: parents.updatedAt });
     let prepared = 0;
     let releasePreparations = () => {};
     const bothPrepared = new Promise<void>((resolve) => {
@@ -279,8 +307,9 @@ describe("one-to-one PostgreSQL save boundary", () => {
 
     const results = await Promise.all([
       saveAdminRecord({
-        changes: ["movie"],
+        changes: ["movie.overview"],
         id: parent.id,
+        updatedAt: parent.updatedAt,
         module: moduleConfig,
         values: {
           kind: "movie",
@@ -289,8 +318,9 @@ describe("one-to-one PostgreSQL save boundary", () => {
         },
       }),
       saveAdminRecord({
-        changes: ["movie"],
+        changes: ["movie.overview"],
         id: parent.id,
+        updatedAt: parent.updatedAt,
         module: moduleConfig,
         values: {
           kind: "movie",

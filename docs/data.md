@@ -13,12 +13,15 @@ pipeline schema work, or batch scripts.
   private migration. Follow the migration-history rules below before rewriting consumed artifacts.
 - Leave generated files under `drizzle/` exactly as Drizzle emits them and review the generated SQL
   diff directly; the formatter runs only on handwritten schema and source files.
-- A Drizzle migration never durably owns a database object or invariant the Drizzle schema cannot
-  express, such as an extension, exclusion constraint, trigger, function, or grant, because host
-  migration history may be consolidated and host code may move without its old chain. Keep an
-  idempotent installer beside the module that owns the invariant and register it with the site's single
-  database-setup executable, which calls ordinary module installer functions. Run that executable after
-  every successful `drizzle-kit migrate`; its failure fails `db:migrate`.
+- Postgres extensions come from Kenstack's supported list in `src/db/scripts/drizzle.mjs`, which
+  `db:migrate` enables before `drizzle-kit migrate`, so a schema or migration may use them. Add an
+  extension by adding it to that list, and only one that ships with standard Postgres. A Drizzle
+  migration never durably owns any other database object or invariant the Drizzle schema cannot
+  express, such as an exclusion constraint, trigger, function, or grant, because host migration history
+  may be consolidated and host code may move without its old chain. Keep an idempotent installer beside
+  the module that owns the invariant and register it with the site's single database-setup executable,
+  which calls ordinary module installer functions. Run that executable after every successful
+  `drizzle-kit migrate`; its failure fails `db:migrate`.
 - Check existing migrations before changing a schema or column name.
 - Import reusable site-side database read helpers from `@kenstack/db/queries`, which owns standard
   public visibility predicates, request-time detail visibility, scheduled-list cache timing, and media

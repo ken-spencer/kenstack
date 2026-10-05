@@ -4,6 +4,7 @@ import { revalidateTag } from "next/cache";
 
 import { db } from "@app/db";
 import { modules } from "@app/modules";
+import { adminLoadCacheTag } from "@kenstack/admin/cache";
 import { pipelineStage } from "@kenstack/api";
 import { requireRecentAuthentication } from "@kenstack/auth/reauthentication/server";
 import schema from "@kenstack/auth/schemas/resetPassword";
@@ -15,7 +16,6 @@ import { audit } from "@kenstack/logger";
 export const resetPasswordPipeline = pipelineStage(
   { access: "authenticated", schema },
   async ({ data, request, response }) => {
-    const now = new Date();
     const users = modules.users.admin.table;
     const session = await requireRecentAuthentication(request);
 
@@ -26,7 +26,7 @@ export const resetPasswordPipeline = pipelineStage(
           !(
             await tx
               .update(users)
-              .set({ passwordHash, updatedAt: now })
+              .set({ passwordHash })
               .where(eq(users.id, session.userId))
               .returning({ id: users.id })
           )[0]
@@ -44,10 +44,12 @@ export const resetPasswordPipeline = pipelineStage(
     }
 
     revalidateTag(userSessionsCacheTag(session.userId), { expire: 0 });
+    // The write moved the user's token, so an admin editor must load it afresh.
+    revalidateTag(adminLoadCacheTag("users", session.userId), { expire: 0 });
 
     await login(session.userId);
     await audit({
-      action: "reset-password",
+      action: "resetPassword",
       userId: session.userId,
       data: { method: "session" },
     });

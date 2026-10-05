@@ -1,5 +1,11 @@
 import { spawn } from "node:child_process";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+import postgres from "postgres";
+
+// The Postgres extensions Kenstack supports. Each ships with standard Postgres and is trusted, so the
+// database owner can create it; migrate enables them all first, so any migration can use them.
+const supportedExtensions = ["pg_trgm", "btree_gist"];
 
 const [command, ...args] = process.argv.slice(2);
 
@@ -26,6 +32,22 @@ if (command === "migrate") {
   env.PGOPTIONS = [env.PGOPTIONS, "-c client_min_messages=warning"]
     .filter(Boolean)
     .join(" ");
+
+  const { default: config } = await import(
+    pathToFileURL(join(process.cwd(), "drizzle.config.ts")).href
+  );
+  const sql = postgres(config.dbCredentials.url, {
+    max: 1,
+    prepare: false,
+    onnotice: () => {},
+  });
+  try {
+    for (const extension of supportedExtensions) {
+      await sql`CREATE EXTENSION IF NOT EXISTS ${sql(extension)}`;
+    }
+  } finally {
+    await sql.end({ timeout: 5 });
+  }
 }
 
 const child = spawn(bin, [command, "--config=drizzle.config.ts", ...args], {

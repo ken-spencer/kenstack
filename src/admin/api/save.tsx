@@ -45,6 +45,11 @@ export const saveAction = (moduleConfig: DefinedAdminModule) => {
       access: "admin",
       schema: z.object({
         id: z.number().nullish(),
+        // The token the form loaded: null for a new record or a singleton that has no row yet.
+        updatedAt: z.iso
+          .datetime()
+          .transform((value) => new Date(value))
+          .nullable(),
         changes: z.array(z.string()),
         parentId: z.int().positive().optional(),
         values: adminConfig.schema,
@@ -54,8 +59,7 @@ export const saveAction = (moduleConfig: DefinedAdminModule) => {
     async ({ response, data: rawData }) => {
       const { parent } = moduleConfig;
       const rawSaveData = withServerPublishDate(rawData);
-      const { id } = rawSaveData;
-      const { changes } = rawSaveData;
+      const { changes, id, updatedAt } = rawSaveData;
       let values: Record<string, unknown> = rawSaveData.values;
 
       if (!id && parent) {
@@ -73,6 +77,7 @@ export const saveAction = (moduleConfig: DefinedAdminModule) => {
         changes,
         id,
         module: moduleConfig,
+        updatedAt,
         values,
       });
 
@@ -83,6 +88,7 @@ export const saveAction = (moduleConfig: DefinedAdminModule) => {
       return response.success({
         id: result.row?.id ?? id,
         values: result.values,
+        updatedAt: result.updatedAt,
       });
     },
   );

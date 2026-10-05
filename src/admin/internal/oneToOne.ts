@@ -12,7 +12,7 @@ import {
 } from "@kenstack/fields/createDefaultValues";
 import { field, type FieldInputOption } from "@kenstack/fields/field";
 
-const oneToOneSelectionFieldName = "kind";
+export const oneToOneSelectionFieldName = "kind";
 
 type OneToOneFields = Record<string, DefinedFields>;
 

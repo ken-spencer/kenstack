@@ -176,11 +176,13 @@ async function writeErrorReport(
   }
 
   try {
-    const { default: mailer } = await import("@kenstack/lib/mailer");
+    const { default: mailer, errorReportKind } =
+      await import("@kenstack/lib/mailer");
     const route = pathname ?? request?.routePath ?? "No route";
     const result = await mailer({
       to: monitoring.email,
       from: emailFrom,
+      kind: errorReportKind,
       subject: `[${environment}] ${error.name}: ${message}`.slice(0, 180),
       html: [
         `<h1>Unexpected server error</h1>`,

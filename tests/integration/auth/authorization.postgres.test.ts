@@ -122,16 +122,27 @@ it.each([
   "revoked",
 ])("refuses %s", async (scenario) => {
   let requested = binding;
-  if (scenario === "missing-cookie") mocks.token = undefined;
-  if (scenario === "wrong-token") mocks.token = "another-token";
-  if (scenario === "wrong-session") requested = { ...binding, sessionId: 2 };
-  if (scenario === "impersonated")
+  if (scenario === "missing-cookie") {
+    mocks.token = undefined;
+  }
+  if (scenario === "wrong-token") {
+    mocks.token = "another-token";
+  }
+  if (scenario === "wrong-session") {
+    requested = { ...binding, sessionId: 2 };
+  }
+  if (scenario === "impersonated") {
     await client`update sessions set impersonated_by=2 where id=1`;
-  if (scenario === "deleted-user")
+  }
+  if (scenario === "deleted-user") {
     await client`update users set deleted_at=clock_timestamp() where id=1`;
-  if (scenario === "expired-session")
+  }
+  if (scenario === "expired-session") {
     await client`update sessions set expires_at=clock_timestamp()-interval '1 second' where id=1`;
-  if (scenario === "revoked") await client`delete from sessions where id=1`;
+  }
+  if (scenario === "revoked") {
+    await client`delete from sessions where id=1`;
+  }
   const before = await loadSession();
   await expect(
     db.transaction((tx) =>

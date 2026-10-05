@@ -1,10 +1,12 @@
 "use client";
 
 import { accountChangedRefusal } from "@kenstack/auth/renderedAccount";
+import { recordChangedCode } from "@kenstack/records/conflict";
 import Notice from "@kenstack/components/Notice";
 import { useForm } from "@kenstack/forms/context";
 import { useSubmitFailure } from "@kenstack/forms/internal/submitFailure";
 import {
+  formErrorName,
   getFormFieldErrors,
   hasRegisteredField,
 } from "@kenstack/forms/internal/fieldErrors";
@@ -26,11 +28,13 @@ export default function NoticeList({
   } = useFormContext();
   const ref = useRef<HTMLDivElement | null>(null);
   const fieldErrors = getFormFieldErrors(errors);
+  const isFormError = (name: string) =>
+    name === "root" ||
+    name.startsWith("root.") ||
+    name.startsWith(formErrorName);
   const unrenderedErrors = fieldErrors.filter(
     ({ name }) =>
-      name === "root" ||
-      name.startsWith("root.") ||
-      !hasRegisteredField(control._fields, name),
+      isFormError(name) || !hasRegisteredField(control._fields, name),
   );
   // A failed submit shows until the next submit, or until its field errors, once shown, are all fixed;
   // typing never brings it back.
@@ -74,6 +78,11 @@ export default function NoticeList({
   }
 
   const isError = showValidation || statusMessage?.status === "error";
+  // Errors tied to no field say what is wrong themselves; with nothing highlighted, they show alone.
+  const showsFormErrorsAlone =
+    fieldErrors.length > 0 &&
+    fieldErrors.every(({ name }) => isFormError(name)) &&
+    statusMessage?.status !== "error";
   return (
     <Notice
       ref={ref}
@@ -83,20 +92,28 @@ export default function NoticeList({
     >
       <div className="flex items-center gap-3">
         <div className="grow">
-          {showValidation
-            ? statusMessage?.status === "error"
-              ? statusMessage.message
-              : validationMessage
-            : statusMessage?.message}
-          {unrenderedErrors.length ? (
-            <ul className="mt-4 list-disc pl-8">
-              {unrenderedErrors.map(
-                ({ message: errorMessage, name }, index) => (
-                  <li key={`${name}-${index}`}>{errorMessage}</li>
-                ),
-              )}
-            </ul>
-          ) : null}
+          {showsFormErrorsAlone ? (
+            unrenderedErrors.map(({ message: errorMessage, name }, index) => (
+              <p key={`${name}-${index}`}>{errorMessage}</p>
+            ))
+          ) : (
+            <>
+              {showValidation
+                ? statusMessage?.status === "error"
+                  ? statusMessage.message
+                  : validationMessage
+                : statusMessage?.message}
+              {unrenderedErrors.length ? (
+                <ul className="mt-4 list-disc pl-8">
+                  {unrenderedErrors.map(
+                    ({ message: errorMessage, name }, index) => (
+                      <li key={`${name}-${index}`}>{errorMessage}</li>
+                    ),
+                  )}
+                </ul>
+              ) : null}
+            </>
+          )}
         </div>
         {showValidation && fieldErrors.length > unrenderedErrors.length ? (
           <Button
@@ -121,7 +138,8 @@ export default function NoticeList({
             View error
           </Button>
         ) : null}
-        {statusMessage?.code === accountChangedRefusal.code ? (
+        {statusMessage?.code === accountChangedRefusal.code ||
+        statusMessage?.code === recordChangedCode ? (
           <Button
             className="shrink-0"
             size="sm"

@@ -175,12 +175,18 @@ capability with their owner and the concrete maintenance cost.
 
 - Apply the ownership and direct-expression rules above before deciding a helper's location or export
   status. An uncommitted export does not exempt a helper from those rules.
-- With one consuming file, keep the helper file-local and unexported.
+- With one consuming file, keep the helper file-local and unexported. This applies to helpers, not to
+  concept files: a canonical schema, status list, constant set, or cohesive domain logic such as crypto
+  or geometry stays with its owner whatever its consumer count.
 - A separate helper file requires multiple production consumers or a concrete runtime, tooling, or
   public-contract boundary. Tests are not production consumers and never justify a production export.
 - Place an earned helper in the closest existing owner and role home, using that owner's `lib` location
   only when no more specific documented home applies. A plausible-sounding name does not create a shared
   folder.
+- Cleanup and review never move, merge, rename or split an existing file to satisfy this ladder; they
+  report the candidate. Such moves happen only in a pass the user requests.
+- Before treating a Kenstack export as unused, check every host site that uses Kenstack, not only the
+  current one.
 
 ## File and folder shape
 

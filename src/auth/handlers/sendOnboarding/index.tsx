@@ -41,6 +41,7 @@ export const sendOnboardingEmailAction = pipelineStage(
     url.searchParams.set("notice", "onboarding");
     const delivery = await mailer({
       attachments,
+      kind: "onboarding",
       html: await render(
         <OnboardingEmail
           invitedBy={admin.name.trim() || "An administrator"}
@@ -66,7 +67,7 @@ export const sendOnboardingEmailAction = pipelineStage(
     }
 
     await audit({
-      action: "onboarding-email-sent",
+      action: "onboardingEmailSent",
       data: { userId },
       userId: admin.id,
     });

@@ -57,6 +57,7 @@ const moduleConfig = defineModule({
 describe("one-to-one save validation", () => {
   it("rejects more than one submitted relation namespace", async () => {
     const result = await saveAdminRecord({
+      updatedAt: null,
       changes: ["movie", "tv_series"],
       id: 1,
       module: moduleConfig,
@@ -75,6 +76,7 @@ describe("one-to-one save validation", () => {
 
   it("rejects a namespace that does not match the discriminator", async () => {
     const result = await saveAdminRecord({
+      updatedAt: null,
       changes: ["tv_series"],
       id: 1,
       module: moduleConfig,
@@ -96,6 +98,7 @@ describe("one-to-one save validation", () => {
 
   it("rejects a relation namespace that is not an object", async () => {
     const result = await saveAdminRecord({
+      updatedAt: null,
       changes: ["movie"],
       id: 1,
       module: moduleConfig,
@@ -113,6 +116,7 @@ describe("one-to-one save validation", () => {
 
   it("rejects an unsupported discriminator before persistence", async () => {
     const result = await saveAdminRecord({
+      updatedAt: null,
       changes: ["kind"],
       id: 1,
       module: moduleConfig,

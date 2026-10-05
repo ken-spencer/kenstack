@@ -28,7 +28,7 @@ export const loginPipeline = pipelineStage(
   }) => {
     // Only failures count (see recordPasswordFailure); a successful sign-in
     // consumes nothing. Locked after 3 failures per account in 15 minutes.
-    const locked = await checkQuota("password-failure", {
+    const locked = await checkQuota("passwordFailure", {
       email,
       limits: { email: passwordFailureLimit },
     });
@@ -87,9 +87,9 @@ export async function recordPasswordFailure(
   email: string,
   userId: number | null,
 ) {
-  await consumeQuota("password-failure", { email });
+  await consumeQuota("passwordFailure", { email });
   await audit({
-    action: "password-failure",
+    action: "passwordFailure",
     data: { email },
     userId,
   });

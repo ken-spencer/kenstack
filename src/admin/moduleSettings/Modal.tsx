@@ -29,6 +29,9 @@ type ModuleSettingsModalProps = {
 
 type SettingsLoadResult = {
   values: Record<string, unknown>;
+  // The row and token, sent back with each save. Null before the first save.
+  id: number | null;
+  updatedAt: string | null;
 };
 
 export default function ModuleSettingsModal({
@@ -78,11 +81,12 @@ function ModuleSettingsModalContent({
         throw new Error(result.message || "Unable to load module settings.");
       }
 
-      return result.values;
+      const { id, updatedAt, values } = result;
+      return { id, updatedAt, values };
     },
   });
   const defaultValues = useMemo(
-    () => query.data ?? createDefaultValues(client.fields),
+    () => query.data?.values ?? createDefaultValues(client.fields),
     [client.fields, query.data],
   );
 
@@ -119,18 +123,26 @@ function ModuleSettingsModalContent({
             className="space-y-4"
             schema={client.schema}
             defaultValues={defaultValues}
-            mutationFn={async (values) =>
+            mutationFn={async (variables) =>
               fetcher<SettingsLoadResult>("/api/admin", {
                 action: "save-module-settings",
                 name,
-                values,
+                id: query.data?.id ?? null,
+                updatedAt: query.data?.updatedAt ?? null,
+                ...variables,
               })
             }
-            onSubmit={({ data, mutation }) => {
-              return mutation.mutateAsync(data);
+            onSubmit={({ data, mutation, changes }) => {
+              return mutation.mutateAsync({ changes, values: data });
             }}
-            onSuccess={(result) => {
-              queryClient.setQueryData(queryKey, result.values);
+            onSuccess={({ id, updatedAt, values }) => {
+              // A save returns the fields it wrote, or the whole record when it merged someone
+              // else's changes.
+              queryClient.setQueryData(queryKey, {
+                id,
+                updatedAt,
+                values: { ...query.data?.values, ...values },
+              });
             }}
           >
             <fieldset

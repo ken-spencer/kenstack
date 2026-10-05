@@ -31,6 +31,7 @@ import { getPresignedUrlAction } from "./presignedUrl";
 import { uploadCompleteAction } from "./uploadComplete";
 import { impersonateAction } from "./impersonate";
 import { pageEditAction } from "@kenstack/admin/pageEditor/api";
+import { emailLogAction } from "@kenstack/admin/emailLog/api";
 import { pageEditorServerFields } from "@kenstack/admin/pageEditor/serverFields";
 import {
   loadModuleSettingsAction,
@@ -105,6 +106,8 @@ const runAdminPipeline = async (request: NextRequest) => {
   const { action, name, ...json } = rawJson;
 
   switch (action) {
+    case "email-log":
+      return pipeline({ request, json }, emailLogAction());
     case "page-editor":
       return pipeline({ request, json }, pageEditAction());
     case "page-editor-get-presigned-url":

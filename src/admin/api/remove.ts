@@ -24,7 +24,7 @@ const schema = z.object({
 const actionNames = {
   permanent: "delete",
   restore: "restore",
-  trash: "soft-delete",
+  trash: "softDelete",
 } satisfies Record<z.infer<typeof schema>["mode"], string>;
 
 export const removeAction = ({

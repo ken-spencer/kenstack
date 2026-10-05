@@ -90,7 +90,7 @@ export async function impersonate(userId: number): Promise<void> {
   revalidateTag(sessionCacheTag(tokenHash), { expire: 0 });
 
   await audit({
-    action: "start-impersonation",
+    action: "startImpersonation",
     userId: user.id,
     rowId: session ? session.id : null,
     table: "sessions",
@@ -125,7 +125,7 @@ export async function logout(): Promise<void> {
     revalidateTag(sessionCacheTag(tokenHash), { expire: 0 });
 
     await audit({
-      action: "end-impersonation",
+      action: "endImpersonation",
       userId: user.impersonatedBy,
       rowId: session ? session.id : null,
       table: "sessions",
