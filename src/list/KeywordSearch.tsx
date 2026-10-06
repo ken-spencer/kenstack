@@ -27,17 +27,20 @@ export default function KeywordSearch<
         id={id}
         maxLength={maxLength}
         startAdornment={<Search className="pointer-events-none size-4" />}
+        // Always rendered, and only hidden while there is nothing to clear, so the input keeps its
+        // end padding and its width doesn't change as the visitor types.
         endAdornment={
-          filters.keywords.length ? (
-            <button
-              aria-label="Clear search"
-              type="button"
-              className="bg-foreground text-background flex size-4 items-center justify-center rounded-full"
-              onClick={() => setFilters((prev) => ({ ...prev, keywords: "" }))}
-            >
-              <X className="size-3" />
-            </button>
-          ) : null
+          <button
+            aria-label="Clear search"
+            type="button"
+            className={cn(
+              "bg-foreground text-background flex size-4 items-center justify-center rounded-full",
+              !filters.keywords.length && "invisible",
+            )}
+            onClick={() => setFilters((prev) => ({ ...prev, keywords: "" }))}
+          >
+            <X className="size-3" />
+          </button>
         }
         placeholder={placeholder}
         value={filters.keywords}
