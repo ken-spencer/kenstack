@@ -1,9 +1,11 @@
 "use client";
 
 import type { ComponentType, SVGProps } from "react";
-import { twMerge } from "tailwind-merge";
 
-import Field, { type FieldProps } from "@kenstack/forms/Field";
+import GroupField from "@kenstack/forms/GroupField";
+import type { FieldProps } from "@kenstack/forms/Field";
+import { ToggleGroup } from "@kenstack/forms/controls/ToggleGroup";
+import { cn } from "@kenstack/lib/utils";
 
 type RadioButtonOption = {
   icon?: ComponentType<SVGProps<SVGSVGElement>>;
@@ -33,57 +35,26 @@ export default function RadioButtonField({
   onValueChange,
 }: RadioButtonFieldProps) {
   return (
-    <Field
+    <GroupField
       name={name}
       label={label}
       help={help}
       description={description}
       className={className}
       render={({ field }) => (
-        <div className={twMerge("flex flex-wrap gap-1.5", groupClassName)}>
-          {options.map(({ icon: Icon, label, value }, index) => (
-            <label
-              key={value}
-              className={twMerge(
-                "cursor-pointer text-xs",
-                disabled && "cursor-not-allowed",
-              )}
-            >
-              <input
-                ref={index === 0 ? field.ref : undefined}
-                type="radio"
-                name={field.name}
-                value={value}
-                checked={
-                  typeof field.value === "string" && field.value === value
-                }
-                className="peer sr-only"
-                disabled={disabled}
-                onBlur={field.onBlur}
-                onChange={() => {
-                  if (disabled) {
-                    return;
-                  }
-
-                  field.onChange(value);
-                  onValueChange?.(value, { icon: Icon, label, value });
-                }}
-              />
-              <span
-                className={twMerge(
-                  "border-border flex min-h-9 min-w-28 items-center justify-center gap-1 rounded border px-2 text-center transition peer-checked:border-fuchsia-800 peer-checked:bg-fuchsia-800/85 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-fuchsia-800 peer-focus-visible:ring-offset-2",
-                  disabled
-                    ? "opacity-60"
-                    : "hover:bg-muted peer-checked:hover:bg-fuchsia-800",
-                  buttonClassName,
-                )}
-              >
-                {Icon ? <Icon className="size-3.5" /> : null}
-                {label}
-              </span>
-            </label>
-          ))}
-        </div>
+        <ToggleGroup
+          className={cn("mt-2", groupClassName)}
+          disabled={disabled}
+          itemClassName={buttonClassName}
+          name={field.name}
+          options={options}
+          value={typeof field.value === "string" ? field.value : ""}
+          onBlur={field.onBlur}
+          onValueChange={(value, option) => {
+            field.onChange(value);
+            onValueChange?.(value, option);
+          }}
+        />
       )}
     />
   );

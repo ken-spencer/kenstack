@@ -64,6 +64,19 @@ pipeline schema work, or batch scripts.
   owning row or derives it in a query. Keep a copy only as a deliberate point-in-time snapshot, such
   as an order line's price at purchase, and say so in a comment; two live columns holding the same
   fact drift apart and need code to keep them in step.
+- A table has one Drizzle definition, in its owner. Code outside the owner, such as a Sympolis
+  feature, never declares a second definition of the table and never adds columns to it: nothing checks
+  a second definition against the real table, so a missing column type-checks and fails at runtime.
+  The exception is a test mock standing in for the host (such as Sympolis's `mocks/app/`), where the
+  stand-in is the point. Instead:
+  - to read the owner's columns, import the owner's table (`@kenstack/modules/users/tables` for users);
+  - to keep its own facts about a row, such as a setting or a provider id, it exports columns, named
+    with its feature as a prefix (`task_emails`), that the host spreads into the owner's table, and
+    reads them as below;
+  - to read columns a host adds to an owner's table, such as the address columns a site mixes into
+    users, go through the host's registered module via `@app/modules`, as
+    `kenstack/src/auth/server/getUsersModule.ts` does, with the package's mock standing in when it
+    type-checks alone.
 - Logs of every kind, including audit rows, error reports and request logs, are history. No code path
   reads them to decide behavior; a fact that decides behavior lives in its owner's rows or columns.
   Only staff history views and reports read logs.

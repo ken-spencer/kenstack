@@ -10,7 +10,7 @@ import { media as mediaTable } from "@kenstack/db/tables";
 import type { User } from "@kenstack/types";
 import { mediaListField as createMediaListField, mediaListSchema } from ".";
 import type { FieldLoadContext, FieldSaveContext } from "../serverField";
-import { serverField, type ServerFieldResolverFor } from "../serverField";
+import { serverField } from "../serverField";
 import { imageMetadata } from "../internal/media/attachment";
 import { prepareMediaCrop } from "../internal/media/crop";
 
@@ -22,11 +22,7 @@ type MediaHandlerConfig = {
   };
 };
 
-export function mediaListField({
-  table,
-}: MediaHandlerConfig): ServerFieldResolverFor<
-  ReturnType<typeof createMediaListField>
-> {
+export function mediaListField({ table }: MediaHandlerConfig) {
   return serverField(createMediaListField(), (field) => ({
     upload: {
       accept: field.accept,
