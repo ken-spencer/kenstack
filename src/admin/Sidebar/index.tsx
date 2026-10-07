@@ -23,6 +23,7 @@ const sidebarCookieName = "sidebar_state";
 type AdminSidebarProps = {
   accountMenu?: React.ReactNode;
   logo?: React.ReactNode;
+  platformLogo?: React.ReactNode;
   sidebarAfter?: React.ReactNode;
   sidebarBefore?: React.ReactNode;
   children: React.ReactNode;
@@ -48,6 +49,7 @@ async function AdminSidebarWithDefaultOpen(props: AdminSidebarProps) {
 function AdminSidebarContent({
   accountMenu,
   logo,
+  platformLogo,
   sidebarAfter,
   sidebarBefore,
   children,
@@ -137,7 +139,7 @@ function AdminSidebarContent({
     <QueryProvider>
       <SidebarProvider className="flex" defaultOpen={defaultOpen}>
         <NavigationBlockerProvider>
-          <AppSidebar content={sidebarNav} />
+          <AppSidebar content={sidebarNav} platformLogo={platformLogo} />
           <Content
             logo={logo}
             moduleLinks={moduleLinks.map(({ headerIcon, name, title }) => ({

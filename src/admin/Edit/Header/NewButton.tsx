@@ -7,9 +7,9 @@ import { useAdminEdit } from "../context";
 
 export default function NewButton() {
   const searchParams = useSearchParams();
-  const { listPath, single } = useAdminEdit();
+  const { canCreate, listPath } = useAdminEdit();
 
-  if (single) {
+  if (!canCreate) {
     return null;
   }
 

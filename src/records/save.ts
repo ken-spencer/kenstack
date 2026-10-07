@@ -69,14 +69,20 @@ type SaveRecordOptions<
     select: ReturnType<typeof selectFields<TTable, TFields>>;
     user: User;
   }) => Promise<SelectedFieldValues<TTable, TFields> | undefined>;
+  // Runs inside the transaction after the fields save; a failure rolls the save back. Work that must
+  // wait for the commit, such as email, is returned as `afterCommit`.
   afterSave?: (ctx: {
     tx: DbTransaction;
     row: SelectedFieldValues<TTable, TFields>;
     values: Record<string, unknown>;
     savedValues: Record<string, unknown>;
     user: User;
+    // The fields the save records as changed, and whether it inserted the row.
+    changes: string[];
+    isNew: boolean;
   }) => Promise<{
-    revisionValues: Record<string, unknown>;
+    revisionValues?: Record<string, unknown>;
+    afterCommit?: FieldSaveTask[];
   } | void>;
   additionalPreparations?: RecordPreparation[];
   translateError?: (error: unknown) => FetchError | undefined;
@@ -166,6 +172,7 @@ export async function saveRecord<
       return result;
     }
     committed = true;
+    const { afterCommit, ...saved } = result;
 
     // Invalidate before follow-up tasks or audit can fail or read stale data.
     try {
@@ -173,6 +180,7 @@ export async function saveRecord<
     } finally {
       await runSaveTasks([
         ...preparation.afterCommit,
+        ...afterCommit,
         ...additionalPreparations.flatMap(
           (additional) => additional.afterCommit,
         ),
@@ -188,7 +196,7 @@ export async function saveRecord<
       data: { changes: revisionChanges },
     });
 
-    return result;
+    return saved;
   } catch (err) {
     if (!committed) {
       await runSaveTasks(afterFailure);
@@ -478,7 +486,10 @@ export async function savePreparedRecord<
     values: preparation.values,
     savedValues,
     user,
+    changes: snapshotChanges,
+    isNew: !id,
   });
+  const afterCommit = afterResult?.afterCommit ?? [];
   const revisionValues = {
     ...savedValues,
     ...afterResult?.revisionValues,
@@ -489,6 +500,7 @@ export async function savePreparedRecord<
       status: "success" as const,
       row: savedRow,
       values: savedValues,
+      afterCommit,
     };
   }
 
@@ -496,6 +508,7 @@ export async function savePreparedRecord<
   return {
     status: "success" as const,
     row: savedRow,
+    afterCommit,
     // The editor of a merged save has not seen the other changes, so it gets the whole record to adopt
     // with the token, as the edit loader would load it.
     values: merged
@@ -638,7 +651,8 @@ const changedMessage =
   "This record changed after you opened it. Reload to see the current version.";
 
 async function runSaveTasks(tasks: FieldSaveTask[]) {
-  await Promise.allSettled(tasks.map((task) => task()));
+  // Async, so a task that throws at once settles like one that rejects and the rest still run.
+  await Promise.allSettled(tasks.map(async (task) => task()));
 }
 
 async function preSaveFields({

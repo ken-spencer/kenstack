@@ -1,5 +1,10 @@
 "use client";
 
+/*
+ * Public entry point: the editor's Save button, with Cmd+S and, for a publishing table, the status
+ * menu, for an EditToolbar. Exports only SaveButton.
+ */
+
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { CalendarClock, Check, ChevronDown } from "lucide-react";

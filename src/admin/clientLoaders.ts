@@ -66,6 +66,7 @@ function buildAdminClient(admin: AdminClientInput): AdminClient {
   return {
     fields,
     listItems: admin.listItems,
+    Edit: admin.Edit,
     EditForm: admin.EditForm,
     oneToOne,
   };

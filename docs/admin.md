@@ -56,6 +56,47 @@ foreign keys, or generic CRUD support.
 - Use `border-[var(--admin-divider)]`, or its side-specific equivalent, for structural admin borders,
   and the generic border color for fields and controls.
 
+## Edit Page Route
+
+A record's editor answers at `/admin/<name>/<id>` and also at `/admin/<name>/<id>/edit`. A module
+whose record page is a read-only view the host mounts at `/admin/<name>/[id]` links its Edit button to
+`/edit`.
+
+## Custom Editors
+
+A module whose editor needs more than its generated form passes `Edit` to `defineAdminClient`
+beside or in place of `EditForm`. `Edit` renders `AdminEdit` from `@kenstack/admin/Edit/AdminEdit`,
+which owns the form, saving, conflicts, the unsaved-changes guard, the breadcrumbs and the child-module
+links:
+
+```tsx
+<AdminEdit
+  toolbar={
+    <EditToolbar end={<DeleteButton />}>
+      <ViewButton />
+      <SaveButton />
+    </EditToolbar>
+  }
+  footer={
+    <EditFooter>
+      <RecordDates />
+    </EditFooter>
+  }
+>
+  <Fields />
+</AdminEdit>
+```
+
+- Each slot takes an element. An omitted slot keeps Kenstack's default: the standard toolbar, the
+  footer with the record's dates and Previous/Next, and the module's `EditForm` as the fields (its
+  relation tabs for a one-to-one module). An `Edit` given without `EditForm` must pass its fields.
+- `EditToolbar` (`Edit/Header/EditToolbar`) leads with its children and ends with `end`. Compose it
+  from `ViewButton`, `SaveButton` and `DeleteButton` in `Edit/Header/`; `ViewButton` links to
+  the record's own page at `/admin/<name>/<id>`. `EditFooter` and `RecordDates` are in `Edit/`.
+- The fields read the record from `useAdminEdit()` (`@kenstack/admin/Edit/context`).
+- A module's own list keys its queries under `getAdminListQueryPrefix(name)` from
+  `@kenstack/admin/List/queryKey`, so the editor's saves and deletes refresh it.
+
 ## Edit Form Layout
 
 - Follow the established two-column admin edit rhythm: primary identity fields first (`name`, `title`,
@@ -179,6 +220,13 @@ Clearing it when the content changes:
   Declare additional content dependencies once in `admin.revalidate`; public forms do not duplicate
   that tag list. Session snapshots also carry the users record tag, so module saves and removals need
   no site-level session-invalidation callback.
+- A module whose records carry their own work on every save, such as a timeline entry or a notice,
+  declares `admin.afterSave`. Both save paths run it inside the save's transaction after the fields
+  save, after Kenstack's own hooks, with the saved `row`, the `values`, `changes` and `isNew`; a
+  failure rolls the save back. Email and other work that must wait for the commit is returned as
+  `afterCommit`. A field hook runs only when its field changed; `afterSave` runs for every save that
+  writes the record, but not for one with nothing to record, a trash, a restore or a reorder. A site
+  form's `row` holds only the columns it saved; the hook reads others through `tx`.
 - `loadRecord` does not cache reads; to cache one, see
   [Caching Module Content](#caching-module-content).
 - Use `saveAdminRecord({ module, id, changes, values, updatedAt })` for the standard admin module save

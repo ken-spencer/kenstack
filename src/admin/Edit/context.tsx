@@ -22,6 +22,11 @@ type AdminEditProps = {
   defaultValues: Record<string, unknown>;
   client: ModuleClient | undefined;
   children: React.ReactNode;
+  // Rendered on the server. AdminEdit places them inside its form, whose navigation guard their
+  // links need.
+  breadcrumbs: React.ReactNode;
+  childModuleLinks: React.ReactNode;
+  canCreate: boolean;
   parentId?: number;
   preview?: PreviewPath;
   oneToOne?: OneToOneEdit;
@@ -58,6 +63,9 @@ type AdminEditContext = {
   hasSeoDialog: boolean;
   preview?: PreviewPath;
   oneToOne?: OneToOneEdit;
+  breadcrumbs: React.ReactNode;
+  childModuleLinks: React.ReactNode;
+  canCreate: boolean;
 };
 
 const AdminEditContext = createContext<AdminEditContext | null>(null);
@@ -77,6 +85,9 @@ export function AdminEditProvider({
   oneToOne,
   publish,
   seo,
+  breadcrumbs,
+  childModuleLinks,
+  canCreate,
   children,
 }: AdminEditProps) {
   if (!client?.admin) {
@@ -113,6 +124,9 @@ export function AdminEditProvider({
     hasSeoDialog: seo,
     preview,
     oneToOne,
+    breadcrumbs,
+    childModuleLinks,
+    canCreate,
   };
   return (
     <AdminEditContext.Provider value={context}>

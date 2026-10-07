@@ -355,6 +355,20 @@ async function saveModule(
     revisionRelations: adminConfig.oneToOne?.relations,
     translateError: admin ? adminConfig.translateError : undefined,
     ...extensions,
+    // Kenstack's own hook, such as a one-to-one relation's save, runs first, then the module's.
+    afterSave: async (
+      ctx: Parameters<NonNullable<typeof extensions.afterSave>>[0],
+    ) => {
+      const kenstackResult = await extensions.afterSave?.(ctx);
+      const moduleResult = await adminConfig.afterSave?.(ctx);
+      return {
+        revisionValues: kenstackResult?.revisionValues,
+        afterCommit: [
+          ...(kenstackResult?.afterCommit ?? []),
+          ...(moduleResult?.afterCommit ?? []),
+        ],
+      };
+    },
   };
   let result;
   if (!("list" in adminConfig)) {

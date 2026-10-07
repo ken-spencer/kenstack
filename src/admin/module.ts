@@ -51,6 +51,9 @@ import type { AdminKeyTable, AdminTable } from "@kenstack/admin/table";
 import type { ModuleClient } from "@kenstack/admin/client";
 import type { RevalidateTagRule } from "@kenstack/lib/revalidate";
 import type { SelectedFieldValues } from "@kenstack/records/select";
+import type { DbTransaction } from "@kenstack/db/types";
+import type { FieldSaveTask } from "@kenstack/fields/serverField";
+import type { User } from "@kenstack/types";
 import type { FetchError } from "@kenstack/api/fetcher";
 import type { NumericIdTable } from "@kenstack/db/types";
 import {
@@ -130,7 +133,28 @@ type AdminConfigBase<
   // `list.select`.
   select?: SelectedFields;
   translateError?: (error: unknown) => FetchError | undefined;
+  // The module's own work on every save that writes one of its records, from the editor or a site form,
+  // inside the save's transaction after the fields save: a failure rolls the save back. `changes` names
+  // the fields the save records, and `isNew` says it inserted the row (a singleton's site-form upsert
+  // always says so). A site form's `row` holds only the columns it saved; read others through `tx`.
+  // Work that must wait for the commit, such as email, is returned as `afterCommit`.
+  afterSave?: ModuleAfterSave<
+    SelectedFieldValues<TTable, TFields & GeneratedFields<TTable>>
+  >;
 };
+
+// Resolved modules share one registry, so the hook stays bivariant in its row there, as list renderers do.
+type ModuleAfterSave<TRow extends { id: number } = { id: number }> = {
+  bivarianceHack(ctx: {
+    tx: DbTransaction;
+    row: TRow;
+    values: Record<string, unknown>;
+    savedValues: Record<string, unknown>;
+    user: User;
+    changes: string[];
+    isNew: boolean;
+  }): Promise<{ afterCommit?: FieldSaveTask[] } | void>;
+}["bivarianceHack"];
 
 type AdminListConfig<
   TTable extends AdminTable,
@@ -435,6 +459,7 @@ function resolveAdmin(admin: AdminConfigRuntime | undefined) {
       : resolvedFields;
     // Erases module-specific field keys after validation so resolved modules share one registry type.
     const flatFields = fields as ServerDefinedFields;
+    const afterSave: ModuleAfterSave | undefined = config.afterSave;
     assertSelectKeys(
       config.select,
       [
@@ -454,6 +479,7 @@ function resolveAdmin(admin: AdminConfigRuntime | undefined) {
       seo,
       revalidate: config.revalidate,
       translateError: config.translateError,
+      afterSave,
       preview: config.preview,
       fields: flatFields,
       schema: createSchemaFromFields(flatFields, oneToOne),

@@ -108,12 +108,19 @@ type BareFieldDefinitions<TFields extends DefinedFields> = {
 
 export function defineAdminClient<
   const TFields extends DefinedFields = DefinedFields,
->(client: {
-  fields: TFields & BareFieldDefinitions<TFields>;
-  listItems?: ListItems<TFields>;
-  EditForm: FC<PropsWithChildren>;
-  oneToOne?: Record<string, ClientOneToOneDefinition>;
-}) {
+>(
+  client: {
+    fields: TFields & BareFieldDefinitions<TFields>;
+    listItems?: ListItems<TFields>;
+    oneToOne?: Record<string, ClientOneToOneDefinition>;
+  } &
+    // Edit, the module's own editor, renders AdminEdit; AdminEdit renders EditForm when it is given
+    // no fields.
+    (
+      | { Edit?: FC; EditForm: FC<PropsWithChildren> }
+      | { Edit: FC; EditForm?: FC<PropsWithChildren> }
+    ),
+) {
   return client;
 }
 
@@ -139,7 +146,8 @@ export type ModuleClient = {
 export type AdminClient = {
   fields: DefinedFields;
   listItems?: ListItems<DefinedFields>;
-  EditForm: FC<PropsWithChildren>;
+  Edit?: FC;
+  EditForm?: FC<PropsWithChildren>;
   oneToOne?: ClientOneToOne;
 };
 export type SettingsClient = {

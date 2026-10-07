@@ -72,7 +72,8 @@ pipeline schema work, or batch scripts.
   - to read the owner's columns, import the owner's table (`@kenstack/modules/users/tables` for users);
   - to keep its own facts about a row, such as a setting or a provider id, it exports columns, named
     with its feature as a prefix (`task_emails`), that the host spreads into the owner's table, and
-    reads them as below;
+    reads them as below. That is the default, not a given: ask Ken before adding each one, since
+    some facts are better as a table of their own;
   - to read columns a host adds to an owner's table, such as the address columns a site mixes into
     users, go through the host's registered module via `@app/modules`, as
     `kenstack/src/auth/server/getUsersModule.ts` does, with the package's mock standing in when it

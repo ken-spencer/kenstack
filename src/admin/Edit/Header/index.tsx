@@ -7,6 +7,7 @@ import { metaFieldOptions } from "@kenstack/admin/metaFields";
 import { defineFormFields } from "@kenstack/fields/formFields";
 import { useAdminEdit } from "../context";
 import DeleteButton, { RestoreButton } from "./DeleteButton";
+import EditToolbar from "./EditToolbar";
 import ListButton from "./ListButton";
 import NewButton from "./NewButton";
 import PreviewButton from "./PreviewButton";
@@ -26,42 +27,41 @@ const metaFormFields = defineFormFields(
 );
 const seoFieldNames = Object.keys(metaFormFields);
 
-export default function AdminEditHeader({ canCreate = true }) {
+export default function AdminEditHeader() {
   const { hasSeoDialog } = useAdminEdit();
 
-  // Pinned so Save stays reachable at the end of a long form; breadcrumbs
-  // above it scroll away.
   return (
-    <div className="bg-background sticky top-0 z-20 flex gap-4 border-b border-b-[var(--admin-divider)]">
-      <div className="flex grow items-center gap-1">
-        {canCreate ? <NewButton /> : null}
-        <ListButton />
-        <SaveButton />
-      </div>
-      <div className="flex gap-1">
-        {hasSeoDialog ? (
-          <SeoDialog names={seoFieldNames}>
-            <SeoDialogSection
-              help="Shown in search results. Leave empty to use the page's own title and description."
-              title="Search results"
-            >
-              <metaFormFields.seoTitle />
-              <metaFormFields.seoDescription />
-            </SeoDialogSection>
-            <SeoDialogSection
-              help="The image shown when this page is shared in social media and messaging apps. Leave empty to use the site default. 1200 × 630 pixels works best."
-              title="Link previews"
-            >
-              <metaFormFields.ogImage />
-            </SeoDialogSection>
-          </SeoDialog>
-        ) : null}
-        <PreviewButton />
-        <SwitchUserButton />
-        <RevisionHistoryButton />
-        <RestoreButton />
-        <DeleteButton />
-      </div>
-    </div>
+    <EditToolbar
+      end={
+        <>
+          {hasSeoDialog ? (
+            <SeoDialog names={seoFieldNames}>
+              <SeoDialogSection
+                help="Shown in search results. Leave empty to use the page's own title and description."
+                title="Search results"
+              >
+                <metaFormFields.seoTitle />
+                <metaFormFields.seoDescription />
+              </SeoDialogSection>
+              <SeoDialogSection
+                help="The image shown when this page is shared in social media and messaging apps. Leave empty to use the site default. 1200 × 630 pixels works best."
+                title="Link previews"
+              >
+                <metaFormFields.ogImage />
+              </SeoDialogSection>
+            </SeoDialog>
+          ) : null}
+          <PreviewButton />
+          <SwitchUserButton />
+          <RevisionHistoryButton />
+          <RestoreButton />
+          <DeleteButton />
+        </>
+      }
+    >
+      <NewButton />
+      <ListButton />
+      <SaveButton />
+    </EditToolbar>
   );
 }

@@ -5,6 +5,13 @@ contract lives in `docs/upgrading.md`.
 
 ## Unreleased
 
+### Signed In As
+
+`SignedInAs({ label })`, from `@kenstack/auth/components/Login/SignedInAs`, names the account a step
+acts for: the avatar, the label, then the name with the email below it, or the email alone, and
+"Not you?", which signs out without leaving the page. In a flow the login step then comes back. It
+renders nothing for a signed-out visitor. Nothing to migrate.
+
 ### Modules Carry Their Clients
 
 A module's admin client now travels with its definition, and the site's client registry is gone.
@@ -19,9 +26,10 @@ Now:
   default-exports only lazy imports, `{ admin: () => import("./admin") }`, adding
   `settings: () => import("./settings")` for a module with settings.
 - `client/admin.ts` default-exports `defineAdminClient({ fields, EditForm, listItems, oneToOne })`, the
-  old `admin` contents. `client/settings.ts` default-exports
-  `defineSettingsClient({ fields, SettingsForm })`, the old `settings` contents. Both come from
-  `@kenstack/admin/client`.
+  old `admin` contents. A module may also pass `Edit`, its own editor (`docs/admin.md`, "Custom
+  Editors"), and then needs no `EditForm`; `AdminClient`'s `EditForm` is optional.
+  `client/settings.ts` default-exports `defineSettingsClient({ fields, SettingsForm })`, the old
+  `settings` contents. Both come from `@kenstack/admin/client`.
 - The module's `index.ts` imports `./client` and passes it to `defineModule({ name, client, admin })`;
   `defineUsersModule` and `defineSiteSettingsModule` take the same `client`. On the server it is a
   client reference, so server code passes it through and never reads its properties.
@@ -848,7 +856,8 @@ login flow at `/login`. Final post-login redirects retain the default check to a
 ### Automatic Child-Module Navigation
 
 Kenstack now renders child-module links below the edit toolbar for saved parent records. The
-`ChildModuleLinks` component is removed, and `useAdminEdit()` no longer returns `childModuleLinks`.
+`ChildModuleLinks` component is removed, and `useAdminEdit()`'s `childModuleLinks` is now the rendered
+links, which `AdminEdit` places; a host edit form no longer places them.
 Child lists and edit pages retain their breadcrumbs back to the parent record.
 
 Migration steps:

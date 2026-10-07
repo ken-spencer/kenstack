@@ -175,6 +175,9 @@ export default function EditForm({ children }: { children: React.ReactNode }) {
         });
       }}
     >
+      {/* Enter in a field submits through the form's first submit button. This one comes first, so
+          it saves and stays, rather than a toolbar link that saves and then leaves. */}
+      <button type="submit" className="sr-only" tabIndex={-1} aria-hidden />
       {children}
     </Form>
   );

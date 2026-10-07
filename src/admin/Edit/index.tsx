@@ -1,8 +1,5 @@
 import { AdminEditProvider } from "./context";
-import EditForm from "./Form";
-import Header from "./Header";
-import Footer from "./Footer";
-import OneToOneTabs from "./OneToOneTabs";
+import EditBody from "./Body";
 import Breadcrumbs from "@kenstack/admin/components/Breadcrumbs";
 import Button from "@kenstack/components/Button";
 import { uploadsConfigured } from "@kenstack/lib/mediaStorage";
@@ -27,7 +24,7 @@ import { getOneToOneQueryKey } from "./queryKey";
 import { modules } from "@app/modules";
 import { GuardedLink } from "@kenstack/forms/NavigationBlocker";
 
-export default async function AdminEdit({
+export default async function AdminEditPage({
   name,
   moduleTitle,
   id,
@@ -141,23 +138,20 @@ export default async function AdminEdit({
         client={client}
         publish={adminConfig.publish}
         seo={adminConfig.seo}
+        breadcrumbs={
+          <Breadcrumbs
+            currentTitle={isNew ? "New Entry" : getAdminRecordTitle(item)}
+            moduleName={name}
+            moduleTitle={moduleTitle}
+            parent={parentRecord}
+          />
+        }
+        childModuleLinks={
+          !isNew && item ? renderChildModuleLinks(modules, name, item.id) : null
+        }
+        canCreate={"list" in adminConfig && adminConfig.create}
       >
-        <EditForm>
-          <div className="flex flex-col gap-2">
-            <Breadcrumbs
-              currentTitle={isNew ? "New Entry" : getAdminRecordTitle(item)}
-              moduleName={name}
-              moduleTitle={moduleTitle}
-              parent={parentRecord}
-            />
-            <Header canCreate={"list" in adminConfig && adminConfig.create} />
-            {!isNew && item
-              ? renderChildModuleLinks(modules, name, item.id)
-              : null}
-            <OneToOneTabs />
-            <Footer />
-          </div>
-        </EditForm>
+        <EditBody />
       </AdminEditProvider>
     </HydrationBoundary>
   );

@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  type FC,
+  type KeyboardEvent,
+  type PropsWithChildren,
+} from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useFormContext, useWatch } from "react-hook-form";
 
@@ -13,16 +19,32 @@ import { getOneToOneQueryKey } from "./queryKey";
 
 // Renders the standard edit form or relation tabs according to the module configuration.
 export default function OneToOneTabs() {
-  const { client, oneToOne } = useAdminEdit();
+  const {
+    client: { EditForm },
+    name,
+    oneToOne,
+  } = useAdminEdit();
+  // Reached when a module defines Edit but no EditForm, and its Edit renders AdminEdit without fields.
+  if (!EditForm) {
+    throw new Error(
+      `The "${name}" admin client has no EditForm, so its Edit must pass its fields to AdminEdit.`,
+    );
+  }
   if (!oneToOne || !oneToOne.relations.length) {
-    return <client.EditForm />;
+    return <EditForm />;
   }
 
-  return <TabSet oneToOne={oneToOne} />;
+  return <TabSet EditForm={EditForm} oneToOne={oneToOne} />;
 }
 
 // Renders relation tabs and handles switching so each field set appears as a separate section.
-function TabSet({ oneToOne }: { oneToOne: OneToOneEdit }) {
+function TabSet({
+  EditForm,
+  oneToOne,
+}: {
+  EditForm: FC<PropsWithChildren>;
+  oneToOne: OneToOneEdit;
+}) {
   const { control, getFieldState, unregister, setValue } = useFormContext();
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const selectionValue = useWatch({
@@ -133,7 +155,7 @@ function TabSet({ oneToOne }: { oneToOne: OneToOneEdit }) {
           id={`admin-panel-${activeRelation.name}`}
           role="tabpanel"
         >
-          <Panel relation={activeRelation} />
+          <Panel ParentEditForm={EditForm} relation={activeRelation} />
         </div>
       ) : null}
     </div>
@@ -142,7 +164,13 @@ function TabSet({ oneToOne }: { oneToOne: OneToOneEdit }) {
 
 // Renders the active relation form and loads its values without adding inactive sections to form
 // state.
-function Panel({ relation }: { relation: OneToOneEdit["relations"][number] }) {
+function Panel({
+  ParentEditForm,
+  relation,
+}: {
+  ParentEditForm: FC<PropsWithChildren>;
+  relation: OneToOneEdit["relations"][number];
+}) {
   const { getFieldState, getValues, register, resetField, setValue } =
     useFormContext();
   const { apiPath, client, id, isNew, name } = useAdminEdit();
@@ -240,7 +268,7 @@ function Panel({ relation }: { relation: OneToOneEdit["relations"][number] }) {
 
   return (
     <EditForm
-      ParentEditForm={client.EditForm}
+      ParentEditForm={ParentEditForm}
       fields={fields}
       prefix={relation.name}
     />

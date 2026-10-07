@@ -13,24 +13,29 @@ export default function LogoutButton({ className }: { className?: string }) {
     <button
       className={cn("menu-item", className)}
       type="button"
-      onClick={() => {
-        logoutUser()
-          .then(() => {
-            router.push("/");
-            router.refresh();
-          })
-          .catch((error) => {
-            window.alert(
-              "There was an unexpected problem handling your request. Please try again later.",
-            );
-
-            // eslint-disable-next-line no-console
-            console.error(error);
-          });
-      }}
+      onClick={() =>
+        logout(() => {
+          router.push("/");
+          router.refresh();
+        })
+      }
     >
       <LogOut />
       Logout
     </button>
   );
+}
+
+// Logs out, then runs onLoggedOut; a failure tells the visitor to try again.
+export function logout(onLoggedOut: () => void) {
+  logoutUser()
+    .then(onLoggedOut)
+    .catch((error) => {
+      window.alert(
+        "There was an unexpected problem handling your request. Please try again later.",
+      );
+
+      // eslint-disable-next-line no-console
+      console.error(error);
+    });
 }

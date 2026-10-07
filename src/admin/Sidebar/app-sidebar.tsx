@@ -12,7 +12,13 @@ import { X } from "lucide-react";
 import { Button } from "@kenstack/components/Button";
 import KenstackLogo from "./KenstackLogo";
 
-export function AppSidebar({ content }: { content: React.ReactNode }) {
+export function AppSidebar({
+  content,
+  platformLogo,
+}: {
+  content: React.ReactNode;
+  platformLogo?: React.ReactNode;
+}) {
   const { toggleSidebar, isMobile } = useSidebar();
 
   return (
@@ -22,7 +28,7 @@ export function AppSidebar({ content }: { content: React.ReactNode }) {
           <div className="flex items-center gap-2">
             <SidebarTrigger className={isMobile ? "hidden" : ""} />
             <div className="flex h-9 items-center group-data-[collapsible=icon]:hidden">
-              <KenstackLogo className="h-9 w-auto" />
+              {platformLogo ?? <KenstackLogo className="h-9 w-auto" />}
             </div>
           </div>
           <Button

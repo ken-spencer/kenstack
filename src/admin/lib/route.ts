@@ -19,8 +19,12 @@ export function parseAdminRouteSegments(segments: string[]) {
     };
   }
 
-  if (segments.length > 2) {
-    return null;
+  // A record's editor also answers at `<id>/edit`, for a module whose record page is a view the host
+  // mounts at `<id>`.
+  if (segments.length === 3) {
+    return third === "edit" && idPattern.test(second)
+      ? { name: first, id: Number(second), isNew: false }
+      : null;
   }
 
   if (second === undefined) {

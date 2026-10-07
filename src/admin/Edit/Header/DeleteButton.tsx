@@ -1,4 +1,10 @@
 "use client";
+
+/*
+ * Public entry point: the editor's trash and delete-forever button, for an EditToolbar. Exports only
+ * DeleteButton; RestoreButton is Kenstack's own, for its default toolbar.
+ */
+
 import {
   AlertDialog,
   AlertDialogAction,
