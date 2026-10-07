@@ -11,7 +11,7 @@ import type {
 } from "@kenstack/admin/module";
 import Breadcrumbs from "@kenstack/admin/components/Breadcrumbs";
 import { getFilterMeta, getSortMeta } from "@kenstack/admin/types/list";
-import type { AdminClientRegistry } from "@kenstack/admin/clientLoaders";
+import type { ModuleClient } from "@kenstack/admin/client";
 import {
   parseListSearchParams,
   type ListSearchParams,
@@ -24,7 +24,7 @@ import { notFound } from "next/navigation";
 type AdminListProps = {
   adminConfig: AnyAdminConfig;
   basePath?: string;
-  clients: AdminClientRegistry;
+  client: ModuleClient | undefined;
   searchParams: ListSearchParams;
   name: string;
   moduleTitle: string;
@@ -35,7 +35,7 @@ type AdminListProps = {
 export default async function AdminListCont({
   adminConfig,
   basePath,
-  clients,
+  client,
   searchParams,
   name,
   moduleTitle,
@@ -80,7 +80,7 @@ export default async function AdminListCont({
         name={name}
         parentId={parentId}
         basePath={basePath}
-        clients={clients}
+        client={client}
         sort={sortMeta}
         filter={filterMeta}
       >

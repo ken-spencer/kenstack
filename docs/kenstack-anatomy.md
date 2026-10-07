@@ -72,7 +72,7 @@ Standard editors come from the built-in client field-kind registry. A consuming 
 property-specific components over those defaults and returns fixed-name generated components; extract
 that call to a module `fields/formFields.ts` only when multiple production consumers need the same
 configured map. Unresolved fields are omitted because the form may render them through bespoke panels.
-`defineClient(...)` receives only the bare isomorphic definitions and neither imports nor resolves
+`defineAdminClient(...)` receives only the bare isomorphic definitions and neither imports nor resolves
 editor components. Relation forms pass the field subset they render and their `prefix` directly to
 `defineFormFields(...)`; there is no separate resolved component-bearing field map. Several fields may
 share a primitive directly, without wrappers for symmetry.

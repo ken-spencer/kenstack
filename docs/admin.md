@@ -94,7 +94,7 @@ foreign keys, or generic CRUD support.
 
 ## Generated Fields
 
-- Module form-component generation, client registration, settings forms, and import direction follow
+- Module form-component generation, module clients, settings forms, and import direction follow
   `docs/module-anatomy.md`; reusable field and component boundaries follow
   `docs/kenstack-anatomy.md#field-library`.
 - `defineTable({ publish, seo })` owns the publication and SEO fields. `defineModule(...)` and the admin
@@ -124,11 +124,11 @@ foreign keys, or generic CRUD support.
   components are owned; when a bespoke panel renders only a subset, generate that subset and pass the
   same prefix or full field names into its custom controls.
 - A one-to-one kind's server and client entries, their registration by canonical key in
-  `admin.oneToOne`, and which fields stay in the parent `EditForm` follow
-  `docs/module-anatomy.md#one-to-one-kind-units`. The registration key is the persisted discriminator,
-  and the first registered relation is the default. The host table declares the persisted `kind`
-  column; `defineModule(...)` adds the reserved field to the resolved map, schema, defaults, list, and
-  filters, so it is never declared or rendered as an ordinary parent field.
+  `admin.oneToOne` and the admin client's `oneToOne`, and which fields stay in the parent `EditForm`
+  follow `docs/module-anatomy.md#one-to-one-kind-units`. The registration key is the persisted
+  discriminator, and the first registered relation is the default. The host table declares the
+  persisted `kind` column; `defineModule(...)` adds the reserved field to the resolved map, schema,
+  defaults, list, and filters, so it is never declared or rendered as an ordinary parent field.
 - Use `relationshipField({ mode: "single" })` for a scalar foreign-key selector. The field name
   identifies a directly persisted table column with exactly one single-column foreign key to the `id`
   of exactly one registered admin-list module; Kenstack derives the searchable options, labels, and

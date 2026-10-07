@@ -7,6 +7,7 @@ import type { SelectedFields } from "drizzle-orm/pg-core";
 import type { SelectResultFields } from "drizzle-orm/query-builders/select.types";
 import { UsersRound } from "lucide-react";
 
+import type { ModuleClient } from "@kenstack/admin/client";
 import type { AdminConfig } from "@kenstack/admin/module";
 import { defineModule } from "@kenstack/admin/server";
 import type { AuthUsersTable, Role } from "@kenstack/auth/server/types";
@@ -41,16 +42,18 @@ export function defineUsersModule<
   const TOptions extends UsersOptions<TSelect, TPublic> = Record<never, never>,
 >({
   admin,
+  client,
   ...options
-}: TOptions & { admin: AdminConfig<TTable, TFields> } & UsersOptions<
-    TSelect,
-    TPublic
-  >) {
+}: TOptions & {
+  admin: AdminConfig<TTable, TFields>;
+  client?: ModuleClient;
+} & UsersOptions<TSelect, TPublic>) {
   return {
     ...defineModule({
       name: "users",
       title: "Users",
       icon: UsersRound,
+      client,
       admin,
     }),
     ...options,

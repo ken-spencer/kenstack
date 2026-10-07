@@ -5,6 +5,7 @@
 
 import { Settings } from "lucide-react";
 
+import type { ModuleClient } from "@kenstack/admin/client";
 import type { AdminConfig } from "@kenstack/admin/module";
 import { defineModule } from "@kenstack/admin/server";
 import type { AdminKeyTable } from "@kenstack/admin/table";
@@ -13,11 +14,18 @@ import type { ServerDefinedFields } from "@kenstack/fields/internal/serverResolu
 export function defineSiteSettingsModule<
   const TTable extends AdminKeyTable,
   const TFields extends ServerDefinedFields,
->({ admin }: { admin: AdminConfig<TTable, TFields> }) {
+>({
+  admin,
+  client,
+}: {
+  admin: AdminConfig<TTable, TFields>;
+  client?: ModuleClient;
+}) {
   return defineModule({
     name: "site-settings",
     title: "Site Settings",
     icon: Settings,
+    client,
     admin,
   });
 }

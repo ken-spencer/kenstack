@@ -1,25 +1,78 @@
-"use client";
-
-/*
- * Public entry point: the admin client-registry API for host applications.
- * Export only supported host-facing APIs. Kenstack code imports non-public
- * implementation from its canonical files, not through this entry point.
- */
-
 import { createSchemaFromFields } from "@kenstack/fields/createSchemaFromFields";
 import {
   resolveOneToOneDefinition,
   withOneToOneSelectionField,
 } from "@kenstack/admin/internal/oneToOne";
 
-import type { ClientConfig, ClientOneToOne, defineClient } from "./client";
+import type {
+  AdminClient,
+  ClientOneToOne,
+  defineAdminClient,
+  ModuleClient,
+  SettingsClient,
+} from "./client";
 
-// What a module registers: defineClient's inputs, built once by the loader below.
-type ClientInput = ReturnType<typeof defineClient>;
-type ClientConfigModule = { client: ClientInput } | { default: ClientInput };
+type AdminClientInput = ReturnType<typeof defineAdminClient>;
+type AdminClientLoader = NonNullable<ModuleClient["admin"]>;
+type SettingsClientLoader = NonNullable<ModuleClient["settings"]>;
+
+// A module's loader is the same function on every render, so each client is built once and
+// use() always receives the same promise.
+const adminClients = new WeakMap<AdminClientLoader, Promise<AdminClient>>();
+const settingsClients = new WeakMap<
+  SettingsClientLoader,
+  Promise<SettingsClient>
+>();
+
+export function loadAdminClient(load: AdminClientLoader) {
+  let adminClient = adminClients.get(load);
+  if (!adminClient) {
+    adminClient = load().then(
+      ({ default: admin }) => buildAdminClient(admin),
+      (error) => {
+        // Forget a failed load, so the next render tries again.
+        adminClients.delete(load);
+        throw error;
+      },
+    );
+    adminClients.set(load, adminClient);
+  }
+  return adminClient;
+}
+
+export function loadSettingsClient(load: SettingsClientLoader) {
+  let settingsClient = settingsClients.get(load);
+  if (!settingsClient) {
+    settingsClient = load().then(
+      ({ default: settings }) => ({
+        ...settings,
+        schema: createSchemaFromFields(settings.fields),
+      }),
+      (error) => {
+        settingsClients.delete(load);
+        throw error;
+      },
+    );
+    settingsClients.set(load, settingsClient);
+  }
+  return settingsClient;
+}
+
+function buildAdminClient(admin: AdminClientInput): AdminClient {
+  const oneToOne = admin.oneToOne ? resolveOneToOne(admin.oneToOne) : undefined;
+  const fields = oneToOne
+    ? withOneToOneSelectionField(admin.fields, oneToOne)
+    : admin.fields;
+  return {
+    fields,
+    listItems: admin.listItems,
+    EditForm: admin.EditForm,
+    oneToOne,
+  };
+}
 
 function resolveOneToOne(
-  config: NonNullable<NonNullable<ClientInput["admin"]>["oneToOne"]>,
+  config: NonNullable<AdminClientInput["oneToOne"]>,
 ): ClientOneToOne {
   const definition = resolveOneToOneDefinition(
     Object.fromEntries(
@@ -40,51 +93,4 @@ function resolveOneToOne(
     ),
     selectionField: definition.selectionField,
   };
-}
-
-function buildClient({ admin, settings }: ClientInput): ClientConfig {
-  return {
-    admin: admin
-      ? (() => {
-          const oneToOne = admin.oneToOne
-            ? resolveOneToOne(admin.oneToOne)
-            : undefined;
-          const fields = oneToOne
-            ? withOneToOneSelectionField(admin.fields, oneToOne)
-            : admin.fields;
-          return {
-            fields,
-            listItems: admin.listItems,
-            EditForm: admin.EditForm,
-            oneToOne,
-          };
-        })()
-      : undefined,
-    settings: settings
-      ? { ...settings, schema: createSchemaFromFields(settings.fields) }
-      : undefined,
-  };
-}
-
-export type AdminClientLoader = () => Promise<ClientConfig>;
-export type AdminClientRegistry = Record<string, AdminClientLoader>;
-
-export function defineAdminClients(
-  loaders: Record<string, () => Promise<ClientConfigModule>>,
-) {
-  const clients: AdminClientRegistry = {};
-
-  for (const [name, load] of Object.entries(loaders)) {
-    let clientConfig: Promise<ClientConfig> | undefined;
-
-    clients[name] = () => {
-      clientConfig ??= load().then((mod) =>
-        buildClient("client" in mod ? mod.client : mod.default),
-      );
-
-      return clientConfig;
-    };
-  }
-
-  return clients;
 }

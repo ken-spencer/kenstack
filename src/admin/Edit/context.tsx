@@ -4,8 +4,8 @@ import { type ZodObject } from "zod";
 
 import React, { createContext, use, useContext, useMemo } from "react";
 
-import type { AdminClient } from "@kenstack/admin/client";
-import type { AdminClientRegistry } from "@kenstack/admin/clientLoaders";
+import type { AdminClient, ModuleClient } from "@kenstack/admin/client";
+import { loadAdminClient } from "@kenstack/admin/clientLoaders";
 import { pickMetaFields } from "@kenstack/admin/metaFields";
 import type { PreviewPath } from "@kenstack/admin/module";
 import type { AdminEditItem } from "@kenstack/admin/queries/load";
@@ -20,7 +20,7 @@ type AdminEditProps = {
   userId: number;
   canUpload: boolean;
   defaultValues: Record<string, unknown>;
-  clients: AdminClientRegistry;
+  client: ModuleClient | undefined;
   children: React.ReactNode;
   parentId?: number;
   preview?: PreviewPath;
@@ -71,7 +71,7 @@ export function AdminEditProvider({
   userId,
   canUpload,
   defaultValues,
-  clients,
+  client,
   parentId,
   preview,
   oneToOne,
@@ -79,32 +79,25 @@ export function AdminEditProvider({
   seo,
   children,
 }: AdminEditProps) {
-  const loadClientConfig = clients[name];
-
-  if (!loadClientConfig) {
+  if (!client?.admin) {
     throw new Error(`Missing admin client config for "${name}".`);
   }
-
-  const clientConfig = use(loadClientConfig());
-  const client = clientConfig.admin;
-  if (!client) {
-    throw new Error("Admin client config is required for admin edit routes.");
-  }
+  const adminClient = use(loadAdminClient(client.admin));
 
   const listPath = parentId ? `/admin/${parentId}/${name}` : `/admin/${name}`;
 
   const schema = useMemo(
     () =>
       createSchemaFromFields(
-        { ...client.fields, ...pickMetaFields({ publish, seo }) },
-        client.oneToOne,
+        { ...adminClient.fields, ...pickMetaFields({ publish, seo }) },
+        adminClient.oneToOne,
       ),
-    [client, publish, seo],
+    [adminClient, publish, seo],
   );
 
   const context: AdminEditContext = {
     name,
-    client,
+    client: adminClient,
     id: item?.id ?? (typeof id === "number" ? id : undefined),
     isNew,
     single,

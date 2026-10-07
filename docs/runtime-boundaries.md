@@ -35,22 +35,22 @@ imports, caching, Suspense, and public runtime boundaries.
 - Keep terminal UI states direct: explicit returns or one shared shell, with no temporary status or
   message state and no duplicated loading, empty, error, or success shells.
 
-## Client Registries and Dynamic Imports
+## Module Clients and Dynamic Imports
 
 - For lazy or dynamic loaders meant to keep optional client code out of the initial bundle, make the
   loader itself a Client Component. A Next.js bug can cause a Server Component loader, even one with a
   conditional or dynamic import, to pull the loaded client module and its dependencies into the build
   or route bundle.
-- Admin and client registries that call `defineAdminClients` or export module `clients` maps start with
-  `"use client"`, including when imported by server modules. Without that boundary, their dynamic
-  imports can bundle every registered module onto public pages.
+- A module's `client/index.ts` starts with `"use client"` and holds only lazy imports, because the
+  server module definition imports it. Without that boundary, its dynamic imports can bundle the
+  module's admin client onto public pages. On the server it is a client reference: pass it through
+  as a prop and never read or call its properties there.
 - Admin server routes decide whether an admin route exists from server-owned module config, such as
-  `moduleConfig.admin`. Client registry wiring is UI behavior, not route existence: an admin route never
+  `moduleConfig.admin`. A module's client is UI behavior, not route existence: an admin route never
   checks `moduleConfig.client` before rendering, and a missing client loader never calls `notFound()`.
   Validate client config only inside client components that consume it.
 - Fix public bundle leakage in the importing graph while preserving the client loader boundary, or
-  explicitly accept the measured trade-off. When warranted, split server module definitions from
-  client registries or pass client-enabled modules only at the admin entry point. Moving a loader to
+  explicitly accept the measured trade-off. Moving a loader to
   server-only or server-safe code reintroduces the bundling problem.
 - Before adding, removing, or moving a `"use client"` directive or a dynamic import of a Client
   Component, establish why the boundary is safe. When the goal is bundle reduction, verify with a production build before and

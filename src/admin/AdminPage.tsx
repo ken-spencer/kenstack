@@ -122,7 +122,6 @@ export function createAdminPage() {
       }
 
       const adminConfig = moduleConfig.admin;
-      const clients = moduleConfig.client ?? {};
 
       if (!("list" in adminConfig) && id !== undefined) {
         notFound();
@@ -145,7 +144,7 @@ export function createAdminPage() {
                 basePath={
                   adminConfig.preview ? moduleConfig.basePath : undefined
                 }
-                clients={clients}
+                client={moduleConfig.client}
                 searchParams={searchIn}
                 parentId={parentId}
                 moduleParent={moduleParent}
@@ -157,7 +156,7 @@ export function createAdminPage() {
                 name={name}
                 moduleTitle={moduleConfig.title}
                 adminConfig={adminConfig}
-                clients={clients}
+                client={moduleConfig.client}
                 moduleParent={moduleParent}
                 parentId={parentId}
                 userId={user.id}

@@ -25,7 +25,7 @@ export default async function ModuleSettingsControl({
   return (
     <AuthGuard access="admin" fallback={children}>
       <ModuleSettingsControlClient
-        clients={module.client}
+        client={module.client}
         description={description}
         label={label ?? `Edit ${title} settings`}
         name={module.name}

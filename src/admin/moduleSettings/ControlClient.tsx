@@ -5,13 +5,14 @@ import { Settings } from "lucide-react";
 
 import { useAdminControl } from "@kenstack/admin/components/PageControls/useAdminUi";
 import { cn } from "@kenstack/lib/utils";
-import type { AdminClientRegistry } from "@kenstack/admin/clientLoaders";
+import type { ModuleClient } from "@kenstack/admin/client";
+import { loadSettingsClient } from "@kenstack/admin/clientLoaders";
 
 import ModuleSettingsModal from "./Modal";
 
 type ModuleSettingsControlClientProps = {
   children: React.ReactNode;
-  clients: AdminClientRegistry;
+  client: ModuleClient;
   description?: string;
   label: string;
   name: string;
@@ -20,7 +21,7 @@ type ModuleSettingsControlClientProps = {
 
 export default function ModuleSettingsControlClient({
   children,
-  clients,
+  client,
   description,
   label,
   name,
@@ -33,18 +34,11 @@ export default function ModuleSettingsControlClient({
     return children;
   }
 
-  const loadClientConfig = clients[name];
-
-  if (!loadClientConfig) {
+  if (!client.settings) {
     return children;
   }
 
-  const client = use(loadClientConfig());
-  const settings = client.settings;
-
-  if (!settings) {
-    return children;
-  }
+  const settings = use(loadSettingsClient(client.settings));
 
   return (
     <div className="relative">

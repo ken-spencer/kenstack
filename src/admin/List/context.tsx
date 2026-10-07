@@ -18,15 +18,19 @@ import useQueryStore, {
   type SetQueryStore,
 } from "@kenstack/list/useQueryStore";
 
-import type { AdminClient, BaseListItem } from "@kenstack/admin/client";
-import type { AdminClientRegistry } from "@kenstack/admin/clientLoaders";
+import type {
+  AdminClient,
+  BaseListItem,
+  ModuleClient,
+} from "@kenstack/admin/client";
+import { loadAdminClient } from "@kenstack/admin/clientLoaders";
 import { getAdminListQueryKey } from "./queryKey";
 
 const AdminListContext = createContext<UseListProps | null>(null);
 
 type AdminListProps = {
   basePath?: string;
-  clients: AdminClientRegistry;
+  client: ModuleClient | undefined;
   name: string;
   parentId?: number;
   sort: AdminSortMeta[];
@@ -63,24 +67,17 @@ type UseListProps = {
 
 export function AdminListProvider({
   basePath,
-  clients,
+  client,
   name,
   parentId,
   sort,
   filter,
   children,
 }: AdminListProps) {
-  const loadClientConfig = clients[name];
-
-  if (!loadClientConfig) {
+  if (!client?.admin) {
     throw new Error(`Missing admin client config for "${name}".`);
   }
-
-  const clientConfig = use(loadClientConfig());
-  const client = clientConfig.admin;
-  if (!client) {
-    throw new Error("Admin client config is required for admin list routes.");
-  }
+  const adminClient = use(loadAdminClient(client.admin));
 
   const [selected, setSelected] = useState<number[]>([]);
   const defaultFilterState = createDefaultListQueryState(sort);
@@ -137,7 +134,7 @@ export function AdminListProvider({
   });
 
   const values: UseListProps = {
-    client,
+    client: adminClient,
     basePath,
     sort,
     filter,

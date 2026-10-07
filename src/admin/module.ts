@@ -48,7 +48,7 @@ import type { ServerDefinedFields } from "@kenstack/fields/internal/serverResolu
 import type { DefinedFields } from "@kenstack/admin/fields";
 import { metaFieldOptions, pickMetaFields } from "@kenstack/admin/metaFields";
 import type { AdminKeyTable, AdminTable } from "@kenstack/admin/table";
-import type { AdminClientRegistry } from "@kenstack/admin/clientLoaders";
+import type { ModuleClient } from "@kenstack/admin/client";
 import type { RevalidateTagRule } from "@kenstack/lib/revalidate";
 import type { SelectedFieldValues } from "@kenstack/records/select";
 import type { FetchError } from "@kenstack/api/fetcher";
@@ -182,6 +182,8 @@ type ModuleOptions<
   title?: string;
   basePath?: PreviewPath;
   icon?: ComponentType<SVGProps<SVGSVGElement>>;
+  // The module's client/index.ts, which the server only passes through to client components.
+  client?: ModuleClient;
   admin?: AdminConfig<TTable, TFields>;
   settings?: ModuleSettingsConfig;
   parent?: ModuleParentOptions;
@@ -195,6 +197,7 @@ type ResolvedModule<
   title: string;
   basePath: PreviewPath;
   icon: TModule extends { icon: infer TIcon } ? TIcon : undefined;
+  client: ModuleClient | undefined;
   admin: TModule extends { admin: infer TAdmin }
     ? Omit<TAdmin, keyof AnyAdminConfig> &
         (TTable extends AdminTable
@@ -230,9 +233,9 @@ export type DefinedAdmin = Record<
     title: string;
     basePath: PreviewPath;
     icon?: ComponentType<SVGProps<SVGSVGElement>>;
+    client?: ModuleClient;
     admin?: AnyAdminConfig;
     settings?: ResolvedModuleSettings;
-    client?: AdminClientRegistry;
     parent?: ModuleParentOptions;
     navigationParent?: string;
   }
@@ -350,6 +353,7 @@ export function defineModule<
     title: options.title ?? startCase(options.name),
     basePath: options.basePath ?? `/${options.name}`,
     icon: options.icon,
+    client: options.client,
     admin,
     settings: resolveSettings(options.settings),
     parent: options.parent,

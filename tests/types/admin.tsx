@@ -5,7 +5,11 @@ import type { ComponentProps } from "react";
 
 import { defineModule } from "@kenstack/admin/module";
 import { defineKeyTable } from "@kenstack/admin/table";
-import { defineClient, defineOneToOneClient } from "@kenstack/admin/client";
+import {
+  defineAdminClient,
+  defineOneToOneClient,
+  defineSettingsClient,
+} from "@kenstack/admin/client";
 import { defineFields } from "@kenstack/admin/fields";
 import {
   resolveOneToOneDefinition,
@@ -70,39 +74,35 @@ if (false) {
     },
   });
 
-  defineClient({
-    admin: {
-      fields: listFields,
-      EditForm: Component,
-      listItems: [
-        [
-          (row) => {
-            expectTypeOf(row.file).toEqualTypeOf<SelectedMedia | null>();
-            expectTypeOf(row.image).toEqualTypeOf<SelectedImage | null>();
-            expectTypeOf(row.money).toEqualTypeOf<number | null>();
-            expectTypeOf(row.number).toEqualTypeOf<number | null>();
-            expectTypeOf(row.title).toEqualTypeOf<string>();
-            expectTypeOf(row.semanticImage).toEqualTypeOf<
-              z.output<(typeof listFields.semanticImage)["zod"]>
-            >();
-            return null;
-          },
-        ],
+  defineAdminClient({
+    fields: listFields,
+    EditForm: Component,
+    listItems: [
+      [
+        (row) => {
+          expectTypeOf(row.file).toEqualTypeOf<SelectedMedia | null>();
+          expectTypeOf(row.image).toEqualTypeOf<SelectedImage | null>();
+          expectTypeOf(row.money).toEqualTypeOf<number | null>();
+          expectTypeOf(row.number).toEqualTypeOf<number | null>();
+          expectTypeOf(row.title).toEqualTypeOf<string>();
+          expectTypeOf(row.semanticImage).toEqualTypeOf<
+            z.output<(typeof listFields.semanticImage)["zod"]>
+          >();
+          return null;
+        },
       ],
-    },
+    ],
   });
 
-  defineClient({
-    admin: {
-      fields: {
-        // @ts-expect-error defineClient accepts definitions, not resolved components.
-        title: {
-          ...fields.title,
-          component: Component,
-        },
+  defineAdminClient({
+    fields: {
+      // @ts-expect-error defineAdminClient accepts definitions, not resolved components.
+      title: {
+        ...fields.title,
+        component: Component,
       },
-      EditForm: Component,
     },
+    EditForm: Component,
   });
 
   const formSourceFields = defineFields({
@@ -158,12 +158,10 @@ if (false) {
     }),
   };
 
-  defineClient({
-    admin: {
-      fields: formSourceFields,
-      EditForm: Component,
-      oneToOne: clientOneToOne,
-    },
+  defineAdminClient({
+    fields: formSourceFields,
+    EditForm: Component,
+    oneToOne: clientOneToOne,
   });
 
   const fieldOwnedProps = defineFormFields(
@@ -224,21 +222,17 @@ if (false) {
   });
 
   const settingsFields = defineFields({ fields: { title: textField() } });
-  defineClient({
-    settings: {
-      fields: settingsFields,
-      SettingsForm: Component,
-      // @ts-expect-error Settings accept a form, not a component registry.
-      fieldComponents: { custom: Component },
-    },
+  defineSettingsClient({
+    fields: settingsFields,
+    SettingsForm: Component,
+    // @ts-expect-error Settings accept a form, not a component registry.
+    fieldComponents: { custom: Component },
   });
-  defineClient({
-    settings: {
-      fields: settingsFields,
-      SettingsForm: Component,
-      // @ts-expect-error Settings accept a form, not field-kind registrations.
-      fieldKinds: [],
-    },
+  defineSettingsClient({
+    fields: settingsFields,
+    SettingsForm: Component,
+    // @ts-expect-error Settings accept a form, not field-kind registrations.
+    fieldKinds: [],
   });
 
   void saveRecord({

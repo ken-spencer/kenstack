@@ -1,0 +1,25 @@
+"use client";
+
+import { defineAdminClient } from "@kenstack/admin/client";
+import EditForm from "../components/EditForm";
+import { fields } from "../adminFields";
+import { UserAvatarListItem, UserNameListItem } from "../components/ListItems";
+
+export default defineAdminClient({
+  fields,
+  listItems: [
+    [
+      (row) => UserAvatarListItem({ row }),
+      { className: "flex items-center", column: "auto" },
+    ],
+    [(row) => UserNameListItem({ row })],
+    [
+      (row) => row.email,
+      {
+        className:
+          "text-muted-foreground hidden self-center truncate text-sm sm:block",
+      },
+    ],
+  ],
+  EditForm,
+});

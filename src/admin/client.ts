@@ -22,8 +22,8 @@ export type OneToOneEditFormProps<
   prefix: string;
 };
 
-// ClientConfig stores relation forms with different field maps in one runtime
-// registry, so the erased boundary must remain bivariant like list renderers.
+// Modules with different relation field maps share the AdminClient type, so
+// the erased boundary must remain bivariant like list renderers.
 type OneToOneEditForm<TFields extends DefinedFields = DefinedFields> = {
   bivarianceHack(props: OneToOneEditFormProps<TFields>): ReturnType<FC>;
 }["bivarianceHack"];
@@ -64,8 +64,8 @@ export type ListItemRow<
   TExtra extends Record<string, unknown> = Record<string, unknown>,
 > = BaseListItem & TExtra & { path: string };
 
-// ClientConfig stores modules with different row shapes in one registry, so
-// render callbacks must remain bivariant at that shared boundary.
+// Modules with different row shapes share the AdminClient type, so render
+// callbacks must remain bivariant at that shared boundary.
 type ListItemRender<TRow extends ListItemRow> = {
   bivarianceHack(row: TRow, context: { grouped: boolean }): ReactNode;
 }["bivarianceHack"];
@@ -106,26 +106,36 @@ type BareFieldDefinitions<TFields extends DefinedFields> = {
     : unknown;
 };
 
-export function defineClient<
+export function defineAdminClient<
   const TFields extends DefinedFields = DefinedFields,
-  const TSettingsFields extends DefinedFields = DefinedFields,
 >(client: {
-  admin?: {
-    fields: TFields & BareFieldDefinitions<TFields>;
-    listItems?: ListItems<TFields>;
-    EditForm: FC<PropsWithChildren>;
-    oneToOne?: Record<string, ClientOneToOneDefinition>;
-  };
-  settings?: {
-    fields: TSettingsFields & BareFieldDefinitions<TSettingsFields>;
-    SettingsForm: FC;
-  };
+  fields: TFields & BareFieldDefinitions<TFields>;
+  listItems?: ListItems<TFields>;
+  EditForm: FC<PropsWithChildren>;
+  oneToOne?: Record<string, ClientOneToOneDefinition>;
 }) {
   return client;
 }
 
-// The registry boundary must allow modules with different relation keys.
-// defineClient's generic return type narrows those keys to one module.
+export function defineSettingsClient<
+  const TFields extends DefinedFields = DefinedFields,
+>(client: {
+  fields: TFields & BareFieldDefinitions<TFields>;
+  SettingsForm: FC;
+}) {
+  return client;
+}
+
+// What a module's client/index.ts default-exports and defineModule takes as `client`.
+export type ModuleClient = {
+  admin?: () => Promise<{ default: ReturnType<typeof defineAdminClient> }>;
+  settings?: () => Promise<{
+    default: ReturnType<typeof defineSettingsClient>;
+  }>;
+};
+
+// The built clients must allow modules with different relation keys.
+// defineAdminClient's generic return type narrows those keys to one module.
 export type AdminClient = {
   fields: DefinedFields;
   listItems?: ListItems<DefinedFields>;
@@ -136,8 +146,4 @@ export type SettingsClient = {
   fields: DefinedFields;
   SettingsForm: FC;
   schema: ZodObject;
-};
-export type ClientConfig = {
-  admin: AdminClient | undefined;
-  settings: SettingsClient | undefined;
 };

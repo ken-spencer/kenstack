@@ -19,7 +19,7 @@ import type {
   DefinedAdmin,
   ModuleParentOptions,
 } from "@kenstack/admin/module";
-import type { AdminClientRegistry } from "@kenstack/admin/clientLoaders";
+import type { ModuleClient } from "@kenstack/admin/client";
 import { loadAdminEdit, loadOneToOne } from "@kenstack/admin/queries/load";
 import { loadAdminParentRecord } from "@kenstack/admin/queries/parent";
 import { getAdminRecordTitle } from "@kenstack/admin/lib/recordTitle";
@@ -34,7 +34,7 @@ export default async function AdminEdit({
   isNew = false,
   userId,
   adminConfig,
-  clients,
+  client,
   moduleParent,
   parentId,
 }: {
@@ -44,7 +44,7 @@ export default async function AdminEdit({
   isNew?: boolean;
   userId: number;
   adminConfig: AnyAdminConfig;
-  clients: AdminClientRegistry;
+  client: ModuleClient | undefined;
   moduleParent?: ModuleParentOptions;
   parentId?: number;
 }) {
@@ -138,7 +138,7 @@ export default async function AdminEdit({
         parentId={resolvedParentId}
         preview={preview}
         oneToOne={oneToOne}
-        clients={clients}
+        client={client}
         publish={adminConfig.publish}
         seo={adminConfig.seo}
       >

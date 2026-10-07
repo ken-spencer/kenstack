@@ -45,7 +45,7 @@ boundary earn it a file, place it in the applicable kind home. Only an earned he
 goes to `lib`, and the vocabulary grows by decision.
 
 The required core is `index.ts`, `fields` (`fields.ts` or `fields/index.ts`), and `tables.ts`. Every
-other location exists only when its capability does: `client` when the module has client configuration,
+other location exists only when its capability does: `client/` when the module has client configuration,
 `fields/formFields.ts` when a generated form map has multiple consumers, `queries` when it has a read
 API, `components/` when it owns UI, and `README.md` when the gate below is met. An empty placeholder is
 never created. At volume, `queries/` members keep their own names (`queries/list.ts`,
@@ -61,19 +61,24 @@ never created. At volume, `queries/` members keep their own names (`queries/list
   from the owning field units. For one-to-one kinds, import each kind-owned server config and register
   the map at `admin.oneToOne`; the parent leaves that kind's fields, table, and server behavior to the
   kind. Imported by the site's module registry.
-- `client.ts` or `client.tsx` as syntax requires — default-exports the module's `defineClient(...)`
-  result, a Client Component boundary (see `docs/runtime-boundaries.md`). It passes the bare isomorphic
-  definitions from `fields` as `admin.fields` to `defineClient(...)` for the record schema and list
-  configuration. `defineClient(...)` returns its inputs unchanged, and the client loader builds them
-  once per module, so one client can build on another's inputs. For one-to-one kinds, import each
-  kind-owned client config and register the map at `admin.oneToOne`. A settings module likewise passes bare settings fields and a `SettingsForm`; that
-  form owns or imports its generated controls directly, so the client entry never imports generated
-  form controls. Imported by the site's client registry aggregation.
+- `client/` — the module's client configuration. `client/index.ts` starts with `"use client"` and
+  default-exports only lazy imports, `{ admin: () => import("./admin") }`, with
+  `settings: () => import("./settings")` for a settings module; `index.ts` passes it to
+  `defineModule({ client })`. On the server it is a client reference (see
+  `docs/runtime-boundaries.md`): server code passes it through as a prop and never reads or calls its
+  properties, and the browser loads each import separately when the admin needs it.
+  `client/admin.ts` (`.tsx` as syntax requires) default-exports `defineAdminClient(...)`, passing the
+  bare isomorphic definitions from `fields` as `fields` for the record schema and list configuration.
+  `defineAdminClient(...)` returns its inputs unchanged, and Kenstack builds them once per loader, so
+  one client can build on another's inputs. For one-to-one kinds, import each kind-owned client config
+  and register the map at `oneToOne`. `client/settings.ts` likewise passes bare settings fields and a
+  `SettingsForm` to `defineSettingsClient(...)`; that form owns or imports its generated controls
+  directly, so the client entry never imports generated form controls.
 - `fields/formFields.ts` — optional shared boundary that named-exports `fields` from one
   `defineFormFields(fields, { components?, prefix? })` call from `@kenstack/fields/formFields` over the
   isomorphic definitions and the module's property-specific client editors. Create it only when the
   same configured map has multiple production consumers; a one-use call stays in its consuming form.
-  Client-owned; it never imports `client.ts(x)` or the components that consume it, so forms never import
+  Client-owned; it never imports `client/` or the components that consume it, so forms never import
   the client entry.
 - `tables.ts` — named-exports the module's parent-owned tables and re-exports table entry points
   from its nested modules and one-to-one kind units. Child table definitions stay with their owning
@@ -94,7 +99,7 @@ never created. At volume, `queries/` members keep their own names (`queries/list
   field map that `index.ts` and the admin client consume (see `docs/site-anatomy.md`).
 
   A site defines its users module with `defineUsersModule` from `@kenstack/modules/users/module`,
-  which takes `defineModule`'s `admin` and inherits Kenstack's name, title and icon.
+  which takes `defineModule`'s `admin` and `client` and inherits Kenstack's name, title and icon.
   `currentUser.select: { … }` adds columns or SQL subqueries to the cached current-user
   query, and `getCurrentUser()` and `requireUser()` return them, typed through the registry;
   Kenstack's own fields replace a site field with the same name, and a site field named
@@ -105,11 +110,11 @@ never created. At volume, `queries/` members keep their own names (`queries/list
   it exposes them. `loginDestination: (user) => path` chooses where a sign-in without a safe `returnTo`
   lands (default `/`), and `passwordPath` names the page hosting `ResetPasswordForm` (default
   `/reset-password`). The client builds on Kenstack's:
-  `defineClient({ admin: { ...usersClient.admin, fields, EditForm } })`, with `usersClient` the
-  default export of `@kenstack/modules/users/client`. A users module built with plain
+  `defineAdminClient({ ...usersAdmin, fields, EditForm })`, with `usersAdmin` the default export of
+  `@kenstack/modules/users/client/admin`. A site module without its `client` throws `Missing admin client config` on its admin pages. A users module built with plain
   `defineModule` keeps Kenstack's defaults.
 
-  Every site also registers a site-settings module, built with `defineSiteSettingsModule({ admin })`
+  Every site also registers a site-settings module, built with `defineSiteSettingsModule({ admin, client })`
   from `@kenstack/modules/siteSettings/module`: Kenstack's own, or one whose table and fields extend
   `siteSettingsColumns` and `siteSettingsFields`. `loadSiteSettings()` and
   `loadSiteSettingsMetadata()` read it, typed with the site's settings, and the site's schema registry
@@ -168,8 +173,8 @@ is not a separate registration surface.
   error translation. The parent module imports the config and only registers `{ movie }` or another
   canonical key in `admin.oneToOne`.
 - `client.tsx` is client-owned and default-exports `defineOneToOneClient({ fields, EditForm })` from
-  `@kenstack/admin/client`. It owns the relation form. The parent client imports the config and only
-  registers the matching key in `admin.oneToOne`.
+  `@kenstack/admin/client`. It owns the relation form. The parent's `client/admin.ts` imports the config
+  and only registers the matching key in `oneToOne`.
 - Additional components, queries, policies, or helpers stay inside the kind folder. Contracts shared by
   kinds in more than one module belong under `modules/shared/<domain>/`; the local kind still owns its
   parent-specific table binding and presentation.
@@ -199,7 +204,7 @@ defineModule({
 ```
 
 The client follows the same ownership shape: `movie/client.tsx` exports its local
-`defineOneToOneClient({ fields, EditForm })` config, and the parent `client.tsx` registers
+`defineOneToOneClient({ fields, EditForm })` config, and the parent `client/admin.ts` registers
 `oneToOne: { movie }`.
 
 ## Standard kinds
@@ -225,19 +230,20 @@ Kenstack suite.
 
 ## Dependency direction
 
-`fields.ts`, `fields/index.ts`, and each `fields/<name>/index.ts` are isomorphic; both server and client
-module graphs may import them. Each `fields/<name>/server.ts` is server-owned, imports `"server-only"`,
-and imports only the server or isomorphic siblings it needs. Each `fields/<name>/Component.tsx` is
-client-owned and may import its field's isomorphic entry point. `index.ts`, `tables`, `queries`, and
-`api` are server-owned; a generated form-map owner and `client.ts` start with `"use client"` and import
-only isomorphic definitions and client-owned code. A one-to-one kind's `index.ts` is server-owned and
-its `client.tsx` is client-owned. The parent `index.ts` registers server implementations through
-property-keyed `serverFields`; the consuming form or shared `fields/formFields.ts` registers client
-implementations through `defineFormFields(...)`; `client.ts` passes the bare isomorphic field map to
-`defineClient(...)` and never imports the generated components. `fields/index.ts` only assembles
-isomorphic field entries. `index.ts` and `client.ts` do not import one another: the host registries
-assemble the server definition and client loader without pulling either runtime graph through the
-other.
+`fields.ts`, `fields/index.ts`, and each `fields/<name>/index.ts` are isomorphic; both server and
+client module graphs may import them. Each `fields/<name>/server.ts` is server-owned, imports
+`"server-only"`, and imports only the server or isomorphic siblings it needs. Each
+`fields/<name>/Component.tsx` is client-owned and may import its field's isomorphic entry point.
+`index.ts`, `tables`, `queries`, and `api` are server-owned; a generated form-map owner and the
+`client/` files start with `"use client"` and import only isomorphic definitions and client-owned
+code. A one-to-one kind's `index.ts` is server-owned and its `client.tsx` is client-owned. The
+parent `index.ts` registers server implementations through property-keyed `serverFields`; the
+consuming form or shared `fields/formFields.ts` registers client implementations through
+`defineFormFields(...)`; `client/admin.ts` passes the bare isomorphic field map to
+`defineAdminClient(...)` and never imports the generated components. `fields/index.ts` only
+assembles isomorphic field entries. `index.ts` imports only `client/index.ts`, a lazy-imports-only
+file, so the server graph gets a client reference and no client code; nothing under `client/`
+imports `index.ts`.
 
 ## Host registration
 
@@ -251,11 +257,10 @@ Add only the registrations the module's capabilities require:
   Administration group placed where the first appears. A link may also sit at the top level, such as
   a Dashboard link to `/admin`; it shows in place without a heading. A sidebar link is lit on every
   page under its path, except `/admin`, which is lit only on itself.
-- When `client.ts` exists, add it to the host client registry through a lazy `() => import(...)`
-  loader, keeping that registry's required Client Component boundary. Register custom editors by
-  property through `defineFormFields(...)` in their consuming form, extracting a shared
-  `fields/formFields.ts` only for multiple consumers. Pass the bare isomorphic field map to
-  `defineClient(...)` as `admin.fields`. A bespoke module form may still import a component directly
+- A module's `client/` needs no host registration; it travels with the module definition. Register
+  custom editors by property through `defineFormFields(...)` in their consuming form, extracting a
+  shared `fields/formFields.ts` only for multiple consumers. Pass the bare isomorphic field map to
+  `defineAdminClient(...)` as `fields`. A bespoke module form may still import a component directly
   when it needs module-specific context or coordinates several fields. Isomorphic field definitions
   never import or load components.
 - When module `api` code handles HTTP, expose it through a thin `app/**/route.ts` entry, because

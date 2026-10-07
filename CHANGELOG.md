@@ -5,6 +5,44 @@ contract lives in `docs/upgrading.md`.
 
 ## Unreleased
 
+### Modules Carry Their Clients
+
+A module's admin client now travels with its definition, and the site's client registry is gone.
+
+Before, `modules/clients.ts` (`"use client"`) listed every module's client by name,
+`defineAdminClients({ news: () => import("./news/client"), … })`, and `defineAdmin(entries, clients)`
+took it; each `client.ts` default-exported `defineClient({ admin, settings })`.
+
+Now:
+
+- A module with a client has a `client/` folder. `client/index.ts` starts with `"use client"` and
+  default-exports only lazy imports, `{ admin: () => import("./admin") }`, adding
+  `settings: () => import("./settings")` for a module with settings.
+- `client/admin.ts` default-exports `defineAdminClient({ fields, EditForm, listItems, oneToOne })`, the
+  old `admin` contents. `client/settings.ts` default-exports
+  `defineSettingsClient({ fields, SettingsForm })`, the old `settings` contents. Both come from
+  `@kenstack/admin/client`.
+- The module's `index.ts` imports `./client` and passes it to `defineModule({ name, client, admin })`;
+  `defineUsersModule` and `defineSiteSettingsModule` take the same `client`. On the server it is a
+  client reference, so server code passes it through and never reads its properties.
+- `defineAdmin(entries)` takes no second parameter.
+- `defineAdminClients`, `AdminClientRegistry`, `AdminClientLoader`, `defineClient` and `ClientConfig`
+  are removed. `ModuleClient`, from `@kenstack/admin/client`, types the `client/index.ts` object. The built clients keep their types, `AdminClient` and
+  `SettingsClient`; code that read `ClientConfig.admin` or `.settings` uses those.
+- Kenstack's users and site-settings modules carry their own clients, so registering
+  `@kenstack/modules/users` or `@kenstack/modules/siteSettings` is enough. Their admin clients are
+  `@kenstack/modules/users/client/admin` and `@kenstack/modules/siteSettings/client/admin`.
+
+To migrate, for each entry in `modules/clients.ts`:
+
+1. `git mv` the module's `client.ts` to `client/admin.ts`, point its `./` imports one folder up, and
+   replace `defineClient({ admin: { … } })` with `defineAdminClient({ … })`. Move a `settings` slot to
+   `client/settings.ts` as `defineSettingsClient({ … })`.
+2. Add `client/index.ts` with the lazy imports, and pass `client` from the module's `index.ts`. A
+   Kenstack module the site registers directly needs neither step.
+
+Then call `defineAdmin(entries)` and delete `modules/clients.ts`.
+
 ### Supported Postgres Extensions
 
 `db:migrate` now enables Kenstack's supported Postgres extensions, `pg_trgm` and `btree_gist`, before
@@ -238,18 +276,17 @@ Kenstack's users module is now `defineUsersModule({ admin: { fields, table: user
   impersonating, so a test fixture that builds a `PublicAuthState` sets it.
 - `requireUser()` now returns the current user's inferred type, site fields included, instead of
   `User<Role>`.
-- `defineClient` returns its inputs unchanged, and the client loader builds them once per module, so
-  a site's users client builds on Kenstack's:
-  `defineClient({ admin: { ...usersClient.admin, fields, EditForm } })`, with `usersClient` the
-  default export of `@kenstack/modules/users/client`. Code that read a built client straight from a
-  module's `client` file, such as its `settings.schema`, loads it through the client registry
-  instead.
-- `buildClient` and `ClientInput` are no longer exported from `@kenstack/admin/client`; the client
-  loader builds each registered client itself.
+- `defineAdminClient` returns its inputs unchanged, and Kenstack builds them once per loader, so a
+  site's users client builds on Kenstack's: `defineAdminClient({ ...usersAdmin, fields, EditForm })`,
+  with `usersAdmin` the default export of `@kenstack/modules/users/client/admin`. Code that read a
+  built client straight from a module's client file, such as its `settings.schema`, no longer can;
+  Kenstack's admin builds it.
+- `buildClient` and `ClientInput` are no longer exported from `@kenstack/admin/client`; Kenstack's
+  admin builds each module's admin client itself.
 
 A users module built with plain `defineModule` keeps working with Kenstack's defaults. To adopt, wrap
 the site's users module in `defineUsersModule`, move any separate query for the signed-in user's own
-columns into `currentUser.select`, and compose the client from `@kenstack/modules/users/client` in
+columns into `currentUser.select`, and compose the client from `@kenstack/modules/users/client/admin` in
 place of copied list columns.
 
 ### Site settings a site extends
@@ -263,10 +300,9 @@ settings, so a site drops its own loader, defaults and metadata copy and imports
 
 - Every site registers a site-settings module, since the loaders read it and Kenstack does not compile
   without one. Replace `defineModule({ name: "site-settings", … })` with
-  `defineSiteSettingsModule({ admin })`. A site without one registers Kenstack's: the default export of
-  `@kenstack/modules/siteSettings` in `defineAdmin`, and
-  `"site-settings": () => import("@kenstack/modules/siteSettings/client")` in its client registry. It
-  then generates the migration for the table below.
+  `defineSiteSettingsModule({ admin })`. A site without one registers Kenstack's, the default export of
+  `@kenstack/modules/siteSettings`, in `defineAdmin`; it carries its own client. It then generates the
+  migration for the table below.
 - `@kenstack/db/tables` no longer exports the `site_settings` table. The site's schema registry exports
   Kenstack's, `export * from "@kenstack/modules/siteSettings/tables"`, or its own extended table.
 

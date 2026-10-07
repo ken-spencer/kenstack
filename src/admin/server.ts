@@ -26,7 +26,6 @@ import {
   type AdminNavigationLink,
   type DefinedAdmin,
 } from "./module";
-import type { AdminClientRegistry } from "./clientLoaders";
 import { resolveScopedReorders } from "./lib/scopedReorder";
 import { resolveSingleRelationship } from "./lib/singleRelationship";
 
@@ -70,14 +69,11 @@ type EntryModule<TEntry> = TEntry extends AdminModule
       : never;
 
 type DefinedAdminMap<TEntries extends readonly AdminEntry[]> = DefinedAdmin & {
-  [TModule in EntryModule<TEntries[number]> as TModule["name"]]: TModule & {
-    client: AdminClientRegistry;
-  };
+  [TModule in EntryModule<TEntries[number]> as TModule["name"]]: TModule;
 };
 
 export function defineAdmin<const TEntries extends readonly AdminEntry[]>(
   entries: TEntries,
-  clients: AdminClientRegistry = {},
 ): DefinedAdminMap<TEntries> {
   const { modules, navigation } = normalizeAdminEntries(entries);
   const moduleNames = new Set<string>();
@@ -129,13 +125,7 @@ export function defineAdmin<const TEntries extends readonly AdminEntry[]>(
       resolvedModules.map((moduleConfig) => {
         validateOneToOne(moduleConfig, resolvedModules);
 
-        return [
-          moduleConfig.name,
-          {
-            ...moduleConfig,
-            client: clients,
-          },
-        ];
+        return [moduleConfig.name, moduleConfig];
       }),
     ),
     [adminNavigation]: navigation,
