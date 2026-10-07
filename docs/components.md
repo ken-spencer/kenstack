@@ -32,6 +32,19 @@ helper ladder follow `docs/code-organization.md`.
   shared component, and neither does an extraction whose render callbacks, modes, and configuration
   would introduce more implementation than the duplication it removes.
 
+## Toggles
+
+- In the admin and in forms, a button that is on or off uses `ToggleButton`, and a row of buttons
+  choosing one of several uses `ToggleGroup`, both from `@kenstack/forms/controls/`; a form field uses
+  `RadioButtonField`, which renders a `ToggleGroup`. Never hand-make a button with `aria-pressed` or a
+  styled radio row for them. A checkbox or switch stays a checkbox or switch.
+- A `ToggleGroup`'s options are all links or all choices. Links, each with an `href`, switch views,
+  such as one theatre's calendar, and can render from a server component when they have no `icon`;
+  choices switch state through `onValueChange`.
+- Name a toolbar group with `label`. In a form field the fieldset's legend names the choice, so the
+  group takes none.
+- On is a solid fill in `--toggle-on` with `--toggle-on-foreground` text; a site sets both in its theme.
+
 ## Accessible control names
 
 - A control's accessible name comes from native semantics, visible text, or an associated label. When

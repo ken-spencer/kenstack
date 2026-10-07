@@ -5,6 +5,7 @@
   "scripts": {
     "trace": "node --trace-deprecation node_modules/next/dist/bin/next dev -p 3001",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "prettier": "npx prettier src tests mocks vitest.config.ts vitest.integration.config.ts --check",
     "prettier:fix": "npm run prettier -- --write",
     "format": "npm run prettier:fix && npm run lint -- --fix",

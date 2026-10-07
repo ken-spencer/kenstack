@@ -43,6 +43,14 @@ To migrate, for each entry in `modules/clients.ts`:
 
 Then call `defineAdmin(entries)` and delete `modules/clients.ts`.
 
+### Radio Button Field
+
+`RadioButtonField` now renders Kenstack's toggle style inside a `GroupField`: its label is the group's
+legend, its options are as wide as their text and 2rem tall, the chosen option is a solid
+`--toggle-on` fill with `--toggle-on-foreground` text (fuchsia and white by default), and focus shows
+the `--ring` outline. A site sets the two colours in its theme; `buttonClassName` still restyles each
+option. `.toggle` is now a Kenstack class name.
+
 ### Supported Postgres Extensions
 
 `db:migrate` now enables Kenstack's supported Postgres extensions, `pg_trgm` and `btree_gist`, before
