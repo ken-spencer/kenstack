@@ -14,8 +14,9 @@ import { logout } from "@kenstack/components/AccountMenu/LogoutButton";
 import { formatUserInitials } from "@kenstack/lib/user";
 import { cn } from "@kenstack/lib/utils";
 
-// Signing out stays on the page: the refreshed render shows the visitor signed out, and in a flow the
-// login step comes back, so the visitor signs in and returns to this step.
+// It reassures a visitor the flow skipped sign-in for that it knows who they are. Signing out stays on
+// the page: the refreshed render shows the visitor signed out, and in a flow the login step comes back.
+// Whatever the old session held, such as a seat hold, goes with it, so the flow may resume earlier.
 export default function SignedInAs({ label }: { label: string }) {
   const router = useRouter();
   const user = useUserInfo();

@@ -54,6 +54,9 @@ type MailerOptions = MailMessage & {
   // What the email is, in camel case, recorded in the Email Log: the operation's quota or reCAPTCHA
   // key where it has one, such as `contact` or `verification`, otherwise a name such as `receipt`.
   kind: string;
+  // Mail to people other than whoever caused it, such as staff alerts and task or comment notices.
+  // Outside production it reaches only the developer.
+  notification?: boolean;
 } & (
     | {
         // The site record the email is about, such as an order, which the Email Log links to.
@@ -64,7 +67,8 @@ type MailerOptions = MailMessage & {
   );
 
 export type MailDeliveryResult =
-  | { messageId: string; status: "sent" }
+  // No message id when the email was withheld outside production.
+  | { messageId?: string; status: "sent" }
   | { status: "recipient-rejected" }
   | {
       attempts: number;
@@ -163,7 +167,12 @@ async function sendEmail({
   subject = "",
   html = "",
   attachments = [],
-}: MailMessage & { from: EmailAddress }): Promise<MailDeliveryResult> {
+  destinations,
+}: MailMessage & {
+  from: EmailAddress;
+  // The addresses SES delivers to; the message's own recipients when omitted.
+  destinations?: string[];
+}): Promise<MailDeliveryResult> {
   const msg = createMimeMessage();
   msg.setSender(from);
 
@@ -202,7 +211,10 @@ async function sendEmail({
 
   const raw = msg.asRaw();
   const buffer = Buffer.from(raw, "utf8");
-  const cmd = new SendRawEmailCommand({ RawMessage: { Data: buffer } });
+  const cmd = new SendRawEmailCommand({
+    Destinations: destinations,
+    RawMessage: { Data: buffer },
+  });
 
   const maxRetries = 3;
   for (let attempt = 1; ; attempt++) {
@@ -268,6 +280,7 @@ export function senderUnavailableMessage(email: string) {
 export default async function mailer({
   from,
   kind,
+  notification,
   table,
   rowId,
   ...options
@@ -279,6 +292,31 @@ export default async function mailer({
       code: "SenderUnavailable",
       status: "operational-failure",
     } satisfies MailDeliveryResult;
+  }
+
+  // Outside production, which includes development, `next start` and Vercel previews, a notification
+  // reaches only the developer's addresses in DEVELOPER_EMAIL, comma-separated, so testing never
+  // emails staff. The message is unchanged; SES delivers it to those addresses alone, and with none
+  // of them among its recipients it is not sent. Mail the recipient caused, such as a sign-in code or
+  // a receipt, always goes out, so testers on a preview get it.
+  let destinations: string[] | undefined;
+  let withheld: string | undefined;
+  if (notification && process.env.VERCEL_ENV !== "production") {
+    const developerEmails = (process.env.DEVELOPER_EMAIL ?? "")
+      .split(",")
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean);
+    const recipients = [options.to, options.cc, options.bcc].flatMap(
+      (recipient) => (recipient ? [new Mailbox(recipient).addr] : []),
+    );
+    destinations = recipients.filter((addr) =>
+      developerEmails.includes(addr.trim().toLowerCase()),
+    );
+    if (destinations.length < recipients.length) {
+      withheld = destinations.length
+        ? `Withheld outside production; sent only to ${destinations.join(", ")}`
+        : "Withheld outside production";
+    }
   }
 
   // Logged before SES is contacted, so every send has a row; one still `sending` afterwards is a send
@@ -297,9 +335,10 @@ export default async function mailer({
               : `${sender.name} <${sender.addr}>`,
           subject: options.subject,
           kind,
-          status: "sending",
+          status: destinations?.length === 0 ? "skipped" : "sending",
           table: table && getTableName(table),
           rowId,
+          error: withheld,
         })
         .returning({ id: emailMessages.id });
     } catch (error) {
@@ -310,6 +349,11 @@ export default async function mailer({
       );
       return operationalFailure(error, 0);
     }
+  }
+
+  // The caller carries on as though the email went out.
+  if (destinations?.length === 0) {
+    return { status: "sent" } satisfies MailDeliveryResult;
   }
 
   // Serverless has no cleanup timer; a small sample of sends prunes rows past retention. The catch
@@ -331,7 +375,7 @@ export default async function mailer({
 
   let delivery: MailDeliveryResult;
   try {
-    delivery = await sendEmail({ ...options, from: sender });
+    delivery = await sendEmail({ ...options, from: sender, destinations });
   } catch (error) {
     delivery = operationalFailure(error, 0);
   }

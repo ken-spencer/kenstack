@@ -232,10 +232,15 @@ async function sendVerification(
       secrets = createFreshChallengeSecrets(currentHistory);
     }
 
-    // Claimed after every refusal above so a rejected resend spends nothing.
+    // Claimed after every refusal above so a rejected resend spends nothing. Six an hour per
+    // address; fifty per IP, so a group sharing one network can all sign in.
     const exceeded = await claimQuota(
       "verification",
-      { email, ip: await getIp(request) },
+      {
+        email,
+        ip: await getIp(request),
+        limits: { email: [6, "1 hour"], ip: [50, "1 hour"] },
+      },
       tx,
     );
     if (exceeded) {

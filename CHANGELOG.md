@@ -5,6 +5,43 @@ contract lives in `docs/upgrading.md`.
 
 ## Unreleased
 
+### Pipeline Quota Skips Signed-In Visitors
+
+A `pipelineStage`'s `quota` is no longer claimed for a signed-in visitor, the same as its `recaptcha`.
+Signed-in members are no longer IP-limited on forms using `quota`. Nothing to migrate; a stage that
+must limit members claims its own quota by email with `claimQuota`. The IP limit across every scope
+combined rises from 60 to 300 an hour, so a room of visitors on one network isn't locked out.
+
+### Pipeline Stages Take Their Name From the Action
+
+A `pipelineStage`'s `quota` and `recaptcha` no longer take a scope or action string. They take their
+name from the pipeline: `multiPipeline` passes the action key, and a standalone `pipeline` takes
+`name` in its options. `quota: true` uses Kenstack's default limits; `quota: { ip: [max, window] }`
+sets its own IP limit. `recaptcha: true` verifies under the same name, with hyphens turned into
+underscores, since reCAPTCHA action names allow neither. `fetcher` and `recaptcha()` make the same
+change to the `recaptchaAction` and `action` they are given, so a form passes the name as is. A stage
+that sets either in a pipeline without a name throws.
+
+To migrate:
+
+- Replace `quota: "<scope>"` with `quota: true` and `recaptcha: "<action>"` with `recaptcha: true`.
+- In a standalone pipeline, name it once: `pipeline({ request, name: "contact" }, stage)`.
+- In a `multiPipeline`, the action key becomes the quota scope and reCAPTCHA action. Set the form's
+  `recaptchaAction` (or the `fetcher` call's) to that key, such as `"submit-special-request"`.
+- Uses already counted under an old scope stop counting toward the new one and expire.
+
+### Mail Outside Production
+
+`mailer()` takes `notification: true` for mail to people other than whoever caused it, such as staff
+alerts and task or comment notices. Outside production (`VERCEL_ENV` other than `production`), a
+notification goes only to the addresses in the new `DEVELOPER_EMAIL` environment variable,
+comma-separated. Other recipients are dropped, a notification with none of the developer's addresses is
+not sent, and the Email Log records it as Skipped, "Withheld outside production". Set
+`DEVELOPER_EMAIL` in each development and preview environment; without it, no notification is sent
+there. Mail without `notification` sends as before. A withheld notification returns
+`{ status: "sent" }` with no `messageId`, so `MailDeliveryResult`'s `messageId` is now optional. Mark
+each sender that mails staff or other third parties.
+
 ### Signed In As
 
 `SignedInAs({ label })`, from `@kenstack/auth/components/Login/SignedInAs`, names the account a step

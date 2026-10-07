@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { errorLog, send } = vi.hoisted(() => ({
+const { errorLog, insertValues, send } = vi.hoisted(() => ({
   errorLog: vi.fn(),
+  insertValues: vi.fn(),
   send: vi.fn(),
 }));
 
@@ -16,7 +17,12 @@ vi.mock("@aws-sdk/client-ses", async (importOriginal) => {
 vi.mock("@kenstack/lib/errorLog", () => ({ default: errorLog }));
 vi.mock("@app/db", () => ({
   db: {
-    insert: () => ({ values: () => ({ returning: async () => [{ id: 1 }] }) }),
+    insert: () => ({
+      values: (values: unknown) => {
+        insertValues(values);
+        return { returning: async () => [{ id: 1 }] };
+      },
+    }),
     update: () => ({ set: () => ({ where: async () => undefined }) }),
     delete: () => ({ where: async () => undefined }),
   },
@@ -32,12 +38,17 @@ const options = {
   to: "recipient@example.com",
 };
 
-describe("mailer delivery results", () => {
-  beforeEach(() => {
-    errorLog.mockReset();
-    send.mockReset();
-  });
+beforeEach(() => {
+  errorLog.mockReset();
+  insertValues.mockReset();
+  send.mockReset();
+});
 
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
+describe("mailer delivery results", () => {
   it("returns the accepted SES message id", async () => {
     send.mockResolvedValue({ MessageId: "message-1" });
 
@@ -108,6 +119,68 @@ describe("mailer delivery results", () => {
           httpStatusCode: 400,
         },
       }),
+    );
+  });
+});
+
+describe("notifications outside production", () => {
+  const notification = { ...options, notification: true };
+
+  beforeEach(() => {
+    vi.stubEnv("VERCEL_ENV", "preview");
+    vi.stubEnv("DEVELOPER_EMAIL", "dev@example.com, other-dev@example.com");
+  });
+
+  it("withholds a message with no developer recipient and logs it as skipped", async () => {
+    await expect(mailer(notification)).resolves.toEqual({ status: "sent" });
+
+    expect(send).not.toHaveBeenCalled();
+    expect(insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: "Withheld outside production",
+        status: "skipped",
+      }),
+    );
+  });
+
+  it("delivers only to the developer's addresses among the recipients", async () => {
+    send.mockResolvedValue({ MessageId: "message-1" });
+
+    await mailer({
+      ...notification,
+      cc: "Dev <DEV@example.com>",
+      bcc: "staff@example.com",
+    });
+
+    expect(send.mock.calls[0]?.[0].input.Destinations).toEqual([
+      "DEV@example.com",
+    ]);
+    expect(insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: "Withheld outside production; sent only to DEV@example.com",
+        status: "sending",
+      }),
+    );
+  });
+
+  it("sends nothing without DEVELOPER_EMAIL", async () => {
+    vi.stubEnv("DEVELOPER_EMAIL", undefined);
+
+    await mailer({ ...notification, to: "dev@example.com" });
+
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("sends unmarked mail to every recipient", async () => {
+    send.mockResolvedValue({ MessageId: "message-1" });
+
+    await expect(mailer(options)).resolves.toEqual({
+      messageId: "message-1",
+      status: "sent",
+    });
+    expect(send.mock.calls[0]?.[0].input.Destinations).toBeUndefined();
+    expect(insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({ error: undefined, status: "sending" }),
     );
   });
 });

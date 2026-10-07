@@ -105,6 +105,8 @@ export function createEmailLogin(options: EmailLoginOptions = {}) {
         const exceeded = await checkQuota("verification", {
           email: data.email,
           ip: await getIp(request),
+          // The same limits sendCode claims under.
+          limits: { email: [6, "1 hour"], ip: [50, "1 hour"] },
         });
         if (exceeded) {
           throw new ReturnedError(exceeded.message, { status: 429 });

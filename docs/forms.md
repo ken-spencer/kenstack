@@ -32,9 +32,16 @@ and client-side form validation in Kenstack and host sites.
   token request reports through the status outlet. A request outside a form, or a `mutationFn`, passes
   `{ recaptchaAction }` to its own `fetcher` call; nothing calls `executeRecaptcha` itself. The host
   mounts one `RecaptchaProvider` site-wide to load the script, so the score reflects the whole visit.
-  The API checks the token with `pipelineStage({ recaptcha: "<action>" })`, or by hand with
+- The API checks the token with `pipelineStage({ recaptcha: true })`, or by hand with
   `recaptcha({ action, body: dataIn, request, response })`; both read it from the raw request body, so
-  schemas never declare it.
+  schemas never declare it. A stage's `quota: true` claims a per-IP use with Kenstack's default limits
+  before reCAPTCHA; `quota: { ip: [max, window] }` sets its own IP limit. Both guard against anonymous
+  bots, so a signed-in visitor skips both.
+- Both take their name from the pipeline: in a `multiPipeline`, the action key, and a standalone
+  `pipeline({ request, name })` names it once. The quota scope is the name as is. reCAPTCHA action names
+  allow only letters, digits, underscores and slashes, so `fetcher` and `recaptcha` both turn a
+  name's hyphens into underscores; the form's `recaptchaAction` is the same name. A stage that sets
+  `quota` or `recaptcha` in a pipeline without a name throws.
 - A handler with cheap refusals or shortcuts, such as a lockout, a quota read or a shortcut that sends
   nothing, checks reCAPTCHA by hand after them, so those requests never cost an assessment.
 - The reCAPTCHA terms always come last, below every button, in a page or a dialog. `Form` renders them

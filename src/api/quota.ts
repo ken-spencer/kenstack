@@ -14,7 +14,7 @@ const quotaSubjects = ["email", "ip"] as const;
 type QuotaSubject = (typeof quotaSubjects)[number];
 
 // Per subject (an email address or a client IP): how many uses within a window.
-type QuotaLimits = Record<
+export type QuotaLimits = Record<
   QuotaSubject,
   readonly [max: number, within: DurationString]
 >;
@@ -30,7 +30,8 @@ const defaultLimits: QuotaLimits = {
 // scoped window.
 const siteLimits: QuotaLimits = {
   email: [30, "1 hour"],
-  ip: [60, "1 hour"],
+  // High enough for a room of visitors sharing one network (Ken, 7 October 2026).
+  ip: [300, "1 hour"],
 };
 
 type QuotaOptions = {

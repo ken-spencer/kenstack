@@ -234,7 +234,10 @@ describe("sendCode", () => {
     );
     expect(mocks.claimQuota).toHaveBeenCalledWith(
       "verification",
-      { email: "missing@example.com" },
+      {
+        email: "missing@example.com",
+        limits: { email: [6, "1 hour"], ip: [50, "1 hour"] },
+      },
       expect.anything(),
     );
     expect(email).not.toHaveBeenCalled();

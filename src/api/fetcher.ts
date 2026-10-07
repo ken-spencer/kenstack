@@ -7,6 +7,7 @@ import {
 } from "@kenstack/auth/renderedAccount";
 
 import { ReturnedError } from "./errors";
+import { formatRecaptchaAction } from "./formatRecaptchaAction";
 
 declare global {
   interface Window {
@@ -52,8 +53,8 @@ export default async function fetcher<
   path: RequestInfo,
   data: Record<string, unknown> | null = null,
   options: RequestInit & {
-    // Requests a reCAPTCHA token under this action and sends it as `recaptchaToken`, for an API stage
-    // whose `recaptcha` names the same action.
+    // Requests a reCAPTCHA token under this action name and sends it as `recaptchaToken`, for an API
+    // stage with `recaptcha: true` in a pipeline of the same name.
     recaptchaAction?: string;
   } = {},
 ): Promise<FetchResult<TExtra>> {
@@ -72,18 +73,26 @@ export default async function fetcher<
     headers.set(renderedAccountHeader, String(renderedAccount));
   }
 
-  // Without a site key, or before the script has loaded, there is no token to send. The server ignores
-  // one for a signed-in visitor.
+  // Without a site key there is no token to send. The provider loads the script after the page, so a
+  // request waits up to ten seconds for it; a blocked script sends none. The server ignores a token for
+  // a signed-in visitor and refuses its absence for anyone else.
   let payload = data;
-  if (recaptchaAction && data) {
-    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY?.trim();
+  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY?.trim();
+  if (recaptchaAction && data && siteKey) {
+    for (
+      let waited = 0;
+      !window.grecaptcha?.execute && waited < 10_000;
+      waited += 100
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
     const { grecaptcha } = window;
-    if (siteKey && grecaptcha?.execute) {
+    if (grecaptcha?.execute) {
       let recaptchaToken;
       try {
         await new Promise<void>((resolve) => grecaptcha.ready(resolve));
         recaptchaToken = await grecaptcha.execute(siteKey, {
-          action: recaptchaAction,
+          action: formatRecaptchaAction(recaptchaAction),
         });
       } catch (error) {
         throw Object.assign(

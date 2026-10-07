@@ -35,6 +35,17 @@ admin route name. The site registers `@kenstack/db/tables/emailMessages` in its 
 page from its sidebar, in a "Logs" group. Each `mailer()` call names its `kind` and, when the email is about a record, its
 Drizzle `table` and `rowId`; a message links to that record when a list module edits its table.
 
+A `mailer()` call passes `notification: true` for mail its recipients don't expect: broadcasts and
+automatic notices, such as staff alerts and task or comment notices. Outside production (`VERCEL_ENV` other than
+`production`, so development, `next start` and previews), a notification goes only to the developer:
+the addresses in `DEVELOPER_EMAIL`, comma-separated. The message is unchanged, but SES delivers it only
+to those of its recipients (to, cc or bcc). One with none of them is not sent; the Email Log shows it as
+Skipped with the reason "Withheld outside production", and the caller gets `{ status: "sent" }` with
+no message id. Without `DEVELOPER_EMAIL`, no notification is sent outside production. Mail the
+recipient caused, such as a sign-in code, a receipt or a confirmation, and mail someone sends to a
+chosen person on purpose, such as an invitation, is not marked and always goes out, so testers on a
+preview receive it.
+
 ## One-to-Many Relationships
 
 Before implementing a new one-to-many admin relationship, decide whether staff should manage it as a

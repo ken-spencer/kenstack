@@ -4,6 +4,7 @@ import { isRecord } from "@kenstack/lib/isRecord";
 import type { NextRequest } from "next/server";
 import * as z from "zod";
 
+import { formatRecaptchaAction } from "./formatRecaptchaAction";
 import type { PipelineResponse } from "./PipelineResponse";
 
 const schema = z.object({
@@ -21,6 +22,7 @@ export default async function recaptcha({
   response,
   threshold = 0.5,
 }: {
+  // The action name, checked as the browser requested it, with hyphens as underscores.
   action?: string;
   // The raw request body. Form sends the token beside the values, so schemas
   // never declare it.
@@ -151,7 +153,7 @@ export default async function recaptcha({
   if (
     !data.success ||
     (data.score ?? 0) < threshold ||
-    (action && data.action !== action)
+    (action && data.action !== formatRecaptchaAction(action))
   ) {
     // eslint-disable-next-line no-console -- Expected reCAPTCHA rejection with sanitized diagnostics for integration support.
     console.error(

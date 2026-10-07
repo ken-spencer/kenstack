@@ -1,6 +1,6 @@
 import { ReturnedError } from "./errors";
 import { NextRequest, NextResponse } from "next/server";
-import { claimQuota } from "./quota";
+import { claimQuota, type QuotaLimits } from "./quota";
 import recaptcha from "./recaptcha";
 import type { ObjectSchema } from ".";
 
@@ -16,6 +16,7 @@ import { resolveAccess } from "@kenstack/api/access";
 import { verificationMissingMessage } from "@kenstack/auth/email/verification/internal/policy";
 import { accountChangedRefusal } from "@kenstack/auth/renderedAccount";
 import { loadAuthState, loadUserInfo } from "@kenstack/auth/server/state";
+import { getCurrentUser } from "@kenstack/auth/server/user";
 import { reportError } from "@kenstack/lib/errorReporter";
 import type { AuthAccess } from "@kenstack/auth/server/auth";
 import type { User } from "@kenstack/types";
@@ -66,11 +67,15 @@ function validationErrors(error: z.ZodError) {
 export type PipelineOptions = {
   request: NextRequest;
   json?: Record<string, unknown>;
+  // Names the quota scope and reCAPTCHA action of a stage that sets `quota` or `recaptcha`.
+  // multiPipeline passes the action key.
+  name?: string;
 };
 
 type PipelineContext = {
   request: NextRequest;
   response: PipelineResponse;
+  name?: string;
   /** unsafe data */
   dataIn: unknown;
 } & Record<string, unknown>;
@@ -92,6 +97,7 @@ type PipelineStageResult =
       request?: never;
       response?: never;
       dataIn?: never;
+      name?: never;
       data?: never;
       proof?: never;
       user?: never;
@@ -115,10 +121,12 @@ type PipelineStageOptions<TSchema extends ObjectSchema | undefined, TAccess> = {
   schema?: TSchema;
   access?: TAccess;
   fieldsKey?: string;
-  // Per-IP quota scope, claimed before reCAPTCHA and the action.
-  quota?: string;
-  // reCAPTCHA action, verified against the token in the request body.
-  recaptcha?: string;
+  // A per-IP use of the pipeline name's quota scope, claimed before reCAPTCHA and the action, with
+  // Kenstack's default limits or its own IP limit. Like reCAPTCHA, it guards against anonymous bots,
+  // so a signed-in visitor skips it.
+  quota?: true | { ip: QuotaLimits["ip"] };
+  // Verifies the token in the request body under the pipeline name; a signed-in visitor skips it.
+  recaptcha?: true;
 };
 
 export default async function pipeline(
@@ -230,7 +238,7 @@ export function pipelineStage<
     access,
     fieldsKey,
     quota,
-    recaptcha: recaptchaAction,
+    recaptcha: checkRecaptcha,
   }: PipelineStageOptions<TSchema, TAccess>,
   action: PipelineStageCallback<PipelineStageContext<TSchema, TAccess>>,
 ): PipelineStage & { [isStage]: PipelineStage } {
@@ -316,25 +324,35 @@ export function pipelineStage<
       user = resolved.user;
     }
 
-    // Quota first: cheaper than the reCAPTCHA assessment and the action.
-    if (quota) {
-      const exceeded = await claimQuota(quota, {
-        ip: await getIp(ctx.request),
-      });
-      if (exceeded) {
-        throw new ReturnedError(exceeded.message, { status: 429 });
+    if (quota || checkRecaptcha) {
+      const { name } = ctx;
+      if (!name) {
+        throw new Error(
+          "pipelineStage quota and recaptcha need a pipeline name",
+        );
       }
-    }
 
-    if (recaptchaAction) {
-      const rejection = await recaptcha({
-        action: recaptchaAction,
-        body: ctx.dataIn,
-        request: ctx.request,
-        response: ctx.response,
-      });
-      if (rejection) {
-        return rejection;
+      // Quota first: cheaper than the reCAPTCHA assessment and the action.
+      if (quota && !(await getCurrentUser())) {
+        const exceeded = await claimQuota(name, {
+          ip: await getIp(ctx.request),
+          limits: quota === true ? undefined : quota,
+        });
+        if (exceeded) {
+          throw new ReturnedError(exceeded.message, { status: 429 });
+        }
+      }
+
+      if (checkRecaptcha) {
+        const rejection = await recaptcha({
+          action: name,
+          body: ctx.dataIn,
+          request: ctx.request,
+          response: ctx.response,
+        });
+        if (rejection) {
+          return rejection;
+        }
       }
     }
 

@@ -80,7 +80,9 @@ export default function DeleteButton() {
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
+        {/* Not a submit: inside the editor's form, opening the dialog would save the record. */}
         <Button
+          type="button"
           disabled={isNew || (name === "users" && id === userId)}
           isPending={mutation.isPending}
           className="relative"

@@ -77,11 +77,13 @@ export default async function multiPipeline(
     );
   }
 
+  // The action key names the pipeline, for its stages' quota and reCAPTCHA.
+  const actionOptions = { ...options, json, name: actionName };
   if (isStage in actionItem) {
-    return await pipeline({ ...options, json }, actionItem[isStage]);
+    return await pipeline(actionOptions, actionItem[isStage]);
   }
   if (Array.isArray(actionItem)) {
-    return await pipeline({ ...options, json }, actionItem);
+    return await pipeline(actionOptions, actionItem);
   }
-  return await actionItem({ ...options, json });
+  return await actionItem(actionOptions);
 }
