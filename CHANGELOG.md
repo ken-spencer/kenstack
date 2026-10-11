@@ -5,12 +5,103 @@ contract lives in `docs/upgrading.md`.
 
 ## Unreleased
 
-### Pipeline Quota Skips Signed-In Visitors
+### Error Alerts Without Upstash
 
-A `pipelineStage`'s `quota` is no longer claimed for a signed-in visitor, the same as its `recaptcha`.
-Signed-in members are no longer IP-limited on forms using `quota`. Nothing to migrate; a stage that
-must limit members claims its own quota by email with `claimQuota`. The IP limit across every scope
-combined rises from 60 to 300 an hour, so a room of visitors on one network isn't locked out.
+The error reporter now emails repeats of one error once per 15 minutes using Vercel's Runtime Cache,
+so it no longer reads `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `KV_REST_API_URL` or
+`KV_REST_API_TOKEN`. To migrate: remove those variables from each host, and the Upstash store if
+nothing else uses it. A host that had no Upstash credentials, and so got every error emailed, now gets
+repeats once per 15 minutes too.
+
+### Query Builder Leaves Out Trash, Runs In Transactions
+
+`query(table)` from `@kenstack/db/queries` now leaves out the trashed rows of its table and of every
+table it joins; a left join finds none for them. `listQuery` and `pageQuery` already filtered their
+own table. `query(table, { db })` runs the read on the database or a transaction passed as `db`, and
+`.for(strength, config?)` locks its rows, as Drizzle's `.for` does. `FieldLoadContext`'s `db` is now
+`Database | DbTransaction` (was `Pick<Database, "select">`), so a field's `load` passes it straight
+to `query`. `query(table, { trash: "include" })` keeps trashed rows and `{ trash: "only" }` returns
+only the table's trashed rows; neither filters a join. To migrate: code that calls a field's `load`
+itself passes the database or a transaction. A `query(...)` read that must see trashed rows passes
+`trash: "include"`, or `"only"` for a trash view. A site's own Drizzle read on a transaction or a
+field's `db` can switch to `query`, with `trash` when it must see or lock a trashed row.
+
+### Tables Without a Trash
+
+`defineTable({ trash: false })` builds a table with no `deletedAt`, for rows staff never trash and
+restore; its standard indexes cover every row. Leaving `trash` out keeps the trash as before.
+`defineMediaList({ table })` now takes any table with a numeric `id`, so a table without a trash can
+have a media list. Nothing to migrate for existing tables. A table that turns its trash off drops
+`deleted_at` and its index in a generated migration, which also rebuilds its standard indexes without
+the `deleted_at` predicate; hard-delete its trashed rows (`deleted_at IS NOT NULL`) first, or they
+come back as live rows.
+
+### ResponsiveRail Layout
+
+New component `@kenstack/components/ResponsiveRail`:
+`<ResponsiveRail primary={…} rail={…}>{rest}</ResponsiveRail>` puts `rail` beside `primary`
+from `lg` and directly after it on phones, before the rest. Nothing to migrate; a site's own copy of
+this layout can switch to it.
+
+### One Access Shape
+
+`AuthAccess` also takes a module permission, `{ module, permission }`, such as
+`{ module: "orders", permission: "edit" }`, with `permission` required. It passes whoever the
+module's grants give that permission, admins always. Every place that asks for access takes it with
+the same meaning: `pageRoute({ access })`, `requireUser(access)`, `hasAccess(access)` and
+`AuthGuard`, a `pipelineStage`'s `access` (refusing as a role list does: 409 for a changed account,
+401 signed out, 403 without the permission, all before the schema), a sidebar link's `access` and a
+field's `access`. `hasRoleAccess(roles, access)` runs in the browser too, so it takes the role forms
+only, typed `RoleAccess` from `@kenstack/auth/roleAccess`. To migrate: code that passed an
+`AuthAccess` value to `hasRoleAccess` passes a `RoleAccess`, or checks the signed-in person with
+`hasAccess`.
+
+Admins now pass every role list too, so a list names only the other roles it lets in, and an empty
+list is admins alone. To migrate: a check that must leave admins out tests the
+roles itself (`roles.includes(role)`) instead of calling `hasRoleAccess`;
+`"admin"` in an existing list is now redundant.
+
+### Permanent Delete Runs in One Transaction
+
+The admin's "Delete permanently" runs the field delete hooks and the row delete in one transaction.
+A record other rows still reference is refused with "A selected record is used elsewhere, so nothing
+was deleted permanently." and nothing changes, where it used to fail with a generic error after the
+hooks' work had committed. A field's `delete` hook now receives that transaction as `db`
+(`FieldDeleteContext`'s `db` is a `DbTransaction`, as in `save`); hooks that only query and write
+need no change.
+
+### StepFlow Steps Report Skipped and Satisfied
+
+A step is done when it is skipped, or when the person continued on it and its condition still holds.
+`useStep()` gains `setSatisfied(boolean)`, and a step definition an optional `satisfied` (default
+true), beside `skipped`. `setSkipped(false)` now means only "shown": it no longer forces a step to
+be done again. A controller that relied on that reports `setSatisfied(false)` while its condition
+fails, as Kenstack's login step does with browser identity. `next()` on a step shown ahead of a
+later destination records it and keeps that destination.
+
+### Pipeline Stages Refuse Before Validating
+
+A `pipelineStage` with `access` now checks it before parsing its schema, so a refused caller gets
+the 401, 403 or 409 refusal and never the validation errors. Nothing to migrate.
+
+### Signed-In Visitors Without Access See No Access
+
+A signed-in person whose roles don't open a page now sees a "No access" page, with "Sign in as
+someone else", in place of the redirect to `/login`. This covers `pageRoute({ access })` and
+`createAdminPage()`. A signed-out visitor still goes to sign-in, and `requireUser` is unchanged.
+Grants (`viewers`, `contributors` and `editors` on `defineModule` or a `defineAdmin` entry),
+`access` on a sidebar link and field `access` are new and opt-in, so a site without them stays
+admin-only. Nothing to migrate.
+
+### Pipeline Quota by Visitor
+
+A `pipelineStage`'s `quota` counts a signed-out visitor by IP, as before, and no longer counts a
+signed-in visitor by IP, so members are no longer IP-limited on forms using `quota`. A stage that
+limits members sets `quota: { email: [max, window] }`, counted by account email. An object counts only
+the visitors its keys name, so a public stage that also limits signed-out visitors sets `ip` beside it.
+Admins are never counted. Nothing to migrate; a stage that claimed its own quota by email
+with `claimQuota` can use the option instead. The IP limit across every scope combined rises from 60
+to 300 an hour, so a room of visitors on one network isn't locked out.
 
 ### Pipeline Stages Take Their Name From the Action
 
@@ -19,8 +110,8 @@ name from the pipeline: `multiPipeline` passes the action key, and a standalone 
 `name` in its options. `quota: true` uses Kenstack's default limits; `quota: { ip: [max, window] }`
 sets its own IP limit. `recaptcha: true` verifies under the same name, with hyphens turned into
 underscores, since reCAPTCHA action names allow neither. `fetcher` and `recaptcha()` make the same
-change to the `recaptchaAction` and `action` they are given, so a form passes the name as is. A stage
-that sets either in a pipeline without a name throws.
+change to the `recaptchaAction` and `action` they are given, so a form passes the name as is. A
+stage that sets either in a pipeline without a name throws.
 
 To migrate:
 
@@ -35,12 +126,12 @@ To migrate:
 `mailer()` takes `notification: true` for mail to people other than whoever caused it, such as staff
 alerts and task or comment notices. Outside production (`VERCEL_ENV` other than `production`), a
 notification goes only to the addresses in the new `DEVELOPER_EMAIL` environment variable,
-comma-separated. Other recipients are dropped, a notification with none of the developer's addresses is
-not sent, and the Email Log records it as Skipped, "Withheld outside production". Set
+comma-separated. Other recipients are dropped, a notification with none of the developer's addresses
+is not sent, and the Email Log records it as Skipped, "Withheld outside production". Set
 `DEVELOPER_EMAIL` in each development and preview environment; without it, no notification is sent
 there. Mail without `notification` sends as before. A withheld notification returns
-`{ status: "sent" }` with no `messageId`, so `MailDeliveryResult`'s `messageId` is now optional. Mark
-each sender that mails staff or other third parties.
+`{ status: "sent" }` with no `messageId`, so `MailDeliveryResult`'s `messageId` is now optional.
+Mark each sender that mails staff or other third parties.
 
 ### Signed In As
 
@@ -54,26 +145,29 @@ renders nothing for a signed-out visitor. Nothing to migrate.
 A module's admin client now travels with its definition, and the site's client registry is gone.
 
 Before, `modules/clients.ts` (`"use client"`) listed every module's client by name,
-`defineAdminClients({ news: () => import("./news/client"), … })`, and `defineAdmin(entries, clients)`
-took it; each `client.ts` default-exported `defineClient({ admin, settings })`.
+`defineAdminClients({ news: () => import("./news/client"), … })`, and
+`defineAdmin(entries, clients)` took it; each `client.ts` default-exported
+`defineClient({ admin, settings })`.
 
 Now:
 
 - A module with a client has a `client/` folder. `client/index.ts` starts with `"use client"` and
   default-exports only lazy imports, `{ admin: () => import("./admin") }`, adding
   `settings: () => import("./settings")` for a module with settings.
-- `client/admin.ts` default-exports `defineAdminClient({ fields, EditForm, listItems, oneToOne })`, the
-  old `admin` contents. A module may also pass `Edit`, its own editor (`docs/admin.md`, "Custom
+- `client/admin.ts` default-exports `defineAdminClient({ fields, EditForm, listItems, oneToOne })`,
+  the old `admin` contents. A module may also pass `Edit`, its own editor (`docs/admin.md`, "Custom
   Editors"), and then needs no `EditForm`; `AdminClient`'s `EditForm` is optional.
   `client/settings.ts` default-exports `defineSettingsClient({ fields, SettingsForm })`, the old
   `settings` contents. Both come from `@kenstack/admin/client`.
-- The module's `index.ts` imports `./client` and passes it to `defineModule({ name, client, admin })`;
-  `defineUsersModule` and `defineSiteSettingsModule` take the same `client`. On the server it is a
-  client reference, so server code passes it through and never reads its properties.
+- The module's `index.ts` imports `./client` and passes it to
+  `defineModule({ name, client, admin })`; `defineUsersModule` and `defineSiteSettingsModule` take
+  the same `client`. On the server it is a client reference, so server code passes it through and
+  never reads its properties.
 - `defineAdmin(entries)` takes no second parameter.
-- `defineAdminClients`, `AdminClientRegistry`, `AdminClientLoader`, `defineClient` and `ClientConfig`
-  are removed. `ModuleClient`, from `@kenstack/admin/client`, types the `client/index.ts` object. The built clients keep their types, `AdminClient` and
-  `SettingsClient`; code that read `ClientConfig.admin` or `.settings` uses those.
+- `defineAdminClients`, `AdminClientRegistry`, `AdminClientLoader`, `defineClient` and
+  `ClientConfig` are removed. `ModuleClient`, from `@kenstack/admin/client`, types the
+  `client/index.ts` object. The built clients keep their types, `AdminClient` and `SettingsClient`;
+  code that read `ClientConfig.admin` or `.settings` uses those.
 - Kenstack's users and site-settings modules carry their own clients, so registering
   `@kenstack/modules/users` or `@kenstack/modules/siteSettings` is enough. Their admin clients are
   `@kenstack/modules/users/client/admin` and `@kenstack/modules/siteSettings/client/admin`.
@@ -81,8 +175,8 @@ Now:
 To migrate, for each entry in `modules/clients.ts`:
 
 1. `git mv` the module's `client.ts` to `client/admin.ts`, point its `./` imports one folder up, and
-   replace `defineClient({ admin: { … } })` with `defineAdminClient({ … })`. Move a `settings` slot to
-   `client/settings.ts` as `defineSettingsClient({ … })`.
+   replace `defineClient({ admin: { … } })` with `defineAdminClient({ … })`. Move a `settings` slot
+   to `client/settings.ts` as `defineSettingsClient({ … })`.
 2. Add `client/index.ts` with the lazy imports, and pass `client` from the module's `index.ts`. A
    Kenstack module the site registers directly needs neither step.
 
@@ -90,11 +184,11 @@ Then call `defineAdmin(entries)` and delete `modules/clients.ts`.
 
 ### Radio Button Field
 
-`RadioButtonField` now renders Kenstack's toggle style inside a `GroupField`: its label is the group's
-legend, its options are as wide as their text and 2rem tall, the chosen option is a solid
-`--toggle-on` fill with `--toggle-on-foreground` text (fuchsia and white by default), and focus shows
-the `--ring` outline. A site sets the two colours in its theme; `buttonClassName` still restyles each
-option. `.toggle` is now a Kenstack class name.
+`RadioButtonField` now renders Kenstack's toggle style inside a `GroupField`: its label is the
+group's legend, its options are as wide as their text and 2rem tall, the chosen option is a solid
+`--toggle-on` fill with `--toggle-on-foreground` text (fuchsia and white by default), and focus
+shows the `--ring` outline. A site sets the two colours in its theme; `buttonClassName` still
+restyles each option. `.toggle` is now a Kenstack class name.
 
 ### Supported Postgres Extensions
 
@@ -279,7 +373,8 @@ login step) sends nothing at all. Kenstack `Form`
 shows the refusal with a Reload button, and `StatusMessage` gains an optional `code`. The account menus
 open a "Your sign-in changed" dialog when a page rendered for an account sees another account or none,
 and the user-info store no longer follows another tab's change on such a page. The admin API now
-refuses a non-admin with a `401` or `403` error instead of `{ redirect: "/login" }`.
+refuses a signed-out request with a `401` error, and an action the person has no permission for with
+a `403`, instead of `{ redirect: "/login" }`.
 
 Migration steps:
 
@@ -330,17 +425,17 @@ Kenstack's users module is now `defineUsersModule({ admin: { fields, table: user
 - `requireUser()` now returns the current user's inferred type, site fields included, instead of
   `User<Role>`.
 - `defineAdminClient` returns its inputs unchanged, and Kenstack builds them once per loader, so a
-  site's users client builds on Kenstack's: `defineAdminClient({ ...usersAdmin, fields, EditForm })`,
-  with `usersAdmin` the default export of `@kenstack/modules/users/client/admin`. Code that read a
-  built client straight from a module's client file, such as its `settings.schema`, no longer can;
-  Kenstack's admin builds it.
+  site's users client builds on Kenstack's:
+  `defineAdminClient({ ...usersAdmin, fields, EditForm })`, with `usersAdmin` the default export of
+  `@kenstack/modules/users/client/admin`. Code that read a built client straight from a module's
+  client file, such as its `settings.schema`, no longer can; Kenstack's admin builds it.
 - `buildClient` and `ClientInput` are no longer exported from `@kenstack/admin/client`; Kenstack's
   admin builds each module's admin client itself.
 
-A users module built with plain `defineModule` keeps working with Kenstack's defaults. To adopt, wrap
-the site's users module in `defineUsersModule`, move any separate query for the signed-in user's own
-columns into `currentUser.select`, and compose the client from `@kenstack/modules/users/client/admin` in
-place of copied list columns.
+A users module built with plain `defineModule` keeps working with Kenstack's defaults. To adopt,
+wrap the site's users module in `defineUsersModule`, move any separate query for the signed-in
+user's own columns into `currentUser.select`, and compose the client from
+`@kenstack/modules/users/client/admin` in place of copied list columns.
 
 ### Site settings a site extends
 
@@ -351,11 +446,11 @@ inherits the `site-settings` name, title and icon. A site that adds settings ext
 `loadSiteSettingsMetadata()` read the site-settings module the site registered, typed with its own
 settings, so a site drops its own loader, defaults and metadata copy and imports Kenstack's.
 
-- Every site registers a site-settings module, since the loaders read it and Kenstack does not compile
-  without one. Replace `defineModule({ name: "site-settings", … })` with
-  `defineSiteSettingsModule({ admin })`. A site without one registers Kenstack's, the default export of
-  `@kenstack/modules/siteSettings`, in `defineAdmin`; it carries its own client. It then generates the
-  migration for the table below.
+- Every site registers a site-settings module, since the loaders read it and Kenstack does not
+  compile without one. Replace `defineModule({ name: "site-settings", … })` with
+  `defineSiteSettingsModule({ admin })`. A site without one registers Kenstack's, the default export
+  of `@kenstack/modules/siteSettings`, in `defineAdmin`; it carries its own client. It then
+  generates the migration for the table below.
 - `@kenstack/db/tables` no longer exports the `site_settings` table. The site's schema registry exports
   Kenstack's, `export * from "@kenstack/modules/siteSettings/tables"`, or its own extended table.
 
@@ -380,15 +475,16 @@ shows the record's title or name.
 ### Payments moved to its own package
 
 `@kenstack/payments/*` no longer exists. The payments code, its tests and its checkout stylesheet
-live in the separate private `payments` package mounted beside Kenstack; import `@payments/...` and
-add `@payments/checkout/theme.css` after `@kenstack/theme.css`. Kenstack's stand-in `@app/db` no
+live in the separate private `sympolis` package mounted beside Kenstack as `sympolis/`; import
+`@sympolis/payments/...` and add `@sympolis/payments/checkout/theme.css` after `@kenstack/theme.css`. Kenstack's stand-in `@app/db` no
 longer includes the payment tables.
 
 ### Pipeline stages as actions
 
 `multiPipeline` accepts a `pipelineStage` result or a stage array per action and runs the pipeline
 itself; actions written as `(options) => pipeline(options, ...)` still work. `pipelineStage` takes
-`quota` (per-IP quota scope) and `recaptcha` (the action, checked against the token `fetcher` sends).
+`quota` (`true`, or `{ ip, email }` limits, counted under the pipeline's name) and `recaptcha`
+(`true`, checked under the pipeline's name against the token `fetcher` sends).
 `recaptcha()` reads the token from the raw request body, so a hand check passes `body: dataIn` in
 place of `token: data.recaptchaToken`, and schemas drop their `recaptchaToken` field.
 `loginPipeline(opts)` and `forgotPasswordPipeline(props)` now return a stage, and `logoutPipeline` and
@@ -475,7 +571,6 @@ Migration steps:
     })
     .innerJoin(users, eq(users.id, issues.createdBy))
     .where(where)
-    .build()
     .limit(1);
   if (!row) {
     return null;
@@ -512,7 +607,6 @@ Migration steps:
         >`"users"."visibility"`,
       })
       .where(eq(users.id, user.id))
-      .build()
       .limit(1),
   ]);
   const visibility = profile?.visibility;
@@ -652,11 +746,10 @@ requires a recent session, and "Email me a code" in the confirmation always send
 
 ### Error Alerts Without Redis
 
-`reportError` no longer needs Redis to email. A host with `MONITORING_EMAIL` and `FROM_ADDRESS` but no
-Upstash credentials now receives one email for every reported error; before, it received none. With
-Upstash configured, repeats of one error are still emailed once per 15 minutes, and an unreachable
-Upstash now sends the email instead of suppressing it. Add the Upstash credentials to a host that
-should not receive every repeat.
+`reportError` no longer needs Redis to email. A host with `MONITORING_EMAIL` and `FROM_ADDRESS` now
+receives reported errors by email, repeats of one error once per 15 minutes (see "Error Alerts Without
+Upstash"); before, a host without Upstash credentials received none. When the repeat check fails, the
+email is sent instead of suppressed.
 
 ### Email Verification While Signed In
 
@@ -753,7 +846,8 @@ into the mutation variables itself, and a rejected request left the form silent.
 Migration steps:
 
 - Mount `RecaptchaProvider` from `@kenstack/context/RecaptchaProvider` once, above every form that
-  names an action; without it no token is sent, and the server refuses every signed-out submission.
+  names an action; without it no token is sent, and where reCAPTCHA's site and secret keys are both
+  set, the server refuses every signed-out submission.
 - Add `recaptchaAction="<action>"` to each `Form` whose API calls `recaptcha()`, and remove the
   `useGoogleReCaptcha` hook and the `recaptchaToken` merge from its submit handler.
 - A request made outside a form mutation passes `recaptchaAction` to `fetcher` (see "`fetcher`
@@ -786,7 +880,8 @@ Migration steps:
   the login step's live prerequisite gate progress.
 - Anything a step took from the server because it needed identity, such as the account's saved
   details, reaches the browser in the user info: the users module's `publicUser` adds it for the
-  signed-in person only, and a save that changes it answers with `loadUserInfo()`. Civic's
+  signed-in person only, and a save that changes it answers with
+  `response.success({ returnUser: true })`. Civic's
   `AccountDetailsStep` is the reference.
 - A standalone login page no longer redirects a signed-in visitor on the server, which the sign-in
   refresh would trigger mid-flow: the visitor walks the flow, which skips what it already has.
@@ -868,22 +963,18 @@ stub adds nothing, and the frame shows a 404. A site that already serves its own
 
 `createLoginStep()` now returns a skipped step for an authenticated or proven identity instead of
 `null`. Pass its complete definition to StepFlow so its controller can require login again when browser
-identity is lost. `always: true` retains the existing always-visible behavior. Host server checks for
-protected content and operations remain necessary.
+identity is lost. Host server checks for protected content and operations remain necessary.
 
 Steps may supply `skipped` and controllers may call `useStep().setSkipped(boolean)`: `true` bypasses
-that step in navigation; `false` requires it regardless of stored completion. Ordinary steps omit it.
+that step in navigation; `false` shows it, and a step that must be done again also reports
+`setSatisfied(false)`. Ordinary steps omit it.
 When every step is skipped, StepFlow keeps controllers mounted and displays a loading notice. Code
 reading `useFlowContext().activeStep` directly must handle `undefined` during that state.
 
 `useStep().isBeforeActiveStep` tells a mounted controller whether its retained step precedes the active
 step. It is false when its step is skipped or no step is active.
 
-### Index Steps and Email Login Destinations
-
-The first configured step may set `index: true` to use the flow's base URL without its step segment.
-`createLoginStep({ index: true })` opts into this behavior when mounting login first. Other steps keep
-their existing URLs, and skipping the index step does not promote another step to the base URL.
+### Email Login Destinations
 
 `getSafeReturnToPath(value, { allowLogin: true })` now permits the exact `/login` path, including its
 query and hash; the default still rejects it, and all other safety checks remain unchanged. Email login
@@ -893,9 +984,9 @@ login flow at `/login`. Final post-login redirects retain the default check to a
 ### Automatic Child-Module Navigation
 
 Kenstack now renders child-module links below the edit toolbar for saved parent records. The
-`ChildModuleLinks` component is removed, and `useAdminEdit()`'s `childModuleLinks` is now the rendered
-links, which `AdminEdit` places; a host edit form no longer places them.
-Child lists and edit pages retain their breadcrumbs back to the parent record.
+`ChildModuleLinks` component is removed, and `useAdminEdit()`'s `childModuleLinks` is now the
+rendered links, which `AdminEdit` places; a host edit form no longer places them. Child lists and
+edit pages retain their breadcrumbs back to the parent record.
 
 Migration steps:
 
@@ -1023,7 +1114,8 @@ Old API:
 New API:
 
 - `AuthAccess` from `@kenstack/auth/server/auth` is the same union
-  (`"authenticated" | Role | readonly Role[]`); `@kenstack/auth/types` is removed.
+  (`"authenticated" | Role | readonly Role[]`), plus a module permission, `{ module, permission }`
+  (see "One Access Shape"); `@kenstack/auth/types` is removed.
 
 Migration steps:
 
@@ -1109,7 +1201,8 @@ Old API:
 
 New API:
 
-- `createDeps(...)` and the `@kenstack/deps` entry point are removed.
+- `createDeps(...)` from `@kenstack/deps` no longer assembles services; it builds only the host's
+  browser-safe values (see "Host deps binding").
 - Hosts map `@app/db`, `@app/email`, `@app/modules`, and `@app/roles` to their canonical owners,
   which export:
   - `@app/db`: the named `db` returned by `createDb({ schema })`.
@@ -1164,7 +1257,8 @@ Migration steps:
   `uploadMaxSizeMessage`.
 - Move the host role registry to `src/roles.ts`; a host using only the default administrator role may
   re-export `@kenstack/auth/roles`.
-- Remove the host dependency module after its consumers are migrated.
+- Remove the services from the host dependency module after their consumers are migrated; it keeps
+  only browser-safe values.
 
 ### Idempotent Query Provider
 
@@ -1254,8 +1348,8 @@ Old behavior:
 
 New behavior:
 
-- Forms preserve their field values while an `Activity` hides them. Transient status and upload state
-  still clear when the form is hidden.
+- Forms preserve their field values while an `Activity` hides them. Transient status still clears
+  when the form is hidden; upload state stays until each upload settles.
 - Kenstack's built-in admin editor explicitly resets a successfully created record before navigating
   from the new-record page to the saved record.
 
@@ -1521,7 +1615,7 @@ New APIs:
   `returnTo=/reset-password` and the existing recovery email copy. It preserves the neutral public
   response for missing accounts and delivery failures. The reset-password page is authenticated-only:
   any recent non-impersonated authentication can set a password without the current password, while an
-  older session must still supply it. The separate `password_reset_requests` table and token-bearing
+  older session must first confirm its identity (see "Shared Reauthentication"). The separate `password_reset_requests` table and token-bearing
   reset page are removed.
 - `hasRecentAuthentication(...)` replaces `hasRecentPasswordAuthentication(...)`. A recent
   non-impersonated session now satisfies the password-change gate regardless of whether it began with a
@@ -1543,22 +1637,24 @@ Migration steps:
   request/IP quotas, delivery, and cleanup of undelivered challenges. The host callback owns only the
   subject and rendered email design. `verifyCode` and the Login form's link action produce the same
   proven browser state. `loadAuthState` includes the active user's normalized email, roles, and user ID
-  and is React-cached for duplicate reads in one request. Access checks read it, writes included;
-  a response after a write reads the user info again with `loadUserInfo()`.
+  and is React-cached for duplicate reads in one request. A stage with `access: "proven"` reads it;
+  other access checks read `getCurrentUser()`. A response after a write answers with
+  `response.success({ returnUser: true })`, and the pipeline reads the user info again.
 - `verifyCode` returns the proven email and verification ID captured inside its transaction. It does
   not reread aggregate auth state after committing: a concurrent request may legitimately supersede or
   consume that proof, and must not turn the already-recorded success into a server error. Then call
-  `redeemEmailProof()`, which reads that proof itself; a handler that may establish a session performs
-  one final fresh public-auth read for its response.
+  `redeemEmailProof()`, which reads that proof itself; a handler that may establish a session answers
+  with `response.success({ returnUser: true })`.
 - Codes and links expire after 15 minutes. Successful proof starts a separate one-hour browser window
   for site-owned account creation or authentication. Logout clears that verification cookie. Expired
   verification rows remain available for older-code diagnostics for 24 hours, then `sendCode`'s sampled
   cleanup removes them. Every successful delivery adds a verification row; the newest row sharing the
   browser verification-key hash is current, while earlier rows retain the prior codes and links. The
   raw browser key remains only in the HttpOnly cookie.
-- An impersonated session remains `authenticated` and carries `impersonatedBy`. Verification, account
-  creation, and proof-to-session authentication refuse to act through it. A signed-in user may refresh
-  only their own session with a proof for the same email.
+- An impersonated session remains `authenticated` and carries `impersonatedBy`. Verification and
+  proof-to-session authentication accept it: a signed-in user, impersonating or not, who proves another
+  address switches to that address's account (see "Email Verification While Signed In"). Account
+  creation, through a stage with `access: "proven"`, refuses any session.
 - Email login sends the same challenge whether an account already exists. After proof, an existing
   account is authenticated and an unknown address reports the missing account by default. A host with
   an account-creation flow may enable `emailLogin.allowUnregistered`; the auth pipeline then preserves
@@ -1614,9 +1710,7 @@ New API:
 - `@kenstack/auth/components/Login` is a Server Component (default export only). It resolves the
   remembered-method cookie and active challenge from `loadAuthState()` inside its own Suspense
   boundary.
-- `createLoginStep(...)` now returns `Promise<Step | null>` instead of `Step`. It omits the step
-  for authenticated or email-proven visitors by default. Set `always: true` to include it regardless
-  of auth state.
+- `createLoginStep(...)` now returns `Promise<Step>` instead of `Step`.
 
 Migration steps:
 
@@ -1624,10 +1718,9 @@ Migration steps:
 - Move standalone login rendering out of Client Components and import the default Server Component.
 - A StepFlow uses `createLoginStep(...)` from
   `@kenstack/auth/components/Login/Step`, which owns its embedded behavior.
-- Pass the factory result directly into the StepFlow registry; StepFlow resolves it and omits `null`.
-  Other consumers must await the result and handle `null`. Remove host wrappers that duplicate this
-  auth-state check; pass any custom title directly. Use `always: true` where unconditional inclusion
-  is required.
+- Pass the factory result directly into the StepFlow registry; StepFlow resolves it. Other consumers
+  must await the result. Remove host wrappers that check auth state around it; pass any custom title
+  directly.
 
 ### Object Roles Registry With Login-Provider Bestowal
 
@@ -1744,8 +1837,8 @@ New API:
 - `@kenstack/forms/Form` renders its alert outlet automatically before the supplied form children. It
   displays mutation status, pathless schema and server errors, and errors for unrendered fields. Field
   controls continue to display their own errors inline.
-- `Form` accepts `validationMessage` when a workflow needs more specific introductory copy. It preserves
-  every distinct client or server message for a field rather than showing only the first one.
+- `Form` accepts `validationMessage` when a workflow needs more specific introductory copy. Each field
+  shows its first client or server message (see "First validation error per field").
 
 Migration steps:
 
@@ -1797,7 +1890,7 @@ New API:
   if no component or behavior is registered for it.
 - `defineFormFields(...)` does not throw for a kind without a registered client component; it omits the
   unresolved field because a module's own `EditForm` may render it through a bespoke panel.
-  `defineClient(...)` receives the bare field definitions and performs no component resolution.
+  `defineAdminClient(...)` receives the bare field definitions and performs no component resolution.
   Relation forms pass the field subset they render and their `prefix` directly to
   `defineFormFields(...)`. Settings follow the same model: their supplied `SettingsForm` decides which
   generated or bespoke controls to render.
@@ -1921,7 +2014,7 @@ New APIs:
   module-owned `fields/formFields.ts` only when multiple consumers need the same configured map. Custom
   components go in the property-keyed `components` map. The returned map holds fixed-name components
   such as `<fields.title />`, and they read form state through the standard form context.
-- `defineClient(...)` takes the bare isomorphic definitions as `admin.fields` for the record schema,
+- `defineAdminClient(...)` takes the bare isomorphic definitions as `fields` for the record schema,
   list typing, and one-to-one relation metadata. It rejects component-bearing fields and no longer
   accepts `fieldKinds` or `fieldComponents`. `AdminEditFormProps` is removed: module edit forms take no
   `fields` prop.
@@ -1936,8 +2029,8 @@ Migration steps:
 
 - Remove intermediate resolved field maps. Call
   `defineFormFields(definitions, { components?, prefix? })` in a sole consuming form or a shared
-  `fields/formFields.ts`, pass the bare definitions as `admin.fields` in `defineClient(...)`, and remove
-  the `fieldKinds` and `fieldComponents` arguments from `defineClient(...)`. The client entry never
+  `fields/formFields.ts`, pass the bare definitions as `fields` in `defineAdminClient(...)`, and remove
+  the `fieldKinds` and `fieldComponents` arguments. The client entry never
   imports generated form maps.
 - Replace `<Field name="title" />` with a generated component such as `<fields.title />`. Remove the
   `fields` prop and `AdminEditFormProps` typing from module edit forms and their section components;
@@ -1946,15 +2039,6 @@ Migration steps:
   the relation form before generating them with the supplied prefix. Pass the prefix or full names into
   bespoke controls instead of embedding relation paths. Replace `parentFields` reads with imports from
   the parent's shared generated map when that additional consumer earns one.
-- Pass that generated field map to shared admin layouts that render named fields. `MetaFields` now
-  requires it explicitly:
-
-  ```tsx
-  import MetaFields from "@kenstack/admin/components/MetaFields";
-
-  <MetaFields formFields={fields} />;
-  ```
-
 - Keep the low-level `Field` from `@kenstack/forms/Field` for implementing controls. Only the high-level
   admin name resolver was removed.
 
@@ -2008,7 +2092,7 @@ New API:
 - Module server behavior targets a field property through the `admin.serverFields` property, which
   replaces the `serverFields(...)` function. One-to-one relation behavior uses the same property-keyed
   `serverFields` shape beside that relation's table binding.
-- A module client passes the isomorphic field map directly to `defineClient(...)`. A separate
+- A module client passes the isomorphic field map directly to `defineAdminClient(...)`. A separate
   consumer-owned `defineFormFields(...)` call supplies custom editor components through the
   property-keyed `components` option. Extract it to `fields/formFields.ts` only when the configured map
   is shared. Unknown registrations throw; a field without a component remains available for a bespoke
@@ -2018,13 +2102,13 @@ New API:
   `event-occurrences`.
 - Field definitions no longer carry component loaders. Standard list filters retain the serializable
   `filterKind` capability. Loaded-value types now come from registered server-selection and client
-  component contracts; register the server implementation by kind and the client component by property
+  component contracts; register the server implementation and the client component by property
   when replacing a standard kind with a semantic kind. The page editor owns its supported inline field
   set.
 - `resolveServerFields(...)` remains available for lower-level field-map resolution, with the same
   registration options contract. It resolves an isomorphic field map once; do not pass its resolved
   output into another resolution call.
-- The caller-facing server type surface includes `ServerField`, `ServerFieldKinds`,
+- The caller-facing server type surface includes `ServerField`, `ServerFields`,
   `ServerFieldResolver`, `ServerFieldResolverFor`, `SelectedServerFieldResolverFor`, and the field
   lifecycle context, result, task, and upload types. Resolved-map intermediates remain internal.
 
@@ -2045,7 +2129,7 @@ Migration steps:
 - Pass bare `defineFields(...)` output to `defineModule(...)` and apply module registrations through
   `admin.serverFields`. Remove any path that resolves a map before giving it to
   `defineModule(...)` or passes a `resolveServerFields(...)` result into another resolution call.
-- Replace `FieldBehavior` with `ServerField`. Type registries with `ServerFieldKinds<typeof fields>` and
+- Replace `FieldBehavior` with `ServerField`. Type registrations with `ServerFields<typeof fields>` and
   obtain resolver entries from `defineServerField(...)` or
   `serverField(configuredField, resolver)`. The latter takes the configured output of `field(...)` or a
   configured field factory call such as `textField(...)`; it does not take the factory function itself.
@@ -2107,7 +2191,7 @@ New API:
   scope. A custom per-scope window cannot exceed its subject's site-wide window.
 - Each `quotaUses` row stores its scope and the nullable normalized `email` and `ip` values directly.
   The old hashed key is not retained.
-- Password failures use the `password-failure` scope and write durable request
+- Password failures use the `passwordFailure` scope and write durable request
   metadata through the audit logger instead of the quota table.
 
 Migration steps:
@@ -2167,19 +2251,15 @@ const recaptchaRejection = await recaptcha({
   action: "form_action",
   request,
   response,
-  token: data.recaptchaToken,
+  body: dataIn,
 });
 if (recaptchaRejection) {
   return recaptchaRejection;
 }
 ```
 
-Include the token in the protected action's pipeline schema so malformed values become missing tokens instead
-of form-field errors:
-
-```ts
-recaptchaToken: z.string().optional().catch(undefined),
-```
+`recaptcha(...)` reads the token from the raw request body, so the protected action's pipeline schema does not
+declare it; a malformed value counts as a missing token.
 
 Missing or invalid tokens, expired checks, low scores, wrong actions, and other documented assessment rejections
 still stop the request. Availability failures fail open. Operator-actionable failures, including incomplete
@@ -2215,7 +2295,7 @@ Old APIs:
 New APIs:
 
 - `saveModuleRecord({ module, id, changes, values })` saves a module record from an authenticated site action with restricted field authority and module-owned cache revalidation. It writes the columns named in `values` and runs the handlers of the module fields among them, so the action's validated schema defines its writable and returned surface.
-- `saveAdminRecord({ module, id, changes, values })` saves through the standard admin path and supplies admin-save authority to field handlers.
+- `saveAdminRecord({ module, id, updatedAt, changes, values })` saves through the standard admin path and supplies admin-save authority to field handlers.
 - `saveRecord(...)` remains the low-level helper for custom persistence. It is restricted by default and accepts `admin: true` for backend actions that have already enforced admin access.
 - Admin-save authority describes the backend action, not the current user's roles, and is never accepted from submitted data.
 
@@ -2284,7 +2364,7 @@ Old APIs:
 
 New APIs:
 
-- Kind registry entries are direct `ServerField` contributions with `load`, `save`, `preSave`, `delete`, `select`, `listSelect`, `upload`, and other server properties at the top level.
+- Server field registrations are direct `ServerField` contributions with `load`, `save`, `preSave`, `delete`, `select`, `listSelect`, `upload`, and other server properties at the top level.
 - Resolved server fields expose those properties directly, such as `field.save` and `field.select`.
 - The client `filter: boolean` option remains unchanged. Standard filter behavior is selected by the
   separate isomorphic `filterKind` capability and its field options when the admin list is built.
@@ -2292,7 +2372,7 @@ New APIs:
 
 Migration steps:
 
-- Remove the `behavior` object and register the implementation by semantic kind:
+- Remove the `behavior` object and register the implementation by field property:
 
   ```ts
   // Before
@@ -2356,8 +2436,7 @@ New APIs:
 - `seo: true` adds the standard `seoTitle`, `seoDescription`, and `ogImage` columns.
 - Isomorphic `defineFields(...)` from `@kenstack/admin/fields` is the single field-map authoring API.
 - `defineFields({ fields: { ... } })` defines plain field maps.
-- `defineFields({ publish: true, fields: { ... } })` adds the standard `visibility` and `publishedAt` field definitions.
-- `defineFields({ seo: true, fields: { ... } })` adds the standard `seoTitle`, `seoDescription`, and `ogImage` field definitions.
+- `defineModule(...)` adds the standard `visibility` and `publishedAt` field definitions for a table with `publish: true`, and the standard `seoTitle`, `seoDescription`, and `ogImage` field definitions for a table with `seo: true`.
 - `AdminTable` represents the base defined-table contract. Use `AdminPublicIdTable`, `AdminPublishTable`, or `AdminSeoTable` when code requires those generated columns.
 
 Migration steps:
@@ -2371,8 +2450,7 @@ Migration steps:
 - Replace field-map imports from `@kenstack/fields/defineFields` with `@kenstack/admin/fields`.
 - Replace `defineAdminFields(...)` with `defineFields(...)` from `@kenstack/admin/fields`.
 - Wrap plain field maps in the new object shape, changing `defineFields({ title: textField() })` to `defineFields({ fields: { title: textField() } })`.
-- For admin field maps with standard publishing fields, use `defineFields({ publish: true, fields: { ... } })` and remove the manual `metaFieldOptions` entries.
-- For admin field maps with standard SEO fields, use `defineFields({ seo: true, fields: { ... } })` and remove the manual `metaFieldOptions` entries.
+- For admin field maps with standard publishing or SEO fields, remove the manual `metaFieldOptions` entries; `defineModule(...)` adds them from the table.
 - For tables that relied on the old implicit `publicId` column, add `publicId: true` to `defineTable(...)` before upgrading.
 - Remove `publicId: false` from tables that only used it to opt out of the old default.
 - For table types or helpers that require `table.publicId`, use `AdminPublicIdTable`.
@@ -2392,21 +2470,19 @@ New APIs:
 
 - Server module definitions import `defineModule` from `@kenstack/admin/server`.
 - Server admin registries import `defineAdmin` from `@kenstack/admin/server`.
-- `defineModule(...)` is server-only and no longer accepts `client`.
-- Client admin config stays in each module's `client.ts` and is loaded separately through a site-owned client loader map.
-- Client admin config files import `defineClient` from `@kenstack/admin/client`.
-- Site admin pages call `createAdminPage()` after `defineAdmin(...)` attaches client loaders to the module registry.
-- Client loader maps use `defineAdminClients(...)` from `@kenstack/admin/clientLoaders`, with a map of dynamic imports.
+- `defineModule(...)` is server-only. Its `client` is the module's `client/index.ts`, which lazily imports the client admin config; the server only passes it through (see "Modules Carry Their Clients").
+- Client admin config files import `defineAdminClient` and `defineSettingsClient` from `@kenstack/admin/client`.
+- Site admin pages call `createAdminPage()`, which loads each module's client from the `defineAdmin(...)` registry.
 - Sites expose the resolved module registry through `@app/modules`; admin pages, API routes, and the
   sidebar import it from that binding.
 - Admin edit screens load records on the server through `loadAdminEdit` instead of posting `{ action: "load" }` from the client.
-- Module settings client config is declared in `defineClient(...)` with bare `fields` and a supplied
-  `SettingsForm`.
+- Module settings client config is declared in `defineSettingsClient(...)` with bare `fields` and a
+  supplied `SettingsForm`.
 - Server field metadata imports should use explicit server-safe paths such as `@kenstack/admin/metaFields` instead of importing mixed admin APIs from the main admin barrel.
 - Public routes that expose admin-only settings controls should pass the enriched registry module to `ModuleSettingsControl`; the control reads `module.client` internally.
 - Generic custom field components are imported by the consuming form or shared `fields/formFields.ts`
   boundary and passed to `defineFormFields(...)` through its property-keyed `components` argument. The
-  site-level client registry already lazy-loads the whole module client.
+  module's `client/index.ts` already lazy-loads the whole module client.
 - The main `@kenstack/admin` barrel is for shared admin types, list metadata types, search-param helpers, and meta field constants. Do not use it for server-only builders or client config builders.
 
 Migration steps:
@@ -2419,28 +2495,9 @@ Migration steps:
 - Import database query helpers such as `listQuery` and `pageQuery` from `@kenstack/db/queries`; they do
   not belong on the main admin barrel.
 - Keep page editor imports on the page editor subpaths, for example `@kenstack/admin/pageEditor`, `@kenstack/admin/pageEditor/loadContent`, `@kenstack/admin/pageEditor/TextEdit`, and `@kenstack/admin/pageEditor/MarkdownEdit`.
-- Remove `client` from every `defineModule(...)` call. Keep only server-safe admin config, settings table config, fields, handlers, cache tags, and route metadata in the server module file.
-- Keep each module's admin UI config in `client.ts`, exported as `client = defineClient(...)`.
-- Add a Client Component loader map in the site, for example:
-
-  ```ts
-  "use client";
-
-  import { defineAdminClients } from "@kenstack/admin/clientLoaders";
-
-  export const clients = defineAdminClients({
-    news: () => import("./news/client"),
-    users: () => import("./users/client"),
-  });
-  ```
-
-- Pass that loader map to the site module registry so each module entry gets a `client` loader:
-
-  ```ts
-  import { clients } from "./clients";
-
-  export const modules = defineAdmin([news, users], clients);
-  ```
+- Keep only server-safe admin config, settings table config, fields, handlers, cache tags, route metadata, and the `client` import in the server module file.
+- Keep each module's admin UI config in `client/admin.ts`, default-exporting `defineAdminClient(...)`, and add a `"use client"` `client/index.ts` that default-exports `{ admin: () => import("./admin") }`.
+- Import `./client` in the module's `index.ts` and pass it to `defineModule({ name, client, admin })`. The site module registry is `defineAdmin([news, users])`.
 
 - Map `@app/modules` to the host module registry.
 - Replace `createAdminPage({ adminConfig })` with `createAdminPage()` and `adminPipeline({ adminConfig })` with `adminPipeline()`.
@@ -2449,9 +2506,10 @@ Migration steps:
 - Directly re-export `generateMetadata` from `@kenstack/admin/AdminPage` alongside
   `export default createAdminPage()`. `createAdminPage()` reads `modules[name].client` from
   `@app/modules`, while Next.js discovers metadata through the route file's named export.
-- Do not import `client.ts`, form components, list item renderers, or other admin Client Components from server module files.
-- For module settings, pass the bare settings field map and a module-owned form to `defineClient(...)`
-  as `settings: { fields: settingsFields, SettingsForm }`. The form imports generated controls from its
+- Do not import `client/admin.ts`, form components, list item renderers, or other admin Client Components from server module files.
+- For module settings, default-export `defineSettingsClient({ fields: settingsFields, SettingsForm })`
+  from `client/settings.ts`, with the bare settings field map and a module-owned form, and add
+  `settings: () => import("./settings")` to `client/index.ts`. The form imports generated controls from its
   module-owned form-fields file just like an admin `EditForm`; it may also render bespoke controls.
   The settings modal continues to own loading, validation, saving, notices, and submission.
 - Render settings controls with a module entry from the `defineAdmin(...)` registry. Do not pass a separate `loadClient` prop:
@@ -2467,7 +2525,7 @@ Migration steps:
 
 - For generic custom field components, remove `component` from the field definition and register each
   property in `defineFormFields(fields, { components: { myField: MyField } })`. Pass the isomorphic field
-  map directly as `defineClient(...)` `admin.fields`. The field component should be a Client Component
+  map directly as `defineAdminClient(...)`'s `fields`. The field component should be a Client Component
   when it uses hooks, browser APIs, or client-only libraries.
 - For any dynamic/lazy loader intended to keep optional client code out of public route bundles, make the loader file itself a Client Component. Next.js currently does not reliably keep dynamically imported Client Components split when the loader is a Server Component; `ssr: false` also only belongs inside Client Components.
 - Keep loader props serializable when a Client Component loader is rendered by a Server Component.
@@ -2590,10 +2648,11 @@ New APIs:
 - Preview uses Next.js Draft Mode through the admin API GET route.
 - Admin preview links use `/api/admin?action=enable-draft&next=/path`.
 - Draft Mode can be disabled with `/api/admin?action=disable-draft&next=/path`.
-- Modules with a `slug` field default to `/${name}/${slug}` preview paths.
+- A module has a preview path only when it declares `admin.preview` (see "Admin previews are declared").
 - `draftMode()` from `next/headers` checks the current request's Draft Mode state.
-- Public list queries and uncached page queries may accept `{ draft: boolean }`. Cached detail loaders
-  use `resolveVisiblePage(...)` to detect the current request's Draft Mode state.
+- Public list queries may accept `{ draft: boolean }`. A page query takes no `draft` option:
+  `resolveVisiblePage(row, { draft })` gates the loaded row, and without `draft` it detects the
+  current request's Draft Mode state, as cached detail loaders use it.
 - `resolveListDraft()` and `listQuery(table, { draft, ... })` from `@kenstack/db/queries` own Draft Mode
   authorization and list visibility. `pageQuery(...)` owns the page row query, while
   `resolveVisiblePage(...)` owns request-time page visibility.
@@ -2612,7 +2671,6 @@ Migration steps:
   above for cached detail pages.
 - Remove `preview` search parameter propagation from public links, breadcrumbs, back buttons, tag links, and list/detail links.
 - Keep module `admin.preview` path templates; they still define the preview target path, but the admin preview button now routes through Draft Mode before redirecting to that path.
-- Remove explicit `admin.preview` when it only matches the default `/${name}/${slug}` path.
 - Use normal links or anchors, not prefetched Next links, for disable-draft URLs so prefetching cannot clear Draft Mode before the user clicks.
 
 ### Media Table And Media List Field Naming
@@ -2636,7 +2694,8 @@ New APIs:
 - Internal field kind `"media-list"`.
 - Ordered media join tables use `media_id`, `blog_media_unique`, `blog_media_sort_order_idx`, `blog_media_blog_fk`, and `blog_media_media_fk` style names.
 - `SelectedMedia`, `selectMedia(...)`, and `selectMediaSubquery(...)` from `@kenstack/db/queries` for
-  media selector helpers.
+  media selector helpers. `SelectedImage` and `selectImageSubquery(...)` remain there for raster or SVG
+  media only.
 
 Migration steps:
 
@@ -2644,6 +2703,6 @@ Migration steps:
 - Rename ordered media join columns from `image_id` to `media_id`.
 - Rename imports from `defineMedia` to `defineMediaList`.
 - Rename field helper and component imports from `mediaField` / `MediaField` to `mediaListField` / `MediaListField`.
-- Rename selector helper imports from `SelectedImage`, `selectImage`, and `selectImageSubquery` to `SelectedMedia`, `selectMedia`, and `selectMediaSubquery`.
+- Rename `selectImage` imports to `selectMedia`. Where a field may hold files, rename `SelectedImage` and `selectImageSubquery` to `SelectedMedia` and `selectMediaSubquery`; keep them where only raster or SVG media is accepted.
 - Keep singular image fields such as `image`, `ogImage`, or `avatar` named for their domain role; those fields can still store ids from the generalized `media` table.
 - Keep `"original"` and `"square"` selector variants where image renditions are needed. File media ignores the variant and returns its source URL with null dimensions.

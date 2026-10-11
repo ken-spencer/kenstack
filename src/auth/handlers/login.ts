@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt";
 import { sql } from "drizzle-orm";
 
-import { db } from "@app/db";
+import { modules } from "@app/modules";
 import {
   checkQuota,
   consumeQuota,
@@ -12,6 +12,7 @@ import {
 import type { LoginActionResult } from "@kenstack/auth/api";
 import { login as loginUser } from "@kenstack/auth/server/auth";
 import loginSchema from "@kenstack/auth/schemas/login";
+import { query } from "@kenstack/db/queries/query";
 import { resolveLoginDestination } from "@kenstack/auth/server/loginDestination";
 import { loadFreshPublicAuthState } from "@kenstack/auth/server/state";
 import { audit } from "@kenstack/logger";
@@ -50,11 +51,11 @@ export const loginPipeline = pipelineStage(
       return recaptchaRejection;
     }
 
-    const user = await db.query.users.findFirst({
-      columns: { id: true, passwordHash: true },
-      where: (u, { and, isNull }) =>
-        and(sql`lower(${u.email}) = ${email}`, isNull(u.deletedAt)),
-    });
+    const users = modules.users.admin.table;
+    const [user] = await query(users)
+      .select({ id: users.id, passwordHash: users.passwordHash })
+      .where(sql`lower(${users.email}) = ${email}`)
+      .limit(1);
 
     if (!user || !user.passwordHash) {
       // prevent introspection using timing.

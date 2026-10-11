@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import { useSignInChange, useUserInfo } from "@kenstack/auth/useUserInfo";
 import Avatar from "@kenstack/components/Avatar";
 import Button from "@kenstack/components/Button";
-import { logout } from "@kenstack/components/AccountMenu/LogoutButton";
+import { logout } from "@kenstack/auth/useUserInfo";
 import { formatUserInitials } from "@kenstack/lib/user";
 import { cn } from "@kenstack/lib/utils";
 

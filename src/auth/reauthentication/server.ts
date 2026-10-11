@@ -5,6 +5,7 @@ import { revalidateTag } from "next/cache";
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
 import { modules } from "@app/modules";
 import type { DbTransaction } from "@kenstack/db/types";
+import { query } from "@kenstack/db/queries/query";
 import { sessions } from "@kenstack/db/tables/sessions";
 import { hashToken } from "@kenstack/auth/server/token";
 import { getCurrentSession, sessionCacheTag } from "@kenstack/auth/server/user";
@@ -63,9 +64,8 @@ export async function extendAuthorization(
   const users = modules.users.admin.table;
   // UPDATE can evaluate its predicate before waiting on an unchanged row
   // lock. Acquire that lock first, then test liveness with the database clock.
-  await tx
+  await query(sessions, { db: tx })
     .select({ id: sessions.id })
-    .from(sessions)
     .where(and(eq(sessions.id, sessionId), eq(sessions.tokenHash, tokenHash)))
     .for("update");
   const [session] = await tx

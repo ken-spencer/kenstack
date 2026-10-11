@@ -36,6 +36,7 @@ type FlowContextValue = {
   setActiveStep: (stepId: string) => void;
   setLeavingStep: (stepId: string | undefined) => void;
   setStepSkipped: (stepId: string, skipped: boolean) => void;
+  setStepSatisfied: (stepId: string, satisfied: boolean) => void;
   // The step on screen: the active one, unless it leaves the page (see useStepLeavesPage).
   shownStep: string | undefined;
   stepIds: string[];
@@ -135,15 +136,26 @@ export function FlowProvider({
   const isFinished = completedSteps[finishedKey] === true;
   const navigatedStep =
     result ?? (isFinished ? undefined : savedStep) ?? firstStep;
+  // A step whose skipped or satisfied value can change during a visit sets it live through its
+  // controller, and that override stands over a later server render, such as the refresh after a
+  // sign-in.
   const [skippedSteps, setSkippedSteps] = useState<Record<string, boolean>>({});
   const setStepSkipped = useCallback((stepId: string, skipped: boolean) => {
     setSkippedSteps((current) =>
       current[stepId] === skipped ? current : { ...current, [stepId]: skipped },
     );
   }, []);
+  const [satisfiedSteps, setSatisfiedSteps] = useState<Record<string, boolean>>(
+    {},
+  );
+  const setStepSatisfied = useCallback((stepId: string, satisfied: boolean) => {
+    setSatisfiedSteps((current) =>
+      current[stepId] === satisfied
+        ? current
+        : { ...current, [stepId]: satisfied },
+    );
+  }, []);
   const configuredStepIds = Object.keys(steps);
-  // A step whose skipped value can change during a visit sets it live through its controller, and
-  // that override stands over a later server render, such as the refresh after a sign-in.
   const isSkipped = (stepId: string) =>
     skippedSteps[stepId] ?? steps[stepId].skipped;
   const stepIds = configuredStepIds.filter((stepId) => !isSkipped(stepId));
@@ -157,17 +169,17 @@ export function FlowProvider({
           configuredStepIds.indexOf(stepId) >
           configuredStepIds.indexOf(routeTarget),
       ) ?? stepIds.at(-1));
+  // A shown step is done once continued and satisfied. An unsatisfied step counts at once; whether it
+  // was continued counts only after hydration, once the browser ledger is readable.
   const firstIncompleteStepIndex = stepIds.findIndex(
     (stepId) =>
-      isSkipped(stepId) === false ||
+      !(satisfiedSteps[stepId] ?? steps[stepId].satisfied ?? true) ||
       (isHydrated && completedSteps[stepId] !== true),
   );
   const lastReachableStepIndex =
     firstIncompleteStepIndex === -1
       ? stepIds.length - 1
       : firstIncompleteStepIndex;
-  // Live prerequisites apply before hydration too. The browser ledger becomes
-  // readable after hydration.
   const activeStep =
     requestedStep === undefined
       ? undefined
@@ -237,25 +249,29 @@ export function FlowProvider({
           if (activeStep === undefined) {
             return;
           }
-          // A recalled prerequisite releases the existing destination when its
-          // controller skips it again; it does not complete a ledger step.
-          if (activeStep !== requestedStep && isSkipped(activeStep) === false) {
-            return;
-          }
           const nextStepId = stepIds[activeStepIndex + 1];
           if (nextStepId === undefined) {
             return;
           }
+          // A step shown before the requested one, because it wasn't done, keeps that destination:
+          // once continued and satisfied, the flow moves on to the next step not done or the
+          // destination.
+          const isInterrupting = activeStep !== requestedStep;
           if (
             !setCompletedSteps((current) => ({
               ...current,
               [activeStep]: true,
-              ...(steps[nextStepId].final ? { [finishedKey]: true } : {}),
+              ...(steps[nextStepId].final && !isInterrupting
+                ? { [finishedKey]: true }
+                : {}),
             }))
           ) {
             return;
           }
           setCompletedStep(activeStep);
+          if (isInterrupting) {
+            return;
+          }
           if (steps[nextStepId].final) {
             setResult(nextStepId);
           } else {
@@ -270,6 +286,7 @@ export function FlowProvider({
         },
         setActiveStep,
         setLeavingStep,
+        setStepSatisfied,
         setStepSkipped,
         shownStep,
         stepIds,
@@ -341,7 +358,7 @@ export function useStep() {
     throw new Error("A StepFlow step is required.");
   }
 
-  const { setActiveStep, setStepSkipped } = context;
+  const { setActiveStep, setStepSatisfied, setStepSkipped } = context;
   const activate = useCallback(
     () => setActiveStep(stepId),
     [setActiveStep, stepId],
@@ -349,6 +366,10 @@ export function useStep() {
   const setSkipped = useCallback(
     (skipped: boolean) => setStepSkipped(stepId, skipped),
     [setStepSkipped, stepId],
+  );
+  const setSatisfied = useCallback(
+    (satisfied: boolean) => setStepSatisfied(stepId, satisfied),
+    [setStepSatisfied, stepId],
   );
   const stepIndex = context.stepIds.indexOf(stepId);
 
@@ -363,6 +384,7 @@ export function useStep() {
     isFirstStep: context.isFirstStep,
     next: context.next,
     previous: context.previous,
+    setSatisfied,
     setSkipped,
   };
 }

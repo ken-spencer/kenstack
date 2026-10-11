@@ -1,6 +1,7 @@
 import "server-only";
 
 import { db as appDb } from "@app/db";
+import { query } from "@kenstack/db/queries/query";
 import type { NumericIdTable } from "@kenstack/db/types";
 import { selectFields } from "./select";
 import type { FieldLoadContext } from "@kenstack/fields/server";
@@ -22,9 +23,10 @@ export async function loadRecord(options: {
   let row: ({ id: number } & Record<string, unknown>) | undefined;
 
   if (options.where || id != null) {
-    [row] = await db
+    // The admin editor opens trashed records so staff can see and restore them; callers that want
+    // only live rows pass their own filter.
+    [row] = await query(table, { db, trash: "include" })
       .select({ ...selectFields(table, fields), ...options.select })
-      .from(table)
       .where(id == null ? options.where : (options.where ?? eq(table.id, id)))
       .limit(1);
   }

@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+
+import { FieldLockedContext } from "@kenstack/forms/fieldLocked";
 import Link from "next/link";
 
 import { cn } from "@kenstack/lib/utils";
@@ -40,6 +42,7 @@ function ToggleGroup<TOption extends ToggleGroupOption = ToggleGroupOption>({
   onValueChange,
   ...props
 }: ToggleGroupProps<TOption>) {
+  const locked = React.useContext(FieldLockedContext);
   const generatedName = React.useId();
   const isNavigation = options.some((option) => option.href !== undefined);
 
@@ -79,7 +82,7 @@ function ToggleGroup<TOption extends ToggleGroupOption = ToggleGroupOption>({
               name={name ?? generatedName}
               value={option.value}
               checked={option.value === value}
-              disabled={disabled}
+              disabled={disabled || locked}
               className="sr-only"
               onChange={() => onValueChange?.(option.value, option)}
             />

@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import type * as z from "zod";
 
 import { selectMediaSubquery } from "@kenstack/db/queries/media";
+import { query } from "@kenstack/db/queries/query";
 import { media } from "@kenstack/db/tables/media";
 import { documentMimeTypes } from "@kenstack/db/tables/media/mimeTypes";
 import { fileField as createFileField, fileSchema } from ".";
@@ -69,9 +70,8 @@ async function prepareFileSave({
   }
 
   const [oldRow] = id
-    ? await db
+    ? await query(table, { db })
         .select({ mediaId: column })
-        .from(table)
         .where(eq(table.id, id))
         .limit(1)
     : [];
@@ -109,17 +109,15 @@ async function prepareFileSave({
       return { status: "error", message: "Could not find the selected file." };
     }
 
-    const [selectedFile] = await db
+    const [selectedFile] = await query(media, { db })
       .select({ id: media.id })
-      .from(media)
       .where(and(eq(media.id, selectedFileId), eq(media.kind, "file")))
       .limit(1);
 
     nextFileId = selectedFile?.id;
   } else {
-    const [uploadedFile] = await db
+    const [uploadedFile] = await query(media, { db })
       .select({ id: media.id, status: media.status })
-      .from(media)
       .where(
         and(
           eq(media.publicId, value.mediaId),

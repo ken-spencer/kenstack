@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 
 import { LogOut } from "lucide-react";
 
-import { logoutUser } from "@kenstack/auth/useUserInfo";
+import { logout } from "@kenstack/auth/useUserInfo";
 import { cn } from "@kenstack/lib/utils";
 
 export default function LogoutButton({ className }: { className?: string }) {
@@ -24,18 +24,4 @@ export default function LogoutButton({ className }: { className?: string }) {
       Logout
     </button>
   );
-}
-
-// Logs out, then runs onLoggedOut; a failure tells the visitor to try again.
-export function logout(onLoggedOut: () => void) {
-  logoutUser()
-    .then(onLoggedOut)
-    .catch((error) => {
-      window.alert(
-        "There was an unexpected problem handling your request. Please try again later.",
-      );
-
-      // eslint-disable-next-line no-console
-      console.error(error);
-    });
 }

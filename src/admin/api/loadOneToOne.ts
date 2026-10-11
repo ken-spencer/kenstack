@@ -9,7 +9,7 @@ import { loadOneToOne } from "@kenstack/admin/queries/load";
 export const loadOneToOneAction = (moduleConfig: DefinedAdminModule) =>
   pipelineStage(
     {
-      access: "admin",
+      access: { module: moduleConfig.name, permission: "view" },
       schema: z.object({
         parentId: z.int().positive(),
         relationKey: z.string().min(1).max(200),

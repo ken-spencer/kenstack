@@ -1,6 +1,9 @@
 "use client";
 
+import { useContext } from "react";
+
 import Field, { type FieldProps } from "@kenstack/forms/Field";
+import { FieldLockedContext } from "@kenstack/forms/fieldLocked";
 import { X } from "lucide-react";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 
@@ -25,27 +28,37 @@ export default function Tags({
         field,
       }: {
         field: ControllerRenderProps<FieldValues, string>;
-      }) => (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          {field.value?.map((tag: Tag) => {
-            return (
-              <span key={tag.name} className="inline-flex items-center gap-2">
-                {tag.name}
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newValue = field.value.filter((v: Tag) => v !== tag);
-                    field.onChange(newValue);
-                  }}
-                >
-                  <X className="text-foreground" />
-                </button>
-              </span>
-            );
-          })}
-          <Search field={field} />
-        </div>
-      )}
+      }) => <TagList field={field} />}
     />
+  );
+}
+
+// Inside Field, so a lock on this field or on an outer one disables the remove buttons.
+function TagList({
+  field,
+}: {
+  field: ControllerRenderProps<FieldValues, string>;
+}) {
+  const locked = useContext(FieldLockedContext);
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+      {field.value?.map((tag: Tag) => {
+        return (
+          <span key={tag.name} className="inline-flex items-center gap-2">
+            {tag.name}
+            <button
+              type="button"
+              disabled={locked}
+              onClick={() => {
+                field.onChange(field.value.filter((v: Tag) => v !== tag));
+              }}
+            >
+              <X className="text-foreground" />
+            </button>
+          </span>
+        );
+      })}
+      <Search field={field} />
+    </div>
   );
 }

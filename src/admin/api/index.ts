@@ -60,7 +60,7 @@ const runAdminGet = async (request: NextRequest) => {
 };
 
 const runAdminPipeline = async (request: NextRequest) => {
-  const { refusal } = await resolveAccess(request, "admin");
+  const { refusal } = await resolveAccess(request, "authenticated");
   if (refusal) {
     const { status, ...error } = refusal;
     return NextResponse.json(
@@ -113,27 +113,36 @@ const runAdminPipeline = async (request: NextRequest) => {
     case "page-editor-get-presigned-url":
       return pipeline(
         { request, json },
-        getPresignedUrlAction({
-          table: content,
-          fields: pageEditorServerFields,
-        }),
+        getPresignedUrlAction(
+          {
+            table: content,
+            fields: pageEditorServerFields,
+          },
+          "admin",
+        ),
       );
     case "page-editor-upload-complete":
       return pipeline(
         { request, json },
-        uploadCompleteAction({
-          table: content,
-          fields: pageEditorServerFields,
-        }),
+        uploadCompleteAction(
+          {
+            table: content,
+            fields: pageEditorServerFields,
+          },
+          "admin",
+        ),
       );
   }
 
   const moduleConfig = typeof name === "string" ? modules[name] : undefined;
   if (!moduleConfig) {
-    return NextResponse.json({
-      status: "error",
-      message: `Unknown module name "${name}"`,
-    });
+    return NextResponse.json(
+      {
+        status: "error",
+        message: `Unknown module name "${name}"`,
+      } satisfies FetchError,
+      { status: 404 },
+    );
   }
 
   switch (action) {
@@ -151,12 +160,16 @@ const runAdminPipeline = async (request: NextRequest) => {
 
   const adminConfig = moduleConfig.admin;
   if (!adminConfig) {
-    return NextResponse.json({
-      status: "error",
-      message: `Module "${name}" does not have admin records.`,
-    });
+    return NextResponse.json(
+      {
+        status: "error",
+        message: `Module "${name}" does not have admin records.`,
+      } satisfies FetchError,
+      { status: 404 },
+    );
   }
   const adminModuleConfig = { ...moduleConfig, admin: adminConfig };
+  const moduleName = moduleConfig.name;
 
   switch (action) {
     case "load-one-to-one":
@@ -172,26 +185,46 @@ const runAdminPipeline = async (request: NextRequest) => {
     case "reorder":
       return pipeline({ request, json }, reorderAction(adminModuleConfig));
     case "revisions":
-      return pipeline({ request, json }, revisionsAction(adminConfig));
+      return pipeline({ request, json }, revisionsAction(adminModuleConfig));
     case "get-presigned-url":
-      return pipeline({ request, json }, getPresignedUrlAction(adminConfig));
+      return pipeline(
+        { request, json },
+        getPresignedUrlAction(adminConfig, {
+          module: moduleName,
+          permission: "edit",
+        }),
+      );
     case "upload-complete":
-      return pipeline({ request, json }, uploadCompleteAction(adminConfig));
+      return pipeline(
+        { request, json },
+        uploadCompleteAction(adminConfig, {
+          module: moduleName,
+          permission: "edit",
+        }),
+      );
     case "impersonate":
       return pipeline({ request, json }, impersonateAction());
     case "tags":
-      return pipeline({ request, json }, tagsAction(adminConfig));
+      return pipeline({ request, json }, tagsAction(adminModuleConfig));
     case "relationship-search":
+      // Looking up the labels of chosen records is part of viewing one; searching is for choosing.
       return pipeline(
         { request, json },
-        relationshipSearchAction(adminModuleConfig, Object.values(modules)),
+        relationshipSearchAction(
+          adminModuleConfig,
+          Object.values(modules),
+          Array.isArray(json.ids) && json.ids.length > 0 ? "view" : "edit",
+        ),
       );
   }
 
-  return NextResponse.json({
-    status: "error",
-    message: `Unknown action ${action}`,
-  });
+  return NextResponse.json(
+    {
+      status: "error",
+      message: `Unknown action ${action}`,
+    } satisfies FetchError,
+    { status: 404 },
+  );
 };
 
 export const adminPipeline = () => ({

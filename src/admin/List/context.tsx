@@ -24,6 +24,7 @@ import type {
   ModuleClient,
 } from "@kenstack/admin/client";
 import { loadAdminClient } from "@kenstack/admin/clientLoaders";
+import type { Permissions } from "@kenstack/admin/lib/moduleAccess";
 import { getAdminListQueryKey } from "./queryKey";
 
 const AdminListContext = createContext<UseListProps | null>(null);
@@ -35,6 +36,9 @@ type AdminListProps = {
   parentId?: number;
   sort: AdminSortMeta[];
   filter: AdminFilterMeta[];
+  // Whether New shows: the module creates records and the person can edit.
+  canCreate: boolean;
+  permissions: Permissions;
   children: React.ReactNode;
 };
 
@@ -62,7 +66,12 @@ type UseListProps = {
   page: number;
   isReorderSort: boolean;
   canReorder: boolean;
+  canCreate: boolean;
+  permissions: Permissions;
   query: UseQueryResult<AdminListQueryData, Error>;
+  // The last trash, restore or delete's refusal, shown above the rows.
+  removeError: string | null;
+  setRemoveError: React.Dispatch<React.SetStateAction<string | null>>;
 };
 
 export function AdminListProvider({
@@ -72,6 +81,8 @@ export function AdminListProvider({
   parentId,
   sort,
   filter,
+  canCreate,
+  permissions,
   children,
 }: AdminListProps) {
   if (!client?.admin) {
@@ -80,6 +91,7 @@ export function AdminListProvider({
   const adminClient = use(loadAdminClient(client.admin));
 
   const [selected, setSelected] = useState<number[]>([]);
+  const [removeError, setRemoveError] = useState<string | null>(null);
   const defaultFilterState = createDefaultListQueryState(sort);
   const [filters, debouncedFilters, setFilters, searchParams] = useQueryStore(
     defaultFilterState,
@@ -102,6 +114,7 @@ export function AdminListProvider({
     sort.find((option) => option.name === filters.sort)?.direction === false;
   const page = isReorderSort ? 1 : parseListPage(searchParams.get("page"));
   const canReorder =
+    !!permissions.edit &&
     isReorderSort &&
     !filters.keywords &&
     !filters.trash &&
@@ -149,7 +162,11 @@ export function AdminListProvider({
     page,
     isReorderSort,
     canReorder,
+    canCreate,
+    permissions,
     query,
+    removeError,
+    setRemoveError,
   };
   return (
     <AdminListContext.Provider value={values}>

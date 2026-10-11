@@ -9,6 +9,7 @@ import type {
   AnyAdminConfig,
   ModuleParentOptions,
 } from "@kenstack/admin/module";
+import { hasAccess } from "@kenstack/auth/server/auth";
 import Breadcrumbs from "@kenstack/admin/components/Breadcrumbs";
 import { getFilterMeta, getSortMeta } from "@kenstack/admin/types/list";
 import type { ModuleClient } from "@kenstack/admin/client";
@@ -54,18 +55,22 @@ export default async function AdminListCont({
     searchParams,
     sort,
   });
-  const [{ data: initialData }, parentRecord] = await Promise.all([
-    loadAdminList({
-      adminConfig,
-      name,
-      moduleParent: parentId ? moduleParent : undefined,
-      parentId,
-      query: initialQuery,
-    }),
-    parentId && moduleParent
-      ? loadAdminParentRecord({ id: parentId, name: moduleParent.module })
-      : null,
-  ]);
+  const [{ data: initialData }, parentRecord, edit, remove] = await Promise.all(
+    [
+      loadAdminList({
+        adminConfig,
+        name,
+        moduleParent: parentId ? moduleParent : undefined,
+        parentId,
+        query: initialQuery,
+      }),
+      parentId && moduleParent
+        ? loadAdminParentRecord({ id: parentId, name: moduleParent.module })
+        : null,
+      hasAccess({ module: name, permission: "edit" }),
+      hasAccess({ module: name, permission: "delete" }),
+    ],
+  );
 
   if (parentId && !parentRecord) {
     notFound();
@@ -83,6 +88,11 @@ export default async function AdminListCont({
         client={client}
         sort={sortMeta}
         filter={filterMeta}
+        canCreate={adminConfig.create && edit}
+        permissions={{
+          edit,
+          delete: remove,
+        }}
       >
         <section>
           <Breadcrumbs
@@ -90,7 +100,7 @@ export default async function AdminListCont({
             moduleTitle={moduleTitle}
             parent={parentRecord}
           />
-          <Header canCreate={adminConfig.create} />
+          <Header />
           <List publish={adminConfig.publish} />
           <Footer />
         </section>

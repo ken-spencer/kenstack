@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+
+import { FieldLockedContext } from "@kenstack/forms/fieldLocked";
 import { ChevronDown } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 
@@ -37,7 +39,7 @@ type SelectProps<TOption extends SelectOption = SelectOption> = Omit<
 function Select<TOption extends SelectOption = SelectOption>({
   className,
   contentClassName,
-  disabled = false,
+  disabled: disabledProp = false,
   itemClassName,
   listLabel,
   options,
@@ -49,6 +51,8 @@ function Select<TOption extends SelectOption = SelectOption>({
   onValueChange,
   ...props
 }: SelectProps<TOption>) {
+  const locked = React.useContext(FieldLockedContext);
+  const disabled = disabledProp || locked;
   const selectedOption =
     options.find((option) => option.value === value) ?? null;
   const SelectedIcon = selectedOption?.icon;

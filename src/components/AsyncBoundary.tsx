@@ -23,14 +23,16 @@ function ErrorFallback(
   }
 
   return (
-    <Notice className="flex-wrap p-4" role="alert">
-      <div className="flex grow flex-wrap items-center justify-between gap-3">
-        <p>{message}</p>
+    <Notice
+      className="p-4"
+      role="alert"
+      message={message}
+      action={
         <Button type="button" variant="outline" onClick={retry}>
           Try again
         </Button>
-      </div>
-    </Notice>
+      }
+    />
   );
 }
 

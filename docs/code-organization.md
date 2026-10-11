@@ -112,9 +112,10 @@ capability with their owner and the concrete maintenance cost.
 
 ## Explanatory text
 
-- A code comment supplies a non-obvious constraint, invariant, or intentionally surprising behavior a
-  maintainer could plausibly remove or violate. Delete comments that narrate syntax, control flow,
-  component mechanics, or hypothetical future work.
+- A code comment supplies a non-obvious constraint, invariant, or intentionally surprising behavior
+  a maintainer could plausibly remove or violate. Delete comments that narrate syntax, control flow,
+  component mechanics, or hypothetical future work. When a change makes a comment on or in the code
+  it edits false, the same change updates or deletes it, without a question.
 - When writing interface text, add a sentence only when users need its context, outcome, expectation,
   or next action. Do not add encouragement, vague reassurance, or friendly filler. At a money,
   commitment, or destructive step, reassurance is one specific true fact the screen does not already
@@ -173,6 +174,8 @@ capability with their owner and the concrete maintenance cost.
 
 ## Helper ladder
 
+- Before writing a helper, constant or check, search Kenstack, the host and its packages for one
+  that already does the job, and call it.
 - Apply the ownership and direct-expression rules above before deciding a helper's location or export
   status. An uncommitted export does not exempt a helper from those rules.
 - With one consuming file, keep the helper file-local and unexported. This applies to helpers, not to

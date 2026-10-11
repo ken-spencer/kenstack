@@ -1,4 +1,5 @@
 import {
+  useContext,
   useEffect,
   useRef,
   useState,
@@ -17,6 +18,7 @@ import Field, {
   type FieldProps,
   type RenderProps,
 } from "@kenstack/forms/Field";
+import { FieldLockedContext } from "@kenstack/forms/fieldLocked";
 import Button from "@kenstack/components/Button";
 import Help from "@kenstack/components/Help";
 import { getReturnedErrorMessage } from "@kenstack/api/errors";
@@ -100,6 +102,7 @@ const createImageRender = ({
   ImageDetails,
 }: ImageRenderProps & { ImageDetails?: ImageDetailsEditor }) =>
   function ImageFieldRender({ field }: { field: RenderProps["field"] }) {
+    const locked = useContext(FieldLockedContext);
     const {
       finishUploading,
       form,
@@ -281,7 +284,7 @@ const createImageRender = ({
         evt.stopPropagation();
 
         const dt = evt.dataTransfer;
-        if (dt.files?.length) {
+        if (!locked && dt.files?.length) {
           const [file] = dt.files;
           if (accept.includes(file.type)) {
             uploadFile(file);
@@ -296,6 +299,7 @@ const createImageRender = ({
           className="sr-only"
           type="file"
           accept={acceptStr}
+          disabled={locked}
           onChange={(evt: ChangeEvent<HTMLInputElement>) => {
             const target = evt.currentTarget;
             if (target?.files) {
@@ -315,6 +319,7 @@ const createImageRender = ({
           ) : null}
           <Button
             type="button"
+            disabled={locked}
             className={"absolute top-1 right-1 cursor-pointer " + buttonClass}
             size="icon"
             tooltip="Cancel upload"
@@ -375,6 +380,7 @@ const createImageRender = ({
         <div className={contClass} {...dragEvents}>
           <Button
             type="button"
+            disabled={locked}
             aria-label="Delete image"
             className={"absolute top-1 right-1 " + buttonClass}
             size="icon"
@@ -404,6 +410,7 @@ const createImageRender = ({
           {ImageDetails ? (
             <button
               type="button"
+              disabled={locked}
               aria-label="Edit image details"
               className="h-full w-full cursor-pointer"
               onClick={(evt) => {
@@ -419,6 +426,7 @@ const createImageRender = ({
           {cropSource ? (
             <Button
               type="button"
+              disabled={locked}
               aria-label="Adjust crop"
               className="bg-background/90 absolute right-1 bottom-1 z-10"
               icon={Crop}

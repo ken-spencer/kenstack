@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+
+import { FieldLockedContext } from "@kenstack/forms/fieldLocked";
 import { ChevronDownIcon, XIcon } from "lucide-react";
 
 import { Button } from "@kenstack/components/Button";
@@ -259,7 +261,7 @@ function ComboboxInput({
   className,
   children,
   autoComplete = "off",
-  disabled = false,
+  disabled: disabledProp = false,
   inputClassName,
   showChevron = true,
   showClear = false,
@@ -270,6 +272,8 @@ function ComboboxInput({
   ref,
   ...props
 }: ComboboxInputProps) {
+  const locked = React.useContext(FieldLockedContext);
+  const disabled = disabledProp || locked;
   const combobox = useComboboxInputContext("ComboboxInput");
   const picker = usePickerContext("ComboboxInput");
   const inputRef = React.useRef<HTMLInputElement | null>(null);

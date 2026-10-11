@@ -3,15 +3,13 @@ import { and, eq, sql } from "drizzle-orm";
 import isEqual from "lodash-es/isEqual";
 
 import { ReturnedError } from "@kenstack/api/errors";
+import { query } from "@kenstack/db/queries/query";
 import { media } from "@kenstack/db/tables/media";
 import type {
   ImageVariants,
   SquareCrop,
 } from "@kenstack/db/tables/media/types";
-import type {
-  FieldAfterSave,
-  FieldPrepareSaveContext,
-} from "@kenstack/fields/serverField";
+import type { FieldAfterSave } from "@kenstack/fields/serverField";
 import { mediaStorage } from "@kenstack/lib/mediaStorage";
 import {
   getSquareCropExtract,
@@ -32,12 +30,10 @@ type CropItem = {
 
 export async function prepareMediaCrop<TItem extends CropItem>({
   allowedMediaIds,
-  db,
   item,
   userId,
 }: {
   allowedMediaIds: Set<number>;
-  db: FieldPrepareSaveContext["db"];
   item: TItem;
   userId: number;
 }) {
@@ -57,7 +53,7 @@ export async function prepareMediaCrop<TItem extends CropItem>({
     return null;
   }
 
-  const [row] = await db
+  const [row] = await query(media)
     .select({
       id: media.id,
       baseName: media.baseName,
@@ -67,7 +63,6 @@ export async function prepareMediaCrop<TItem extends CropItem>({
       status: media.status,
       variants: media.variants,
     })
-    .from(media)
     .where(where)
     .limit(1);
 

@@ -17,8 +17,9 @@ vocabulary such as the server-only meaning of `api` lives in `docs/runtime-bound
   it directly. Components and other declarative definitions may keep the domain noun they represent.
 - Reserve `get` for retrieving or selecting a value that already exists in the named source. A value
   derived from its inputs takes the established operation verb, such as `sum`, `count`, `calculate`,
-  `format`, `build`, or `resolve`, preferring the native, owner, or adopted-library name when one
-  exists.
+  `format`, or `build`, preferring the native, owner, or adopted-library name when one exists.
+  `resolve` is never the default verb: use it only when the function turns a reference into the
+  thing it refers to, and the verbs above don't fit.
 - A boolean function that compares values begins with `is`, such as `isSameValue`, `isDateBefore`, or
   `isOptionMatch`. `compare` is reserved for a three-way comparator that returns ordering.
 - Keep the same domain noun as a value crosses its producer, result type, response property, prop,

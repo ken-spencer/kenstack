@@ -9,6 +9,9 @@ import Edit from "@kenstack/admin/Edit";
 import { modules } from "@app/modules";
 import { pageRoute } from "@kenstack/pageRoute";
 import { parseAdminRouteSegments } from "@kenstack/admin/lib/route";
+import NoAccess from "@kenstack/auth/components/NoAccess";
+import { hasRoleAccess } from "@kenstack/auth/roleAccess";
+import { hasAccess } from "@kenstack/auth/server/auth";
 import StyleGuidePage from "@kenstack/admin/style-guide/Page";
 import EmailLogPage from "@kenstack/admin/emailLog/ListPage";
 import EmailMessagePage from "@kenstack/admin/emailLog/MessagePage";
@@ -62,10 +65,12 @@ export async function generateMetadata({
   };
 }
 
+// Any signed-in person reaches the page, which then checks what they asked for: the reserved pages are
+// for admins, and a module page needs the permission its grant gives their roles.
 export function createAdminPage() {
   return pageRoute(
     {
-      access: "admin",
+      access: "authenticated",
       fallback: <AdminPageSkeleton />,
       params: z
         .object({
@@ -75,6 +80,13 @@ export function createAdminPage() {
     },
     async ({ params, searchIn, user }) => {
       const { name, id, isNew = false, parentId } = params;
+      if (
+        (name === "style-guide" || name === "email-log") &&
+        !hasRoleAccess(user.roles, "admin")
+      ) {
+        return <NoAccess />;
+      }
+
       if (name === "style-guide") {
         const requestedContext = searchIn.context;
         return (
@@ -127,6 +139,15 @@ export function createAdminPage() {
         notFound();
       }
 
+      if (
+        !(await hasAccess({
+          module: name,
+          permission: isNew ? "edit" : "view",
+        }))
+      ) {
+        return <NoAccess />;
+      }
+
       const Icon = moduleConfig.icon;
 
       return (
@@ -159,7 +180,6 @@ export function createAdminPage() {
                 client={moduleConfig.client}
                 moduleParent={moduleParent}
                 parentId={parentId}
-                userId={user.id}
               />
             )}
           </Suspense>

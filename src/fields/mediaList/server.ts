@@ -6,6 +6,7 @@ import type { AnyPgColumn, AnyPgTable } from "drizzle-orm/pg-core";
 import isEqual from "lodash-es/isEqual";
 
 import { selectMediaSubquery } from "@kenstack/db/queries/media";
+import { query } from "@kenstack/db/queries/query";
 import { media as mediaTable } from "@kenstack/db/tables";
 import type { User } from "@kenstack/types";
 import { mediaListField as createMediaListField, mediaListSchema } from ".";
@@ -58,9 +59,8 @@ export function mediaListField({ table }: MediaHandlerConfig) {
 
       const allowedMediaIds = new Set<number>();
       if (id) {
-        const currentRows = await db
+        const currentRows = await query(table, { db })
           .select({ mediaId: table.mediaId })
-          .from(table)
           .where(eq(table.tableId, id));
 
         for (const { mediaId } of currentRows) {
@@ -89,7 +89,6 @@ export function mediaListField({ table }: MediaHandlerConfig) {
 
           const prepared = await prepareMediaCrop({
             allowedMediaIds,
-            db,
             item,
             userId: user.id,
           });
@@ -125,12 +124,11 @@ async function loadMedia({
   tableId: number;
   table: MediaHandlerConfig["table"];
 }) {
-  const rows = await db
+  const rows = await query(table, { db })
     .select({
       id: table.mediaId,
       media: selectMediaSubquery(table.mediaId, "square"),
     })
-    .from(table)
     .innerJoin(mediaTable, eq(table.mediaId, mediaTable.id))
     .where(eq(table.tableId, tableId))
     .orderBy(asc(table.sortOrder));
@@ -158,14 +156,13 @@ async function saveMedia({
   selected: z.output<typeof mediaListSchema>;
   user: User;
 }) {
-  const oldRows = await db
+  const oldRows = await query(table, { db })
     .select({
       mediaId: table.mediaId,
       alt: mediaTable.alt,
       title: mediaTable.title,
       caption: mediaTable.caption,
     })
-    .from(table)
     .innerJoin(mediaTable, eq(table.mediaId, mediaTable.id))
     .where(eq(table.tableId, tableId))
     .orderBy(asc(table.sortOrder));
@@ -184,7 +181,7 @@ async function saveMedia({
     }
 
     if ("action" in item && item.action === "upload") {
-      const [mediaRow] = await db
+      const [mediaRow] = await query(mediaTable, { db })
         .select({
           id: mediaTable.id,
           alt: mediaTable.alt,
@@ -192,7 +189,6 @@ async function saveMedia({
           caption: mediaTable.caption,
           status: mediaTable.status,
         })
-        .from(mediaTable)
         .where(
           and(
             eq(mediaTable.publicId, item.mediaId),

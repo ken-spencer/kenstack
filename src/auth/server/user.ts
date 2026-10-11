@@ -1,13 +1,12 @@
 import { cache } from "react";
 import { cacheLife, cacheTag, io } from "next/cache";
 import { cookies, headers } from "next/headers";
-import { and, isNull, eq, gt, sql } from "drizzle-orm";
+import { and, eq, gt, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import omit from "lodash-es/omit";
 
 import { modules } from "@app/modules";
 import roles from "@app/roles";
-import type { AuthAccess } from "@kenstack/auth/server/auth";
 import { getLoginReturnPath } from "@kenstack/auth/returnTo";
 import { selectMediaSubquery } from "@kenstack/db/queries/media";
 import { query } from "@kenstack/db/queries/query";
@@ -15,7 +14,8 @@ import { sessions } from "@kenstack/db/tables/sessions";
 import { formatUserInitials, formatUserName } from "@kenstack/lib/user";
 import { adminLoadCacheTag } from "@kenstack/admin/cache";
 
-import { hasRoleAccess } from "./roleAccess";
+import { isAccessGranted } from "@kenstack/admin/lib/moduleAccess";
+import type { AuthAccess } from "@kenstack/auth/server/auth";
 import { hashToken } from "./token";
 import { getUsersModule } from "./getUsersModule";
 import type { Role } from "./types";
@@ -54,10 +54,8 @@ async function loadUserByTokenHash(tokenHash: string) {
       and(
         eq(sessions.tokenHash, tokenHash),
         gt(sessions.expiresAt, sql`now()`),
-        isNull(users.deletedAt),
       ),
     )
-    .build()
     .limit(1);
 
   return user;
@@ -196,7 +194,7 @@ export const requireUser = cache(async function requireUser(
     redirect(getLoginReturnPath(returnTo));
   }
 
-  if (!hasRoleAccess(user.roles, access)) {
+  if (!isAccessGranted(user.roles, access)) {
     redirect("/login");
   }
 

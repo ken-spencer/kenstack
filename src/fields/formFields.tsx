@@ -32,6 +32,8 @@ import SwitchField from "@kenstack/forms/SwitchField";
 import TextareaField from "@kenstack/forms/TextareaField";
 import UrlField from "@kenstack/forms/UrlField";
 import { hasKey } from "@kenstack/lib/hasKey";
+import { useFieldAccess } from "@kenstack/forms/fieldAccess";
+import { FieldLockedContext } from "@kenstack/forms/fieldLocked";
 
 export type FieldComponentProps = {
   name: string;
@@ -191,7 +193,7 @@ export function defineFormFields<
           ? `${namePrefix}.${configuredFieldName}`
           : configuredFieldName;
 
-        return createElement(
+        const element = createElement(
           Component as ComponentType<Record<string, unknown>>,
           {
             ...props,
@@ -200,10 +202,38 @@ export function defineFormFields<
             label: configuredProps.label ?? startCase(name),
           },
         );
+
+        return field.access === undefined ? (
+          element
+        ) : (
+          <RestrictedField name={name}>{element}</RestrictedField>
+        );
       }
 
       GeneratedField.displayName = `Field.${configuredFieldName}`;
       return [[name, GeneratedField]];
     }),
   ) as unknown as GeneratedFormFields<TFields, TFieldComponents>;
+}
+
+// A field with `access`, looked up by its definition key: a control that doesn't render a Field of
+// that name, such as a field array or a group, is hidden or locked as a whole, and its inner controls
+// inherit the lock.
+function RestrictedField({
+  name,
+  children,
+}: {
+  name: string;
+  children: ReactNode;
+}) {
+  const access = useFieldAccess(name);
+  if (access === "hidden") {
+    return null;
+  }
+
+  return access === "locked" ? (
+    <FieldLockedContext value>{children}</FieldLockedContext>
+  ) : (
+    children
+  );
 }

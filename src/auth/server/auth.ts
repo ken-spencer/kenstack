@@ -9,12 +9,19 @@ import { verificationCookie } from "@kenstack/auth/email/verification/internal/c
 import { sessions, type LoginProvider } from "@kenstack/db/tables/sessions";
 import { audit } from "@kenstack/logger";
 
-import { hasRoleAccess } from "./roleAccess";
+import {
+  isAccessGranted,
+  type Permissions,
+} from "@kenstack/admin/lib/moduleAccess";
+import { hasRoleAccess, type RoleAccess } from "@kenstack/auth/roleAccess";
 import { generateToken, hashToken } from "./token";
 import type { Role } from "./types";
 import { getCurrentUser, sessionCacheTag } from "./user";
 
-export type AuthAccess = "authenticated" | Role | readonly Role[];
+// Who may do something: anyone signed in, any one of these roles, or whoever a module's grants give
+// this permission (admins always).
+export type AuthAccess =
+  RoleAccess | { module: string; permission: keyof Permissions };
 
 export async function login(
   userId: number,
@@ -172,10 +179,8 @@ export const hasRole = cache(async (role: Role | readonly Role[]) => {
   return user ? hasRoleAccess(user.roles, role) : false;
 });
 
+// Whether the signed-in person has this access, read once per request: the one check for every form.
 export const hasAccess = cache(async (access: AuthAccess) => {
-  if (access === "authenticated") {
-    return isAuthenticated();
-  }
-
-  return hasRole(access);
+  const user = await getCurrentUser();
+  return user ? isAccessGranted(user.roles, access) : false;
 });

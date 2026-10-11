@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { db } from "@app/db";
-import { eq, type SQL } from "drizzle-orm";
+import { and, eq, isNull, type SQL } from "drizzle-orm";
 import { type Prettify } from "@kenstack/types";
 
 import { cacheLife, cacheTag } from "next/cache";
 import { selectImageSubquery } from "@kenstack/db/queries/media";
+import { query } from "@kenstack/db/queries/query";
 import { content } from "@kenstack/db/tables/content";
 import { createDefaultValues } from "@kenstack/fields/createDefaultValues";
 import { loadRecord } from "@kenstack/records";
@@ -53,7 +53,7 @@ export const loadContent = async (
     (await loadRecord({
       table: content,
       fields: pageEditorServerFields,
-      where: eq(content.slug, slug),
+      where: and(eq(content.slug, slug), isNull(content.deletedAt)),
     })) ?? {};
 
   const data = Object.fromEntries(
@@ -82,7 +82,7 @@ export const loadMeta = async (
     throw Error("slug is required");
   }
 
-  const [row] = await db
+  const [row] = await query(content)
     .select({
       title: content.title,
       description: content.description,
@@ -90,7 +90,6 @@ export const loadMeta = async (
       seoTitle: content.seoTitle,
       seoDescription: content.seoDescription,
     })
-    .from(content)
     .where(eq(content.slug, slug));
   const title =
     row?.seoTitle ||

@@ -60,8 +60,12 @@ unsupported top-level directories are transitional and set no precedent.
   the browser imports ships whole, so it holds only browser-safe values.
 - `roles.ts` default-exports the role registry. Kenstack owns the default list, so by default the file
   is one line, `export { default } from "@kenstack/auth/roles";`, and roles Kenstack adds later reach
-  the site; it adds its own roles only when the site needs them. Only admin and server code import
+  the site; it adds its own roles only when the site needs them. A role gives a `label` only where its
+  key in start case would read wrong. Only admin and server code import
   `@app/roles`, so public pages never carry the role list.
+- A role list that more than one place checks, such as a sidebar link and the routes behind it, is a
+  named export of `roles.ts` beside the registry, never a file of its own, so a security review finds
+  every shared grant in one file. A route that states its roles once keeps them inline.
 - `app/**/route.ts` exposes module, feature, or integration HTTP behavior only where Next.js requires a
   framework entry point.
 

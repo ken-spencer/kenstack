@@ -1,11 +1,12 @@
 import "server-only";
 
 import { sql } from "drizzle-orm";
-import { db } from "@app/db";
+import { modules } from "@app/modules";
 import { login, logout } from "@kenstack/auth/server/auth";
 import { loadLoginVerification } from "@kenstack/auth/server/state";
 import { getFreshCurrentUser } from "@kenstack/auth/server/user";
 import { ReturnedError } from "@kenstack/api";
+import { query } from "@kenstack/db/queries/query";
 import { normalizeEmail } from "@kenstack/fields/email";
 
 import {
@@ -45,16 +46,12 @@ export async function redeemEmailProof({
   if (user && normalizeEmail(user.email) === email) {
     userId = user.id;
   } else {
-    userId = (
-      await db.query.users.findFirst({
-        columns: { id: true },
-        where: (users, { and, isNull }) =>
-          and(
-            sql`lower(${users.email}) = ${normalizeEmail(email)}`,
-            isNull(users.deletedAt),
-          ),
-      })
-    )?.id;
+    const users = modules.users.admin.table;
+    const [account] = await query(users)
+      .select({ id: users.id })
+      .where(sql`lower(${users.email}) = ${normalizeEmail(email)}`)
+      .limit(1);
+    userId = account?.id;
     if (userId === undefined) {
       if (allowUnregistered) {
         // The proven address has no account, so the host's flow goes on to

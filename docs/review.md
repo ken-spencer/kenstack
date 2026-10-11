@@ -8,7 +8,8 @@ cannot otherwise be judged.
 ## Review order
 
 1. Check correctness, regressions, error handling, accessibility, authorization, cache behavior, and
-   other observable behavior affected by the change.
+   other observable behavior affected by the change. Judge each new or changed read against the caching
+   rules in `docs/runtime-boundaries.md#caching-and-suspense`.
 2. Check whether verification matches the actual boundary and whether a missing check leaves a material
    risk. Use browser inspection when code cannot establish visible behavior.
 3. Ask whether a simpler approach provides the same result and whether each abstraction or mechanism has
@@ -28,10 +29,13 @@ cannot otherwise be judged.
    behavior to one, compare it with Kenstack and existing site components and rule on ownership
    against the component-reuse rules in `docs/components.md`; a similarity score, visual
    resemblance, or unresolved duplication candidate is not a finding.
-5. Report code outside Kenstack (a site, payments) that performs a Kenstack mechanism's job — access
-   or session checks, refusal codes or messages, store adoption, carrying a value between two
-   Kenstack ends — as a finding, with the declarative
-   Kenstack shape that replaces it. It goes to the user for a decision, not to a local fix.
+   For each new query, search for an existing loader that reads the same data and check whether the
+   request already holds it, such as the signed-in user; a read that repeats either is a finding.
+5. Report a call site (a site, or one package using another) that performs a package mechanism's job
+   — access or session checks, refusal codes or messages, store adoption, carrying a value between
+   two ends of the same package, or a provider, wrapper or setup step a package's component needs —
+   as a finding, with the declarative shape inside the package that replaces it. It goes to the user
+   for a decision, not to a local fix.
 
 A finding never asks for churn between equivalent forms, a rename of harmless locals, complexity moved
 elsewhere, or a diff that is harder to review. When the diff shows the cleanup pass was skipped, route

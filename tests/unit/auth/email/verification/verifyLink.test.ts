@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   getKey: vi.fn(),
   prove: vi.fn(),
+  query: vi.fn(),
   setCookie: vi.fn(),
   transaction: vi.fn(),
 }));
@@ -18,6 +19,7 @@ vi.mock("drizzle-orm", () => ({
 vi.mock("@app/db", () => ({
   db: { transaction: mocks.transaction },
 }));
+vi.mock("@kenstack/db/queries/query", () => ({ query: mocks.query }));
 vi.mock("@kenstack/db/tables/verification", () => ({ verifications: {} }));
 vi.mock("@kenstack/auth/email/verification/internal/repository", () => ({
   proveVerification: mocks.prove,
@@ -33,40 +35,31 @@ import { hashVerificationKey } from "@kenstack/auth/email/verification/internal/
 const token = "a".repeat(43);
 const proofExpiresAt = new Date("2030-01-01T01:00:00.000Z");
 
-function queryResult(record: Record<string, unknown>) {
-  const query = {
-    for: vi.fn().mockResolvedValue([record]),
-    from: vi.fn(),
-    limit: vi.fn(),
-    where: vi.fn(),
+// A fake Kenstack query builder: every clause returns it, and awaiting it gives the rows.
+function fakeBuilder(rows: unknown[]) {
+  const builder = {
+    for: () => builder,
+    groupBy: () => builder,
+    innerJoin: () => builder,
+    leftJoin: () => builder,
+    limit: () => builder,
+    orderBy: () => builder,
+    select: () => builder,
+    then: (
+      resolve: (rows: unknown[]) => unknown,
+      reject?: (reason: unknown) => unknown,
+    ) => Promise.resolve(rows).then(resolve, reject),
+    where: () => builder,
   };
-  query.from.mockReturnValue(query);
-  query.limit.mockReturnValue(query);
-  query.where.mockReturnValue(query);
-  return query;
-}
-
-function latestVerificationResult(id = 3) {
-  const query = {
-    from: vi.fn(),
-    limit: vi.fn().mockResolvedValue([{ id }]),
-    orderBy: vi.fn(),
-    where: vi.fn(),
-  };
-  query.from.mockReturnValue(query);
-  query.orderBy.mockReturnValue(query);
-  query.where.mockReturnValue(query);
-  return query;
+  return builder;
 }
 
 function transactionWith(record: Record<string, unknown>, latestId = 3) {
-  const tx = {
-    execute: vi.fn(),
-    select: vi
-      .fn()
-      .mockReturnValueOnce(queryResult(record))
-      .mockReturnValueOnce(latestVerificationResult(latestId)),
-  };
+  const tx = { execute: vi.fn() };
+  mocks.query.mockReset();
+  mocks.query
+    .mockReturnValueOnce(fakeBuilder([record]))
+    .mockReturnValueOnce(fakeBuilder([{ id: latestId }]));
   mocks.transaction.mockImplementation((callback) => callback(tx));
   return tx;
 }

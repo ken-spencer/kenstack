@@ -2,6 +2,7 @@ import "server-only";
 
 import { and, desc, eq, gt, isNotNull, isNull, lte, ne, or } from "drizzle-orm";
 import { db } from "@app/db";
+import { query } from "@kenstack/db/queries/query";
 import { verifications } from "@kenstack/db/tables/verification";
 import type { DbTransaction } from "@kenstack/db/types";
 
@@ -101,7 +102,7 @@ export async function loadVerificationsForUpdate(
   tx: DbTransaction,
   verificationKeyHash: string,
 ) {
-  return tx
+  return query(verifications, { db: tx })
     .select({
       challengeKey: verifications.challengeKey,
       codeHash: verifications.codeHash,
@@ -116,7 +117,6 @@ export async function loadVerificationsForUpdate(
       provenAt: verifications.provenAt,
       userId: verifications.userId,
     })
-    .from(verifications)
     .where(eq(verifications.verificationKeyHash, verificationKeyHash))
     .orderBy(desc(verifications.createdAt), desc(verifications.id))
     .for("update");
@@ -195,12 +195,11 @@ export async function resolveCodeAttempt(
     !matchesCurrent &&
     !matchesSuperseded &&
     (
-      await tx
+      await query(verifications, { db: tx })
         .select({
           codeHash: verifications.codeHash,
           codeSalt: verifications.codeSalt,
         })
-        .from(verifications)
         .where(
           and(
             eq(verifications.email, current.email),

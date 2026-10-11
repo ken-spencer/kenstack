@@ -1,8 +1,9 @@
 import "server-only";
 
-import { and, getTableName, isNull, sql } from "drizzle-orm";
+import { getTableName, sql } from "drizzle-orm";
 
 import { db } from "@app/db";
+import { query } from "@kenstack/db/queries/query";
 import { ReturnedError } from "@kenstack/api";
 import {
   verificationEndedCode,
@@ -66,15 +67,9 @@ export async function createAccount(
             .onConflictDoNothing()
             .returning(select);
           if (!row) {
-            const [existing] = await tx
+            const [existing] = await query(users, { db: tx })
               .select({ id: users.id })
-              .from(users)
-              .where(
-                and(
-                  sql`lower(${users.email}) = ${verification.email}`,
-                  isNull(users.deletedAt),
-                ),
-              )
+              .where(sql`lower(${users.email}) = ${verification.email}`)
               .limit(1);
             // Without a live account for the email, the conflict is on another unique users column in the
             // site's account fields, such as a slug.

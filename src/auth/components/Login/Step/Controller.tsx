@@ -31,7 +31,7 @@ export default function LoginController({
   authState: PublicAuthState;
 }) {
   const userInfo = useUserInfo(initialAuthState);
-  const { id, setSkipped } = useStep();
+  const { id, setSatisfied, setSkipped } = useStep();
   const hasIdentity =
     userInfo.state === "authenticated" || userInfo.state === "proven";
 
@@ -44,7 +44,8 @@ export default function LoginController({
     }
 
     setSkipped(hasIdentity);
-  }, [hasIdentity, setSkipped, userInfo.state]);
+    setSatisfied(hasIdentity);
+  }, [hasIdentity, setSatisfied, setSkipped, userInfo.state]);
 
   // A sign-in inside the flow, by this step, an emailed link or account creation, refreshes the
   // server render without waiting, so the menus and other output that depends on identity update.

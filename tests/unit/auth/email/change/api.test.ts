@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
   reportError: vi.fn(),
   revalidateTag: vi.fn(),
   sendCode: vi.fn(),
-  findUser: vi.fn(),
+  query: vi.fn(),
   getCurrentSession: vi.fn(),
   login: vi.fn(),
   deleteWhere: vi.fn(),
@@ -31,7 +31,6 @@ vi.mock("next/cache", () => ({ revalidateTag: mocks.revalidateTag }));
 vi.mock("react-email", () => ({ render: mocks.render }));
 vi.mock("@app/db", () => ({
   db: {
-    query: { users: { findFirst: mocks.findUser } },
     select: () => ({
       from: () => ({
         where: () => ({ limit: async () => [{ challengeKey }] }),
@@ -41,6 +40,7 @@ vi.mock("@app/db", () => ({
   },
 }));
 vi.mock("@app/email", () => ({ attachments: [] }));
+vi.mock("@kenstack/db/queries/query", () => ({ query: mocks.query }));
 vi.mock("@app/modules", () => ({
   modules: { users: { admin: { table: { email: "email", id: "id" } } } },
 }));
@@ -113,6 +113,25 @@ vi.mock("@kenstack/auth/email/change/NoticeEmail", () => ({
 import { createEmailChange } from "@kenstack/auth/email/change/api";
 import { verificationEndedCode } from "@kenstack/auth/email/verification/internal/policy";
 
+// A fake Kenstack query builder: every clause returns it, and awaiting it gives the rows.
+function fakeBuilder(rows: unknown[]) {
+  const builder = {
+    for: () => builder,
+    groupBy: () => builder,
+    innerJoin: () => builder,
+    leftJoin: () => builder,
+    limit: () => builder,
+    orderBy: () => builder,
+    select: () => builder,
+    then: (
+      resolve: (rows: unknown[]) => unknown,
+      reject?: (reason: unknown) => unknown,
+    ) => Promise.resolve(rows).then(resolve, reject),
+    where: () => builder,
+  };
+  return builder;
+}
+
 const challengeKey = "6f0f6dfa-7e5a-4be8-a0d5-0f1c2ff05c55";
 type StageContext = Parameters<
   ReturnType<typeof createEmailChange>["request"]
@@ -157,7 +176,8 @@ beforeEach(() => {
 describe("email change request", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.findUser.mockResolvedValue(undefined);
+    mocks.query.mockReset();
+    mocks.query.mockImplementation(() => fakeBuilder([]));
     mocks.loadPublicAuthState.mockResolvedValue(signedInState);
     mocks.mailer.mockResolvedValue({ status: "sent" });
     mocks.render.mockResolvedValue("<p>Notice</p>");
@@ -206,7 +226,7 @@ describe("email change request", () => {
   });
 
   it("gives an address that already has an account a decoy code screen and tells that address", async () => {
-    mocks.findUser.mockResolvedValue({ id: 5 });
+    mocks.query.mockReturnValueOnce(fakeBuilder([{ id: 5 }]));
 
     await expect(
       createEmailChange({ linkPath: "/profile" }).request(
@@ -302,12 +322,11 @@ describe("email change confirmation", () => {
     mocks.consume.mockResolvedValue({ id: 3 });
     mocks.updateWhere.mockResolvedValue(undefined);
     mocks.verifyCode.mockResolvedValue(proof);
+    mocks.query.mockReset();
+    mocks.query.mockImplementation(() =>
+      fakeBuilder([{ email: "old@example.com" }]),
+    );
     transactionWith({
-      select: () => ({
-        from: () => ({
-          where: () => ({ limit: async () => [{ email: "old@example.com" }] }),
-        }),
-      }),
       update: () => ({ set: () => ({ where: mocks.updateWhere }) }),
       delete: () => ({ where: mocks.deleteWhere }),
     });
@@ -470,18 +489,13 @@ describe("email change cancellation", () => {
   }
 
   function transactionFinding(row: Record<string, unknown> | undefined) {
-    const query = {
-      from: vi.fn(),
-      limit: vi.fn().mockResolvedValue(row ? [row] : []),
-      where: vi.fn(),
-    };
-    query.from.mockReturnValue(query);
-    query.where.mockReturnValue(query);
-    transactionWith({ execute: vi.fn(), select: () => query });
+    mocks.query.mockReturnValueOnce(fakeBuilder(row ? [row] : []));
+    transactionWith({ execute: vi.fn() });
   }
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.query.mockReset();
     vi.useFakeTimers();
     vi.setSystemTime(now);
   });

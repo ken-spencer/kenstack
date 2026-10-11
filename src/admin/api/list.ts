@@ -4,12 +4,13 @@ import { createListRequestSchema } from "@kenstack/list/querySchema";
 import { queryAdminList } from "@kenstack/admin/queries/list";
 
 export const listAction = ({
+  name,
   admin: adminConfig,
   parent,
 }: DefinedAdminModule) =>
   pipelineStage(
     {
-      access: "admin",
+      access: { module: name, permission: "view" },
       schema: createListRequestSchema({
         filters: "list" in adminConfig ? adminConfig.list.filters : {},
         sort: "list" in adminConfig ? adminConfig.list.sort : {},

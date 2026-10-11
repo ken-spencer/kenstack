@@ -2,13 +2,15 @@
 
 Use this checklist with the cleanup skill when cleanup is explicitly requested or required by the
 development workflow. The skill owns invocation, Git scope, delegation, edit eligibility, the equivalence
-bar, verification, and the report; this reference supplies Kenstack's engineering checks. Expand past
-the diff only on request or when an affected owner cannot otherwise be found.
+bar, verification, and the report; this reference supplies Kenstack's engineering checks.
 
 ## Checklist
 
-- Ownership, owner APIs and component duplication are review's checks (`docs/review.md`); cleanup
-  does not repeat them.
+- Ownership, owner APIs and component reuse are review's checks (`docs/review.md`). For every new
+  function, query, constant, check or hook, search Kenstack, the host and its packages for one that
+  already does the job, and replace the new one with a call to it. Calling the same cached check or loader
+  in separate functions or components is not a duplicate; each loads what it needs (see "Redundant
+  lookups").
 - **Helpers and indirection:** Inspect changed helpers, wrappers, mappers, normalizers, and local
   bindings, including destructured bindings and callbacks. Apply ownership, capability order,
   direct-expression keep conditions, and the helper ladder in `docs/code-organization.md`. Trace
@@ -16,8 +18,11 @@ the diff only on request or when an affected owner cannot otherwise be found.
   call-path collapse procedure below.
 - **Redundant lookups:** Within one function or component, take each value from a call it already
   makes when that call returns it, rather than adding a second lookup. Extend that call's owner only
-  when every one of its callers should receive the value. Separate functions and components each load
-  what they need; never move a load into a parent to pass it down.
+  when every one of its callers should receive the value. Separate functions and components each
+  load what they need; never move a load into a parent to pass it down. Flag every new or changed
+  prop, parameter or option whose value the receiver can derive itself, from its own dependencies or
+  a cheap call (a cached loader or session read included), such as a check that takes the current
+  user's roles when it can read the current user.
 - **Aliases and renamed bindings:** Inspect every new or changed import alias, destructuring rename,
   pass-through binding, and local alias. Use the canonical source name directly; keep a rename only
   when it resolves an actual collision or marks an explicit lifecycle boundary, and remove one that
@@ -49,8 +54,9 @@ the diff only on request or when an affected owner cannot otherwise be found.
   changed `role` and `aria-*` attribute, keeping only necessary and accurate semantics that native
   markup or visible content does not already supply.
 - **Explanatory text:** Apply the code-comment rule in `docs/code-organization.md` to every new or
-  changed code comment. Cleanup never removes or rewords interface text; development review covers
-  interface lines the agent added.
+  changed code comment, and to comments and doc lines elsewhere that the diff makes false, found by
+  searching for the names it changed; cleanup updates or deletes them. Cleanup never removes or
+  rewords interface text; development review covers interface lines the agent added.
 - **Untracked files:** Remove a task-created untracked file with no production, test, tooling, or
   documented operational purpose; report any other unexplained untracked file for the user's ruling.
 

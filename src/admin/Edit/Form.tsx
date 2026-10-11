@@ -5,6 +5,7 @@ import pick from "lodash-es/pick";
 import Form from "@kenstack/forms/Form";
 import fetcher from "@kenstack/api/fetcher";
 import { refreshUserInfo } from "@kenstack/auth/useUserInfo";
+import { FieldLockedContext } from "@kenstack/forms/fieldLocked";
 
 import { useAdminEdit } from "./context";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
@@ -28,6 +29,7 @@ export default function EditForm({ children }: { children: React.ReactNode }) {
     parentId,
     userId,
     oneToOne,
+    permissions,
   } = useAdminEdit();
   const revisionTarget = single ? name : id;
   return (
@@ -176,9 +178,14 @@ export default function EditForm({ children }: { children: React.ReactNode }) {
       }}
     >
       {/* Enter in a field submits through the form's first submit button. This one comes first, so
-          it saves and stays, rather than a toolbar link that saves and then leaves. */}
-      <button type="submit" className="sr-only" tabIndex={-1} aria-hidden />
-      {children}
+          it saves and stays, rather than a toolbar link that saves and then leaves. Someone who can't
+          save gets every field read-only and no submit button for Enter. */}
+      {permissions.edit ? (
+        <button type="submit" className="sr-only" tabIndex={-1} aria-hidden />
+      ) : null}
+      <FieldLockedContext value={!permissions.edit}>
+        {children}
+      </FieldLockedContext>
     </Form>
   );
 }

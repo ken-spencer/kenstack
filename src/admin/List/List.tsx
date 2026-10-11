@@ -44,9 +44,11 @@ function AdminList({ publish }: { publish: boolean }) {
     apiPath,
     canReorder,
     isReorderSort,
+    permissions,
     name,
     filters,
     sort,
+    removeError,
     client: { listItems },
   } = useAdminList();
   const [reorderError, setReorderError] = useState<string | null>(null);
@@ -154,6 +156,7 @@ function AdminList({ publish }: { publish: boolean }) {
   return (
     <>
       {reorderError ? <Notice className="my-2">{reorderError}</Notice> : null}
+      {removeError ? <Notice className="my-2">{removeError}</Notice> : null}
       <div
         className="grid [grid-template-columns:min-content_var(--list-item-mobile-columns)] gap-x-2 pb-2 md:[grid-template-columns:min-content_var(--list-item-columns)]"
         style={listStyle}
@@ -172,7 +175,9 @@ function AdminList({ publish }: { publish: boolean }) {
               <>
                 <div className="flex items-center justify-self-start px-1 py-2">
                   {isReorderSort ? (
-                    <SortableHandle />
+                    permissions.edit ? (
+                      <SortableHandle />
+                    ) : null
                   ) : (
                     <Checkbox
                       checked={selected.includes(item.id)}
@@ -210,13 +215,16 @@ function AdminList({ publish }: { publish: boolean }) {
             );
           });
 
+          // A group whose parent is in the trash has no label: it is headed "Ungrouped", without a link,
+          // so its rows never read as part of the group above.
+          const label = group ? groupValue(rows[0], group.label) : null;
           return (
             <Fragment key={start}>
               {group && value !== null ? (
                 <GroupHeading
                   id={value}
-                  label={groupValue(rows[0], group.label) ?? value}
-                  link={group.link}
+                  label={label ?? "Ungrouped"}
+                  link={label === null ? undefined : group.link}
                 />
               ) : null}
               {isReorderSort ? (

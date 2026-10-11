@@ -17,6 +17,8 @@ imports, caching, Suspense, and public runtime boundaries.
   that element only, never a parent section or a structural mismatch. Dates formatted with an explicit
   timezone or otherwise deterministic need no suppression.
 - Keep data loading on the server unless the UI requires client-side updates.
+- A page load never mutates: no database write, cookie change, email, external write or cache
+  expiry, directly or through `after()` or `waitUntil()`. Mutations run in route handlers.
 
 ## React APIs and Client State
 
@@ -64,7 +66,8 @@ barrel client-safe or move those consumers to explicit client-safe subpaths in t
 barrel's runtime boundary is determined by its consumers, not only by its directives.
 
 - Reserve `api` in filenames, folder names, and symbol qualifiers for server-owned API code; the import
-  boundary treats any `api` path segment as server-only. Name a client-side wrapper for HTTP endpoints
+  boundary treats any `api` path segment as server-only, except the client-safe entries
+  `@kenstack/api/errors` and `@kenstack/api/fetcher`. Name a client-side wrapper for HTTP endpoints
   by its actual role, such as `requests.ts`.
 - Isomorphic code stays on an isomorphic entry point or subpath, even when its current callers are all
   server-side; server-only code stays off client and shared entry points.
@@ -89,22 +92,49 @@ barrel's runtime boundary is determined by its consumers, not only by its direct
 - Kenstack applications deploy to serverless infrastructure. Use `"use cache: remote"` when caching
   database or API query results so every server instance shares the cached read; regular `"use cache"`
   is for cached components or values whose purpose is prerendering, prefetching, or client stale-time.
-- The cache boundary is a read-model boundary, not a blanket database-query rule. Transactional
-  decisions, uniqueness and availability checks, authorization, command-side validation, and reads that
-  determine a write observe the authoritative source and stay outside shared caches.
-- One exception: the session read behind `getCurrentUser` and `loadAuthState` uses
-  `"use cache: remote"`. It stays coherent only because every mutation that changes a session's
-  authority (login, logout, impersonation, password reset, user save or removal) revalidates the
-  session or user tag with blocking expiration immediately after its write, before any audit or
-  follow-up task. A new mutation that touches sessions or user roles must do the same. Every access
-  check reads this snapshot, writes included; it is current. A fresh read is only for reading the
-  session or user again after the same request changed it.
-  Module saves and removals expire the users record tag carried by session snapshots automatically;
-  direct writes still need explicit invalidation. See `docs/admin.md#record-saving`.
-- Shared admin content reads may use regular or remote caching. Perform authorization outside the
-  shared cached scope; a shared entry never includes the current user's permissions or private state.
-  An admin mutation expires the record, list, and dependent public tags only after its transaction
-  commits.
+- Cache a read when the same key is likely to be read again before its cache is cleared: a news
+  article read by many visitors, a list's default first page, a person's organizations read through a
+  flow. Use the helpers in `@kenstack/db/queries`, following
+  `docs/module-anatomy.md#canonical-public-query-patterns`: `listQuery(...)` and `pageQuery(...)` for
+  published module content, `query(table)` where its clauses fit, and Drizzle directly otherwise,
+  inside a `"use cache: remote"` function. A list's search, filter, sort and later pages stay uncached
+  unless their keys are bounded and repeat, such as a public news list filtered by a CMS tag; a scope
+  such as a parent record, user or theatre is part of the key, not a filter. A tag shared by many keys,
+  such as a site-wide `payments` tag on per-user pages, clears every entry on any change, so weigh it
+  when judging reuse. Reading a cached function again in the same request is fine.
+- Every write that changes anything a cached read selects, joined records and "not found" results
+  included, clears a tag the entry carries, after its commit and before its response. Handle time with a
+  check outside the cache or a lifetime that ends when the answer changes, as `listQuery(...)` does for
+  a future publication.
+- Set the lifetime by who changes the data. Content staff edit in the admin stays correct until they
+  edit it again, so it lives for `cacheLife("max")` and its tags clear it. Data driven by a person's
+  own activity, such as their transactions, is read during their visit and may never be read again, so
+  it lives about an hour (`cacheLife({ expire: 3600 })`), or no longer than the answer holds, such as a
+  hold's expiry.
+- Don't cache a read whose key won't be read again, such as a sign-in attempt, an upload or a search,
+  and never put password hashes or sign-in proofs in a shared cache. Read uncached when a change clears
+  no tag (Stripe state, quotas), for rows the read's own transaction locks or writes, or after a write
+  in the same request that the read must see. An API action that only reads other data, such as admin
+  content, uses the cached read, before any transaction it opens: a cached read that misses inside a
+  transaction needs a second pooled connection while the transaction holds one, and two such requests
+  can wait on each other. When both are needed, the cached function wraps the
+  uncached query and a `Fresh`-named function gives the uncached read (`getCurrentUser`,
+  `getFreshCurrentUser`); call the cached one wherever possible.
+- The session read behind `getCurrentUser` and `loadAuthState` is cached this way, and every access
+  check reads it. Every mutation that changes a session's authority (login, logout, impersonation,
+  password reset, user save or removal) revalidates the session or user tag with blocking expiration
+  immediately after its write, before any audit or follow-up task; a new mutation that touches sessions
+  or user roles must do the same. Module saves and removals expire the users record tag carried by
+  session snapshots automatically; direct writes still need explicit invalidation. See
+  `docs/admin.md#record-saving`.
+- A query answers whether data exists: a missing record is `null` or an empty list, never a thrown
+  error. Only a real failure, such as an unreachable database, throws. Inside a cached function this
+  matters twice over: a thrown error reaches its caller without its class, so a `ReturnedError` meant
+  as a 404 becomes a 500. The caller outside the cache turns a miss into its 404.
+- Perform authorization outside a cached scope. An entry several people read never includes one
+  person's permissions or private state; a person's own data is keyed by their id, as the session and
+  their organizations are. An admin mutation expires the record, list, and dependent public tags only
+  after its transaction commits.
 - Preserve read-after-write behavior explicitly. In a Server Action, use `updateTag(tag)` when the next
   request must see the write. In a Route Handler, use blocking expiration such as
   `revalidateTag(tag, { expire: 0 })`. Return the committed row in place of an immediate reload; when
@@ -116,9 +146,6 @@ barrel's runtime boundary is determined by its consumers, not only by its direct
   Mode resolution, visibility timing before pagination, filtered variants, and the list/detail
   publication race. `revalidate` alone is stale-while-revalidate and can serve the old result to the
   first request after publication; those patterns use a hard `expire` instead.
-- Cache final variants for bounded domain filters such as CMS-owned tag slugs. Normalize or resolve an
-  unbounded public search value before making it a shared cache key; the presence of a search parameter
-  is not a reason to bypass caching.
 - Keep client `stale` within the acceptable user-visible delay for scheduled transitions and editorial
   changes, even when the server's `revalidate` and `expire` ceilings are days or months.
 - When server loaders might be called from more than one component or query path during a single page

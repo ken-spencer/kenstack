@@ -1,6 +1,7 @@
 import "server-only";
 
 import { db } from "@app/db";
+import { query as queryTable } from "@kenstack/db/queries/query";
 import { modules } from "@app/modules";
 import { requireUser } from "@kenstack/auth/server/user";
 import { audit } from "@kenstack/logger";
@@ -43,6 +44,18 @@ export type RecordPreparation = Exclude<
   Awaited<ReturnType<typeof prepareRecordFields>>,
   { status: "error" }
 >;
+// What a save's afterSave receives: the transaction, the saved row and the values it saved.
+export type AfterSaveContext<TRow> = {
+  tx: DbTransaction;
+  row: TRow;
+  values: Record<string, unknown>;
+  savedValues: Record<string, unknown>;
+  user: User;
+  // The fields the save records as changed, and whether it inserted the row.
+  changes: string[];
+  isNew: boolean;
+};
+
 type SaveRecordOptions<
   TTable extends NumericIdTable,
   TFields extends ServerDefinedFields,
@@ -71,16 +84,9 @@ type SaveRecordOptions<
   }) => Promise<SelectedFieldValues<TTable, TFields> | undefined>;
   // Runs inside the transaction after the fields save; a failure rolls the save back. Work that must
   // wait for the commit, such as email, is returned as `afterCommit`.
-  afterSave?: (ctx: {
-    tx: DbTransaction;
-    row: SelectedFieldValues<TTable, TFields>;
-    values: Record<string, unknown>;
-    savedValues: Record<string, unknown>;
-    user: User;
-    // The fields the save records as changed, and whether it inserted the row.
-    changes: string[];
-    isNew: boolean;
-  }) => Promise<{
+  afterSave?: (
+    ctx: AfterSaveContext<SelectedFieldValues<TTable, TFields>>,
+  ) => Promise<{
     revisionValues?: Record<string, unknown>;
     afterCommit?: FieldSaveTask[];
   } | void>;
@@ -558,15 +564,9 @@ async function reconcileChange({
   updatedAt: Date | null;
 }) {
   const columns = getTableColumns(table);
-  const [current] = await tx
+  const [current] = await queryTable(table, { db: tx })
     .select(select)
-    .from(table)
-    .where(
-      and(
-        eq(table.id, id),
-        columns.deletedAt ? isNull(columns.deletedAt) : undefined,
-      ),
-    )
+    .where(eq(table.id, id))
     .for("update");
   if (!current) {
     throw new RecordChangedError(
@@ -575,7 +575,8 @@ async function reconcileChange({
   }
 
   const users = modules.users.admin.table;
-  const later = await tx
+  // Names a revision's author even after their account is trashed, as the revision history does.
+  const later = await queryTable(revisions, { db: tx, trash: "include" })
     .select({
       changes: revisions.changes,
       hasCurrentToken: sql<boolean>`date_trunc('milliseconds', ${revisions.createdAt}) = (select date_trunc('milliseconds', ${columns.updatedAt}) from ${table} where ${table.id} = ${id})`,
@@ -583,7 +584,6 @@ async function reconcileChange({
       familyName: users.familyName,
       givenName: users.givenName,
     })
-    .from(revisions)
     .leftJoin(users, eq(revisions.createdBy, users.id))
     .where(
       and(

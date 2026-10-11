@@ -30,8 +30,11 @@ export type Step = {
   content: ReactNode;
   controller?: ReactElement;
   final?: true;
-  // A live prerequisite: false requires this step even after stored completion.
+  // Whether the step belongs in this visit; a skipped step counts as done. Default false.
   skipped?: boolean;
+  // Whether the step's condition holds; a shown step is done once continued and satisfied. Default
+  // true, for a step with no condition. Both are first-render values its controller then reports.
+  satisfied?: boolean;
   title: string;
 };
 

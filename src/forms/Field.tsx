@@ -10,6 +10,8 @@ import {
   type ControllerFieldState,
 } from "react-hook-form";
 
+import { useFieldAccess } from "@kenstack/forms/fieldAccess";
+import { FieldLockedContext } from "@kenstack/forms/fieldLocked";
 import { cn } from "@kenstack/lib/utils";
 import { getFormFieldErrors } from "./internal/fieldErrors";
 
@@ -37,8 +39,17 @@ export default function Field({
     render: (props: RenderProps) => React.ReactElement;
   }) {
   const { control } = useFormContext();
+  // In the admin editor, a field the person's roles leave out is hidden, and one they can't change is
+  // read-only through FieldLockedContext, which each control reads. A field inside a locked one, such as
+  // a field array's row, is locked too.
+  const access = useFieldAccess(name);
+  const isInsideLock = React.useContext(FieldLockedContext);
+  if (access === "hidden") {
+    return null;
+  }
+  const locked = access === "locked" || isInsideLock;
 
-  return (
+  const content = (
     <FormFieldContext.Provider value={{ name }}>
       <Controller
         control={control}
@@ -53,13 +64,22 @@ export default function Field({
                 {help && <Help message={help} />}
               </div>
             )}
-            {render({ field, fieldState })}
+            {render({
+              // A locked field ignores writes, such as a blur that reformats or a clear button.
+              field: locked ? { ...field, onChange: () => {} } : field,
+              fieldState,
+            })}
             {description && <FormDescription>{description}</FormDescription>}
             <FormMessage className="" />
           </FormItem>
         )}
       />
     </FormFieldContext.Provider>
+  );
+  return locked ? (
+    <FieldLockedContext value>{content}</FieldLockedContext>
+  ) : (
+    content
   );
 }
 

@@ -8,6 +8,7 @@ import type { DefinedAdminModule } from "@kenstack/admin/module";
 import { adminListCacheTag } from "@kenstack/admin/queries/list";
 import { resolveReorderScopeField } from "@kenstack/admin/lib/scopedReorder";
 import { db } from "@app/db";
+import { query } from "@kenstack/db/queries/query";
 import { audit } from "@kenstack/logger";
 import { revalidator } from "@kenstack/lib/revalidate";
 
@@ -22,7 +23,7 @@ export const reorderAction = (moduleConfig: DefinedAdminModule) => {
   const { name, admin: adminConfig } = moduleConfig;
 
   return pipelineStage(
-    { access: "admin", schema },
+    { access: { module: name, permission: "edit" }, schema },
     async ({ response, user, data }) => {
       if (!("list" in adminConfig)) {
         return response.error("This admin config is not listable.");
@@ -41,12 +42,11 @@ export const reorderAction = (moduleConfig: DefinedAdminModule) => {
         let scopeValue: unknown;
 
         if (scopeField) {
-          const submittedRows = await tx
+          const submittedRows = await query(table, { db: tx })
             .select({
               scope: scopeField,
             })
-            .from(table)
-            .where(and(inArray(table.id, data.ids), isNull(table.deletedAt)));
+            .where(inArray(table.id, data.ids));
           if (submittedRows.length !== data.ids.length) {
             return staleListError;
           }
@@ -58,10 +58,9 @@ export const reorderAction = (moduleConfig: DefinedAdminModule) => {
             return "Only records from one group can be reordered together. Refresh the list and try again.";
           }
 
-          const activeScopeRows = await tx
+          const activeScopeRows = await query(table, { db: tx })
             .select({ id: table.id })
-            .from(table)
-            .where(and(eq(scopeField, scopeValue), isNull(table.deletedAt)));
+            .where(eq(scopeField, scopeValue));
           const submittedIds = new Set(data.ids);
           if (
             activeScopeRows.length !== submittedIds.size ||

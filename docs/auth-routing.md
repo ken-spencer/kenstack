@@ -53,7 +53,8 @@ The headers carry navigation context only; they grant no access. Keep session an
 page and data-access code, and authorize actions and API handlers independently. Cookie presence
 never replaces those checks.
 
-`requireUser(access, returnTo?)` keeps the full session and role checks. For a signed-out user it uses
+`requireUser(access, returnTo?)` keeps the full session and access checks; `access` takes every form
+`hasAccess` does (see `admin.md#access`). For a signed-out user it uses
 the explicit second argument when supplied, otherwise `x-pathname` plus `x-search`, otherwise plain
 `/login`. The selected value passes through `getSafeReturnToPath`; an invalid explicit value falls
 back to plain `/login`, not the headers. An empty string explicitly selects plain `/login`.
@@ -66,8 +67,14 @@ await requireUser("authenticated", "/account?tab=orders");
 An explicit argument controls only a redirect made by `requireUser`. If the proxy redirects first,
 the page's argument cannot take effect. For a custom destination, align the proxy's early redirect
 with that destination or let the page handle it. Reusable components can use the forwarded headers.
-An authenticated user without the required role goes to plain `/login`; returning that user to the
+An authenticated user without the required access goes to plain `/login`; returning that user to the
 same protected destination would loop.
+
+`pageRoute({ access })` sends a signed-out visitor to sign-in the same way, but shows a signed-in
+person without the access a "No access" page in place, with "Sign in as someone else". That signs
+them out and refreshes, so the page's own sign-in redirect brings them back after they sign in with
+another account. The admin page (`createAdminPage`) admits anyone signed in and shows the same page
+for an admin page their roles don't open (see `admin.md#access`).
 
 `requireUser` reads the headers only when the user is signed out and the second argument is omitted.
 Keep request reads and authorization outside shared cache scopes and under the appropriate Suspense
@@ -80,9 +87,11 @@ boundary, as described in `runtime-boundaries.md`. The return path does not chan
   login step. After that only this tab's own sign-in or sign-out changes it, or a sign-in that a page
   rendered signed out takes on. A page with none of these seeds (such as a point-of-sale screen) sends nothing and is
   never compared.
-- Every access-checked pipeline stage, and the admin API, compares it with the session before anything
-  runs, and answers `409` with `code: "account-changed"` when they differ. A page rendered signed out
-  sends nothing until it takes on a sign-in; a session that has ended gets the usual `401`.
+- Every access-checked pipeline stage, each admin API action included, compares it with the session
+  after the pipeline parses the JSON body and before the stage validates it against its schema, and
+  answers `409` with `code: "account-changed"` when they differ. The admin API also checks the session
+  and its account before it parses its body. A page rendered signed out sends nothing until it takes
+  on a sign-in; a session that has ended gets the usual `401`.
 - `Form` shows that refusal with a Reload button. A host API that checks access by hand moves onto its
   stage's `access`, so it is compared too.
 - The user-info store follows the page's account. A page rendered for an account takes a user-info

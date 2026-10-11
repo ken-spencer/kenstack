@@ -8,10 +8,11 @@ import { Button } from "@kenstack/components/Button";
 import { Mail } from "lucide-react";
 
 import fetcher from "@kenstack/api/fetcher";
+import { hasRoleAccess } from "@kenstack/auth/roleAccess";
 import { useForm } from "@kenstack/forms/context";
 
 export default function Onboarding() {
-  const { id } = useAdminEdit();
+  const { id, userRoles } = useAdminEdit();
   const { form } = useForm();
   const email = form.watch("email");
   const hasEmail = typeof email === "string" && email.trim().length > 0;
@@ -21,7 +22,7 @@ export default function Onboarding() {
       fetcher("/api/auth", { action: "send-onboarding", userId: id }),
   });
 
-  if (!id) {
+  if (!id || !hasRoleAccess(userRoles, "admin")) {
     return null;
   }
   const { data } = mutation;

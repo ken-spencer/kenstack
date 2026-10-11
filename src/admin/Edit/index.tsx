@@ -16,6 +16,13 @@ import type {
   DefinedAdmin,
   ModuleParentOptions,
 } from "@kenstack/admin/module";
+import {
+  getHiddenFields,
+  loadFieldAccess,
+} from "@kenstack/admin/lib/fieldAccess";
+import NoAccess from "@kenstack/auth/components/NoAccess";
+import { hasAccess } from "@kenstack/auth/server/auth";
+import { requireUser } from "@kenstack/auth/server/user";
 import type { ModuleClient } from "@kenstack/admin/client";
 import { loadAdminEdit, loadOneToOne } from "@kenstack/admin/queries/load";
 import { loadAdminParentRecord } from "@kenstack/admin/queries/parent";
@@ -29,7 +36,6 @@ export default async function AdminEditPage({
   moduleTitle,
   id,
   isNew = false,
-  userId,
   adminConfig,
   client,
   moduleParent,
@@ -39,7 +45,6 @@ export default async function AdminEditPage({
   moduleTitle: string;
   id?: number;
   isNew?: boolean;
-  userId: number;
   adminConfig: AnyAdminConfig;
   client: ModuleClient | undefined;
   moduleParent?: ModuleParentOptions;
@@ -59,6 +64,15 @@ export default async function AdminEditPage({
 
   if ("list" in adminConfig && !isNew && !item) {
     notFound();
+  }
+
+  // A singleton with no row yet is created by its first save, which is an edit.
+  if (
+    !item &&
+    !("list" in adminConfig) &&
+    !(await hasAccess({ module: name, permission: "edit" }))
+  ) {
+    return <NoAccess />;
   }
 
   if (item && parentId !== undefined && item.parentId !== parentId) {
@@ -120,6 +134,18 @@ export default async function AdminEditPage({
     );
   }
 
+  const [user, edit, remove, fieldAccess] = await Promise.all([
+    requireUser(),
+    hasAccess({ module: name, permission: "edit" }),
+    hasAccess({ module: name, permission: "delete" }),
+    loadFieldAccess(name, isNew),
+  ]);
+  // A hidden field's value never reaches the browser.
+  const shownItem = item && { ...item };
+  for (const field of getHiddenFields(fieldAccess)) {
+    delete shownItem?.[field];
+  }
+
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <AdminEditProvider
@@ -128,10 +154,11 @@ export default async function AdminEditPage({
         id={id}
         isNew={isNew}
         single={!("list" in adminConfig)}
-        userId={userId}
+        userId={user.id}
+        userRoles={user.roles}
         canUpload={uploadsConfigured}
         defaultValues={defaultValues ?? {}}
-        item={item}
+        item={shownItem}
         parentId={resolvedParentId}
         preview={preview}
         oneToOne={oneToOne}
@@ -140,7 +167,7 @@ export default async function AdminEditPage({
         seo={adminConfig.seo}
         breadcrumbs={
           <Breadcrumbs
-            currentTitle={isNew ? "New Entry" : getAdminRecordTitle(item)}
+            currentTitle={isNew ? "New Entry" : getAdminRecordTitle(shownItem)}
             moduleName={name}
             moduleTitle={moduleTitle}
             parent={parentRecord}
@@ -149,7 +176,12 @@ export default async function AdminEditPage({
         childModuleLinks={
           !isNew && item ? renderChildModuleLinks(modules, name, item.id) : null
         }
-        canCreate={"list" in adminConfig && adminConfig.create}
+        canCreate={"list" in adminConfig && adminConfig.create && edit}
+        permissions={{
+          edit,
+          delete: remove,
+        }}
+        fieldAccess={fieldAccess}
       >
         <EditBody />
       </AdminEditProvider>

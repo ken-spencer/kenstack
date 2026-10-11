@@ -1,22 +1,13 @@
-import {
-  and,
-  asc,
-  getTableColumns,
-  ilike,
-  inArray,
-  isNull,
-  notInArray,
-  or,
-  sql,
-} from "drizzle-orm";
+import { and, asc, ilike, inArray, notInArray, or, sql } from "drizzle-orm";
 import * as z from "zod";
 
-import { db } from "@app/db";
 import type { DefinedAdmin, DefinedAdminModule } from "@kenstack/admin/module";
 import { resolveSingleRelationship } from "@kenstack/admin/lib/singleRelationship";
 import { isSingleRelationshipField } from "@kenstack/fields/relationship";
 import { isRelationshipField } from "@kenstack/fields/server";
 import { pipelineStage } from "@kenstack/api";
+import { query } from "@kenstack/db/queries/query";
+import type { Permissions } from "@kenstack/admin/lib/moduleAccess";
 
 const schema = z.object({
   relationship: z.string(),
@@ -28,64 +19,64 @@ const schema = z.object({
 export const relationshipSearchAction = (
   moduleConfig: DefinedAdminModule,
   modules: readonly DefinedAdmin[string][],
+  permission: keyof Permissions,
 ) =>
-  pipelineStage({ access: "admin", schema }, async ({ response, data }) => {
-    const field = moduleConfig.admin.fields[data.relationship];
-    const relationship = isRelationshipField(field)
-      ? field.relationship
-      : undefined;
-    const singleRelationship = isSingleRelationshipField(field)
-      ? resolveSingleRelationship(moduleConfig, modules, data.relationship)
-      : undefined;
+  pipelineStage(
+    { access: { module: moduleConfig.name, permission }, schema },
+    async ({ response, data }) => {
+      const field = moduleConfig.admin.fields[data.relationship];
+      const relationship = isRelationshipField(field)
+        ? field.relationship
+        : undefined;
+      const singleRelationship = isSingleRelationshipField(field)
+        ? resolveSingleRelationship(moduleConfig, modules, data.relationship)
+        : undefined;
 
-    const resolved = relationship
-      ? {
-          label: relationship.label ?? relationship.toPrimaryKey,
-          orderBy: relationship.orderBy,
-          primaryKey: relationship.toPrimaryKey,
-          search: relationship.search,
-          table: relationship.to,
-        }
-      : singleRelationship;
-    if (!resolved) {
-      return response.error(
-        `Unknown relationship "${data.relationship}" for this admin table.`,
-      );
-    }
-    const keyword = data.keywords.trim();
-    const { label, primaryKey, table } = resolved;
-    const search = resolved.search?.length ? resolved.search : [label];
-    const orderBy = resolved.orderBy ?? [asc(sql`${label}`)];
-    const where = [];
-
-    const { deletedAt } = getTableColumns(table);
-    if (deletedAt) {
-      where.push(isNull(deletedAt));
-    }
-
-    if (data.ids.length) {
-      where.push(inArray(primaryKey, data.ids));
-    } else {
-      if (data.exclude.length) {
-        where.push(notInArray(primaryKey, data.exclude));
-      }
-
-      if (keyword) {
-        where.push(
-          or(...search.map((column) => ilike(sql`${column}`, `%${keyword}%`))),
+      const resolved = relationship
+        ? {
+            label: relationship.label ?? relationship.toPrimaryKey,
+            orderBy: relationship.orderBy,
+            primaryKey: relationship.toPrimaryKey,
+            search: relationship.search,
+            table: relationship.to,
+          }
+        : singleRelationship;
+      if (!resolved) {
+        return response.error(
+          `Unknown relationship "${data.relationship}" for this admin table.`,
         );
       }
-    }
+      const keyword = data.keywords.trim();
+      const { label, primaryKey, table } = resolved;
+      const search = resolved.search?.length ? resolved.search : [label];
+      const orderBy = resolved.orderBy ?? [asc(sql`${label}`)];
+      const where = [];
 
-    const items = await db
-      .select({
-        id: sql<number>`${primaryKey}`.mapWith(Number),
-        label: sql<string>`${label}`.mapWith(String),
-      })
-      .from(table)
-      .where(and(...where))
-      .orderBy(...orderBy)
-      .limit(data.ids.length || 10);
+      if (data.ids.length) {
+        where.push(inArray(primaryKey, data.ids));
+      } else {
+        if (data.exclude.length) {
+          where.push(notInArray(primaryKey, data.exclude));
+        }
 
-    return response.success({ items });
-  });
+        if (keyword) {
+          where.push(
+            or(
+              ...search.map((column) => ilike(sql`${column}`, `%${keyword}%`)),
+            ),
+          );
+        }
+      }
+
+      const items = await query(table)
+        .select({
+          id: sql<number>`${primaryKey}`.mapWith(Number),
+          label: sql<string>`${label}`.mapWith(String),
+        })
+        .where(and(...where))
+        .orderBy(...orderBy)
+        .limit(data.ids.length || 10);
+
+      return response.success({ items });
+    },
+  );

@@ -5,7 +5,7 @@ Kenstack is a shared CMS/admin core for Next.js host sites. Host projects provid
 ## Host Expectations
 
 - Next.js App Router
-- React 19.2+
+- React and React DOM 19.3+
 - Node.js 24+
 - Drizzle/Postgres application tables
 - `@app/db`, `@app/email`, `@app/modules`, `@app/deps`, and `@app/roles` mapped to their host owners
@@ -36,18 +36,19 @@ Use `saveModuleRecord` for authenticated site actions that update a record owned
 await saveModuleRecord({ module, id, changes, values });
 ```
 
-Use `saveAdminRecord` for the standard admin save action. It accepts the same record input, derives the same module behavior, and gives field handlers admin-save authority. The owning pipeline must enforce `access: "admin"`; this helper does not check the current user's role.
+Use `saveAdminRecord` for the standard admin save action. It accepts the same record input plus `updatedAt`, the concurrency token the form loaded (`null` for a new record), derives the same module behavior, and gives field handlers admin-save authority. The helper checks no permission: the owning pipeline must authorize the caller, as the admin save does with the module's `edit` permission (`access: { module: module.name, permission: "edit" }`).
 
 ```ts
-await saveAdminRecord({ module, id, changes, values });
+await saveAdminRecord({ module, id, changes, values, updatedAt });
 ```
 
 Use `saveRecord` only when persistence is not represented by a module, such as module settings or page-editor content with a custom upsert. It is restricted by default. Pass `admin: true` only from a backend action that has already established admin access; never accept or derive this value from submitted data or the user's roles.
 
 ## Payments
 
-The payments package (shared checkout, holds, refunds, orders admin) is a separate private
-repository mounted beside Kenstack as `payments/`; see its `AGENTS.md` and `docs/checkout.md`.
+Payments (shared checkout, holds, refunds, orders admin) live in Sympolis, a separate private
+repository mounted beside Kenstack as `sympolis/` and imported as `@sympolis/*`; see
+`sympolis/AGENTS.md` and `sympolis/docs/payments/checkout.md`.
 
 ## Server Error Reporting
 
@@ -55,7 +56,9 @@ Email alerting is enabled when the host provides:
 
 - `MONITORING_EMAIL`
 - `FROM_ADDRESS`
-- optionally Upstash Redis, as `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` or the Vercel Marketplace pair `KV_REST_API_URL` and `KV_REST_API_TOKEN`: with it, repeats of one error are emailed once per 15 minutes; without it, every error is emailed
+
+Repeats of one error are emailed once per 15 minutes, tracked in Vercel's Runtime Cache. Off Vercel,
+each server instance tracks its own repeats in memory.
 
 ## Conventions
 

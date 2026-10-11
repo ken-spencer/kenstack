@@ -36,7 +36,9 @@ vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("drizzle-orm", () => ({
   and: vi.fn(() => ({})),
   eq: vi.fn(() => ({})),
+  getTableColumns: vi.fn(() => ({})),
   gt: vi.fn(() => ({})),
+  is: vi.fn(() => false),
   isNull: vi.fn(() => ({})),
   sql: vi.fn(() => ({})),
 }));
@@ -62,24 +64,27 @@ function selectResult(roles: string[] = []) {
     $dynamic: vi.fn(),
     from: vi.fn(),
     innerJoin: vi.fn(),
-    limit: vi.fn().mockResolvedValue([
-      {
-        avatar: null,
-        email: "person@example.com",
-        expiresAt: new Date(Date.now() + 60_000),
-        familyName: "Example",
-        givenName: "Person",
-        id: 12,
-        impersonatedBy: null,
-        middleName: "",
-        roles,
-      },
-    ]),
+    limit: vi.fn(),
+    then: (resolve: (rows: unknown) => unknown) =>
+      Promise.resolve([
+        {
+          avatar: null,
+          email: "person@example.com",
+          expiresAt: new Date(Date.now() + 60_000),
+          familyName: "Example",
+          givenName: "Person",
+          id: 12,
+          impersonatedBy: null,
+          middleName: "",
+          roles,
+        },
+      ]).then(resolve),
     where: vi.fn(),
   };
   query.$dynamic.mockReturnValue(query);
   query.from.mockReturnValue(query);
   query.innerJoin.mockReturnValue(query);
+  query.limit.mockReturnValue(query);
   query.where.mockReturnValue(query);
   return query;
 }
@@ -198,7 +203,7 @@ describe("required-user redirects", () => {
       get: () => ({ value: "expired-token" }),
     });
     const query = selectResult();
-    query.limit.mockResolvedValue([]);
+    query.then = (resolve) => Promise.resolve([]).then(resolve);
     mocks.select.mockReturnValue(query);
     await expect(requireUser("admin")).rejects.toThrow(
       "REDIRECT /login?returnTo=%2Fadmin%2Fmovies%3Fsearch%3DArrival%26page%3D2",

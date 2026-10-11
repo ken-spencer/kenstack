@@ -56,7 +56,7 @@ const menuOptions = [...visibilityStatusOptions].sort(
  * save will commit as its icon, and the chevron menu stages a different one.
  */
 export default function SaveButton() {
-  const { hasPublicationControl } = useAdminEdit();
+  const { hasPublicationControl, permissions } = useAdminEdit();
   const {
     formState: { isDirty, isReady },
   } = useFormContext();
@@ -80,6 +80,10 @@ export default function SaveButton() {
     size: "sm",
     value: "save",
   } as const;
+
+  if (!permissions.edit) {
+    return null;
+  }
 
   return hasPublicationControl ? (
     <PublishingSave saveProps={saveProps} />

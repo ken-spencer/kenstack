@@ -1,6 +1,8 @@
 import type { ComponentType, SVGProps } from "react";
 import * as z from "zod";
 
+import type { AuthAccess } from "@kenstack/auth/server/auth";
+
 import {
   configureFormProps,
   declareFormProperties,
@@ -46,6 +48,9 @@ export type FieldDefinition<
     | {
         defaultDirection?: "asc" | "desc";
       };
+  // Who gets the field in the admin editor, as far as their module permissions allow: admins always, and
+  // everyone who opens the module when left out. A save from anyone else leaves it as it is.
+  access?: AuthAccess;
 };
 
 // Declares extra configurable keys on a base definition. Properties named here
@@ -78,6 +83,7 @@ export type CommonFieldOptions = Pick<
   | "list"
   | "filter"
   | "sort"
+  | "access"
 > & {
   placeholder?: string;
 };

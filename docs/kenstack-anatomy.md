@@ -66,16 +66,17 @@ A multi-file field unit uses only the surfaces it needs:
 - `Component.tsx` — optional owned editor; starts with `"use client"`.
 - Additional files — only field-owned helpers or assets that have independently earned a file.
 
-The field's public isomorphic definition never imports its server implementation or editor component.
-Standard editors come from the built-in client field-kind registry. A consuming form imports
-`defineFormFields(...)` from the client-only `@kenstack/fields/formFields` entry, which resolves
-property-specific components over those defaults and returns fixed-name generated components; extract
-that call to a module `fields/formFields.ts` only when multiple production consumers need the same
-configured map. Unresolved fields are omitted because the form may render them through bespoke panels.
-`defineAdminClient(...)` receives only the bare isomorphic definitions and neither imports nor resolves
-editor components. Relation forms pass the field subset they render and their `prefix` directly to
-`defineFormFields(...)`; there is no separate resolved component-bearing field map. Several fields may
-share a primitive directly, without wrappers for symmetry.
+The field's public isomorphic definition never imports its server implementation or editor
+component. Standard editors come from the built-in client field-kind registry. A consuming form
+imports `defineFormFields(...)` from the client-only `@kenstack/fields/formFields` entry, which
+resolves property-specific components over those defaults and returns fixed-name generated
+components; extract that call to a module `fields/formFields.ts` only when multiple production
+consumers need the same configured map. Unresolved fields are omitted because the form may render
+them through bespoke panels. `defineAdminClient(...)` receives only the bare isomorphic definitions
+and neither imports nor resolves editor components. Relation forms pass the field subset they render
+and their `prefix` directly to `defineFormFields(...)`; there is no separate resolved
+component-bearing field map. Several fields may share a primitive directly, without wrappers for
+symmetry.
 
 `@kenstack/fields/formFields` is client-only and includes admin-aware editors; its ownership under
 `fields/` does not make it an isomorphic or public-form entry. Ordinary public forms use the stable
@@ -116,10 +117,11 @@ substitute. The page editor owns its supported inline field set; generic fields 
 capabilities.
 
 Add a server definition only for a server schema override or server-only behavior. Use
-`defineServerField(isomorphicField, additions)` for fixed additions and
-`serverField(configuredField, resolver)` for configurable behavior. Pass a configured field, either the
-result of `field(...)` or of calling a field factory such as `textField(...)`, never the factory
-function itself. Server field-kind registries accept only the resolver returned by one of these helpers
+`defineServerField(isomorphicFieldFactory, additions)` for fixed additions: it takes the isomorphic
+field factory, such as `dateField`, and returns a server-field factory; call that factory to get the
+registration resolver. Use `serverField(configuredField, resolver)` for configurable behavior, passing
+a configured field, either the result of `field(...)` or of calling a field factory such as
+`textField(...)`, never the factory function itself. Server field registrations accept only the resolver returned by one of these helpers
 at the typed boundary; a raw `ServerField` object is not a typed registration. This keeps kind, default,
 input, and value contracts derived from the isomorphic owner. Spread configurable additions before
 `kind` so the owner's canonical identity cannot be replaced.

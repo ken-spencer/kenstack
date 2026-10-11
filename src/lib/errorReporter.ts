@@ -1,3 +1,4 @@
+import { getCache } from "@vercel/functions";
 import type { Instrumentation } from "next";
 import type { EmailAddress } from "@kenstack/lib/mailer";
 import escape from "lodash-es/escape";
@@ -125,10 +126,10 @@ async function writeErrorReport(
   // eslint-disable-next-line no-console
   console.error("[kenstack:error]", event);
 
-  const monitoring = getMonitoringConfiguration();
+  const monitoringEmail = process.env.MONITORING_EMAIL?.trim();
   // A development server already shows every error in its terminal and overlay.
   if (
-    !monitoring ||
+    !monitoringEmail ||
     process.env.NEXT_RUNTIME === "edge" ||
     process.env.NODE_ENV === "development"
   ) {
@@ -145,34 +146,32 @@ async function writeErrorReport(
     return;
   }
 
-  // Without Redis every error is emailed; with it, one email per fingerprint per window.
-  if (monitoring.redis) {
-    const projectKey =
-      process.env.VERCEL_PROJECT_ID ??
+  // One email per fingerprint per window, through Vercel's Runtime Cache; off Vercel it is the
+  // instance's memory.
+  const alerts = getCache();
+  const key = [
+    "kenstack:error-alert:v1",
+    process.env.VERCEL_PROJECT_ID ??
       process.env.VERCEL_PROJECT_PRODUCTION_URL ??
-      "unknown-project";
-    const key = [
-      "kenstack:error-alert:v1",
-      projectKey,
-      environment,
-      fingerprint,
-    ].join(":");
-
-    try {
-      if (!(await claimErrorAlert(monitoring.redis, key))) {
-        return;
-      }
-    } catch (inhibitorError) {
-      // This must not recurse through the reporter.
-      // eslint-disable-next-line no-console
-      console.error(
-        "[kenstack:error] Alert inhibition failed; email sent without it.",
-        {
-          error: getSafeErrorSummary(inhibitorError),
-          fingerprint,
-        },
-      );
+      "unknown-project",
+    environment,
+    fingerprint,
+  ].join(":");
+  try {
+    if (await alerts.get(key)) {
+      return;
     }
+    await alerts.set(key, true, { ttl: alertTtlSeconds });
+  } catch (inhibitorError) {
+    // This must not recurse through the reporter.
+    // eslint-disable-next-line no-console
+    console.error(
+      "[kenstack:error] Alert inhibition failed; email sent without it.",
+      {
+        error: getSafeErrorSummary(inhibitorError),
+        fingerprint,
+      },
+    );
   }
 
   try {
@@ -180,7 +179,7 @@ async function writeErrorReport(
       await import("@kenstack/lib/mailer");
     const route = pathname ?? request?.routePath ?? "No route";
     const result = await mailer({
-      to: monitoring.email,
+      to: monitoringEmail,
       from: emailFrom,
       kind: errorReportKind,
       subject: `[${environment}] ${error.name}: ${message}`.slice(0, 180),
@@ -249,61 +248,6 @@ export function getSafePathname(path: string | null | undefined) {
 
   const separator = path.search(/[?#]/);
   return separator === -1 ? path : path.slice(0, separator);
-}
-
-export async function claimErrorAlert(
-  redis: { url: string; token: string },
-  key: string,
-) {
-  const response = await fetch(redis.url.replace(/\/$/, ""), {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${redis.token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(["SET", key, "1", "NX", "EX", alertTtlSeconds]),
-    signal: AbortSignal.timeout(2000),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Upstash returned HTTP ${response.status}`);
-  }
-
-  const body: unknown = await response.json();
-  if (typeof body !== "object" || body === null || !("result" in body)) {
-    throw new Error("Upstash returned an invalid response");
-  }
-
-  if (body.result === "OK") {
-    return true;
-  }
-
-  if (body.result === null) {
-    return false;
-  }
-
-  throw new Error("Upstash returned an unexpected result");
-}
-
-function getMonitoringConfiguration() {
-  const email = process.env.MONITORING_EMAIL?.trim();
-  if (!email) {
-    return null;
-  }
-
-  const upstashUrl = process.env.UPSTASH_REDIS_REST_URL?.trim();
-  const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
-  if (upstashUrl && upstashToken) {
-    return { email, redis: { url: upstashUrl, token: upstashToken } };
-  }
-
-  const vercelUrl = process.env.KV_REST_API_URL?.trim();
-  const vercelToken = process.env.KV_REST_API_TOKEN?.trim();
-  if (vercelUrl && vercelToken) {
-    return { email, redis: { url: vercelUrl, token: vercelToken } };
-  }
-
-  return { email, redis: undefined };
 }
 
 function toError(thrown: unknown) {

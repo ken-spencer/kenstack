@@ -43,7 +43,7 @@ export type ServerField<TValue = unknown> = {
 };
 
 export type FieldLoadContext = {
-  db: Pick<Database, "select">;
+  db: Database | DbTransaction;
   key: string;
   tableId: number;
 };
@@ -59,7 +59,7 @@ export type FieldSaveContext<TValue = unknown> = {
 };
 
 export type FieldDeleteContext = {
-  db: Database;
+  db: DbTransaction;
   key: string;
   tableId: number;
   row: Record<string, unknown>;

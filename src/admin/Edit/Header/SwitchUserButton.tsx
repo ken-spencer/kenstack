@@ -3,6 +3,7 @@
 import { useAdminEdit } from "@kenstack/admin/Edit/context";
 import { getReturnedErrorMessage } from "@kenstack/api/errors";
 import fetcher from "@kenstack/api/fetcher";
+import { hasRoleAccess } from "@kenstack/auth/roleAccess";
 import Button from "@kenstack/components/Button";
 import { useForm } from "@kenstack/forms/context";
 import type { UserInfoResult } from "@kenstack/auth/api";
@@ -12,7 +13,7 @@ import { UserRoundKey } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export default function SwitchUserButton() {
-  const { id, userId, apiPath, name } = useAdminEdit();
+  const { id, userId, userRoles, apiPath, name } = useAdminEdit();
   const router = useRouter();
   const { setStatusError, setStatusMessage } = useForm();
 
@@ -44,7 +45,7 @@ export default function SwitchUserButton() {
     },
   });
 
-  if (name !== "users" || !id) {
+  if (name !== "users" || !id || !hasRoleAccess(userRoles, "admin")) {
     return null;
   }
 

@@ -12,12 +12,17 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("server-only", () => ({}));
-vi.mock("@app/db", () => ({
-  db: {
-    select: vi.fn(() => ({
-      from: vi.fn(() => ({ where: mocks.selectWhere })),
-    })),
-  },
+vi.mock("@kenstack/db/queries/query", () => ({
+  query: () => ({
+    select() {
+      return this;
+    },
+    where() {
+      return this;
+    },
+    then: (resolve: (rows: unknown) => unknown) =>
+      mocks.selectWhere().then(resolve),
+  }),
 }));
 vi.mock("@app/modules", () => ({
   modules: { users: { admin: { table: {} } } },
@@ -37,9 +42,7 @@ vi.mock("@kenstack/lib/user", () => ({
 }));
 vi.mock("react-email", () => ({ render: mocks.render }));
 vi.mock("drizzle-orm", () => ({
-  and: vi.fn(() => ({})),
   eq: vi.fn(() => ({})),
-  isNull: vi.fn(() => ({})),
 }));
 
 import { sendOnboardingEmailAction } from "@kenstack/auth/handlers/sendOnboarding";

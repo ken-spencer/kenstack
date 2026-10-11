@@ -1,6 +1,7 @@
 import * as z from "zod";
 import {
   and,
+  DrizzleQueryError,
   getTableColumns,
   getTableName,
   inArray,
@@ -13,6 +14,7 @@ import { pipelineStage } from "@kenstack/api";
 import type { DefinedAdminModule } from "@kenstack/admin/module";
 import { adminLoadCacheTag, adminListCacheTag } from "@kenstack/admin/cache";
 import { db } from "@app/db";
+import { isPostgresError } from "@kenstack/db/errorTranslator";
 import { audit } from "@kenstack/logger";
 import { revalidator } from "@kenstack/lib/revalidate";
 
@@ -32,7 +34,7 @@ export const removeAction = ({
   admin: adminConfig,
 }: DefinedAdminModule) =>
   pipelineStage(
-    { access: "admin", schema },
+    { access: { module: name, permission: "delete" }, schema },
     async ({ response, user, data }) => {
       if (!("list" in adminConfig)) {
         return response.error("This admin config is not removable.");
@@ -67,52 +69,76 @@ export const removeAction = ({
       }
 
       if (data.mode === "permanent") {
-        const relatedRowsByBinding = [];
-        if (adminConfig.oneToOne) {
-          const rowIds = rows.map((row) => row.id);
-          for (const binding of Object.values(adminConfig.oneToOne.relations)) {
-            // Related field delete hooks may inspect any column, so this
-            // boundary loads the full rows.
-            const relatedRows = await db
-              .select(getTableColumns(binding.table))
-              .from(binding.table)
-              .where(inArray(binding.foreignKey, rowIds));
-            relatedRowsByBinding.push({
-              binding,
-              relatedById: new Map(
-                relatedRows.map((relatedRow) => [relatedRow.id, relatedRow]),
-              ),
-            });
-          }
-        }
+        const rowIds = rows.map((row) => row.id);
+        const relatedRowsByBinding = await Promise.all(
+          Object.values(adminConfig.oneToOne?.relations ?? {}).map(
+            async (binding) => {
+              // Related field delete hooks may inspect any column, so this
+              // boundary loads the full rows.
+              const relatedRows = await db
+                .select(getTableColumns(binding.table))
+                .from(binding.table)
+                .where(inArray(binding.foreignKey, rowIds));
+              return {
+                binding,
+                relatedById: new Map(
+                  relatedRows.map((relatedRow) => [relatedRow.id, relatedRow]),
+                ),
+              };
+            },
+          ),
+        );
 
-        for (const row of rows) {
-          for (const { binding, relatedById } of relatedRowsByBinding) {
-            const relatedRow = relatedById.get(row.id);
+        // The field delete hooks and the delete commit together, so a record other rows still
+        // reference keeps everything the hooks would have removed.
+        try {
+          await db.transaction(async (tx) => {
+            for (const row of rows) {
+              for (const { binding, relatedById } of relatedRowsByBinding) {
+                const relatedRow = relatedById.get(row.id);
 
-            if (relatedRow) {
-              for (const [fieldKey, field] of Object.entries(binding.fields)) {
+                if (relatedRow) {
+                  for (const [fieldKey, field] of Object.entries(
+                    binding.fields,
+                  )) {
+                    await field.delete?.({
+                      db: tx,
+                      key: fieldKey,
+                      tableId: row.id,
+                      row: relatedRow,
+                    });
+                  }
+                }
+              }
+
+              for (const [fieldKey, field] of Object.entries(
+                adminConfig.fields,
+              )) {
                 await field.delete?.({
-                  db,
+                  db: tx,
                   key: fieldKey,
                   tableId: row.id,
-                  row: relatedRow,
+                  row,
                 });
               }
             }
-          }
 
-          for (const [fieldKey, field] of Object.entries(adminConfig.fields)) {
-            await field.delete?.({
-              db,
-              key: fieldKey,
-              tableId: row.id,
-              row,
-            });
+            await tx.delete(table).where(targetFilter);
+          });
+        } catch (error) {
+          // Another row still references the record: 23503 for a plain foreign key, 23001 for one
+          // declared on delete restrict.
+          if (
+            error instanceof DrizzleQueryError &&
+            isPostgresError(error.cause) &&
+            (error.cause.code === "23503" || error.cause.code === "23001")
+          ) {
+            return response.error(
+              "A selected record is used elsewhere, so nothing was deleted permanently.",
+            );
           }
+          throw error;
         }
-
-        await db.delete(table).where(targetFilter);
       } else {
         await db
           .update(table)

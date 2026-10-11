@@ -31,19 +31,24 @@ helper ladder follow `docs/code-organization.md`.
 - Keep separate components when they own different behavior. Superficial layout similarity earns no
   shared component, and neither does an extraction whose render callbacks, modes, and configuration
   would introduce more implementation than the duplication it removes.
+- Use `ResponsiveRail` when side content belongs beside the primary content on wide screens and
+  directly after it on phones, before the rest.
 
 ## Toggles
 
 - In the admin and in forms, a button that is on or off uses `ToggleButton`, and a row of buttons
-  choosing one of several uses `ToggleGroup`, both from `@kenstack/forms/controls/`; a form field uses
-  `RadioButtonField`, which renders a `ToggleGroup`. Never hand-make a button with `aria-pressed` or a
-  styled radio row for them. A checkbox or switch stays a checkbox or switch.
+  choosing one of several uses `ToggleGroup`, both from `@kenstack/forms/controls/`; a form field
+  uses `RadioButtonField`, which renders a `ToggleGroup`. Never hand-make a button with
+  `aria-pressed` or a styled radio row for them. A checkbox or switch stays a checkbox or switch.
+- A toggle's label never changes with its state; whether it is on shows only through its pressed
+  state.
 - A `ToggleGroup`'s options are all links or all choices. Links, each with an `href`, switch views,
   such as one theatre's calendar, and can render from a server component when they have no `icon`;
   choices switch state through `onValueChange`.
 - Name a toolbar group with `label`. In a form field the fieldset's legend names the choice, so the
   group takes none.
-- On is a solid fill in `--toggle-on` with `--toggle-on-foreground` text; a site sets both in its theme.
+- On is a solid fill in `--toggle-on` with `--toggle-on-foreground` text; a site sets both in its
+  theme.
 
 ## Accessible control names
 
@@ -67,8 +72,10 @@ helper ladder follow `docs/code-organization.md`.
 
 These apply to every Kenstack site. Do not use:
 
-- eyebrow, kicker, or overline labels above headings; put useful context in the heading or supporting
-  copy;
+- eyebrow, kicker, overline or tagline lines: a short line in smaller or muted type above or below a
+  heading. Add one only when the user asks for it. Otherwise put the wording in the heading or the
+  supporting copy, including a subtitle in supplied copy such as "Title: Subtitle"; when it fits
+  neither, ask;
 - italic accent words inside headings; the heading's wording carries the emphasis;
 - numbered section labels such as `01` or `02`; the heading names the section;
 - monospace labels; use the site's body or heading font;

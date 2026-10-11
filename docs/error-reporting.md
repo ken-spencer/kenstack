@@ -9,8 +9,10 @@ reporting, or request metadata capture.
   useful and independently queried, using `AsyncBoundary` from `@kenstack/components/AsyncBoundary`; do not
   add a second boundary or a parallel reporting path.
 - Keep expected empty results distinct from unexpected failures. The public failure state accepts a
-  module title and says, “There is an unexpected problem loading {module title}. Please check back later.”
-  Exception messages, stack traces, query details, and error digests never reach the page.
+  module title. A server error, one carrying a digest, says, “There is an unexpected problem loading
+  {module title}. Please check back later.” A browser error says, “This part of the page stopped working
+  in your browser. Try again or reload the page.” Both offer a Try again button. Exception messages,
+  stack traces, query details, and error digests never reach the page.
 - For an expected failure caused by stored or user-correctable data, preserve a usable repair path and
   tell the user what needs correction. Use the generic unexpected-failure state when the code cannot
   offer a safe specific action, or when the state is an unrecoverable invariant or security boundary.
@@ -34,6 +36,9 @@ reporting, or request metadata capture.
   Operational reporting is for failures that require operator action; a user-caused failure never
   generates operator email.
 - A development server logs reported errors but never emails them.
+- Repeats of one error are emailed once per 15 minutes, keyed by project, environment and error
+  fingerprint in Vercel's Runtime Cache; off Vercel, each server instance tracks repeats in memory. When
+  that check fails, the email is sent anyway.
 - Email delivery failures never call `reportError(...)`, because the operational reporter sends its own
   alerts by email. `@kenstack/lib/mailer` owns sanitized delivery-failure logging through
   `errorLog(...)` and returns its classified result; callers may translate that result into

@@ -19,6 +19,7 @@ export * from "./phone";
 export * from "./relationship";
 export * from "./tags";
 export * from "./unsecureId";
+export * from "./youtube";
 export * from "./createSchemaFromFields";
 export * from "./createDefaultValues";
 export * from "./getFieldNames";

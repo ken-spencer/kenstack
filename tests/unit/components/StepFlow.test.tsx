@@ -167,40 +167,6 @@ describe("StepFlow", () => {
     expect(container.querySelector("h2")?.textContent).toBe("First");
   });
 
-  it("requires a live prerequisite despite stored completion and before hydration", () => {
-    window.sessionStorage.setItem(
-      "stored-state:%2Fflow:$completedSteps",
-      JSON.stringify({ value: { account: true } }),
-    );
-    window.sessionStorage.setItem(
-      "stored-state:%2Fflow:$expiresAt",
-      String(Date.now() + 60_000),
-    );
-    const flow = (
-      <StepFlowClient
-        basePath="/flow"
-        steps={{
-          account: {
-            content: <p>Sign in again</p>,
-            controller: <PrerequisiteController />,
-            skipped: false,
-            title: "Account",
-          },
-          payment: { content: <p>Payment form</p>, title: "Payment" },
-        }}
-      />
-    );
-    const html = renderToString(flow);
-    expect(html).toContain("Sign in again");
-    expect(html).not.toContain("Payment form");
-    act(() => root.render(flow));
-    expect(container.querySelector("h2")?.textContent).toBe("Account");
-    act(() => getButton(container, "Skip this step").click());
-    expect(container.querySelector("h2")?.textContent).toBe("Payment");
-    act(() => getButton(container, "Require this step").click());
-    expect(container.querySelector("h2")?.textContent).toBe("Account");
-  });
-
   it("keeps controllers running when every step is skipped", () => {
     act(() =>
       root.render(

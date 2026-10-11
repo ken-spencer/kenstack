@@ -8,55 +8,46 @@ import type {
   AdminClient,
   ClientOneToOne,
   defineAdminClient,
-  ModuleClient,
+  defineSettingsClient,
   SettingsClient,
 } from "./client";
 
 type AdminClientInput = ReturnType<typeof defineAdminClient>;
-type AdminClientLoader = NonNullable<ModuleClient["admin"]>;
-type SettingsClientLoader = NonNullable<ModuleClient["settings"]>;
 
 // A module's loader is the same function on every render, so each client is built once and
 // use() always receives the same promise.
-const adminClients = new WeakMap<AdminClientLoader, Promise<AdminClient>>();
-const settingsClients = new WeakMap<
-  SettingsClientLoader,
-  Promise<SettingsClient>
->();
-
-export function loadAdminClient(load: AdminClientLoader) {
-  let adminClient = adminClients.get(load);
-  if (!adminClient) {
-    adminClient = load().then(
-      ({ default: admin }) => buildAdminClient(admin),
-      (error) => {
-        // Forget a failed load, so the next render tries again.
-        adminClients.delete(load);
-        throw error;
-      },
-    );
-    adminClients.set(load, adminClient);
-  }
-  return adminClient;
+function createClientLoader<TInput, TClient>(
+  build: (input: TInput) => TClient,
+) {
+  const clients = new WeakMap<
+    () => Promise<{ default: TInput }>,
+    Promise<TClient>
+  >();
+  return (load: () => Promise<{ default: TInput }>) => {
+    let client = clients.get(load);
+    if (!client) {
+      client = load().then(
+        ({ default: input }) => build(input),
+        (error) => {
+          // Forget a failed load, so the next render tries again.
+          clients.delete(load);
+          throw error;
+        },
+      );
+      clients.set(load, client);
+    }
+    return client;
+  };
 }
 
-export function loadSettingsClient(load: SettingsClientLoader) {
-  let settingsClient = settingsClients.get(load);
-  if (!settingsClient) {
-    settingsClient = load().then(
-      ({ default: settings }) => ({
-        ...settings,
-        schema: createSchemaFromFields(settings.fields),
-      }),
-      (error) => {
-        settingsClients.delete(load);
-        throw error;
-      },
-    );
-    settingsClients.set(load, settingsClient);
-  }
-  return settingsClient;
-}
+export const loadAdminClient = createClientLoader(buildAdminClient);
+
+export const loadSettingsClient = createClientLoader(
+  (settings: ReturnType<typeof defineSettingsClient>): SettingsClient => ({
+    ...settings,
+    schema: createSchemaFromFields(settings.fields),
+  }),
+);
 
 function buildAdminClient(admin: AdminClientInput): AdminClient {
   const oneToOne = admin.oneToOne ? resolveOneToOne(admin.oneToOne) : undefined;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { History } from "lucide-react";
 import { useFormContext } from "react-hook-form";
@@ -18,6 +18,7 @@ import { dateFormat } from "@kenstack/lib/dateFormat";
 import { getReturnedErrorMessage } from "@kenstack/api/errors";
 import fetcher from "@kenstack/api/fetcher";
 import { useForm } from "@kenstack/forms/context";
+import { FieldAccessContext } from "@kenstack/forms/fieldAccess";
 import { isRecord } from "@kenstack/lib/isRecord";
 import { useAdminEdit } from "../context";
 import { getOneToOneQueryKey } from "../queryKey";
@@ -47,6 +48,7 @@ export default function RevisionHistoryButton() {
   const { reset, setValue } = useFormContext<Record<string, unknown>>();
   const { mutation, setStatusError, setStatusMessage } = useForm();
   const { apiPath, id, isNew, name, oneToOne, schema, single } = useAdminEdit();
+  const fieldAccess = useContext(FieldAccessContext);
   const revisionTarget = single ? name : id;
   const selectedRevisionId =
     selectedRevision && selectedRevision.selectedAt > mutation.submittedAt
@@ -89,11 +91,12 @@ export default function RevisionHistoryButton() {
       }
 
       reset();
+      // A field the person can't see or change keeps its current value.
       if (!oneToOne) {
         for (const [fieldName, value] of Object.entries(
           data.revision.snapshot,
         )) {
-          if (fieldName in schema.shape) {
+          if (fieldName in schema.shape && !fieldAccess[fieldName]) {
             setValue(fieldName, value, { shouldDirty: true });
           }
         }
@@ -104,7 +107,7 @@ export default function RevisionHistoryButton() {
         for (const [fieldName, value] of Object.entries(
           data.revision.snapshot,
         )) {
-          if (!(fieldName in schema.shape)) {
+          if (!(fieldName in schema.shape) || fieldAccess[fieldName]) {
             continue;
           }
 

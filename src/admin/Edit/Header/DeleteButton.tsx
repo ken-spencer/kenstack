@@ -69,11 +69,11 @@ function useRemoveMutation(mode: "trash" | "permanent" | "restore") {
 }
 
 export default function DeleteButton() {
-  const { isNew, id, name, userId, single, item } = useAdminEdit();
+  const { isNew, id, name, userId, single, item, permissions } = useAdminEdit();
   const isDeleted = !!item?.deletedAt;
   const mutation = useRemoveMutation(isDeleted ? "permanent" : "trash");
 
-  if (single) {
+  if (single || !permissions.delete) {
     return null;
   }
 
@@ -120,11 +120,11 @@ export default function DeleteButton() {
 }
 
 export function RestoreButton() {
-  const { isNew, id, single, item } = useAdminEdit();
+  const { isNew, id, single, item, permissions } = useAdminEdit();
   const isDeleted = !!item?.deletedAt;
   const mutation = useRemoveMutation("restore");
 
-  if (single || !isDeleted) {
+  if (single || !isDeleted || !permissions.delete) {
     return null;
   }
 

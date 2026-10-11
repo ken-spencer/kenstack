@@ -10,8 +10,8 @@ summaries, and browser persistence in Kenstack and host sites.
   pieces in one unit under the owning module or feature; a step does not have to live in `components/`.
   It exports one complete step definition or factory. A flow assembles and orders those definitions;
   the step's content and controller travel together. Framework routes delegate to the unit's handlers.
-- In a server-composed application, keep complete step factories in a server-safe module and
-  interactive step implementations in client modules. The server route invokes only server-safe
+- In a server-composed application, keep complete step factories in the step unit's server-safe
+  `index` entry and interactive step implementations in its client entry. The server route invokes only server-safe
   factories, which may include client components in their step definitions; client hooks live in those
   client components. Pass factory results directly into the `steps` registry: StepFlow resolves all
   entries concurrently and omits entries that resolve to `null`, so the call site neither awaits a
@@ -32,7 +32,7 @@ summaries, and browser persistence in Kenstack and host sites.
   independently.
 - A reusable step works when its route name or position changes. It may use navigation and lifecycle
   operations scoped to itself; it never knows a sibling's route name, assumes which step follows it, or
-  requires an undocumented provider or wrapper outside its returned definition.
+  requires a provider or wrapper outside its returned definition.
 - Button and status copy describes the action the step performs, with neutral wording such as
   `Continue` when the next step is flow-defined; reusable content never names a presumed next step.
 - StepFlow renders no progress bar, step tracker, or completed/remaining-step list. Its current
@@ -53,22 +53,23 @@ summaries, and browser persistence in Kenstack and host sites.
   before it. Switching accounts goes through the account menu, which also offers Logout to a visitor
   who has proven an email but has no account yet. A later step names the account it acts for with
   `SignedInAs` (`@kenstack/auth/components/Login/SignedInAs`), its `label` leading the line, such as
-  "Paying as", so a visitor whose sign-in was skipped sees which account the flow uses. Its "Not you?"
-  signs out without leaving the page, so the login step comes back; anything the old session held,
-  such as a seat hold, is released with it, so the flow may resume at an earlier step. `createLoginStep()` starts the step
-  skipped for a visit the server sees signed in, and its controller follows browser identity: signing
-  in, in the flow or another tab, skips the step so the flow moves on, and losing identity brings it
-  forward. Signing in updates browser identity in place, and the login step's controller then
-  refreshes the server render without waiting on it, so account menus and other output that depends
-  on identity update. The account menu also refreshes it when a page rendered signed out adopts a
-  sign-in made in another tab. Data a step needs from the account, such as its saved details, reaches the
-  browser in the user info, which the users module's `publicUser` extends for the signed-in person
-  only; a save that changes it answers with `returnUser: true`, whose `userInfo` `Form` adopts.
+  "Paying as", so a visitor whose sign-in was skipped sees which account the flow uses. Its "Not
+  you?" signs out without leaving the page, so the login step comes back; anything the old session
+  held, such as a seat hold, is released with it, so the flow may resume at an earlier step.
+  `createLoginStep()` starts the step skipped for a visit the server sees signed in, and its
+  controller follows browser identity: signing in, in the flow or another tab, skips the step so the
+  flow moves on, and losing identity brings it forward. Signing in updates browser identity in
+  place, and the login step's controller then refreshes the server render without waiting on it, so
+  account menus and other output that depends on identity update. The account menu also refreshes it
+  when a page rendered signed out adopts a sign-in made in another tab. Data a step needs from the
+  account, such as its saved details, reaches the browser in the user info, which the users module's
+  `publicUser` extends for the signed-in person only; a save that changes it answers with
+  `returnUser: true`, whose `userInfo` `Form` adopts.
 - Inside a flow, the server render can run again mid-visit, as the refresh after a sign-in does. Steps
-  may vary their server-rendered content. A step whose skipped value can change during a visit sets
-  it live through its controller, and that override stands over a later server render, so a refresh
-  does not move the flow. A controller sets its override from live state, such as the user info, so
-  the override follows that state.
+  may vary their server-rendered content. A step whose facts can change during a visit reports them
+  live through its controller, and they stand over a later server render, so a refresh does not move
+  the flow. A controller reports them from live state, such as the user info, so they follow that
+  state.
 - A terminal result step sets `final`. It is reached through `next()` like any step, which records the
   preceding step in the ledger; it omits Back and the running summary and reads the flow's values as
   any step does. Arriving there also records the result in the ledger, and the next arrival that finds
@@ -100,32 +101,41 @@ summaries, and browser persistence in Kenstack and host sites.
   closest workflow owner. Expose domain operations such as `chooseBlock`, `commitDetails`, or
   `resetOrder` when one action coordinates several changes, so no step has to know which downstream
   values a raw setter would invalidate.
-- Calling `next()` records the active step as completed and advances to the following retained step.
-  If a live prerequisite interrupts a later destination, `next()` preserves that destination without
-  writing completion; the controller releases it by skipping the prerequisite again.
-  StepFlow does not infer completion from current field values. A form calls `next()`
-  from its successful submit path, a selection step enables its own action only when its value is valid,
-  and a payment integration calls it from its successful completion callback.
-- A step with a live prerequisite supplies `skipped` initially and updates it through its controller
-  with `useStep().setSkipped(boolean)`. `true` skips its content in forward and Back navigation while
-  retaining its controller; `false` requires the step even if the browser ledger records it completed.
-  Omit `skipped` for ordinary steps governed by `next()`. Live prerequisite state is never persisted.
-  If every step is skipped, controllers remain mounted with a loading notice until a step becomes
-  available or the owning route redirects; `useFlowContext().activeStep` is then `undefined`.
-- A requested configured route is reachable only when every preceding retained step is recorded as
-  completed and no preceding live prerequisite requires attention. Otherwise StepFlow presents the first incomplete step. Previously
+- Calling `next()` records the active step as continued and advances to the following retained step.
+  When the step was shown ahead of a later destination because it wasn't done, `next()` records it
+  and keeps that destination, so the flow returns there once the step is done. StepFlow does not
+  infer completion from current field values. A form calls `next()` from its successful submit path,
+  a selection step enables its own action only when its value is valid, and a payment integration
+  calls it from its successful completion callback.
+- A step is done when it is skipped, or when the person continued on it and its condition still
+  holds. Two facts decide it, and a step whose facts can change has its controller report both from
+  state on every render; nothing else sets them:
+  - `skipped`, set with `useStep().setSkipped(boolean)`: whether the step belongs in this visit. A
+    skipped step counts as done; its content leaves forward and Back navigation while its controller
+    stays mounted. `false` means only that it shows.
+  - `satisfied`, set with `useStep().setSatisfied(boolean)`: whether its condition holds, such as a
+    sign-in, complete details or a chosen organization. A shown step is done once continued
+    (`next()`, recorded in the browser ledger) and satisfied, so a condition that fails again brings
+    the step back even after it was continued. Default true, for a step with no condition.
+    The step definition's `skipped` (default false) and `satisfied` (default true) are the server's
+    first-render values, before the controller reports. Omit both for an ordinary step governed by
+    `next()`. These facts are never persisted.
+    If every step is skipped, controllers remain mounted with a loading notice until a step becomes
+    available or the owning route redirects; `useFlowContext().activeStep` is then `undefined`.
+- A requested configured route is reachable only when every preceding shown step is done. Otherwise
+  StepFlow presents the first shown step that isn't done. Previously
   reached steps remain revisitable. This browser ledger protects the intended navigation sequence, but
   browser state is mutable: authorization and authoritative transaction prerequisites remain server
   concerns and must be checked by the operation that needs them.
-- Use a step `controller` only for behavior that must remain mounted while its content is hidden, such
-  as retaining a seat hold or handling an authentication return. A controller is not the way to copy a
-  stored slice into a flow context; the flow owner reads its slices directly. Login uses its controller to
-  follow browser identity and to verify an emailed link, while server checks still
-  govern protected content and operations. Until the browser hydrates, StepFlow applies server-supplied live prerequisites
-  with every stored slice absent; once hydrated it applies the completion ledger, and controllers'
-  overrides take the place of the server's skipped values. A form whose defaults come from a restored slice reads the
-  slice itself, not a context value a controller fills in later, since a form keeps the defaults it
-  mounted with.
+- Use a step `controller` only for behavior that must remain mounted while its content is hidden,
+  such as retaining a seat hold or handling an authentication return. A controller is not the way to
+  copy a stored slice into a flow context; the flow owner reads its slices directly. Login uses its
+  controller to follow browser identity and to verify an emailed link, while server checks still
+  govern protected content and operations. Until the browser hydrates, StepFlow applies the server's
+  `skipped` and `satisfied` with every stored slice absent; once hydrated it applies the completion
+  ledger, and controllers' reports take the place of the server's values. A form whose defaults come
+  from a restored slice reads the slice itself, not a context value a controller fills in later,
+  since a form keeps the defaults it mounted with.
 - Keep step-only data and behavior out of a broad flow context. A flow owner holds a cross-step result,
   invariant, or transaction; shortening a prop list is not a reason.
 

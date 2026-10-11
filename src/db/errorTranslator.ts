@@ -9,7 +9,7 @@ const uniqueConstraintMessages: Record<string, [string, string]> = {
   users_slug_unique: ["slug", "This public path is already in use."],
 };
 
-function isPostgresError(err: unknown): err is postgres.PostgresError {
+export function isPostgresError(err: unknown): err is postgres.PostgresError {
   return (
     typeof err === "object" &&
     err !== null &&

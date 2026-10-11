@@ -1,8 +1,7 @@
-import { and, isNull, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { geolocation } from "@vercel/functions";
 import { render } from "react-email";
 
-import { db } from "@app/db";
 import { modules } from "@app/modules";
 import {
   checkQuota,
@@ -14,6 +13,7 @@ import {
 import getIp from "@kenstack/lib/ip";
 import { getLoginReturnPath } from "@kenstack/auth/returnTo";
 import { getUsersModule } from "@kenstack/auth/server/getUsersModule";
+import { query } from "@kenstack/db/queries/query";
 
 import { sendVerificationLink } from "@kenstack/auth/email/verification/sendCode";
 import DefaultEmail, {
@@ -103,15 +103,12 @@ export const forgotPasswordPipeline = (props: ForgotPasswordProps) =>
 
     const users = modules.users.admin.table;
 
-    const [user] = await db
+    const [user] = await query(users)
       .select({
         givenName: users.givenName,
         familyName: users.familyName,
       })
-      .from(users)
-      .where(
-        and(sql`lower(${users.email}) = ${email}`, isNull(users.deletedAt)),
-      )
+      .where(sql`lower(${users.email}) = ${email}`)
       .limit(1);
 
     if (user) {

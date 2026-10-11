@@ -49,6 +49,7 @@ vi.mock("@kenstack/auth/email/login/redeemProof", () => ({
 }));
 vi.mock("@kenstack/auth/email/verification/sendCode", () => ({
   sendCode: mocks.sendCode,
+  verificationLimits: { email: [6, "1 hour"], ip: [50, "1 hour"] },
 }));
 vi.mock("@kenstack/auth/email/verification/verifyCode", () => ({
   verifyCode: mocks.verifyCode,

@@ -126,7 +126,7 @@ describe("Login step", () => {
     async (state) => {
       mocks.loadPublicAuthState.mockResolvedValue({ state });
 
-      expect((await createLoginStep()).skipped).toBeUndefined();
+      expect((await createLoginStep()).skipped).toBe(false);
     },
   );
 

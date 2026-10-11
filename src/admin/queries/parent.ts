@@ -1,16 +1,20 @@
-import { and, eq, getTableColumns, isNull } from "drizzle-orm";
+import { eq, getTableColumns } from "drizzle-orm";
+import { cacheLife, cacheTag } from "next/cache";
 
-import { db } from "@app/db";
 import { modules } from "@app/modules";
+import { adminLoadCacheTag } from "@kenstack/admin/cache";
 import {
   getAdminRecordTitle,
   getAdminRecordTitleSelect,
 } from "@kenstack/admin/lib/recordTitle";
+import { query } from "@kenstack/db/queries/query";
 
 export type AdminParentRecord = NonNullable<
   Awaited<ReturnType<typeof loadAdminParentRecord>>
 >;
 
+// Read on each of the parent's child list and edit pages; the parent module's saves and removals clear
+// its tags.
 export async function loadAdminParentRecord({
   id,
   name,
@@ -18,6 +22,10 @@ export async function loadAdminParentRecord({
   id: number;
   name: string;
 }) {
+  "use cache: remote";
+  cacheLife("max");
+  cacheTag(name, adminLoadCacheTag(name, id));
+
   const moduleConfig = modules[name];
   const adminConfig = moduleConfig?.admin;
 
@@ -26,16 +34,12 @@ export async function loadAdminParentRecord({
   }
 
   const columns = getTableColumns(adminConfig.table);
-  const where = adminConfig.table.deletedAt
-    ? and(eq(adminConfig.table.id, id), isNull(adminConfig.table.deletedAt))
-    : eq(adminConfig.table.id, id);
-  const [row] = await db
+  const [row] = await query(adminConfig.table)
     .select({
       id: adminConfig.table.id,
       ...getAdminRecordTitleSelect(columns),
     })
-    .from(adminConfig.table)
-    .where(where)
+    .where(eq(adminConfig.table.id, id))
     .limit(1);
 
   if (!row) {

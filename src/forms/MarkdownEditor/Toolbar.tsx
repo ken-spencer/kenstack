@@ -22,7 +22,7 @@ import {
   ListOrdered,
   type LucideIcon,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useContext, useRef, useState } from "react";
 
 import {
   Popover,
@@ -31,6 +31,7 @@ import {
 } from "@kenstack/components/Popover";
 import { Button } from "@kenstack/components/Button";
 import { Input } from "@kenstack/forms/controls/Input";
+import { FieldLockedContext } from "@kenstack/forms/fieldLocked";
 import { cn } from "@kenstack/lib/utils";
 
 type ToolbarProps = {
@@ -299,9 +300,11 @@ function ToolbarButton({
   className,
   ...props
 }: ToolbarButtonProps) {
+  const locked = useContext(FieldLockedContext);
   return (
     <button
       {...props}
+      disabled={props.disabled || locked}
       type="button"
       title={label}
       aria-label={label}

@@ -2,7 +2,9 @@ import { Suspense, type ReactNode } from "react";
 import { notFound } from "next/navigation";
 import type * as z from "zod";
 
+import NoAccess from "@kenstack/auth/components/NoAccess";
 import { requireUser } from "@kenstack/auth/server/user";
+import { isAccessGranted } from "@kenstack/admin/lib/moduleAccess";
 import type { AuthAccess } from "@kenstack/auth/server/auth";
 
 type MaybeSchema = z.ZodType | undefined;
@@ -58,7 +60,14 @@ export function pageRoute<
       parseInput(options.params, paramsIn),
       parseInput(options.search, searchIn),
     ]);
-    const user = options.access ? await requireUser(options.access) : undefined;
+    const user = options.access ? await requireUser() : undefined;
+    if (
+      user &&
+      options.access &&
+      !isAccessGranted(user.roles, options.access)
+    ) {
+      return <NoAccess />;
+    }
 
     const context = {
       params: parsedParams,

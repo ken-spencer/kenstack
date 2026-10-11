@@ -8,6 +8,7 @@ import { waitUntil } from "@vercel/functions";
 import { attachments as defaultAttachments } from "@app/email";
 import { db } from "@app/db";
 import { claimQuota, ReturnedError } from "@kenstack/api";
+import type { QuotaLimits } from "@kenstack/api/quota";
 import { verifications } from "@kenstack/db/tables/verification";
 import getIp from "@kenstack/lib/ip";
 import { reportError } from "@kenstack/lib/errorReporter";
@@ -48,6 +49,12 @@ import { setVerificationCookie, verificationCookie } from "./internal/cookie";
 
 // The Email Log leaves these out of "needs attention": people request a new code themselves.
 export const verificationEmailKind = "verification";
+
+// Codes sent: six an hour per address; fifty per IP, so a group sharing one network can all sign in.
+export const verificationLimits: QuotaLimits = {
+  email: [6, "1 hour"],
+  ip: [50, "1 hour"],
+};
 
 export type CreateVerificationEmail = (input: {
   code: string;
@@ -232,14 +239,13 @@ async function sendVerification(
       secrets = createFreshChallengeSecrets(currentHistory);
     }
 
-    // Claimed after every refusal above so a rejected resend spends nothing. Six an hour per
-    // address; fifty per IP, so a group sharing one network can all sign in.
+    // Claimed after every refusal above so a rejected resend spends nothing.
     const exceeded = await claimQuota(
       "verification",
       {
         email,
         ip: await getIp(request),
-        limits: { email: [6, "1 hour"], ip: [50, "1 hour"] },
+        limits: verificationLimits,
       },
       tx,
     );

@@ -29,7 +29,10 @@ import {
   type VerificationEmailCopy,
 } from "@kenstack/auth/email/verification/Email";
 import { verifyLink } from "@kenstack/auth/email/verification/verifyLink";
-import { sendCode } from "@kenstack/auth/email/verification/sendCode";
+import {
+  sendCode,
+  verificationLimits,
+} from "@kenstack/auth/email/verification/sendCode";
 import { verifyCode } from "@kenstack/auth/email/verification/verifyCode";
 import { redeemEmailProof } from "./redeemProof";
 import {
@@ -105,8 +108,7 @@ export function createEmailLogin(options: EmailLoginOptions = {}) {
         const exceeded = await checkQuota("verification", {
           email: data.email,
           ip: await getIp(request),
-          // The same limits sendCode claims under.
-          limits: { email: [6, "1 hour"], ip: [50, "1 hour"] },
+          limits: verificationLimits,
         });
         if (exceeded) {
           throw new ReturnedError(exceeded.message, { status: 429 });

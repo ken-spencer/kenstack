@@ -1,4 +1,4 @@
-import { asc, gt, isNull, lte, type SQL } from "drizzle-orm";
+import { asc, gt, lte, type SQL } from "drizzle-orm";
 import type { PgColumn, SelectedFields } from "drizzle-orm/pg-core";
 import { cacheLife, cacheTag } from "next/cache";
 import { draftMode } from "next/headers";
@@ -49,29 +49,20 @@ export async function listQuery<TSelection extends SelectedFields>(
   const joined = joins(query(table));
   const rowQuery = (
     draft
-      ? joined.where(isNull(table.deletedAt))
+      ? joined
       : joined.where(isVisible(table)).where(lte(table.publishedAt, now))
   )
     .select(select)
     .where(where)
-    .build();
-
-  if (orderBy) {
-    rowQuery.orderBy(...orderBy);
-  }
-
-  if (typeof limit === "number") {
-    rowQuery.limit(limit);
-  }
+    .orderBy(...(orderBy ?? []));
 
   const nextPublicationQuery = joined
     .select({ publishedAt: table.publishedAt })
     .where(isVisible(table))
     .where(gt(table.publishedAt, now))
-    .where(where)
-    .build();
+    .where(where);
   const [rows, [nextPublication]] = await Promise.all([
-    rowQuery,
+    typeof limit === "number" ? rowQuery.limit(limit) : rowQuery,
     cacheTags && !draft
       ? nextPublicationQuery.orderBy(asc(table.publishedAt)).limit(1)
       : [],

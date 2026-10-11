@@ -19,11 +19,13 @@ import { loadPublicAuthState } from "@kenstack/auth/server/state";
 import { userSessionsCacheTag } from "@kenstack/auth/server/user";
 import { login } from "@kenstack/auth/server/auth";
 import { requireRecentAuthentication } from "@kenstack/auth/reauthentication/server";
+import { query } from "@kenstack/db/queries/query";
 import { sessions } from "@kenstack/db/tables/sessions";
 import { errorTranslator } from "@kenstack/db/errorTranslator";
 import { verifications } from "@kenstack/db/tables/verification";
 import { normalizeEmail } from "@kenstack/fields/email";
 import { reportError } from "@kenstack/lib/errorReporter";
+import { revalidator } from "@kenstack/lib/revalidate";
 import mailer from "@kenstack/lib/mailer";
 import siteOrigin from "@kenstack/lib/siteOrigin";
 import { audit } from "@kenstack/logger";
@@ -161,21 +163,17 @@ export function createEmailChange(options: EmailChangeOptions) {
           });
         }
 
+        const users = modules.users.admin.table;
         // An address with its own account gets a decoy challenge: the code
         // screen looks the same, no code can prove it, and the address's
         // owner is told why no code arrived. The unique index still guards
         // the apply. A resend continues only a challenge of this kind for
         // this account; the sender refuses any other.
-        const isTaken = Boolean(
-          await db.query.users.findFirst({
-            columns: { id: true },
-            where: (users, { and, isNull }) =>
-              and(
-                sql`lower(${users.email}) = ${normalizeEmail(data.email)}`,
-                isNull(users.deletedAt),
-              ),
-          }),
-        );
+        const [account] = await query(users)
+          .select({ id: users.id })
+          .where(sql`lower(${users.email}) = ${normalizeEmail(data.email)}`)
+          .limit(1);
+        const isTaken = Boolean(account);
         const { challengeKey, email } = await sendCode(
           {
             challengeKey: data.challengeKey,
@@ -300,7 +298,7 @@ export function createEmailChange(options: EmailChangeOptions) {
       { schema: cancelEmailChangeSchema },
       async ({ data, response }) => {
         const outcome = await db.transaction(async (tx) => {
-          const [noticed] = await tx
+          const [noticed] = await query(verifications, { db: tx })
             .select({
               email: verifications.email,
               id: verifications.id,
@@ -308,7 +306,6 @@ export function createEmailChange(options: EmailChangeOptions) {
               userId: verifications.userId,
               verificationKeyHash: verifications.verificationKeyHash,
             })
-            .from(verifications)
             .where(eq(verifications.challengeKey, data.challengeKey))
             .limit(1);
           if (!noticed || noticed.kind !== kind) {
@@ -377,9 +374,8 @@ async function applyEmailChange(
   const now = new Date();
   try {
     await db.transaction(async (tx) => {
-      const [account] = await tx
+      const [account] = await query(users, { db: tx })
         .select({ email: users.email })
-        .from(users)
         .where(eq(users.id, userId))
         .limit(1);
       // Consumed first, as this account's own change request: another tab or
@@ -437,5 +433,7 @@ async function applyEmailChange(
   revalidateTag(userSessionsCacheTag(userId), { expire: 0 });
   revalidateTag(adminLoadCacheTag("users", userId), { expire: 0 });
   revalidateTag(adminListCacheTag("users"), { expire: 0 });
+  // What a users module save also clears, such as other modules' editors that show a contact's email.
+  revalidator(["users", ...(modules.users.admin.revalidate ?? [])]);
   await login(userId, session.provider);
 }

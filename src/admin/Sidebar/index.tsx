@@ -15,6 +15,7 @@ import AccountMenu from "@kenstack/components/AccountMenu";
 import NavLink from "./NavLink";
 import { modules } from "@app/modules";
 import { adminNavigation } from "@kenstack/admin/module";
+import { hasAccess } from "@kenstack/auth/server/auth";
 
 import Content from "./Content";
 
@@ -46,7 +47,7 @@ async function AdminSidebarWithDefaultOpen(props: AdminSidebarProps) {
   return <AdminSidebarContent {...props} defaultOpen={defaultOpen} />;
 }
 
-function AdminSidebarContent({
+async function AdminSidebarContent({
   accountMenu,
   logo,
   platformLogo,
@@ -55,23 +56,25 @@ function AdminSidebarContent({
   children,
   defaultOpen,
 }: AdminSidebarProps & { defaultOpen: boolean }) {
-  const moduleLinks = Object.entries(modules).flatMap(([name, module]) => {
-    if (!module.admin) {
-      return [];
-    }
-
-    return [
-      {
-        href: "/admin/" + name,
-        headerIcon: module.icon ? (
-          <module.icon className="text-sidebar-foreground size-4" />
-        ) : null,
-        icon: module.icon ? <module.icon /> : <span className="w-3" />,
-        name,
-        title: module.title,
-      },
-    ];
-  });
+  const moduleLinks = (
+    await Promise.all(
+      Object.entries(modules).map(async ([name, module]) =>
+        module.admin && (await hasAccess({ module: name, permission: "view" }))
+          ? [
+              {
+                href: "/admin/" + name,
+                headerIcon: module.icon ? (
+                  <module.icon className="text-sidebar-foreground size-4" />
+                ) : null,
+                icon: module.icon ? <module.icon /> : <span className="w-3" />,
+                name,
+                title: module.title,
+              },
+            ]
+          : [],
+      ),
+    )
+  ).flat();
   const childLinksByParent = new Map<string, typeof moduleLinks>();
 
   for (const link of moduleLinks) {
@@ -92,12 +95,29 @@ function AdminSidebarContent({
     moduleLinks.map((link) => [link.name, link]),
   );
 
+  // A plain link is admin-only unless it names who sees it.
+  const navigationLinks = modules[adminNavigation].flatMap(({ items }) =>
+    items.filter((item) => typeof item !== "string"),
+  );
+  const openLinkHrefs = new Set(
+    (
+      await Promise.all(
+        navigationLinks.map(async (link) =>
+          (await hasAccess(link.access ?? "admin")) ? [link.href] : [],
+        ),
+      )
+    ).flat(),
+  );
+
   const sidebarNav = (
     <>
       {sidebarBefore}
       {modules[adminNavigation].map(({ heading, items }, index) => {
         const links = items.flatMap((item) => {
           if (typeof item !== "string") {
+            if (!openLinkHrefs.has(item.href)) {
+              return [];
+            }
             return [
               <NavLink
                 key={item.href}
@@ -109,6 +129,8 @@ function AdminSidebarContent({
           }
 
           const link = moduleLinksByName.get(item);
+          const childLinks = childLinksByParent.get(item) ?? [];
+          // A child the person can open stands on its own when its parent isn't visible to them.
           return link
             ? [
                 <NavLink
@@ -116,10 +138,17 @@ function AdminSidebarContent({
                   href={link.href}
                   icon={link.icon}
                   title={link.title}
-                  navChildren={childLinksByParent.get(item)}
+                  navChildren={childLinks}
                 />,
               ]
-            : [];
+            : childLinks.map((child) => (
+                <NavLink
+                  key={child.href}
+                  href={child.href}
+                  icon={child.icon}
+                  title={child.title}
+                />
+              ));
         });
 
         return links.length > 0 ? (

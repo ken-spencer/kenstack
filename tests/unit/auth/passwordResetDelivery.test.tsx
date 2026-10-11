@@ -13,19 +13,16 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("server-only", () => ({}));
-vi.mock("@app/db", () => ({
-  db: {
-    select: vi.fn(() => {
-      const query = {
-        from: vi.fn(),
-        limit: mocks.selectWhere,
-        where: vi.fn(),
-      };
-      query.from.mockReturnValue(query);
-      query.where.mockReturnValue(query);
-      return query;
-    }),
-  },
+vi.mock("@kenstack/db/queries/query", () => ({
+  query: () => ({
+    select() {
+      return this;
+    },
+    where() {
+      return this;
+    },
+    limit: mocks.selectWhere,
+  }),
 }));
 vi.mock("@app/modules", () => ({
   modules: { users: { admin: { table: {} } } },
@@ -66,8 +63,6 @@ vi.mock("@kenstack/lib/user", () => ({
 vi.mock("react-email", () => ({ render: mocks.render }));
 vi.mock("@vercel/functions", () => ({ geolocation: vi.fn(() => ({})) }));
 vi.mock("drizzle-orm", () => ({
-  and: vi.fn(() => ({})),
-  isNull: vi.fn(() => ({})),
   sql: vi.fn(() => ({})),
 }));
 

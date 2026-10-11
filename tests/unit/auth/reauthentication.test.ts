@@ -23,8 +23,18 @@ vi.mock("next/cache", () => ({ revalidateTag: mocks.revalidateTag }));
 vi.mock("@app/db", () => ({
   db: {
     transaction: mocks.transaction,
-    query: { users: { findFirst: mocks.findUser } },
   },
+}));
+vi.mock("@kenstack/db/queries/query", () => ({
+  query: () => ({
+    select() {
+      return this;
+    },
+    where() {
+      return this;
+    },
+    limit: async () => [await mocks.findUser()].filter(Boolean),
+  }),
 }));
 vi.mock("@app/modules", () => ({
   modules: { users: { admin: { table: { id: "id" } } } },

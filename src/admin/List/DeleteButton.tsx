@@ -15,10 +15,15 @@ import Button from "@kenstack/components/Button";
 import { Badge } from "@kenstack/components/Badge";
 import { type AdminListQueryData, useAdminList } from "./context";
 import fetcher from "@kenstack/api/fetcher";
+import {
+  getReturnedErrorMessage,
+  unexpectedRequestMessage,
+} from "@kenstack/api/errors";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 function useRemoveMutation(mode: "trash" | "permanent" | "restore") {
-  const { name, setSelected, apiPath, queryKey } = useAdminList();
+  const { name, setSelected, apiPath, queryKey, setRemoveError } =
+    useAdminList();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -30,6 +35,7 @@ function useRemoveMutation(mode: "trash" | "permanent" | "restore") {
         remove: variables,
       }),
     onMutate: async (variables) => {
+      setRemoveError(null);
       await queryClient.cancelQueries({ queryKey });
 
       const previous = queryClient.getQueryData<AdminListQueryData>(queryKey);
@@ -48,12 +54,16 @@ function useRemoveMutation(mode: "trash" | "permanent" | "restore") {
       if (context?.previous) {
         queryClient.setQueryData(queryKey, context.previous);
       }
+      setRemoveError(getReturnedErrorMessage(err));
       // eslint-disable-next-line no-console
       console.error(err);
     },
     onSuccess: (data, _v, context) => {
-      if (data.status === "error" && context?.previous) {
-        queryClient.setQueryData(queryKey, context.previous);
+      if (data.status === "error") {
+        if (context?.previous) {
+          queryClient.setQueryData(queryKey, context.previous);
+        }
+        setRemoveError(data.message ?? unexpectedRequestMessage);
       }
       if ("success" === data.status) {
         queryClient.invalidateQueries({

@@ -228,6 +228,8 @@ function relatedValue(
   value: AnyColumn | SQL,
   joins: readonly ListJoin[] = [],
 ) {
+  // A related row in the trash gives the list no group label or order.
+  const { deletedAt } = getTableColumns(relatedTable);
   return sql`(
     select ${value}
     from ${relatedTable}
@@ -235,6 +237,6 @@ function relatedValue(
       joins.map(({ on, table }) => sql`left join ${table} on ${on}`),
       sql` `,
     )}
-    where ${relatedColumn} = ${sourceColumn}
+    where ${relatedColumn} = ${sourceColumn}${deletedAt ? sql` and ${deletedAt} is null` : sql``}
   )`;
 }

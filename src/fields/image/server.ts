@@ -5,6 +5,7 @@ import type * as z from "zod";
 import isEqual from "lodash-es/isEqual";
 
 import { selectImageSubquery } from "@kenstack/db/queries/media";
+import { query } from "@kenstack/db/queries/query";
 import { media } from "@kenstack/db/tables/media";
 import {
   imageField as createImageField,
@@ -79,7 +80,6 @@ export function imageField(
 async function prepareImageCrop({
   admin,
   column,
-  db,
   id,
   table,
   user,
@@ -97,9 +97,8 @@ async function prepareImageCrop({
 
   const oldRow = id
     ? (
-        await db
+        await query(table)
           .select({ mediaId: column })
-          .from(table)
           .where(eq(table.id, id))
           .limit(1)
       )[0]
@@ -114,7 +113,6 @@ async function prepareImageCrop({
 
   const prepared = await prepareMediaCrop({
     allowedMediaIds,
-    db,
     item: value,
     userId: user.id,
   });
@@ -153,9 +151,8 @@ async function prepareImageSave({
 
   const oldRow = id
     ? (
-        await db
+        await query(table, { db })
           .select({ mediaId: column })
-          .from(table)
           .where(eq(table.id, id))
           .limit(1)
       )[0]
@@ -192,14 +189,13 @@ async function prepareImageSave({
       };
     }
 
-    const [selectedImage] = await db
+    const [selectedImage] = await query(media, { db })
       .select({
         id: media.id,
         alt: media.alt,
         title: media.title,
         caption: media.caption,
       })
-      .from(media)
       .where(and(eq(media.id, selectedImageId), ne(media.kind, "file")))
       .limit(1);
 
@@ -248,9 +244,8 @@ async function prepareImageSave({
     };
   }
 
-  const [uploadedImage] = await db
+  const [uploadedImage] = await query(media, { db })
     .select({ id: media.id, status: media.status })
-    .from(media)
     .where(
       and(
         eq(media.publicId, value.imageId),

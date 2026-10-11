@@ -4,6 +4,68 @@ Consult this reference for Kenstack admin modules, lists, edit forms, admin-spec
 ownership, record saving, list configuration, relationship interfaces, and visual structure. Shared form
 construction, controls, and state follow `docs/forms.md`.
 
+## Access
+
+Admins can open and do everything in the admin. Other roles reach a module only when it grants them,
+by level: `viewers` view; `contributors` also edit; `editors` also delete. A module sets
+its default grants; a site grants a module on its registry entry, and an entry that sets any level
+replaces all of the module's defaults:
+
+```ts
+// a module's default
+defineModule({ name: "tasks", contributors: staffRoles, … });
+
+// a site's grant, in defineAdmin
+{ module: users, contributors: staffRoles },
+```
+
+- Grants list roles and leave admin out. A module with no grant is admin-only. Only these levels can
+  be granted; underneath, Kenstack checks three permissions: `view`, `edit` and `delete`.
+- A person's permissions are the union of their roles' grants. A record-scoped child module
+  (`parent`, an entry with a `foreignKey`) follows its parent's grants, and giving one its own
+  grants throws; a navigation child is a module of its own.
+- One access shape says who may do something, everywhere access is asked for (`pageRoute`,
+  `requireUser`, pipeline stages, sidebar links and fields): `"authenticated"`, a role, a list of
+  roles, or a module permission, `{ module: "users", permission: "view" }`. Admins pass every form,
+  so a role list names only the other roles it lets in, and an empty list is admins alone.
+  `await hasAccess(access)`, from `@kenstack/auth/server`, checks it for the signed-in person, such
+  as whether a link to a user's record would open for them; it reads the user once per request and
+  is false when signed out. In the browser, where the module registry isn't loaded,
+  `hasRoleAccess(roles, access)` checks the role forms.
+- Pages: a module's list and record need `view`, and `/new` and a singleton with no row yet need
+  `edit`. A signed-in person without it sees the "No access" page; the reserved pages
+  (email log, style guide) are for admins.
+- The admin API takes the permission each action needs: `view` for list, neighbours, revisions, a
+  one-to-one load and a relationship field's label lookup; `edit` to save, reorder, upload, search
+  tags and search a relationship; `delete` to trash, restore or delete. Impersonation, the email
+  log, the page editor, draft mode and module settings stay admin-only whatever module is named. A
+  signed-out caller is refused first; each action then checks its own access. An unknown action or
+  module, or one without admin records, answers a 404 that names it.
+- The editor and list hide what the person can't do: New, Save and reorder handles without `edit`,
+  and trash, restore and delete without `delete`.
+- The sidebar shows a module with `view`. A plain link (`{ href, title }`) is admin-only unless its
+  `access` says who else sees it, such as `"finance"`; its page checks access itself.
+- A field's `access` says who gets it in the editor; admins always do, and without it everyone who
+  opens the module does. The editor hides the field from everyone else, and shows it read-only to
+  someone it names who can't save the record. Someone who can't save the record gets every field
+  read-only and no Save. A custom field component is locked only through Kenstack's form controls:
+  don't set `access` on a field whose component writes with `setValue`, `useController` or
+  `useFieldArray`, or has buttons of its own. A save never writes a field the person can't change:
+  their schema leaves it out, so parsing drops any value sent for it. An existing record keeps its
+  value, and a new record takes the column's default, which the field's own default must match,
+  since that is what the editor shows. The editor, its saves and its revisions never send a hidden
+  field's value to the browser, and the editor and its save never check the field. A new record's form
+  starts from the module's static `defaultValues`, hidden fields' included; neither the form's schema
+  nor the save's sends or keeps them. Lists,
+  filters and search don't filter these fields yet; build that before a restricted field holds
+  something a granted role mustn't read. Kenstack's users module gives its Roles field
+  `access: "admin"`. On an existing contact, only admins change the sign-in email. One-to-one
+  relation fields can't set `access` yet: defining one that does throws.
+- A module with its own pipeline stages or pages checks their `access` itself; a grant doesn't reach
+  a stage that says `access: "admin"`. A stage can instead name a permission in a module,
+  `access: { module: "tasks", permission: "edit" }`: it refuses as a role list does, and its
+  action's `user` is the signed-in person.
+
 ## Style guide
 
 `createAdminPage()` owns `/admin/style-guide`, with `?context=base`, `admin`, or `site` selecting the
@@ -36,15 +98,15 @@ page from its sidebar, in a "Logs" group. Each `mailer()` call names its `kind` 
 Drizzle `table` and `rowId`; a message links to that record when a list module edits its table.
 
 A `mailer()` call passes `notification: true` for mail its recipients don't expect: broadcasts and
-automatic notices, such as staff alerts and task or comment notices. Outside production (`VERCEL_ENV` other than
-`production`, so development, `next start` and previews), a notification goes only to the developer:
-the addresses in `DEVELOPER_EMAIL`, comma-separated. The message is unchanged, but SES delivers it only
-to those of its recipients (to, cc or bcc). One with none of them is not sent; the Email Log shows it as
-Skipped with the reason "Withheld outside production", and the caller gets `{ status: "sent" }` with
-no message id. Without `DEVELOPER_EMAIL`, no notification is sent outside production. Mail the
-recipient caused, such as a sign-in code, a receipt or a confirmation, and mail someone sends to a
-chosen person on purpose, such as an invitation, is not marked and always goes out, so testers on a
-preview receive it.
+automatic notices, such as staff alerts and task or comment notices. Outside production
+(`VERCEL_ENV` other than `production`, so development, `next start` and previews), a notification
+goes only to the developer: the addresses in `DEVELOPER_EMAIL`, comma-separated. The message is
+unchanged, but SES delivers it only to those of its recipients (to, cc or bcc). One with none of
+them is not sent; the Email Log shows it as Skipped with the reason "Withheld outside production",
+and the caller gets `{ status: "sent" }` with no message id. Without `DEVELOPER_EMAIL`, no
+notification is sent outside production. Mail the recipient caused, such as a sign-in code, a
+receipt or a confirmation, and mail someone sends to a chosen person on purpose, such as an
+invitation, is not marked and always goes out, so testers on a preview receive it.
 
 ## One-to-Many Relationships
 
@@ -70,14 +132,14 @@ foreign keys, or generic CRUD support.
 ## Edit Page Route
 
 A record's editor answers at `/admin/<name>/<id>` and also at `/admin/<name>/<id>/edit`. A module
-whose record page is a read-only view the host mounts at `/admin/<name>/[id]` links its Edit button to
-`/edit`.
+whose record page is a read-only view the host mounts at `/admin/<name>/[id]` links its Edit button
+to `/edit`.
 
 ## Custom Editors
 
-A module whose editor needs more than its generated form passes `Edit` to `defineAdminClient`
-beside or in place of `EditForm`. `Edit` renders `AdminEdit` from `@kenstack/admin/Edit/AdminEdit`,
-which owns the form, saving, conflicts, the unsaved-changes guard, the breadcrumbs and the child-module
+A module whose editor needs more than its generated form passes `Edit` to `defineAdminClient` beside
+or in place of `EditForm`. `Edit` renders `AdminEdit` from `@kenstack/admin/Edit/AdminEdit`, which
+owns the form, saving, conflicts, the unsaved-changes guard, the breadcrumbs and the child-module
 links:
 
 ```tsx
@@ -240,9 +302,9 @@ Clearing it when the content changes:
   form's `row` holds only the columns it saved; the hook reads others through `tx`.
 - `loadRecord` does not cache reads; to cache one, see
   [Caching Module Content](#caching-module-content).
-- Use `saveAdminRecord({ module, id, changes, values, updatedAt })` for the standard admin module save
-  path after the pipeline has enforced `access: "admin"`. It supplies admin-save authority to field
-  handlers and never infers authority from the user's roles.
+- Use `saveAdminRecord({ module, id, changes, values, updatedAt })` for the standard admin module
+  save path after the pipeline has enforced the module's access. It supplies admin-save authority to
+  field handlers and never infers authority from the user's roles.
 - Use `saveRecord(...)` directly for custom persistence no module represents, such as settings or
   page-editor saves. It is restricted by default; set `admin: true` only in a backend admin action,
   never from request data or user roles.

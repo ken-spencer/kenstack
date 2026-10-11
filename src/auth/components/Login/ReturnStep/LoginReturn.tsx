@@ -79,18 +79,19 @@ export default function LoginReturn() {
 
   // The refusal line and Reload a form shows.
   return hasChanged ? (
-    <Notice className="mt-7" role="alert">
-      <div className="flex items-center gap-3">
-        <div className="grow">{accountChangedRefusal.message}</div>
+    <Notice
+      className="mt-7"
+      role="alert"
+      message={accountChangedRefusal.message}
+      action={
         <Button
-          className="shrink-0"
           size="sm"
           type="button"
           onClick={() => window.location.reload()}
         >
           Reload
         </Button>
-      </div>
-    </Notice>
+      }
+    />
   ) : null;
 }

@@ -12,6 +12,7 @@ import {
 } from "drizzle-orm";
 import type * as z from "zod";
 
+import { query } from "@kenstack/db/queries";
 import type { Relationship } from "./relationships";
 import {
   relationshipField as createRelationshipField,
@@ -113,20 +114,11 @@ async function loadRelationship({
     ...discriminatorWhere(relationship),
   ];
 
-  if (hasSoftDelete(relationship.through)) {
-    where.push(isNull(relationship.through.deletedAt));
-  }
-
-  if (hasSoftDelete(relationship.to)) {
-    where.push(isNull(relationship.to.deletedAt));
-  }
-
-  return db
+  return query(relationship.through, { db })
     .select({
       id: sql<number>`${relationship.toPrimaryKey}`.mapWith(Number),
       label: sql<string>`${label}`.mapWith(String),
     })
-    .from(relationship.through)
     .innerJoin(
       relationship.to,
       eq(relationship.toPrimaryKey, relationship.toColumn),
@@ -150,18 +142,12 @@ async function saveRelationship({
     eq(relationship.fromColumn, tableId),
     ...discriminatorWhere(relationship),
   ];
-  const currentWhere = [...where];
 
-  if (hasSoftDelete(relationship.through)) {
-    currentWhere.push(isNull(relationship.through.deletedAt));
-  }
-
-  const current = await db
+  const current = await query(relationship.through, { db })
     .select({
       id: sql<number>`${relationship.toColumn}`.mapWith(Number),
     })
-    .from(relationship.through)
-    .where(and(...currentWhere));
+    .where(and(...where));
   const selectedIds = [...new Set(selected.map((item) => item.id))].sort(
     (a, b) => a - b,
   );

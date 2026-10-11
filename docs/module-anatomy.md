@@ -45,11 +45,11 @@ boundary earn it a file, place it in the applicable kind home. Only an earned he
 goes to `lib`, and the vocabulary grows by decision.
 
 The required core is `index.ts`, `fields` (`fields.ts` or `fields/index.ts`), and `tables.ts`. Every
-other location exists only when its capability does: `client/` when the module has client configuration,
-`fields/formFields.ts` when a generated form map has multiple consumers, `queries` when it has a read
-API, `components/` when it owns UI, and `README.md` when the gate below is met. An empty placeholder is
-never created. At volume, `queries/` members keep their own names (`queries/list.ts`,
-`queries/page.ts`) while the kind keeps the address.
+other location exists only when its capability does: `client/` when the module has client
+configuration, `fields/formFields.ts` when a generated form map has multiple consumers, `queries`
+when it has a read API, `components/` when it owns UI, and `README.md` when the gate below is met.
+An empty placeholder is never created. At volume, `queries/` members keep their own names
+(`queries/list.ts`, `queries/page.ts`) while the kind keeps the address.
 
 ## Entry surface (fixed names)
 
@@ -65,15 +65,16 @@ never created. At volume, `queries/` members keep their own names (`queries/list
   default-exports only lazy imports, `{ admin: () => import("./admin") }`, with
   `settings: () => import("./settings")` for a settings module; `index.ts` passes it to
   `defineModule({ client })`. On the server it is a client reference (see
-  `docs/runtime-boundaries.md`): server code passes it through as a prop and never reads or calls its
-  properties, and the browser loads each import separately when the admin needs it.
-  `client/admin.ts` (`.tsx` as syntax requires) default-exports `defineAdminClient(...)`, passing the
-  bare isomorphic definitions from `fields` as `fields` for the record schema and list configuration.
-  `defineAdminClient(...)` returns its inputs unchanged, and Kenstack builds them once per loader, so
-  one client can build on another's inputs. For one-to-one kinds, import each kind-owned client config
-  and register the map at `oneToOne`. `client/settings.ts` likewise passes bare settings fields and a
-  `SettingsForm` to `defineSettingsClient(...)`; that form owns or imports its generated controls
-  directly, so the client entry never imports generated form controls.
+  `docs/runtime-boundaries.md`): server code passes it through as a prop and never reads or calls
+  its properties, and the browser loads each import separately when the admin needs it.
+  `client/admin.ts` (`.tsx` as syntax requires) default-exports `defineAdminClient(...)`, passing
+  the bare isomorphic definitions from `fields` as `fields` for the record schema and list
+  configuration. `defineAdminClient(...)` returns its inputs unchanged, and Kenstack builds them
+  once per loader, so one client can build on another's inputs. For one-to-one kinds, import each
+  kind-owned client config and register the map at `oneToOne`. `client/settings.ts` likewise passes
+  bare settings fields and a `SettingsForm` to `defineSettingsClient(...)`; that form owns or
+  imports its generated controls directly, so the client entry never imports generated form
+  controls.
 - `fields/formFields.ts` — optional shared boundary that named-exports `fields` from one
   `defineFormFields(fields, { components?, prefix? })` call from `@kenstack/fields/formFields` over the
   isomorphic definitions and the module's property-specific client editors. Create it only when the
@@ -100,25 +101,27 @@ never created. At volume, `queries/` members keep their own names (`queries/list
 
   A site defines its users module with `defineUsersModule` from `@kenstack/modules/users/module`,
   which takes `defineModule`'s `admin` and `client` and inherits Kenstack's name, title and icon.
-  `currentUser.select: { … }` adds columns or SQL subqueries to the cached current-user
-  query, and `getCurrentUser()` and `requireUser()` return them, typed through the registry;
-  Kenstack's own fields replace a site field with the same name, and a site field named
-  `sessionId`, `provider`, `expiresAt` or `authorizedUntil` is dropped. The data is cached with the
-  user, so a write to data a subquery reads must clear `adminLoadCacheTag("users", userId)`.
-  `publicUser: (user) => ({ … })` adds fields to the browser's user info; it runs after the cache on
-  each request and cannot replace Kenstack's fields, and the selected fields stay server-only unless
-  it exposes them. `loginDestination: (user) => path` chooses where a sign-in without a safe `returnTo`
-  lands (default `/`), and `passwordPath` names the page hosting `ResetPasswordForm` (default
+  `currentUser.select: { … }` adds columns or SQL subqueries to the cached current-user query, and
+  `getCurrentUser()` and `requireUser()` return them, typed through the registry; Kenstack's own
+  fields replace a site field with the same name, and a site field named `sessionId`, `provider`,
+  `expiresAt` or `authorizedUntil` is dropped. The data is cached with the user, so a write to data
+  a subquery reads must clear `adminLoadCacheTag("users", userId)`. `publicUser: (user) => ({ … })`
+  adds fields to the browser's user info; it runs after the cache on each request and cannot replace
+  Kenstack's fields, and the selected fields stay server-only unless it exposes them.
+  `loginDestination: (user) => path` chooses where a sign-in without a safe `returnTo` lands
+  (default `/`), and `passwordPath` names the page hosting `ResetPasswordForm` (default
   `/reset-password`). The client builds on Kenstack's:
   `defineAdminClient({ ...usersAdmin, fields, EditForm })`, with `usersAdmin` the default export of
-  `@kenstack/modules/users/client/admin`. A site module without its `client` throws `Missing admin client config` on its admin pages. A users module built with plain
-  `defineModule` keeps Kenstack's defaults.
+  `@kenstack/modules/users/client/admin`. A site module without its `client` throws
+  `Missing admin client config` on its admin pages. A users module built with plain `defineModule`
+  keeps Kenstack's defaults.
 
-  Every site also registers a site-settings module, built with `defineSiteSettingsModule({ admin, client })`
-  from `@kenstack/modules/siteSettings/module`: Kenstack's own, or one whose table and fields extend
-  `siteSettingsColumns` and `siteSettingsFields`. `loadSiteSettings()` and
-  `loadSiteSettingsMetadata()` read it, typed with the site's settings, and the site's schema registry
-  exports its table, since `@kenstack/db/tables` does not.
+  Every site also registers a site-settings module, built with
+  `defineSiteSettingsModule({ admin, client })` from `@kenstack/modules/siteSettings/module`:
+  Kenstack's own, or one whose table and fields extend `siteSettingsColumns` and
+  `siteSettingsFields`. `loadSiteSettings()` and `loadSiteSettingsMetadata()` read it, typed with
+  the site's settings, and the site's schema registry exports its table, since `@kenstack/db/tables`
+  does not.
 
   A module-local `fields/<name>/` unit has the field-unit shape defined in
   `docs/kenstack-anatomy.md`: an isomorphic `index.ts`, with explicit server, component, schema, or
@@ -173,8 +176,8 @@ is not a separate registration surface.
   error translation. The parent module imports the config and only registers `{ movie }` or another
   canonical key in `admin.oneToOne`.
 - `client.tsx` is client-owned and default-exports `defineOneToOneClient({ fields, EditForm })` from
-  `@kenstack/admin/client`. It owns the relation form. The parent's `client/admin.ts` imports the config
-  and only registers the matching key in `oneToOne`.
+  `@kenstack/admin/client`. It owns the relation form. The parent's `client/admin.ts` imports the
+  config and only registers the matching key in `oneToOne`.
 - Additional components, queries, policies, or helpers stay inside the kind folder. Contracts shared by
   kinds in more than one module belong under `modules/shared/<domain>/`; the local kind still owns its
   parent-specific table binding and presentation.
@@ -276,7 +279,7 @@ implementations.
 
 ## Canonical public query patterns
 
-Publication-owned, cacheable reads follow one shape. The cache wrapper is for content whose staleness
+Cacheable reads follow one shape; publication-owned content uses the table-driven pair below. The cache wrapper is for content whose staleness
 the module's invalidation tags bound. Before caching, account for volatile joined values (live
 availability, counts), time-dependent visibility, and data joined from other modules: a loader with
 volatile parts stays uncached, uses a shorter `cacheLife` matched to real staleness tolerance, or splits
@@ -290,12 +293,24 @@ reconstruct it around them.
 Both, and the current-user query, are built on `query(table)` from `@kenstack/db/queries`; use it
 directly for a read neither fits, such as a detail page that needs a join. It takes clauses in any
 order and any number of times: `select(...)` calls merge with later keys winning, `where(...)` calls
-are ANDed, and `innerJoin`/`leftJoin` accumulate with Drizzle's join nullability. `build()` returns
-Drizzle's select without `where` or the methods that would bring it back (`$dynamic`, `$withCache`
-and the set operators), so its own methods cannot replace the combined conditions; chain `orderBy`,
-`limit` and `await` as on any Drizzle select. `isVisible(table)` is the
-published-and-not-deleted condition without the publication-time check, for join conditions and
-cached reads, where a time inside the cache would freeze the moment it ran.
+are ANDed, `innerJoin`/`leftJoin` accumulate with Drizzle's join nullability, `orderBy`/`groupBy`
+accumulate, and the last `limit` and row lock `for(...)` win. Awaiting it runs the query; on a
+transaction, or a field load's `db`, which may be either, run it as `query(table, { db })`.
+`isVisible(table)` is the published-and-not-deleted condition without the publication-time check,
+for join conditions and cached reads, where a time inside the cache would freeze the moment it ran.
+
+`query(table)` leaves out the trashed rows of its table and of every table it joins, so a left join
+finds none for them. A read that must see trashed rows passes `trash` and says why in a comment:
+`query(table, { trash: "include" })` leaves out none, and `query(table, { trash: "only" })` keeps
+only the table's trashed rows, for a trash view; neither filters a join. Such a read writes any
+trash condition it still needs itself: the queried table's in `where`, a joined table's in that
+join's condition, so a left join still keeps its row. A deleted campaign's name on the gifts it
+raised is
+`query(gifts, { trash: "include" }).leftJoin(campaigns, ...).where(isNull(gifts.deletedAt))`, the
+`where` needed only when the queried table has a trash. A read of a table with a trash, a join or subquery included, goes through `query(table)`, which
+Drizzle embeds as a subquery, as in `exists(query(table)...)`. Drizzle directly is only for raw SQL
+or a standalone script. A read that needs a clause `query(table)` lacks, such as offset, distinct or
+a CTE, is an "Ask first" item: propose the builder extension instead of hand-building the read.
 
 ### Cached lists
 
@@ -335,9 +350,8 @@ The rules the shape encodes:
   list implementation.
 - A loader whose contract must remain public during Draft Mode passes `draft: false` directly and can
   keep the cache directive on its exported function. Use this for purchase options and other public
-  choice lists, which an admin preview cookie must never change; the command still validates a
-  submitted choice against authoritative uncached state with a `listQuery(...)` call that passes no
-  `cacheTags`.
+  choice lists, which an admin preview cookie must never change; the command validates a submitted
+  choice against the same cached list.
 - The cache wrapper tags the cache with the module's name plus every joined dependency
   whose changes can alter the result; a list passes them as `cacheTags`. Code outside the module that
   changes a dependency clears its tag itself; see
@@ -352,8 +366,8 @@ The rules the shape encodes:
   applies visibility before row ordering and limits, and, when `cacheTags` is passed, tags the entry
   and applies its lifetime: the `cacheLife` option, default `"max"`, shortened to the earliest future
   publication. Next keeps the shortest lifetime, which also covers a function that loads more than one
-  list. A call without `cacheTags`, such as a command's authoritative read or an uncached search,
-  returns the rows alone.
+  list. A call without `cacheTags`, such as a read of rows its own transaction locks or writes, or an
+  uncached search, returns the rows alone.
 - For a filtered cached variant, build its SQL predicate inside the cached function from serializable
   arguments and pass it once as `where`; a Drizzle `SQL` object never crosses the cache boundary. Use
   `joins` when an inner join is required: it receives the table's query builder and returns it with

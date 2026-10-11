@@ -50,10 +50,11 @@ import { metaFieldOptions, pickMetaFields } from "@kenstack/admin/metaFields";
 import type { AdminKeyTable, AdminTable } from "@kenstack/admin/table";
 import type { ModuleClient } from "@kenstack/admin/client";
 import type { RevalidateTagRule } from "@kenstack/lib/revalidate";
+import type { AfterSaveContext } from "@kenstack/records/save";
 import type { SelectedFieldValues } from "@kenstack/records/select";
-import type { DbTransaction } from "@kenstack/db/types";
 import type { FieldSaveTask } from "@kenstack/fields/serverField";
-import type { User } from "@kenstack/types";
+import type { AuthAccess } from "@kenstack/auth/server/auth";
+import type { Role } from "@kenstack/auth/server/types";
 import type { FetchError } from "@kenstack/api/fetcher";
 import type { NumericIdTable } from "@kenstack/db/types";
 import {
@@ -69,6 +70,15 @@ type SelectShape = Record<string, SelectValue>;
 type AdminManagedTable = AdminTable | AdminKeyTable;
 
 export type PreviewPath = `/${string}`;
+
+// The roles a module is granted to, by level: `viewers` view, `contributors` also edit,
+// and `editors` also delete. Admins always have everything, so grants leave them out. A module sets
+// its default; a site's registry entry that sets any level replaces it.
+export type ModuleGrants = {
+  viewers?: readonly Role[];
+  contributors?: readonly Role[];
+  editors?: readonly Role[];
+};
 
 export type AdminOneToOneBinding = {
   defaultValues: Record<string, unknown>;
@@ -145,15 +155,9 @@ type AdminConfigBase<
 
 // Resolved modules share one registry, so the hook stays bivariant in its row there, as list renderers do.
 type ModuleAfterSave<TRow extends { id: number } = { id: number }> = {
-  bivarianceHack(ctx: {
-    tx: DbTransaction;
-    row: TRow;
-    values: Record<string, unknown>;
-    savedValues: Record<string, unknown>;
-    user: User;
-    changes: string[];
-    isNew: boolean;
-  }): Promise<{ afterCommit?: FieldSaveTask[] } | void>;
+  bivarianceHack(
+    ctx: AfterSaveContext<TRow>,
+  ): Promise<{ afterCommit?: FieldSaveTask[] } | void>;
 }["bivarianceHack"];
 
 type AdminListConfig<
@@ -211,7 +215,7 @@ type ModuleOptions<
   admin?: AdminConfig<TTable, TFields>;
   settings?: ModuleSettingsConfig;
   parent?: ModuleParentOptions;
-};
+} & ModuleGrants;
 
 type ResolvedModule<
   TModule extends { name: string },
@@ -237,13 +241,15 @@ type ResolvedModule<
       }
     : undefined;
   parent: ModuleParentOptions | undefined;
-};
+} & ModuleGrants;
 
 // A sidebar link to an admin page that no module owns.
 export type AdminNavigationLink = {
   href: `/${string}`;
   title: string;
   icon?: ComponentType<SVGProps<SVGSVGElement>>;
+  // Who sees it; admin alone when left out.
+  access?: AuthAccess;
 };
 
 // defineAdmin keeps the sidebar's groups, in registry order, beside the modules it returns;
@@ -262,7 +268,7 @@ export type DefinedAdmin = Record<
     settings?: ResolvedModuleSettings;
     parent?: ModuleParentOptions;
     navigationParent?: string;
-  }
+  } & ModuleGrants
 > & {
   [adminNavigation]: {
     heading?: string;
@@ -381,6 +387,9 @@ export function defineModule<
     admin,
     settings: resolveSettings(options.settings),
     parent: options.parent,
+    viewers: options.viewers,
+    contributors: options.contributors,
+    editors: options.editors,
   };
 
   return resolved as ResolvedModule<TModule, TTable>;

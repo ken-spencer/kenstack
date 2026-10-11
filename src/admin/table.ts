@@ -19,6 +19,7 @@ import {
   varchar,
   boolean,
   type AnyPgTable,
+  type IndexBuilder,
   type PgColumnBuilderBase,
   type PgTableExtraConfigValue,
   type AnyPgColumn,
@@ -45,8 +46,8 @@ const baseTableColumns = (name: string) => ({
     .defaultNow()
     .notNull()
     .$onUpdate(() => nextUpdatedAt(name)),
-  deletedAt: timestamp("deleted_at", { withTimezone: true }),
 });
+const deletedAtColumn = () => timestamp("deleted_at", { withTimezone: true });
 const publicIdColumn = () =>
   text("public_id")
     .$defaultFn(() => createId())
@@ -81,7 +82,11 @@ type TableColumns<
   TReorder extends boolean | undefined,
   TPublish extends boolean | undefined,
   TSeo extends boolean | undefined,
+  TTrash extends boolean | undefined,
 > = ReturnType<typeof baseTableColumns> &
+  ([TTrash] extends [false]
+    ? Record<never, never>
+    : { deletedAt: ReturnType<typeof deletedAtColumn> }) &
   ([TPublicId] extends [true]
     ? { publicId: ReturnType<typeof publicIdColumn> }
     : Record<never, never>) &
@@ -103,12 +108,13 @@ type DefinedPgTable<
   TReorder extends boolean | undefined,
   TPublish extends boolean | undefined,
   TSeo extends boolean | undefined,
+  TTrash extends boolean | undefined,
 > = PgTableWithColumns<{
   name: TName;
   schema: undefined;
   columns: BuildColumns<
     TName,
-    TableColumns<TColumnsMap, TPublicId, TReorder, TPublish, TSeo>,
+    TableColumns<TColumnsMap, TPublicId, TReorder, TPublish, TSeo, TTrash>,
     "pg"
   >;
   dialect: "pg";
@@ -151,15 +157,18 @@ export type ExtraTable<
   TReorder extends boolean | undefined = false,
   TPublish extends boolean | undefined = false,
   TSeo extends boolean | undefined = false,
+  TTrash extends boolean | undefined = true,
 > = {
   id: AnyPgColumn;
   createdBy: AnyPgColumn;
   createdAt: AnyPgColumn;
   updatedAt: AnyPgColumn;
-  deletedAt: AnyPgColumn;
-} & ([TPublicId] extends [true]
-  ? { publicId: AnyPgColumn }
-  : Record<never, never>) &
+} & ([TTrash] extends [false]
+  ? Record<never, never>
+  : { deletedAt: AnyPgColumn }) &
+  ([TPublicId] extends [true]
+    ? { publicId: AnyPgColumn }
+    : Record<never, never>) &
   ([TReorder] extends [true]
     ? { sortOrder: AnyPgColumn }
     : Record<never, never>) &
@@ -183,15 +192,19 @@ export type BuildTableOptions<
   TReorder extends boolean | undefined = false,
   TPublish extends boolean | undefined = false,
   TSeo extends boolean | undefined = false,
+  TTrash extends boolean | undefined = true,
 > = {
   name: TName;
   publicId?: TPublicId;
   reorder?: TReorder;
   publish?: TPublish;
   seo?: TSeo;
+  // False for a table whose rows staff never trash and restore, such as one whose rows end by status
+  // or a hard delete: it gets no `deletedAt`.
+  trash?: TTrash;
   columns: TColumnsMap;
   extraConfig?: (
-    table: ExtraTable<TColumnsMap, TPublicId, TReorder, TPublish, TSeo>,
+    table: ExtraTable<TColumnsMap, TPublicId, TReorder, TPublish, TSeo, TTrash>,
   ) => PgTableExtraConfigValue[];
 };
 
@@ -210,12 +223,14 @@ export const defineTable = <
   const TReorder extends boolean | undefined = false,
   const TPublish extends boolean | undefined = false,
   const TSeo extends boolean | undefined = false,
+  const TTrash extends boolean | undefined = true,
 >({
   name,
   publicId,
   reorder,
   publish,
   seo,
+  trash,
   columns,
   extraConfig,
 }: BuildTableOptions<
@@ -224,54 +239,77 @@ export const defineTable = <
   TPublicId,
   TReorder,
   TPublish,
-  TSeo
->): DefinedPgTable<TName, TColumnsMap, TPublicId, TReorder, TPublish, TSeo> => {
+  TSeo,
+  TTrash
+>): DefinedPgTable<
+  TName,
+  TColumnsMap,
+  TPublicId,
+  TReorder,
+  TPublish,
+  TSeo,
+  TTrash
+> => {
   const tableColumns = {
     ...baseTableColumns(name),
+    ...(trash === false ? {} : { deletedAt: deletedAtColumn() }),
     ...(publicId ? { publicId: publicIdColumn() } : {}),
     ...(reorder ? { sortOrder: sortOrderColumn() } : {}),
     ...(publish ? publishColumns() : {}),
     ...(seo ? seoColumns() : {}),
     ...columns,
-  } as TableColumns<TColumnsMap, TPublicId, TReorder, TPublish, TSeo>;
+  } as TableColumns<TColumnsMap, TPublicId, TReorder, TPublish, TSeo, TTrash>;
 
   const table = pgTable(
     name,
     tableColumns as Record<string, PgColumnBuilderBase>,
-    (t) => [
-      index(`${name}_deleted_at_idx`)
-        .on(t.deletedAt)
-        .where(sql`${t.deletedAt} IS NOT NULL`),
-      index(`${name}_created_at_idx`)
-        .on(t.createdAt)
-        .where(sql`${t.deletedAt} IS NULL`),
-      ...(reorder
-        ? [
-            index(`${name}_sort_order_idx`)
-              .on(t.sortOrder)
-              .where(sql`${t.deletedAt} IS NULL`),
-          ]
-        : []),
-      ...(publish
-        ? [
-            index(`${name}_visibility_published_at_idx`)
-              .on(t.visibility, t.publishedAt)
-              .where(sql`${t.deletedAt} IS NULL`),
-          ]
-        : []),
-      ...(extraConfig
-        ? extraConfig(
-            t as ExtraTable<TColumnsMap, TPublicId, TReorder, TPublish, TSeo>,
-          )
-        : []),
-    ],
+    (t) => {
+      const live = (built: IndexBuilder) =>
+        trash === false ? built : built.where(sql`${t.deletedAt} IS NULL`);
+      return [
+        ...(trash === false
+          ? []
+          : [
+              index(`${name}_deleted_at_idx`)
+                .on(t.deletedAt)
+                .where(sql`${t.deletedAt} IS NOT NULL`),
+            ]),
+        live(index(`${name}_created_at_idx`).on(t.createdAt)),
+        ...(reorder
+          ? [live(index(`${name}_sort_order_idx`).on(t.sortOrder))]
+          : []),
+        ...(publish
+          ? [
+              live(
+                index(`${name}_visibility_published_at_idx`).on(
+                  t.visibility,
+                  t.publishedAt,
+                ),
+              ),
+            ]
+          : []),
+        ...(extraConfig
+          ? extraConfig(
+              t as ExtraTable<
+                TColumnsMap,
+                TPublicId,
+                TReorder,
+                TPublish,
+                TSeo,
+                TTrash
+              >,
+            )
+          : []),
+      ];
+    },
   ) as unknown as DefinedPgTable<
     TName,
     TColumnsMap,
     TPublicId,
     TReorder,
     TPublish,
-    TSeo
+    TSeo,
+    TTrash
   >;
 
   return table;

@@ -1,10 +1,10 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { render } from "react-email";
 import * as z from "zod";
 
-import { db } from "@app/db";
 import { modules } from "@app/modules";
 import { pipelineStage } from "@kenstack/api";
+import { query } from "@kenstack/db/queries/query";
 import mailer, { senderUnavailableMessage } from "@kenstack/lib/mailer";
 import siteOrigin from "@kenstack/lib/siteOrigin";
 import { formatUserName } from "@kenstack/lib/user";
@@ -16,14 +16,13 @@ export const sendOnboardingEmailAction = pipelineStage(
   async ({ data: { userId }, request, response, user: admin }) => {
     const users = modules.users.admin.table;
 
-    const [user] = await db
+    const [user] = await query(users)
       .select({
         givenName: users.givenName,
         familyName: users.familyName,
         email: users.email,
       })
-      .from(users)
-      .where(and(eq(users.id, userId), isNull(users.deletedAt)));
+      .where(eq(users.id, userId));
 
     if (!user) {
       return response.error("Unable to find the requested user");

@@ -1,5 +1,6 @@
 import type { ImageVariants } from "./types";
-import { defineTable, type AdminTable } from "@kenstack/admin/table";
+import { defineTable } from "@kenstack/admin/table";
+import type { NumericIdTable } from "@kenstack/db/types";
 import {
   text,
   integer,
@@ -49,7 +50,7 @@ export const defineMediaList = ({
   table,
   prefix,
 }: {
-  table: AdminTable;
+  table: NumericIdTable;
   prefix: string;
 }) => {
   const tablePrefix = snakeCase(prefix);

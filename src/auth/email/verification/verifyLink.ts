@@ -2,6 +2,7 @@ import "server-only";
 
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@app/db";
+import { query } from "@kenstack/db/queries/query";
 import { verifications } from "@kenstack/db/tables/verification";
 
 import { getVerificationKey, setVerificationCookie } from "./internal/cookie";
@@ -18,7 +19,7 @@ async function inspectLink(
   { kind = "login", userId = null }: Partial<VerificationBinding>,
   currentVerificationKey: string | undefined,
 ) {
-  const [record] = await tx
+  const [record] = await query(verifications, { db: tx })
     .select({
       endedAt: verifications.endedAt,
       email: verifications.email,
@@ -30,7 +31,6 @@ async function inspectLink(
       verificationKeyHash: verifications.verificationKeyHash,
       provenAt: verifications.provenAt,
     })
-    .from(verifications)
     .where(eq(verifications.tokenHash, hashVerificationToken(token)))
     .limit(1)
     .for("update");
@@ -45,9 +45,8 @@ async function inspectLink(
   }
   // Latest of its own kind and account: another kind's request in the same
   // browser, such as a login while a change is pending, does not replace it.
-  const [latestVerification] = await tx
+  const [latestVerification] = await query(verifications, { db: tx })
     .select({ id: verifications.id })
-    .from(verifications)
     .where(
       and(
         eq(verifications.verificationKeyHash, record.verificationKeyHash),

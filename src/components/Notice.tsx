@@ -4,11 +4,15 @@ import { twMerge } from "tailwind-merge";
 export type NoticeProps = React.ComponentProps<"div"> & {
   status?: "error" | "success" | "information";
   message?: React.ReactNode;
+  // A button for the notice, such as Try again: beside the message, or below it when they don't fit.
+  // The icon stays centred on the message.
+  action?: React.ReactNode;
 };
 
 const Notice: React.FC<NoticeProps> = ({
   status = "error",
   message,
+  action,
   className,
   children,
   ...props
@@ -38,13 +42,16 @@ const Notice: React.FC<NoticeProps> = ({
     <div
       {...props}
       className={twMerge(
-        "flex items-center gap-2 rounded-[var(--radius-lg,0.5rem)] border p-2 transition",
+        "flex flex-wrap items-center gap-x-3 gap-y-2 rounded-[var(--radius-lg,0.5rem)] border p-2 transition",
         classes,
         className,
       )}
     >
-      <Icon className="size-8" />
-      <div className="grow">{message ?? children}</div>
+      <div className="flex grow items-center gap-2">
+        <Icon className="size-8 shrink-0" />
+        <div className="grow">{message ?? children}</div>
+      </div>
+      {action}
     </div>
   );
 };

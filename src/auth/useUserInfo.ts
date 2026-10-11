@@ -176,6 +176,20 @@ export function logoutUser() {
   return promise;
 }
 
+// Logs out, then runs onLoggedOut; a failure tells the visitor to try again.
+export function logout(onLoggedOut: () => void) {
+  logoutUser()
+    .then(onLoggedOut)
+    .catch((error) => {
+      window.alert(
+        "There was an unexpected problem handling your request. Please try again later.",
+      );
+
+      // eslint-disable-next-line no-console
+      console.error(error);
+    });
+}
+
 // The account menu calls this as the page changes: a completed logout shows once its page has left.
 export function adoptLogout(pathname: string) {
   if (loggedOut && loggedOut.pathname !== pathname) {

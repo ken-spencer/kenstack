@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import { FieldLockedContext } from "@kenstack/forms/fieldLocked";
+
 import { cn } from "@kenstack/lib/utils";
 
 type ToggleButtonProps = Omit<
@@ -19,12 +21,14 @@ function ToggleButton({
   onPressedChange,
   ...props
 }: ToggleButtonProps) {
+  const locked = React.useContext(FieldLockedContext);
   return (
     <button
       type="button"
       aria-pressed={pressed}
       className={cn("toggle", className)}
       {...props}
+      disabled={props.disabled || locked}
       // An aria-disabled button stays focusable, so it can say why it is unavailable, but does nothing.
       onClick={() => {
         if (

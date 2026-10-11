@@ -11,12 +11,13 @@ const schema = z.object({
 });
 
 export const neighborsAction = ({
+  name,
   admin: adminConfig,
   parent,
 }: DefinedAdminModule) =>
   pipelineStage(
     {
-      access: "admin",
+      access: { module: name, permission: "view" },
       schema,
     },
     async ({ response, data }) => {

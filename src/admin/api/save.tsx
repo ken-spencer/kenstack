@@ -2,8 +2,15 @@ import { pipelineStage } from "@kenstack/api";
 import type { DefinedAdminModule } from "@kenstack/admin/module";
 
 import * as z from "zod";
+import omit from "lodash-es/omit";
 
+import {
+  getHiddenFields,
+  loadFieldAccess,
+} from "@kenstack/admin/lib/fieldAccess";
 import { saveAdminRecord } from "@kenstack/admin/queries/save";
+import { buildValidationRefusal } from "@kenstack/api/pipeline";
+import { createSchemaFromFields } from "@kenstack/fields/createSchemaFromFields";
 
 function withServerPublishDate<
   TData extends { changes: string[]; values: Record<string, unknown> },
@@ -42,7 +49,7 @@ export const saveAction = (moduleConfig: DefinedAdminModule) => {
 
   return pipelineStage(
     {
-      access: "admin",
+      access: { module: moduleConfig.name, permission: "edit" },
       schema: z.object({
         id: z.number().nullish(),
         // The token the form loaded: null for a new record or a singleton that has no row yet.
@@ -52,14 +59,36 @@ export const saveAction = (moduleConfig: DefinedAdminModule) => {
           .nullable(),
         changes: z.array(z.string()),
         parentId: z.int().positive().optional(),
-        values: adminConfig.schema,
+        // Checked below against the fields this person sees.
+        values: z.record(z.string(), z.unknown()),
       }),
       fieldsKey: "values",
     },
-    async ({ response, data: rawData }) => {
+    async ({ response, data: { id, values: sentValues, ...meta } }) => {
       const { parent } = moduleConfig;
-      const rawSaveData = withServerPublishDate(rawData);
-      const { changes, id, updatedAt } = rawSaveData;
+
+      // A field the person can't see or change is left out of their schema, so parsing drops any value
+      // sent for it and the save never writes it: an existing record keeps its value, and a new one
+      // takes the column's default. Nor is it recorded as changed.
+      const fieldAccess = await loadFieldAccess(moduleConfig.name, !id);
+      const restrictedFields = Object.keys(fieldAccess);
+      const parsedValues = await (
+        restrictedFields.length
+          ? createSchemaFromFields(
+              omit(adminConfig.fields, restrictedFields),
+              adminConfig.oneToOne,
+            )
+          : adminConfig.schema
+      ).safeParseAsync(sentValues);
+      if (!parsedValues.success) {
+        return response.error(buildValidationRefusal(parsedValues.error));
+      }
+      const rawSaveData = withServerPublishDate({
+        ...meta,
+        changes: meta.changes.filter((key) => !restrictedFields.includes(key)),
+        values: parsedValues.data,
+      });
+      const { changes, updatedAt } = rawSaveData;
       let values: Record<string, unknown> = rawSaveData.values;
 
       if (!id && parent) {
@@ -87,7 +116,7 @@ export const saveAction = (moduleConfig: DefinedAdminModule) => {
 
       return response.success({
         id: result.row?.id ?? id,
-        values: result.values,
+        values: omit(result.values, getHiddenFields(fieldAccess)),
         updatedAt: result.updatedAt,
       });
     },

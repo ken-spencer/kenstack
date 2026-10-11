@@ -8,9 +8,9 @@ import StepLoginForm from "./Form";
 import LoginController from "./Controller";
 
 // Composed for every visit. A signed-in visitor skips the step, forward and
-// Back: it starts skipped on the server, and its controller follows browser
-// identity, bringing it forward if identity is lost and skipping it again once
-// the visitor signs in. Signing in updates browser identity in place, and the
+// Back: it starts skipped and satisfied on the server, and its controller
+// follows browser identity, bringing it forward, unsatisfied, if identity is
+// lost and skipping it again once the visitor signs in. Signing in updates browser identity in place, and the
 // controller refreshes the server render. The controller also verifies an
 // emailed link that lands on the flow.
 export async function createLoginStep({
@@ -19,6 +19,8 @@ export async function createLoginStep({
   title?: string;
 } = {}): Promise<Step> {
   const authState = await loadPublicAuthState();
+  const hasIdentity =
+    authState.state === "authenticated" || authState.state === "proven";
 
   return {
     controller: <LoginController authState={authState} />,
@@ -29,10 +31,8 @@ export async function createLoginStep({
         </Suspense>
       </div>
     ),
-    skipped:
-      authState.state === "authenticated" || authState.state === "proven"
-        ? true
-        : undefined,
+    skipped: hasIdentity,
+    satisfied: hasIdentity,
     title,
   };
 }

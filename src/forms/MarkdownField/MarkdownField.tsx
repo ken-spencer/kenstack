@@ -1,6 +1,11 @@
 "use client";
 
-import { Editor, defaultValueCtx, rootCtx } from "@milkdown/kit/core";
+import {
+  Editor,
+  defaultValueCtx,
+  editorViewOptionsCtx,
+  rootCtx,
+} from "@milkdown/kit/core";
 import { listener, listenerCtx } from "@milkdown/kit/plugin/listener";
 import { history } from "@milkdown/kit/plugin/history";
 import { commonmark } from "@milkdown/kit/preset/commonmark";
@@ -23,6 +28,7 @@ import { type ControllerRenderProps } from "react-hook-form";
 import { twMerge } from "tailwind-merge";
 
 import Field, { type FieldProps } from "@kenstack/forms/Field";
+import { FieldLockedContext } from "@kenstack/forms/fieldLocked";
 import { MarkdownEditorToolbar } from "@kenstack/forms/MarkdownEditor/Toolbar";
 import { markdownMentionPlugin, type MarkdownMentionConfig } from "./mentions";
 
@@ -78,6 +84,7 @@ function MarkdownFieldEditor({
   const lastEditorValue = useRef(initialValue);
   const [loading, get] = useInstance();
   const queryClient = useContext(QueryClientContext);
+  const locked = useContext(FieldLockedContext);
 
   useEditor((root) => {
     const editor = Editor.make()
@@ -85,6 +92,10 @@ function MarkdownFieldEditor({
         ctx.set(rootCtx, root);
         ctx.set(defaultValueCtx, initialValue);
         ctx.set(placeholderCtx, "Start typing...");
+        ctx.update(editorViewOptionsCtx, (options) => ({
+          ...options,
+          editable: () => !locked,
+        }));
 
         ctx.get(listenerCtx).markdownUpdated((_, markdown) => {
           lastEditorValue.current = markdown;

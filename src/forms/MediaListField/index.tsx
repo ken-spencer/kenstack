@@ -2,6 +2,7 @@
 
 import {
   useCallback,
+  useContext,
   useState,
   type ChangeEvent,
   type ComponentProps,
@@ -20,6 +21,7 @@ import Field, {
   type FieldProps,
   type RenderProps,
 } from "@kenstack/forms/Field";
+import { FieldLockedContext } from "@kenstack/forms/fieldLocked";
 import AddImageIcon from "@kenstack/forms/ImageField/AddImageIcon";
 import { getReturnedErrorMessage } from "@kenstack/api/errors";
 import { useForm } from "@kenstack/forms/context";
@@ -148,6 +150,7 @@ const createMediaRender = ({
   ImageDetails,
 }: MediaRenderProps & { ImageDetails?: ImageDetailsEditor }) =>
   function MediaListFieldRender({ field }: { field: RenderProps["field"] }) {
+    const locked = useContext(FieldLockedContext);
     const {
       finishUploading,
       form,
@@ -382,7 +385,7 @@ const createMediaRender = ({
         evt.preventDefault();
         evt.stopPropagation();
 
-        if (canUpload && evt.dataTransfer.files?.length) {
+        if (canUpload && !locked && evt.dataTransfer.files?.length) {
           uploadFiles(evt.dataTransfer.files);
         }
       },
@@ -395,7 +398,7 @@ const createMediaRender = ({
           type="file"
           multiple={multiple}
           accept={acceptStr}
-          disabled={!canUpload}
+          disabled={!canUpload || locked}
           onChange={(evt: ChangeEvent<HTMLInputElement>) => {
             const target = evt.currentTarget;
             if (canUpload && target.files) {
@@ -444,7 +447,7 @@ const createMediaRender = ({
           <AttachmentList
             attachments={value}
             itemClassName={itemClassName}
-            onRemove={removeImage}
+            onRemove={locked ? undefined : removeImage}
           />
         </div>
       );
@@ -498,9 +501,11 @@ const createMediaRender = ({
                   itemClassName,
                 )}
                 id={String(image.id ?? image.mediaId ?? image.url)}
+                disabled={locked}
               >
                 <button
                   type="button"
+                  disabled={locked}
                   title="Remove media"
                   aria-label="Remove media"
                   draggable={false}
@@ -519,7 +524,9 @@ const createMediaRender = ({
                     type="button"
                     aria-label="Edit image details"
                     className="block h-full w-full"
-                    disabled={image.uploadState === "error" || fileMedia}
+                    disabled={
+                      locked || image.uploadState === "error" || fileMedia
+                    }
                     onClick={() => {
                       if (!fileMedia) {
                         setEditing({ index, mode: "details" });
@@ -555,6 +562,7 @@ const createMediaRender = ({
                 {canUpload && cropSource && image.uploadState !== "error" ? (
                   <Button
                     type="button"
+                    disabled={locked}
                     aria-label="Adjust crop"
                     className="bg-background/90 absolute right-1 bottom-1 z-20"
                     icon={Crop}

@@ -22,6 +22,7 @@ import type { AuthAccess } from "@kenstack/auth/server/auth";
 import type { User } from "@kenstack/types";
 import { isRecord } from "@kenstack/lib/isRecord";
 import getIp from "@kenstack/lib/ip";
+import { normalizeEmail } from "@kenstack/fields/email";
 
 type ValidationErrorTree = {
   errors: string[];
@@ -61,6 +62,14 @@ function validationErrors(error: z.ZodError) {
   return {
     ...(Object.keys(fieldErrors).length ? { fieldErrors } : {}),
     ...(formErrors.length ? { formErrors } : {}),
+  };
+}
+
+// The refusal for values that fail their schema, with each field's errors.
+export function buildValidationRefusal(error: z.ZodError) {
+  return {
+    message: "Please review the form and correct the highlighted fields.",
+    ...validationErrors(error),
   };
 }
 
@@ -121,10 +130,10 @@ type PipelineStageOptions<TSchema extends ObjectSchema | undefined, TAccess> = {
   schema?: TSchema;
   access?: TAccess;
   fieldsKey?: string;
-  // A per-IP use of the pipeline name's quota scope, claimed before reCAPTCHA and the action, with
-  // Kenstack's default limits or its own IP limit. Like reCAPTCHA, it guards against anonymous bots,
-  // so a signed-in visitor skips it.
-  quota?: true | { ip: QuotaLimits["ip"] };
+  // A use of the pipeline name's quota scope, claimed before reCAPTCHA and the action. `ip` counts
+  // each signed-out visitor by IP, and `true` does so with Kenstack's default limit; `email` counts
+  // each signed-in visitor by their account email. Admins are never counted.
+  quota?: true | Partial<QuotaLimits>;
   // Verifies the token in the request body under the pipeline name; a signed-in visitor skips it.
   recaptcha?: true;
 };
@@ -229,6 +238,30 @@ export default async function pipeline(
   return response.toNextResponse();
 }
 
+// Who a stage's quota counts: a signed-out visitor by IP, a signed-in one by account email when the
+// stage sets `email`, and never an admin.
+async function loadQuotaSubject(
+  quota: true | Partial<QuotaLimits>,
+  visitor: User | undefined,
+  request: NextRequest,
+) {
+  if (!visitor) {
+    if (quota === true) {
+      return { ip: await getIp(request) };
+    }
+    return quota.ip
+      ? { ip: await getIp(request), limits: { ip: quota.ip } }
+      : null;
+  }
+  if (quota === true || !quota.email || visitor.roles.includes("admin")) {
+    return null;
+  }
+  return {
+    email: normalizeEmail(visitor.email),
+    limits: { email: quota.email },
+  };
+}
+
 export function pipelineStage<
   TSchema extends ObjectSchema | undefined = undefined,
   const TAccess extends AuthAccess | "proven" | undefined = undefined,
@@ -243,6 +276,29 @@ export function pipelineStage<
   action: PipelineStageCallback<PipelineStageContext<TSchema, TAccess>>,
 ): PipelineStage & { [isStage]: PipelineStage } {
   const stage = async (ctx: PipelineContext) => {
+    // Access first, so a refused caller learns nothing from validation errors.
+    let proof: { email: string } | undefined;
+    let user: User | undefined;
+    if (access === "proven") {
+      // Acts for a proven email. A session that appeared since the page rendered may be another
+      // account's, so any session is refused as a changed sign-in. One read decides both.
+      const authState = await loadAuthState();
+      if (authState.state !== "proven") {
+        return ctx.response.error(
+          authState.state === "authenticated"
+            ? { ...accountChangedRefusal, status: 409 }
+            : { message: verificationMissingMessage, status: 401 },
+        );
+      }
+      proof = { email: authState.email };
+    } else if (access !== undefined) {
+      const resolved = await resolveAccess(ctx.request, access);
+      if (resolved.refusal) {
+        return ctx.response.error(resolved.refusal);
+      }
+      user = resolved.user;
+    }
+
     let data: PipelineStageContext<TSchema, TAccess>["data"];
 
     if (schema) {
@@ -275,11 +331,7 @@ export function pipelineStage<
           : undefined;
         const parsedValues = await valuesSchema.safeParseAsync(valuesInput);
         if (!parsedValues.success) {
-          return ctx.response.error({
-            message:
-              "Please review the form and correct the highlighted fields.",
-            ...validationErrors(parsedValues.error),
-          });
+          return ctx.response.error(buildValidationRefusal(parsedValues.error));
         }
 
         data = {
@@ -289,39 +341,13 @@ export function pipelineStage<
       } else {
         const parsed = await schema.safeParseAsync(ctx.dataIn);
         if (!parsed.success) {
-          return ctx.response.error({
-            message:
-              "Please review the form and correct the highlighted fields.",
-            ...validationErrors(parsed.error),
-          });
+          return ctx.response.error(buildValidationRefusal(parsed.error));
         }
 
         data = parsed.data as PipelineStageContext<TSchema, TAccess>["data"];
       }
     } else {
       data = undefined as PipelineStageContext<TSchema, TAccess>["data"];
-    }
-
-    let proof: { email: string } | undefined;
-    let user: User | undefined;
-    if (access === "proven") {
-      // Acts for a proven email. A session that appeared since the page rendered may be another
-      // account's, so any session is refused as a changed sign-in. One read decides both.
-      const authState = await loadAuthState();
-      if (authState.state !== "proven") {
-        return ctx.response.error(
-          authState.state === "authenticated"
-            ? { ...accountChangedRefusal, status: 409 }
-            : { message: verificationMissingMessage, status: 401 },
-        );
-      }
-      proof = { email: authState.email };
-    } else if (access !== undefined) {
-      const resolved = await resolveAccess(ctx.request, access);
-      if (resolved.refusal) {
-        return ctx.response.error(resolved.refusal);
-      }
-      user = resolved.user;
     }
 
     if (quota || checkRecaptcha) {
@@ -332,18 +358,20 @@ export function pipelineStage<
         );
       }
 
+      // A stage with access already holds its user.
+      const visitor = user ?? (await getCurrentUser());
       // Quota first: cheaper than the reCAPTCHA assessment and the action.
-      if (quota && !(await getCurrentUser())) {
-        const exceeded = await claimQuota(name, {
-          ip: await getIp(ctx.request),
-          limits: quota === true ? undefined : quota,
-        });
+      const counted =
+        quota && (await loadQuotaSubject(quota, visitor, ctx.request));
+      if (counted) {
+        const exceeded = await claimQuota(name, counted);
         if (exceeded) {
           throw new ReturnedError(exceeded.message, { status: 429 });
         }
       }
 
-      if (checkRecaptcha) {
+      // reCAPTCHA guards against anonymous bots, so a signed-in visitor skips it.
+      if (checkRecaptcha && !visitor) {
         const rejection = await recaptcha({
           action: name,
           body: ctx.dataIn,

@@ -3,6 +3,7 @@
 import * as React from "react";
 import { CheckIcon, MinusIcon } from "lucide-react";
 
+import { FieldLockedContext } from "@kenstack/forms/fieldLocked";
 import { cn } from "@kenstack/lib/utils";
 
 type CheckedState = boolean | "indeterminate";
@@ -23,6 +24,7 @@ function Checkbox({
   ref,
   ...props
 }: CheckboxProps) {
+  const locked = React.useContext(FieldLockedContext);
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const setRef = React.useCallback(
     (input: HTMLInputElement | null) => {
@@ -73,6 +75,7 @@ function Checkbox({
           onCheckedChange?.(nextChecked);
         }}
         {...props}
+        disabled={props.disabled || locked}
       />
       <span
         data-slot="checkbox-indicator"

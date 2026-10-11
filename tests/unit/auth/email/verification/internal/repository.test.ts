@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
+const mocks = vi.hoisted(() => ({ query: vi.fn() }));
+
 vi.mock("server-only", () => ({}));
 vi.mock("drizzle-orm", () => ({
   and: vi.fn(() => ({})),
@@ -12,6 +14,7 @@ vi.mock("drizzle-orm", () => ({
   ne: vi.fn(() => ({})),
   or: vi.fn(() => ({})),
 }));
+vi.mock("@kenstack/db/queries/query", () => ({ query: mocks.query }));
 vi.mock("@kenstack/db/tables/verification", () => ({ verifications: {} }));
 
 import { createChallengeSecrets } from "@kenstack/auth/email/verification/internal/crypto";
@@ -22,6 +25,25 @@ import {
 
 type ResolveCodeAttemptTransaction = Parameters<typeof resolveCodeAttempt>[0];
 type VerificationRecord = Parameters<typeof resolveCodeAttempt>[1]["current"];
+
+// A fake Kenstack query builder: every clause returns it, and awaiting it gives the rows.
+function fakeBuilder(rows: unknown[]) {
+  const builder = {
+    for: () => builder,
+    groupBy: () => builder,
+    innerJoin: () => builder,
+    leftJoin: () => builder,
+    limit: () => builder,
+    orderBy: () => builder,
+    select: () => builder,
+    then: (
+      resolve: (rows: unknown[]) => unknown,
+      reject?: (reason: unknown) => unknown,
+    ) => Promise.resolve(rows).then(resolve, reject),
+    where: () => builder,
+  };
+  return builder;
+}
 
 function updateQuery(returning?: unknown[]) {
   const query = {
@@ -66,33 +88,17 @@ describe("resolveCodeAttempt", () => {
       id: 1,
     }) as VerificationRecord;
 
-  // Stale-code lookup: select(...).from().where().orderBy().limit() → rows.
-  const createSelectQuery = (rows: unknown[]) => {
-    const query = {
-      from: vi.fn(),
-      limit: vi.fn().mockResolvedValue(rows),
-      orderBy: vi.fn(),
-      where: vi.fn(),
-    };
-    query.from.mockReturnValue(query);
-    query.where.mockReturnValue(query);
-    query.orderBy.mockReturnValue(query);
-    return query;
-  };
-
   it("reports a code from an ended or expired request as expired without consuming an attempt", async () => {
     const current = createChallengeSecrets();
     const stale = createChallengeSecrets();
     const update = vi.fn();
-    const select = vi.fn(() =>
-      createSelectQuery([
-        { codeHash: stale.codeHash, codeSalt: stale.codeSalt },
-      ]),
+    mocks.query.mockReturnValueOnce(
+      fakeBuilder([{ codeHash: stale.codeHash, codeSalt: stale.codeSalt }]),
     );
 
     await expect(
       resolveCodeAttempt(
-        { select, update } as unknown as ResolveCodeAttemptTransaction,
+        { update } as unknown as ResolveCodeAttemptTransaction,
         {
           code: stale.code,
           current: createRecord(current),
@@ -107,15 +113,13 @@ describe("resolveCodeAttempt", () => {
     const current = createChallengeSecrets();
     const stale = createChallengeSecrets();
     const update = vi.fn();
-    const select = vi.fn(() =>
-      createSelectQuery([
-        { codeHash: stale.codeHash, codeSalt: stale.codeSalt },
-      ]),
+    mocks.query.mockReturnValueOnce(
+      fakeBuilder([{ codeHash: stale.codeHash, codeSalt: stale.codeSalt }]),
     );
 
     await expect(
       resolveCodeAttempt(
-        { select, update } as unknown as ResolveCodeAttemptTransaction,
+        { update } as unknown as ResolveCodeAttemptTransaction,
         {
           code: stale.code,
           current: { ...createRecord(current), failedAttempts: 4 },
@@ -129,12 +133,12 @@ describe("resolveCodeAttempt", () => {
   it("counts a code matching nothing as an incorrect attempt", async () => {
     const current = createChallengeSecrets();
     const incorrectCode = current.code === "000000" ? "000001" : "000000";
-    const select = vi.fn(() => createSelectQuery([]));
+    mocks.query.mockReturnValueOnce(fakeBuilder([]));
     const update = vi.fn(() => updateQuery());
 
     await expect(
       resolveCodeAttempt(
-        { select, update } as unknown as ResolveCodeAttemptTransaction,
+        { update } as unknown as ResolveCodeAttemptTransaction,
         {
           code: incorrectCode,
           current: createRecord(current),

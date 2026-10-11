@@ -1,4 +1,4 @@
-import { isNull, type SQL } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import type { SelectedFields } from "drizzle-orm/pg-core";
 import { cacheLife, cacheTag, io } from "next/cache";
 import { draftMode } from "next/headers";
@@ -54,7 +54,6 @@ function selectPage<TSelection extends SelectedFields>(
   return query(table)
     .select(select)
     .select({ publishedAt: table.publishedAt, visibility: table.visibility })
-    .where(isNull(table.deletedAt))
     .where(where);
 }
 
@@ -62,7 +61,7 @@ async function queryPage<TSelection extends SelectedFields>(
   table: AdminContentTable,
   options: PageQueryOptions<TSelection>,
 ) {
-  const [page] = await selectPage(table, options).build().limit(1);
+  const [page] = await selectPage(table, options).limit(1);
   return page ?? null;
 }
 
@@ -76,7 +75,6 @@ async function querySeoPage<TSelection extends SelectedFields>(
       seoDescription: table.seoDescription,
       ogImage: selectImageSubquery(table.ogImage),
     })
-    .build()
     .limit(1);
   return page ?? null;
 }

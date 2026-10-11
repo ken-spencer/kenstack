@@ -1,19 +1,23 @@
 import type { AnyPgTable } from "drizzle-orm/pg-core";
 
 import { pipelineStage } from "@kenstack/api";
+import type { AuthAccess } from "@kenstack/auth/server/auth";
 import {
   completeMediaUpload,
   mediaUploadCompleteSchema,
 } from "@kenstack/fields/internal/media/upload";
 import type { ServerDefinedFields } from "@kenstack/fields/internal/serverResolution";
 
-export const uploadCompleteAction = (adminConfig: {
-  table: AnyPgTable;
-  fields: ServerDefinedFields;
-}) =>
+export const uploadCompleteAction = (
+  adminConfig: {
+    table: AnyPgTable;
+    fields: ServerDefinedFields;
+  },
+  access: AuthAccess,
+) =>
   pipelineStage(
     {
-      access: "admin",
+      access,
       schema: mediaUploadCompleteSchema,
     },
     async ({ data, response, user }) => {

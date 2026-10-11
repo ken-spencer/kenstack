@@ -24,7 +24,6 @@ export async function loadSiteSettings() {
   const [settings] = await query(table)
     .select({ ...columns, ogImage: selectMediaSubquery(table.ogImage) })
     .where(eq(table.key, "site-settings"))
-    .build()
     .limit(1);
   return settings ?? { ...createDefaultValues(fields), ogImage: null };
 }

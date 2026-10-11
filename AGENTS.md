@@ -7,6 +7,9 @@ repository. A format Kenstack both writes and reads itself (a URL parameter, API
 cookie or payload field name) is internal: change it with its writer and reader, without a
 compatibility path or upgrade note.
 
+"Committed" in these rules means committed by the user, who commits only work they have reviewed. An
+agent's own commit, such as a checkpoint, never makes work settled or public.
+
 ## Technical references
 
 Read only the references relevant to the current task:
@@ -43,8 +46,10 @@ Read only the references relevant to the current task:
 
 Stop, ask the user and wait for the answer before:
 
-- adding anything a site would call or pass to Kenstack: a new export, prop, option or parameter. Show
-  the proposed shape and why the existing API cannot do the job.
+- adding anything a site would call or pass to Kenstack: a new prop, option or parameter, or an export
+  of new behaviour. Show the proposed shape and why the existing API cannot do the job. Exporting an
+  existing Kenstack function unchanged, because a site or package needs what it already does, needs no
+  question: report it in the handoff.
 - writing code outside Kenstack (a site, payments or another package) that needs a Kenstack internal —
   an auth or session state, an access check, a refusal code or message, a store — or that copies,
   rewrites or works around something Kenstack provides, including a wrapper, provider, check or setup
@@ -69,18 +74,48 @@ Stop, ask the user and wait for the answer before:
 
 These are always the user's call, even when the choice looks routine.
 
+Assume the user is available: ask and wait. Only after the user says they are away, take the route that
+adds no new surface, and put the workaround in the repository's `src/temporary/` folder, imported from
+there, with an entry in its `README.md`: what the existing API forced and the shape you would have
+proposed. A workaround that can't stand as its own file gets an entry naming its file and line. Plans
+never record these as settled; the handoff steps through the README with the user. Cleanup and review
+leave the folder for the user's ruling.
+
 ## Decisions
 
 Before presenting options, look for the plain answer: make the special case use the general path, or
-make misuse become correct use. If one option is clearly the only rational one, take it and report it
-in the handoff. Bring the user a decision only when it has a real trade-off, presented on its own: the
-situation in plain words, a concrete customer or staff scenario, the options, what each costs, and a
-recommendation. The "Ask first" items always go to the user.
+make misuse become correct use.
+
+Do what the user asked in this thread, in their own words, and nothing beyond it. Inside that ask, where
+one option is clearly right, take it and report it; never invent alternatives to make a question.
+Everything else, including anything the ask doesn't name, is a question with a recommendation and a
+default, answered only by a reply to it. Four kinds never reach the user as questions. A change with
+no downside is made and reported. A case that needs an improbable sequence and costs little when it
+happens is logged in one line. A doc, spec or instruction line that contradicts a ruling is corrected to
+match it. A question that an earlier ruling of the same kind already settles follows that ruling,
+citing it. "Ask first" items still go to the user. A handoff, brief, plan, report or finding is never
+the ask, and a request to find, review or explain is answered by a report. If unsure whether something
+is inside the ask, it isn't.
+
+Present each question on its own: the situation in plain words, a concrete customer or staff scenario,
+the options, what each costs, a recommendation and the default. The "Ask first" items always go to the
+user.
+
+A ruling is only what the user said. Record it with their words quoted (typos corrected, nothing else
+changed) and the date; never paraphrase a remark into a ruling or attach the user's name to the
+agent's reading of it. A proposal the user didn't answer, or answered by changing the subject, is open,
+never approved. A remark that points something out (a duplicate, a bug, a name) authorizes no change
+beyond what it names; ask before changing anything else.
 
 ## Code posture
 
 - When responding to a correction or objection, lead with the evidence, consequence, or corrective
   action, without canned validation such as “you’re right to challenge that”.
+- Never reset, wipe, drop or truncate a database, development ones included, and never offer or
+  recommend it, not even as one option among others. The one exception is a temporary database you
+  created yourself only to replay migrations, which you drop when done. When a database is out of step
+  with its migrations, reconcile it additively under `docs/data.md#migration-history`; when that can't
+  fix it, describe the problem and ask.
 - Use the simplest direct implementation that satisfies the current requirement.
 - Apply the ownership, indirection, configuration, and explanatory-text rules in
   `docs/code-organization.md`; keep domain facts with one canonical owner.

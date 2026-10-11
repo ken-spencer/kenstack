@@ -12,14 +12,18 @@ import { useAdminList } from "./context";
 import DeleteButton, { RestoreButton } from "./DeleteButton";
 import TrashToggle from "./TrashToggle";
 
-export default function AdminListHeader({
-  canCreate = true,
-}: {
-  canCreate?: boolean;
-}) {
+export default function AdminListHeader() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { basePath, filter, filters, setFilters, sort } = useAdminList();
+  const {
+    basePath,
+    canCreate,
+    filter,
+    filters,
+    permissions,
+    setFilters,
+    sort,
+  } = useAdminList();
 
   return (
     <header>
@@ -46,7 +50,7 @@ export default function AdminListHeader({
           filters={filters}
           setFilters={setFilters}
         />
-        <RestoreButton />
+        {permissions.delete ? <RestoreButton /> : null}
         {basePath ? (
           <Button asChild size="icon" tooltip="View Content" variant="ghost">
             <a
@@ -58,8 +62,12 @@ export default function AdminListHeader({
             </a>
           </Button>
         ) : null}
-        <TrashToggle />
-        <DeleteButton />
+        {permissions.delete ? (
+          <>
+            <TrashToggle />
+            <DeleteButton />
+          </>
+        ) : null}
       </div>
     </header>
   );

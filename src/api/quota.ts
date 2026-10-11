@@ -30,7 +30,7 @@ const defaultLimits: QuotaLimits = {
 // scoped window.
 const siteLimits: QuotaLimits = {
   email: [30, "1 hour"],
-  // High enough for a room of visitors sharing one network (Ken, 7 October 2026).
+  // High enough for a room of visitors sharing one network.
   ip: [300, "1 hour"],
 };
 

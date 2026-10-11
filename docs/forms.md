@@ -33,15 +33,17 @@ and client-side form validation in Kenstack and host sites.
   `{ recaptchaAction }` to its own `fetcher` call; nothing calls `executeRecaptcha` itself. The host
   mounts one `RecaptchaProvider` site-wide to load the script, so the score reflects the whole visit.
 - The API checks the token with `pipelineStage({ recaptcha: true })`, or by hand with
-  `recaptcha({ action, body: dataIn, request, response })`; both read it from the raw request body, so
-  schemas never declare it. A stage's `quota: true` claims a per-IP use with Kenstack's default limits
-  before reCAPTCHA; `quota: { ip: [max, window] }` sets its own IP limit. Both guard against anonymous
-  bots, so a signed-in visitor skips both.
+  `recaptcha({ action, body: dataIn, request, response })`; both read it from the raw request body,
+  so schemas never declare it. A stage's `quota` claims a use before reCAPTCHA and the action:
+  `quota: true` counts a signed-out visitor by IP with Kenstack's default limits. An object counts only
+  the visitors its keys name: `ip: [max, window]` a signed-out visitor by IP, and `email: [max, window]`
+  a signed-in visitor by account email, so a public stage that limits both sets both. Admins are never
+  counted. reCAPTCHA guards against anonymous bots, so a signed-in visitor skips it.
 - Both take their name from the pipeline: in a `multiPipeline`, the action key, and a standalone
-  `pipeline({ request, name })` names it once. The quota scope is the name as is. reCAPTCHA action names
-  allow only letters, digits, underscores and slashes, so `fetcher` and `recaptcha` both turn a
-  name's hyphens into underscores; the form's `recaptchaAction` is the same name. A stage that sets
-  `quota` or `recaptcha` in a pipeline without a name throws.
+  `pipeline({ request, name })` names it once. The quota scope is the name as is. reCAPTCHA action
+  names allow only letters, digits, underscores and slashes, so `fetcher` and `recaptcha` both turn
+  a name's hyphens into underscores; the form's `recaptchaAction` is the same name. A stage that
+  sets `quota` or `recaptcha` in a pipeline without a name throws.
 - A handler with cheap refusals or shortcuts, such as a lockout, a quota read or a shortcut that sends
   nothing, checks reCAPTCHA by hand after them, so those requests never cost an assessment.
 - The reCAPTCHA terms always come last, below every button, in a page or a dialog. `Form` renders them

@@ -10,7 +10,8 @@ pipeline schema work, or batch scripts.
   the corresponding migration generation and development-database reconciliation without asking again.
 - Before committing, compress migrations from approved, uncommitted private work into one consolidated migration; a
   commit introduces only that one, so a later fix from the same commit updates or regenerates the
-  private migration. Follow the migration-history rules below before rewriting consumed artifacts.
+  private migration. Consolidate with the `flatten-drizzle` skill, under the migration-history rules
+  below.
 - Leave generated files under `drizzle/` exactly as Drizzle emits them and review the generated SQL
   diff directly; the formatter runs only on handwritten schema and source files.
 - Postgres extensions come from Kenstack's supported list in `src/db/scripts/drizzle.mjs`, which
@@ -33,21 +34,28 @@ pipeline schema work, or batch scripts.
 - Append to committed history by default. Once Preview, staging, or production has recorded a
   migration, preserve its SQL, snapshot, and journal entry exactly.
 - Treat uncommitted migrations as private development without asking for confirmation unless evidence
-  indicates they reached a shared environment. Before consolidating them, check affected development
-  database ledgers and define how each database reaches the replacement chain. Check shared ledgers
-  only when there is evidence those migrations were applied there.
+  indicates they reached a shared environment. Before consolidating them, check that the development
+  database has applied all of them, and ask before applying any it hasn't: the consolidated migration
+  is recorded there as applied, so one it never ran would be skipped. Check shared ledgers only when
+  there is evidence those migrations were applied there.
 - A development database may have consumed intermediate private migrations before they were compressed,
-  so the consolidated migration cannot simply replay against it. Reset the database when it is
-  disposable; otherwise compare its schema with the consolidated target and reconcile both the missing
-  schema changes and its migration ledger before running the normal migration command again.
+  so the consolidated migration cannot simply replay against it. Reconcile it in the same task as the
+  consolidation, without asking, so it is never left broken: record the consolidated migration in its
+  ledger and add the schema it is missing. Never reset it, and never delete its ledger rows, tables,
+  columns or data; list for the user what the consolidated chain drops or changes that it still holds.
+- A consolidated migration's drops run on every database at the pushed state, production included.
+  Bring each drop of a pushed table or column to the user before it is committed.
+- The final check of a consolidated or new migration replays the whole chain, from the first migration,
+  on a throwaway database on the local PostgreSQL server, dropped afterwards, because pushed history
+  runs on every other database.
 - If a shared Preview, staging, or production database consumed rewritten history, stop deployment,
   restore the last shared artifacts, and reconcile its schema and ledger only through a separately
   authorized operation.
 - The approval gate is the schema change itself, not its migration. Once a table, column, or
   relationship change is approved, generate its migration without asking again, and apply any migration
-  already in the working tree to the local development database whenever testing needs it. Destructive
-  database operations and changes to shared Preview, staging, or production require authorization naming
-  the target database and operation.
+  already in the working tree to the local development database whenever testing needs it. Changes to
+  shared Preview, staging, or production, and any operation that deletes data (dropping or truncating a
+  table or column, deleting rows), run only when the user orders that operation on a named database.
 - Changes required by every database go in the migration chain. Reserve direct queries for simple
   changes to one identified development database and scripts for complex or repeatable reconciliation.
 
@@ -57,6 +65,10 @@ pipeline schema work, or batch scripts.
   active-record index, `publish: true` for `visibility`/`publishedAt` and their active-record composite
   index, and `seo: true` for `seoTitle`/`seoDescription`/`ogImage`. Hand-add those bundles or indexes
   only when the table intentionally needs a custom shape.
+- Only records staff trash and restore have a trash (`deletedAt`). A `defineTable` table gets one by
+  default; one whose rows are never trashed passes `trash: false`. Logs, sessions, money records such
+  as orders and transactions, held rows, and rows that end by status or a hard delete never have a
+  trash. `query()`'s `trash` option and its default filter apply only to tables that have one.
 - Use Kenstack's table helpers for standard relationship tables: `defineTags({ table, prefix })` from
   `@kenstack/db/tables/tags` builds a tag relation table with its `tableId`/`tagId`/`createdAt` columns
   and indexes.
@@ -65,11 +77,12 @@ pipeline schema work, or batch scripts.
   as an order line's price at purchase, and say so in a comment; two live columns holding the same
   fact drift apart and need code to keep them in step.
 - A table has one Drizzle definition, in its owner. Code outside the owner, such as a Sympolis
-  feature, never declares a second definition of the table and never adds columns to it: nothing checks
-  a second definition against the real table, so a missing column type-checks and fails at runtime.
-  The exception is a test mock standing in for the host (such as Sympolis's `mocks/app/`), where the
-  stand-in is the point. Instead:
-  - to read the owner's columns, import the owner's table (`@kenstack/modules/users/tables` for users);
+  feature, never declares a second definition of the table and never adds columns to it: nothing
+  checks a second definition against the real table, so a missing column type-checks and fails at
+  runtime. The exception is a test mock standing in for the host (such as Sympolis's `mocks/app/`),
+  where the stand-in is the point. Instead:
+  - to read the owner's columns, import the owner's table (`@kenstack/modules/users/tables` for
+    users);
   - to keep its own facts about a row, such as a setting or a provider id, it exports columns, named
     with its feature as a prefix (`task_emails`), that the host spreads into the owner's table, and
     reads them as below. That is the default, not a given: ask Ken before adding each one, since

@@ -9,6 +9,7 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import type { ResizeOptions, WebpOptions } from "sharp";
 import { db } from "@app/db";
+import { query } from "@kenstack/db/queries/query";
 import { media } from "@kenstack/db/tables";
 import {
   imageMimeTypes,
@@ -164,7 +165,7 @@ export async function completeMediaUpload({
     return mediaUploadError(`Field "${fieldname}" does not support uploads.`);
   }
 
-  const [pendingImage] = await db
+  const [pendingImage] = await query(media)
     .select({
       id: media.id,
       key: media.sourceKey,
@@ -174,7 +175,6 @@ export async function completeMediaUpload({
       kind: media.kind,
       type: media.sourceType,
     })
-    .from(media)
     .where(
       and(
         eq(media.publicId, imageId),

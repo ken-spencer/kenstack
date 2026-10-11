@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 
@@ -18,6 +18,7 @@ import Combobox, {
   ComboboxRoot,
 } from "@kenstack/forms/controls/Combobox";
 import Field, { type FieldProps } from "@kenstack/forms/Field";
+import { FieldLockedContext } from "@kenstack/forms/fieldLocked";
 import useDebounce from "@kenstack/hooks/useDebounce";
 import fetcher from "@kenstack/api/fetcher";
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
@@ -55,6 +56,7 @@ function RelationshipControl({
   placeholder: string;
 }) {
   const { apiPath, name: adminName } = useAdminEdit();
+  const locked = useContext(FieldLockedContext);
   const [keywords, debouncedKeywords, setKeywords] = useDebounce();
   const [open, setOpen] = useState(false);
   const selected = Array.isArray(field.value)
@@ -157,6 +159,7 @@ function RelationshipControl({
               {item.label}
               <Button
                 type="button"
+                disabled={locked}
                 variant="ghost"
                 size="icon-xs"
                 className="size-5"

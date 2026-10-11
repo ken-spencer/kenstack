@@ -2,6 +2,7 @@ import { and, eq, getTableColumns, isNull, sql } from "drizzle-orm";
 import { revalidateTag } from "next/cache";
 
 import { db as appDb } from "@app/db";
+import { query } from "@kenstack/db/queries/query";
 import { requireUser } from "@kenstack/auth/server/user";
 import type { DefinedAdminModule } from "../module";
 import {
@@ -18,7 +19,7 @@ import { errorTranslator } from "@kenstack/db/errorTranslator";
 import type { User } from "@kenstack/types";
 import type { FetchError } from "@kenstack/api/fetcher";
 import type { AdminOneToOneBinding } from "@kenstack/admin/module";
-import type { DbTransaction } from "@kenstack/db/types";
+import type { Database, DbTransaction } from "@kenstack/db/types";
 import { isRecord } from "@kenstack/lib/isRecord";
 import type { ServerDefinedFields } from "@kenstack/fields/internal/serverResolution";
 import { adminLoadCacheTag, adminListCacheTag } from "@kenstack/admin/cache";
@@ -423,30 +424,23 @@ async function saveModule(
           }
           let appendToReorder = !id;
           if (id && reorder.scope) {
-            const [stored] = await tx
+            const [stored] = await query(adminConfig.table, { db: tx })
               .select({ scope: reorder.scope.field })
-              .from(adminConfig.table)
               .where(eq(adminConfig.table.id, id));
             appendToReorder = stored?.scope !== scopeValue;
           }
 
           let orderedData = data;
           if (appendToReorder) {
-            const [position] = await tx
+            const [position] = await query(adminConfig.table, { db: tx })
               .select({
                 sortOrder:
                   sql<number>`coalesce(max(${reorder.field}), 0) + 10`.mapWith(
                     Number,
                   ),
               })
-              .from(adminConfig.table)
               .where(
-                and(
-                  isNull(adminConfig.table.deletedAt),
-                  reorder.scope
-                    ? eq(reorder.scope.field, scopeValue)
-                    : undefined,
-                ),
+                reorder.scope ? eq(reorder.scope.field, scopeValue) : undefined,
               );
             orderedData = {
               ...data,
@@ -600,15 +594,16 @@ async function loadRelationId({
 }: {
   parentId: number;
   binding: AdminOneToOneBinding;
-  db: Pick<typeof appDb, "select">;
+  db: Database | DbTransaction;
   lock?: boolean;
 }) {
-  const query = db
+  // A trashed relation still holds the parent's id, so it must be found here to refuse the save
+  // rather than collide on insert.
+  const relation = query(binding.table, { db, trash: "include" })
     .select({ relationId: binding.table.id })
-    .from(binding.table)
     .where(eq(binding.foreignKey, parentId))
     .limit(1);
-  const [row] = await (lock ? query.for("update") : query);
+  const [row] = await (lock ? relation.for("update") : relation);
   return typeof row?.relationId === "number" ? row.relationId : null;
 }
 
@@ -618,15 +613,9 @@ async function loadActiveRelated(
   id: number,
   tx: DbTransaction,
 ) {
-  const columns = getTableColumns(binding.table);
-  const [row] = await tx
+  const [row] = await query(binding.table, { db: tx })
     .select(selectFields(binding.table, binding.fields))
-    .from(binding.table)
-    .where(
-      "deletedAt" in columns
-        ? and(eq(binding.table.id, id), isNull(columns.deletedAt))
-        : eq(binding.table.id, id),
-    )
+    .where(eq(binding.table.id, id))
     .limit(1);
 
   return row;
@@ -636,7 +625,7 @@ async function loadActiveRelated(
 async function loadActiveRelatedValues(
   binding: AdminOneToOneBinding,
   id: number,
-  db: Pick<typeof appDb, "select">,
+  db: DbTransaction,
 ) {
   const columns = getTableColumns(binding.table);
   return loadRecord({

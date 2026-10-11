@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+
+import { FieldLockedContext } from "@kenstack/forms/fieldLocked";
 import { Minus, Plus } from "lucide-react";
 
 import { cn } from "@kenstack/lib/utils";
@@ -33,7 +35,7 @@ export default function SpinButton({
   "aria-label": ariaLabel,
   className,
   decrementLabel = "Decrease value",
-  disabled = false,
+  disabled: disabledProp = false,
   id: idProp,
   incrementLabel = "Increase value",
   inputRef,
@@ -46,6 +48,8 @@ export default function SpinButton({
   value,
   ...props
 }: SpinButtonProps) {
+  const locked = React.useContext(FieldLockedContext);
+  const disabled = disabledProp || locked;
   const generatedId = React.useId();
   const id = idProp ?? generatedId;
   const decrementDisabled =

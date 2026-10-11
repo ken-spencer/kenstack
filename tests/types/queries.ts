@@ -155,8 +155,7 @@ if (false) {
 
   const merged = query(people)
     .select({ id: people.id, email: people.email })
-    .select({ name: people.name, ticketCount })
-    .build();
+    .select({ name: people.name, ticketCount });
   expectTypeOf<Row<typeof merged>>().toEqualTypeOf<{
     id: number;
     email: string;
@@ -165,8 +164,7 @@ if (false) {
   }>();
   const overridden = query(people)
     .select({ label: people.email })
-    .select({ label: people.name })
-    .build();
+    .select({ label: people.name });
   expectTypeOf<Row<typeof overridden>>().toEqualTypeOf<{
     label: string | null;
   }>();
@@ -176,8 +174,7 @@ if (false) {
     .leftJoin(profiles, eq(profiles.personId, people.id))
     .innerJoin(memberships, eq(memberships.personId, people.id))
     .where(eq(people.email, "a@b.c"))
-    .where(gt(people.id, 5))
-    .build();
+    .where(gt(people.id, 5));
   expectTypeOf<Row<typeof joined>>().toEqualTypeOf<{
     id: number;
     bio: string | null;
@@ -190,8 +187,7 @@ if (false) {
     .leftJoin(profiles, eq(profiles.personId, people.id))
     .select({ bio: profiles.bio })
     .where(eq(people.email, "a@b.c"))
-    .select({ id: people.id })
-    .build();
+    .select({ id: people.id });
   expectTypeOf<Row<typeof reordered>>().toEqualTypeOf<Row<typeof joined>>();
 
   const handWritten = db
@@ -209,17 +205,6 @@ if (false) {
   >();
   // @ts-expect-error a left-joined column is nullable
   expectTypeOf<Row<typeof joined>["bio"]>().toEqualTypeOf<string>();
-  // The built query leaves where() out, also after chaining, and the methods that would bring it back,
-  // so its own methods cannot replace the combined conditions.
-  expectTypeOf(joined).not.toHaveProperty("where");
-  expectTypeOf(joined).not.toHaveProperty("$dynamic");
-  expectTypeOf(joined).not.toHaveProperty("union");
-  expectTypeOf(joined).not.toHaveProperty("$withCache");
-  expectTypeOf(joined.orderBy(people.id)).not.toHaveProperty("where");
-  expectTypeOf(joined.limit(10)).not.toHaveProperty("where");
-  expectTypeOf(limited).not.toHaveProperty("where");
-  // @ts-expect-error a hand-written dynamic query keeps where()
-  expectTypeOf(handWritten.$dynamic()).not.toHaveProperty("where");
   void handWritten;
   void merged;
   void overridden;

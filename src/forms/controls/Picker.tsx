@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+
+import { FieldLockedContext } from "@kenstack/forms/fieldLocked";
 import { createPortal } from "react-dom";
 import { CheckIcon } from "lucide-react";
 
@@ -322,12 +324,14 @@ function Picker<T>({
 }
 
 function PickerTrigger({
-  disabled = false,
+  disabled: disabledProp = false,
   onClick,
   onKeyDown,
   ref,
   ...props
 }: PickerTriggerProps) {
+  const locked = React.useContext(FieldLockedContext);
+  const disabled = disabledProp || locked;
   const context = usePickerContext("PickerTrigger");
   const selectedIndex = Math.max(
     context.items.findIndex((item) => context.isSelected(item)),

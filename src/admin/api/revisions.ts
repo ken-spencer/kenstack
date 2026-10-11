@@ -1,17 +1,25 @@
 import { pipelineStage } from "@kenstack/api";
-import type { AnyAdminConfig } from "@kenstack/admin/module";
+import type { DefinedAdminModule } from "@kenstack/admin/module";
 import { db } from "@app/db";
 import { modules } from "@app/modules";
 import { revisions } from "@kenstack/db/tables/revisions";
 import { and, desc, eq, getTableName } from "drizzle-orm";
 import * as z from "zod";
+import omit from "lodash-es/omit";
+import {
+  getHiddenFields,
+  loadFieldAccess,
+} from "@kenstack/admin/lib/fieldAccess";
 import { filterRevisionSnapshot } from "@kenstack/records";
 import { formatUserName } from "@kenstack/lib/user";
 
-export const revisionsAction = (adminConfig: AnyAdminConfig) =>
+export const revisionsAction = ({
+  name,
+  admin: adminConfig,
+}: DefinedAdminModule) =>
   pipelineStage(
     {
-      access: "admin",
+      access: { module: name, permission: "view" },
       schema: z.object({
         id: z.number(),
         revisionId: z.number().optional(),
@@ -40,19 +48,27 @@ export const revisionsAction = (adminConfig: AnyAdminConfig) =>
           return response.error("Unable to find the requested revision.");
         }
 
+        // A hidden field's value never reaches the browser.
+        const hiddenFields = getHiddenFields(
+          await loadFieldAccess(name, false),
+        );
         return response.success({
           revision: {
             ...revision,
-            snapshot: filterRevisionSnapshot(
-              revision.snapshot,
-              adminConfig.fields,
-              adminConfig.oneToOne?.relations,
+            snapshot: omit(
+              filterRevisionSnapshot(
+                revision.snapshot,
+                adminConfig.fields,
+                adminConfig.oneToOne?.relations,
+              ),
+              hiddenFields,
             ),
           },
         });
       }
 
       const users = modules.users.admin.table;
+      // Keeps trashed users, so a revision still names the author after their account is trashed.
       const rows = await db
         .select({
           id: revisions.id,

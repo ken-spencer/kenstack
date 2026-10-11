@@ -1,5 +1,8 @@
 import * as z from "zod";
 import { eq } from "drizzle-orm";
+import { cacheLife, cacheTag } from "next/cache";
+
+import { modules } from "@app/modules";
 
 import { pipelineStage } from "@kenstack/api";
 import type { DefinedAdmin } from "@kenstack/admin/module";
@@ -17,11 +20,7 @@ export const loadModuleSettingsAction = (
   }
 
   return pipelineStage({ access: "admin" }, async ({ response }) => {
-    const values = await loadRecord({
-      table: settings.table,
-      fields: settings.fields,
-      where: eq(settings.table.key, name),
-    });
+    const values = await loadModuleSettings(name);
 
     // The row and token the editor sends back with each save. Null before the first save.
     return response.success({
@@ -31,6 +30,22 @@ export const loadModuleSettingsAction = (
     });
   });
 };
+
+// Read each time a module's settings editor opens; a settings save clears its tag.
+async function loadModuleSettings(name: string) {
+  "use cache: remote";
+  cacheLife("max");
+  const settings = modules[name]?.settings;
+  if (!settings) {
+    return null;
+  }
+  cacheTag(settings.cacheTag);
+  return loadRecord({
+    table: settings.table,
+    fields: settings.fields,
+    where: eq(settings.table.key, name),
+  });
+}
 
 export const saveModuleSettingsAction = (
   moduleConfig: DefinedAdmin[string],

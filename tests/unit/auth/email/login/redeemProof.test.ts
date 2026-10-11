@@ -25,8 +25,19 @@ vi.mock("@kenstack/api", () => {
 
   return { ReturnedError };
 });
-vi.mock("@app/db", () => ({
-  db: { query: { users: { findFirst: mocks.findUser } } },
+vi.mock("@app/modules", () => ({
+  modules: { users: { admin: { table: {} } } },
+}));
+vi.mock("@kenstack/db/queries/query", () => ({
+  query: () => ({
+    select() {
+      return this;
+    },
+    where() {
+      return this;
+    },
+    limit: async () => [await mocks.findUser()].filter(Boolean),
+  }),
 }));
 vi.mock("@kenstack/auth/server/auth", () => ({
   login: mocks.login,

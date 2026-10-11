@@ -19,12 +19,15 @@ export * from "./metadata";
 export * from "./table";
 export * from "./types/list";
 export * from "./module";
+// What someone's roles may do in a module, for a check outside the admin, such as whether a link to
+// a user's record would open.
 
 import { isSingleRelationshipField } from "@kenstack/fields/relationship";
 import {
   adminNavigation,
   type AdminNavigationLink,
   type DefinedAdmin,
+  type ModuleGrants,
 } from "./module";
 import { resolveScopedReorders } from "./lib/scopedReorder";
 import { resolveSingleRelationship } from "./lib/singleRelationship";
@@ -32,18 +35,20 @@ import { resolveSingleRelationship } from "./lib/singleRelationship";
 export type { DefinedAdmin };
 
 type AdminModule = DefinedAdmin[string];
+// A child entry with a foreignKey is scoped to its parent's records; without one it is a module of its
+// own listed under the parent. An entry's grants replace the module's default.
 type AdminChild =
   | AdminModule
-  | {
+  | ({
       module: AdminModule;
-      foreignKey: string;
-    };
+      foreignKey?: string;
+    } & ModuleGrants);
 type AdminParentEntry =
   | AdminModule
-  | {
+  | ({
       module: AdminModule;
       children?: readonly AdminChild[];
-    };
+    } & ModuleGrants);
 // A sidebar heading of its own for its modules and links, in order; other top-level modules sit
 // under Administration.
 type AdminHeadingEntry = {
@@ -92,6 +97,12 @@ export function defineAdmin<const TEntries extends readonly AdminEntry[]>(
     if (parentName && !moduleNames.has(parentName)) {
       throw new Error(
         `Admin module "${moduleConfig.name}" references unknown parent module "${parentName}".`,
+      );
+    }
+    // A record-scoped child takes its parent's grants, so its own would be ignored.
+    if (parentName && hasGrants(moduleConfig)) {
+      throw new Error(
+        `Admin module "${moduleConfig.name}" sets grants, but a module scoped to parent "${parentName}" takes its parent's.`,
       );
     }
   }
@@ -166,6 +177,15 @@ function validateOneToOne(
 
   for (const name of bindingNames) {
     const binding = bindings[name];
+    // The editor and the save check cover a module's own fields only, so a relation field's access
+    // would be ignored.
+    for (const [fieldName, field] of Object.entries(binding.fields)) {
+      if (field.access !== undefined) {
+        throw new Error(
+          `One-to-one field "${moduleConfig.name}.${name}.${fieldName}" sets access, which relation fields don't support yet.`,
+        );
+      }
+    }
     const relatedTable = binding.table;
     const foreignKey = binding.foreignKey;
 
@@ -283,7 +303,7 @@ function normalizeParentEntries(entries: readonly AdminParentEntry[]) {
     }
 
     return [
-      entry.module,
+      withGrants(entry.module, entry),
       ...(entry.children ?? []).map((child) => {
         if (isAdminModule(child)) {
           return {
@@ -292,16 +312,35 @@ function normalizeParentEntries(entries: readonly AdminParentEntry[]) {
           };
         }
 
-        return {
-          ...child.module,
-          parent: {
-            module: entry.module.name,
-            foreignKey: child.foreignKey,
-          },
-        };
+        const childModule = withGrants(child.module, child);
+        return child.foreignKey === undefined
+          ? { ...childModule, navigationParent: entry.module.name }
+          : {
+              ...childModule,
+              parent: {
+                module: entry.module.name,
+                foreignKey: child.foreignKey,
+              },
+            };
       }),
     ];
   });
+}
+
+function hasGrants(grants: ModuleGrants) {
+  return Boolean(grants.viewers || grants.contributors || grants.editors);
+}
+
+// A registry entry that sets any level replaces all of the module's default grants.
+function withGrants(module: AdminModule, entry: ModuleGrants): AdminModule {
+  return hasGrants(entry)
+    ? {
+        ...module,
+        viewers: entry.viewers,
+        contributors: entry.contributors,
+        editors: entry.editors,
+      }
+    : module;
 }
 
 function isAdminModule(

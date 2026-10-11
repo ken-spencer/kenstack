@@ -1,15 +1,19 @@
 "use client";
 
 import { type ZodObject } from "zod";
+import omitBy from "lodash-es/omitBy";
 
 import React, { createContext, use, useContext, useMemo } from "react";
 
 import type { AdminClient, ModuleClient } from "@kenstack/admin/client";
 import { loadAdminClient } from "@kenstack/admin/clientLoaders";
+import type { loadFieldAccess } from "@kenstack/admin/lib/fieldAccess";
+import type { Permissions } from "@kenstack/admin/lib/moduleAccess";
 import { pickMetaFields } from "@kenstack/admin/metaFields";
 import type { PreviewPath } from "@kenstack/admin/module";
 import type { AdminEditItem } from "@kenstack/admin/queries/load";
 import { createSchemaFromFields } from "@kenstack/fields/createSchemaFromFields";
+import { FieldAccessContext } from "@kenstack/forms/fieldAccess";
 
 type AdminEditProps = {
   name: string;
@@ -18,6 +22,9 @@ type AdminEditProps = {
   isNew: boolean;
   single: boolean;
   userId: number;
+  // The signed-in person's roles, set on the server, for controls only some roles may use, such as
+  // switching to a user.
+  userRoles: readonly string[];
   canUpload: boolean;
   defaultValues: Record<string, unknown>;
   client: ModuleClient | undefined;
@@ -26,7 +33,11 @@ type AdminEditProps = {
   // links need.
   breadcrumbs: React.ReactNode;
   childModuleLinks: React.ReactNode;
+  // Whether New shows: the module creates records and the person can edit.
   canCreate: boolean;
+  permissions: Permissions;
+  // Fields the person's roles leave out (hidden) or can't change here (locked), by name.
+  fieldAccess: Awaited<ReturnType<typeof loadFieldAccess>>;
   parentId?: number;
   preview?: PreviewPath;
   oneToOne?: OneToOneEdit;
@@ -52,6 +63,7 @@ type AdminEditContext = {
   isNew: boolean;
   single: boolean;
   userId: number;
+  userRoles: readonly string[];
   canUpload: boolean;
   apiPath: string;
   listPath: string;
@@ -66,6 +78,7 @@ type AdminEditContext = {
   breadcrumbs: React.ReactNode;
   childModuleLinks: React.ReactNode;
   canCreate: boolean;
+  permissions: Permissions;
 };
 
 const AdminEditContext = createContext<AdminEditContext | null>(null);
@@ -77,6 +90,7 @@ export function AdminEditProvider({
   isNew,
   single,
   userId,
+  userRoles,
   canUpload,
   defaultValues,
   client,
@@ -88,6 +102,8 @@ export function AdminEditProvider({
   breadcrumbs,
   childModuleLinks,
   canCreate,
+  permissions,
+  fieldAccess,
   children,
 }: AdminEditProps) {
   if (!client?.admin) {
@@ -97,13 +113,17 @@ export function AdminEditProvider({
 
   const listPath = parentId ? `/admin/${parentId}/${name}` : `/admin/${name}`;
 
+  // A field the person can't see is neither held nor checked; the save leaves it as it is.
   const schema = useMemo(
     () =>
       createSchemaFromFields(
-        { ...adminClient.fields, ...pickMetaFields({ publish, seo }) },
+        omitBy(
+          { ...adminClient.fields, ...pickMetaFields({ publish, seo }) },
+          (_, field) => fieldAccess[field] === "hidden",
+        ),
         adminClient.oneToOne,
       ),
-    [adminClient, publish, seo],
+    [adminClient, publish, seo, fieldAccess],
   );
 
   const context: AdminEditContext = {
@@ -116,6 +136,7 @@ export function AdminEditProvider({
     apiPath: "/api/admin",
     listPath,
     userId,
+    userRoles,
     item,
     defaultValues: item ?? defaultValues,
     parentId,
@@ -127,10 +148,11 @@ export function AdminEditProvider({
     breadcrumbs,
     childModuleLinks,
     canCreate,
+    permissions,
   };
   return (
     <AdminEditContext.Provider value={context}>
-      {children}
+      <FieldAccessContext value={fieldAccess}>{children}</FieldAccessContext>
     </AdminEditContext.Provider>
   );
 }

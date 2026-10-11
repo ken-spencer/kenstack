@@ -2,17 +2,21 @@ import type { AnyPgTable } from "drizzle-orm/pg-core";
 import type { ServerDefinedFields } from "@kenstack/fields/internal/serverResolution";
 
 import { pipelineStage } from "@kenstack/api";
+import type { AuthAccess } from "@kenstack/auth/server/auth";
 import {
   createMediaUpload,
   mediaUploadRequestSchema,
 } from "@kenstack/fields/internal/media/upload";
 
-export const getPresignedUrlAction = (adminConfig: {
-  table: AnyPgTable;
-  fields: ServerDefinedFields;
-}) =>
+export const getPresignedUrlAction = (
+  adminConfig: {
+    table: AnyPgTable;
+    fields: ServerDefinedFields;
+  },
+  access: AuthAccess,
+) =>
   pipelineStage(
-    { access: "admin", schema: mediaUploadRequestSchema },
+    { access, schema: mediaUploadRequestSchema },
     async ({ data, response, user }) => {
       const result = await createMediaUpload({
         ...adminConfig,

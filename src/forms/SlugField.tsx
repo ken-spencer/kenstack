@@ -1,11 +1,13 @@
 "use client";
 
 import kebabCase from "lodash-es/kebabCase";
-import { useState, useEffect } from "react";
+import { useContext, useState, useEffect } from "react";
 
 import { Lock, LockOpen } from "lucide-react";
 import Button from "@kenstack/components/Button";
 
+import { useFieldAccess } from "@kenstack/forms/fieldAccess";
+import { FieldLockedContext } from "@kenstack/forms/fieldLocked";
 import Field, { FormControl, type FieldProps } from "@kenstack/forms/Field";
 import { Input } from "@kenstack/forms/controls/Input";
 import { useFormContext } from "react-hook-form";
@@ -43,11 +45,15 @@ export default function SlugField({
     : watch(watchField);
   const defaultValue = defaultValues ? defaultValues[name] : undefined;
   const [locked, setLocked] = useState(defaultValue ? true : false);
+  // A slug the admin editor hides or locks, itself or as part of a locked field, stays as it is: no
+  // unlocking, no following the title and no rewriting on blur.
+  const isInsideLock = useContext(FieldLockedContext);
+  const isRestricted = useFieldAccess(name) !== undefined || isInsideLock;
   const [wasEdited, setWasEdited] = useState(false);
 
   // leaving lock out of this effect atm as it potentially could wipe out a user change if clicked otherwise.
   useEffect(() => {
-    if (!locked && watchedValue !== undefined && !wasEdited) {
+    if (!locked && !isRestricted && watchedValue !== undefined && !wasEdited) {
       const slug = kebabCase(watchedValue);
       setValue(name, slug, { shouldDirty: true, shouldTouch: true });
     }
@@ -74,7 +80,7 @@ export default function SlugField({
                 }
               }}
               onBlur={(evt) => {
-                if (!locked) {
+                if (!locked && !isRestricted) {
                   setValue(name, kebabCase(evt.currentTarget.value));
                 }
               }}
@@ -91,6 +97,7 @@ export default function SlugField({
             tooltip={locked ? "Unlock" : "Lock"}
             type="button"
             variant="ghost"
+            disabled={isRestricted}
             onClick={() => {
               setLocked(!locked);
             }}

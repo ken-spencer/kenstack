@@ -1,5 +1,8 @@
 "use client";
 
+import { useContext } from "react";
+
+import { FieldLockedContext } from "@kenstack/forms/fieldLocked";
 import Field, { FormControl } from "@kenstack/forms/Field";
 import Help from "@kenstack/components/Help";
 import type { CheckedFieldProps } from "@kenstack/forms/CheckboxField";
@@ -14,6 +17,7 @@ export function Switch({
   checked?: boolean;
   onCheckedChange?: (isChecked: boolean) => void;
 }) {
+  const locked = useContext(FieldLockedContext);
   const state = checked ? "checked" : "unchecked";
 
   return (
@@ -31,6 +35,7 @@ export function Switch({
         onCheckedChange?.(!checked);
       }}
       {...props}
+      disabled={props.disabled || locked}
     >
       <span
         data-slot="switch-thumb"
