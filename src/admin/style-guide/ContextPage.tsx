@@ -9,6 +9,7 @@ import StyleGuide, {
 } from "./StyleGuide";
 import "./theme.css";
 import { pageRoute } from "@kenstack/pageRoute";
+import { Skeleton } from "@kenstack/components/Skeleton";
 
 export const metadata: Metadata = {
   title: "Style guide",
@@ -20,7 +21,8 @@ export default pageRoute(
     access: process.env.NODE_ENV === "development" ? "admin" : undefined,
     fallback: (
       <div aria-busy="true" className="style-guide style-guide-theme-base">
-        Loading style guide…
+        <p className="sr-only">Loading style guide</p>
+        <Skeleton className="h-svh w-full" />
       </div>
     ),
     params: z.object({

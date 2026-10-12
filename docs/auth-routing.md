@@ -111,13 +111,14 @@ boundary, as described in `runtime-boundaries.md`. The return path does not chan
   included, and the link tab matches the verified email against the answers. The messages never carry
   a token, challenge key or code.
 - With a match, the link tab shows "You're signed in. Close this tab to continue." and leaves the user
-  info and the flow alone. The waiting tab moves on at focus, when its user-info reload adopts the
-  sign-in; a confirmation replays what it held.
+  info and the flow alone. It tells the waiting tab, hidden or not, which moves on once its user-info
+  reload adopts the sign-in; the reload at focus is the fallback. A confirmation held for the account
+  replays on the reauthentication channel's "confirmed" message, which the link tab posts beside it.
 - In a flow, an unanswered link carries on signed in, at this tab's step or the first step in a new
   tab, and on /login to its return step. A failed link (used, expired, or opened in another browser,
   which is refused) shows a dialog with Close, or "You're already signed in." when signed in; with no
-  identity yet, a wrong-browser failure also offers "Request a new link". A failed confirmation link
-  drops `identityConfirmed` from where the flow returns to, so that page never says "You're confirmed".
+  identity yet, a wrong-browser failure also offers "Request a new link". A confirmation link that no
+  tab answers signs in and lands on the page with no notice; a change made again there saves.
 - Standalone Login, outside a flow, leaves for the server's destination once the link signs in, and a
   failure shows its message and leads back to its email form.
 

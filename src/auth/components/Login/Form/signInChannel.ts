@@ -2,6 +2,10 @@
 
 import { useEffect } from "react";
 
+import type { FetchResult } from "@kenstack/api/fetcher";
+import type { EmailLoginVerificationResult } from "@kenstack/auth/api";
+import { postReauthentication } from "@kenstack/auth/reauthentication/channel";
+import { refreshUserInfo } from "@kenstack/auth/useUserInfo";
 import { normalizeEmail } from "@kenstack/fields/email";
 import unsecureId from "@kenstack/lib/unsecureId";
 
@@ -15,11 +19,15 @@ const channelName = "kenstack-sign-in";
 const answerWindowMs = 200;
 
 type Message =
-  { id: string; type: "ask" } | { email: string; id: string; type: "waiting" };
+  | { id: string; type: "ask" }
+  | { email: string; id: string; type: "waiting" | "signed-in" };
 
-// Asks while `request` runs, and resolves with its result and the emails of the tabs that answered
-// by the time it settled, or answerWindowMs after asking, whichever is later.
-export async function askWaitingTabs<T>(request: Promise<T>) {
+// Asks while `request` runs, and resolves with its result and whether a tab waiting on that sign-in
+// answered by the time it settled, or answerWindowMs after asking, whichever is later. A sign-in a
+// waiting tab answered is reported to it, and a confirmation held for the account replays.
+export async function askWaitingTabs(
+  request: Promise<FetchResult<EmailLoginVerificationResult>>,
+) {
   const channel = new BroadcastChannel(channelName);
   const id = unsecureId();
   const emails = new Set<string>();
@@ -34,7 +42,25 @@ export async function askWaitingTabs<T>(request: Promise<T>) {
       request,
       new Promise((resolve) => setTimeout(resolve, answerWindowMs)),
     ]);
-    return { emails, result };
+    if (
+      result.status === "success" &&
+      "email" in result.authState &&
+      emails.has(result.authState.email)
+    ) {
+      channel.postMessage({
+        email: result.authState.email,
+        id,
+        type: "signed-in",
+      } satisfies Message);
+      if (result.authState.state === "authenticated") {
+        postReauthentication({
+          type: "confirmed",
+          userId: result.authState.userId,
+        });
+      }
+      return { isAnswered: true, result };
+    }
+    return { isAnswered: false, result };
   } finally {
     channel.close();
   }
@@ -54,6 +80,13 @@ export function useAnswerSignInAsks(email: string | null) {
           id: data.id,
           type: "waiting",
         } satisfies Message);
+      } else if (
+        data.type === "signed-in" &&
+        data.email === normalizeEmail(email)
+      ) {
+        // The link tab signed in for this form, so its sign-in is adopted at once, hidden or not.
+        // The message prompts a server check; it never supplies the identity the form adopts.
+        void refreshUserInfo();
       }
     };
     return () => channel.close();

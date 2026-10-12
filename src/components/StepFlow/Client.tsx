@@ -134,9 +134,18 @@ function StepFlowContent({
         ) : null,
       )}
       {shownStep === undefined ? (
-        <p id={headingId} role="status">
-          Loading…
-        </p>
+        // Laid out as the default header, so the site's header styles size it.
+        <header>
+          {summary ? <div className="summary">{summary}</div> : null}
+          <div className="heading">
+            <h2 id={headingId}>
+              <span className="sr-only" role="status">
+                Loading
+              </span>
+              <span className="inline-block h-[1em] w-48 max-w-full animate-pulse bg-current/10 align-top motion-reduce:animate-none" />
+            </h2>
+          </div>
+        </header>
       ) : (
         <StepScope stepId={shownStep}>
           <Header

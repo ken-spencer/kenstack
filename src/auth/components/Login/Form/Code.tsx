@@ -45,20 +45,21 @@ export default function LoginCodeForm({
   const [isCompleting, setIsCompleting] = useState(false);
   const { cancel, replay } = useAuthorization();
   // A page rendered for an account takes no other sign-in made elsewhere, so it answers only for
-  // its own account's confirmation; any other page takes the sign-in when the visitor comes back.
+  // its own account's confirmation; any other page takes the sign-in once the link tab reports it.
   useAnswerSignInAsks(
     continuation.mode === "reauthentication" ||
       typeof getRenderedAccount() !== "number"
       ? email
       : null,
   );
-  // When the visitor comes back, the user-info reload on focus adopts this form's sign-in if it was
-  // finished elsewhere, such as by the emailed link, and names the account's destination. A
-  // standalone form then goes where its own sign-in would, and an embedded one completes as its own
-  // sign-in would, so a login step that always shows moves on too. A confirmation moves on through
-  // its wrapper. A page rendered for an account adopts no other account's session and already shows
-  // its own, so it never moves on for a sign-in made elsewhere. That is judged in the first effect,
-  // once the page's account is recorded and before adopting a sign-in records a new one.
+  // When the link tab reports the sign-in, hidden or not, or failing that when the visitor comes back,
+  // the user-info reload adopts this form's sign-in if it was finished elsewhere, such as by the
+  // emailed link, and names the account's destination. A standalone form then goes where its own
+  // sign-in would, and an embedded one completes as its own sign-in would, so a login step that
+  // always shows moves on too. A confirmation moves on through its wrapper. A page rendered for an
+  // account adopts no other account's session and already shows its own, so it never moves on for a
+  // sign-in made elsewhere. That is judged in the first effect, once the page's account is recorded
+  // and before adopting a sign-in records a new one.
   const wasRenderedForAccount = useRef<boolean>(undefined);
   const userInfo = useUserInfo();
   const destination = useLoginDestination();

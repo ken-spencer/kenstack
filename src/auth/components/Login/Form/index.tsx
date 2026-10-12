@@ -19,6 +19,7 @@ import { setUserInfo } from "@kenstack/auth/useUserInfo";
 import type { StatusMessage } from "@kenstack/forms/context";
 
 import CookieTest from "@kenstack/components/CookieTest";
+import { Skeleton } from "@kenstack/components/Skeleton";
 import useConsumedSearchParam from "@kenstack/hooks/useConsumedSearchParam";
 
 import { rememberLoginMethod, type LoginMethod } from "../method";
@@ -309,9 +310,12 @@ function LoginLinkContent({
   }
   if (outcome === undefined) {
     return (
-      <p aria-live="polite" className="text-sm">
-        Signing you in…
-      </p>
+      <div className="w-full">
+        <p className="sr-only" role="status">
+          Signing you in
+        </p>
+        <Skeleton className="h-5 w-2/3" />
+      </div>
     );
   }
 

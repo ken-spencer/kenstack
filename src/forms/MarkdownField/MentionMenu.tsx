@@ -1,4 +1,5 @@
 import Avatar from "@kenstack/components/Avatar";
+import { Skeleton } from "@kenstack/components/Skeleton";
 import { cn } from "@kenstack/lib/utils";
 
 export type MentionMenuOption = {
@@ -28,6 +29,22 @@ export default function MentionMenu({
   selectedIndex,
   status,
 }: MentionMenuProps) {
+  if (status === "loading") {
+    return (
+      <>
+        <p className="sr-only" role="status">
+          {message}
+        </p>
+        {Array.from({ length: 2 }, (_, index) => (
+          <div key={index} className="flex items-center gap-2 px-1.5 py-1.5">
+            <Skeleton className="size-6 shrink-0 rounded-full" />
+            <Skeleton className="h-4 w-28" />
+          </div>
+        ))}
+      </>
+    );
+  }
+
   if (status !== "options") {
     return <div className="text-muted-foreground px-2.5 py-2">{message}</div>;
   }

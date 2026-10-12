@@ -11,6 +11,7 @@ import type {
   AdminSortMeta,
 } from "@kenstack/admin/types/list";
 import Notice from "@kenstack/components/Notice";
+import { Skeleton } from "@kenstack/components/Skeleton";
 import { dateFormat } from "@kenstack/lib/dateFormat";
 import FilterControl from "@kenstack/list/FilterControl";
 import KeywordSearch from "@kenstack/list/KeywordSearch";
@@ -153,9 +154,8 @@ export default function EmailLogList({
           </ul>
           <div className="flex max-w-[60rem] items-center">
             <div aria-live="polite" className="hidden md:flex md:flex-1">
-              {results.isFetching
-                ? "Loading emails…"
-                : `${data.total.toLocaleString()} ${data.total === 1 ? "email" : "emails"}`}
+              {data.total.toLocaleString()}{" "}
+              {data.total === 1 ? "email" : "emails"}
             </div>
             <div className="flex-1 md:flex-0">
               <Pagination
@@ -166,7 +166,20 @@ export default function EmailLogList({
           </div>
         </>
       ) : results.isFetching ? (
-        <p role="status">Loading emails…</p>
+        <>
+          <p className="sr-only" role="status">
+            Loading emails
+          </p>
+          <ul className="max-w-[60rem] divide-y divide-[var(--admin-divider)] border-y border-y-[var(--admin-divider)]">
+            {Array.from({ length: 5 }, (_, index) => (
+              <li key={index} className="flex items-center gap-3 px-2 py-2">
+                <Skeleton className="size-4 shrink-0" />
+                <Skeleton className="h-4 w-1/3" />
+                <Skeleton className="ml-auto hidden h-4 w-24 md:block" />
+              </li>
+            ))}
+          </ul>
+        </>
       ) : null}
     </div>
   );

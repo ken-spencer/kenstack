@@ -15,12 +15,10 @@ export type Continuation =
 
 export function resolveReturnTo({ anchor, mode }: Continuation) {
   if (mode === "reauthentication") {
-    // An emailed link, opened in another tab, confirms and lands back on this page as it stands,
-    // marked so the page there says the held change still waits in the first tab. The
-    // confirmation wrapper reads the mark.
-    const params = new URLSearchParams(window.location.search);
-    params.set("identityConfirmed", "1");
-    return `${window.location.pathname}?${params}${window.location.hash}`;
+    // An emailed link, opened in another tab, confirms and lands back on this page as it stands.
+    return (
+      window.location.pathname + window.location.search + window.location.hash
+    );
   }
   if (mode === "embedded") {
     // Stale sign-in-link parameters must not ride along into a new request's

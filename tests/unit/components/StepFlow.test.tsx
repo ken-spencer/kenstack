@@ -184,7 +184,7 @@ describe("StepFlow", () => {
       ),
     );
     expect(container.querySelector('[role="status"]')).not.toBeNull();
-    expect(container.querySelector("h2")).toBeNull();
+    expect(container.querySelector("h2")?.textContent).toBe("Loading");
     act(() => getButton(container, "Require this step").click());
     expect(container.querySelector("h2")?.textContent).toBe("Account");
   });

@@ -29,6 +29,7 @@ import type { StatusMessage } from "@kenstack/forms/context";
 import LinkButton from "@kenstack/auth/components/Login/Form/LinkButton";
 import VerificationCodeField from "@kenstack/auth/components/VerificationCodeField";
 import Notice from "@kenstack/components/Notice";
+import { Skeleton } from "@kenstack/components/Skeleton";
 import Form from "@kenstack/forms/Form";
 import InputField from "@kenstack/forms/InputField";
 import Submit from "@kenstack/forms/Submit";
@@ -253,9 +254,15 @@ function EmailChangeContent({
         <Notice message={notice.message} status={notice.status} />
       ) : null}
       {isConfirmingLink ? (
-        <p aria-live="polite" className="text-sm">
-          Confirming your new email…
-        </p>
+        // Shaped like the outcome notice and the email form that replace it.
+        <>
+          <p className="sr-only" role="status">
+            Confirming your new email
+          </p>
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-40" />
+        </>
       ) : !canChange ? (
         !isSignedIn && userInfo.state !== "loading" && !token ? (
           <p>
@@ -339,19 +346,25 @@ function EmailChangeCodeForm({
 
   return (
     <div className="space-y-4">
-      <p aria-live="polite" className="text-sm">
+      <div aria-live="polite" className="text-sm">
         {isSending ? (
           <>
-            Sending an email to <strong>{email}</strong>…
+            <span className="sr-only">Sending an email to {email}</span>
+            {/* The instructions run to five lines on a phone and three wider. */}
+            <Skeleton className="my-0.5 h-4 w-full" />
+            <Skeleton className="my-0.5 h-4 w-full" />
+            <Skeleton className="my-0.5 h-4 w-full sm:hidden" />
+            <Skeleton className="my-0.5 h-4 w-full sm:hidden" />
+            <Skeleton className="my-0.5 h-4 w-2/3" />
           </>
         ) : (
-          <>
+          <p>
             Enter the six-digit code we sent to <strong>{email}</strong>. You
             can also open the link in the email. It may take a minute to arrive
             — check your spam or junk folder if you don’t see it.
-          </>
+          </p>
         )}
-      </p>
+      </div>
       <Form<
         EmailChangeVerificationResult,
         Record<string, unknown>,

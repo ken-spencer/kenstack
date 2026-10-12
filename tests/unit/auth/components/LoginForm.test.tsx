@@ -11,7 +11,10 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ refresh: mocks.refresh }),
+  useRouter: () => ({
+    refresh: mocks.refresh,
+    replace: (url: string) => window.history.replaceState(null, "", url),
+  }),
   useSearchParams: () => new URLSearchParams(window.location.search),
 }));
 vi.mock("@kenstack/api/fetcher", () => ({ default: mocks.fetcher }));

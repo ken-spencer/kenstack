@@ -44,10 +44,9 @@ summaries, and browser persistence in Kenstack and host sites.
   the preceding step; browser Back leaves the transaction, so no restorable checkout states
   accumulate. When Next keeps a left route instance alive and shows it again, it shows the tab's step.
 - An emailed sign-in link returns to the flow's URL with its token, and the sign-in step's controller
-  verifies it on whatever step shows; the step never comes forward for it. The token stays in the
-  address until the link settles: meanwhile the sign-in step shows "Signing you in…" in place of its
-  form, and the login return step waits. A tab waiting on that sign-in may answer and carry on instead
-  (`docs/auth-routing.md`).
+  verifies it on whatever step shows; the step never comes forward for it. The controller consumes the
+  token on arrival, and the sign-in step shows its placeholder in place of its form while the link
+  verifies. A tab waiting on that sign-in may answer and carry on instead (`docs/auth-routing.md`).
 - A flow that needs an account composes the login step on every visit, as it does every other step.
   A signed-in visitor skips it, forward and Back, so Back from the step after it reaches the step
   before it. Switching accounts goes through the account menu, which also offers Logout to a visitor

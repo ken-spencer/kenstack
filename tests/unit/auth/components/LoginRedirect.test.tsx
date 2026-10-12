@@ -12,7 +12,10 @@ const mocks = vi.hoisted(() => ({
   reload: vi.fn(),
   refresh: vi.fn(),
 }));
-const router = vi.hoisted(() => ({ refresh: mocks.refresh }));
+const router = vi.hoisted(() => ({
+  refresh: mocks.refresh,
+  replace: (url: string) => window.history.replaceState(null, "", url),
+}));
 vi.mock("next/navigation", () => ({
   useRouter: () => router,
   useSearchParams: () => new URLSearchParams(window.location.search),
@@ -195,8 +198,7 @@ it.each(["password", "code"] as const)(
       "/api/auth",
       expect.objectContaining({
         action: method === "code" ? "verify-email-login-code" : "login",
-        // Marked, so an emailed link opened in another tab lands with a notice.
-        returnTo: path.replace("#", "&identityConfirmed=1#"),
+        returnTo: path,
       }),
       expect.anything(),
     );

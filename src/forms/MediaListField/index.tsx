@@ -547,7 +547,11 @@ const createMediaRender = ({
                           "bg-black/45 px-2 text-center",
                       )}
                     >
-                      {uploadStatus}
+                      {image.uploadState === "error" ? (
+                        uploadStatus
+                      ) : (
+                        <span className="sr-only">{uploadStatus}</span>
+                      )}
                     </div>
                   ) : null}
                   {image.uploadState === "uploading" ? (

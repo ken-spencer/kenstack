@@ -499,7 +499,7 @@ class MentionPluginView {
     }
 
     if (this.loading) {
-      this.renderMenu({ message: "Searching...", status: "loading" });
+      this.renderMenu({ message: "Searching", status: "loading" });
       return;
     }
 

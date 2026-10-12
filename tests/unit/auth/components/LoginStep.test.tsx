@@ -10,7 +10,10 @@ const mocks = vi.hoisted(() => ({
   refresh: vi.fn(),
 }));
 // Next's router keeps one identity across renders.
-const router = vi.hoisted(() => ({ refresh: mocks.refresh }));
+const router = vi.hoisted(() => ({
+  refresh: mocks.refresh,
+  replace: (url: string) => window.history.replaceState(null, "", url),
+}));
 
 vi.mock("server-only", () => ({}));
 vi.mock("@kenstack/auth/server/state", () => ({
@@ -256,6 +259,23 @@ describe("Login step", () => {
     expect(window.location.search).toBe("");
   });
 
+  it("takes the token out of the address and holds the form back while the link verifies", async () => {
+    window.history.replaceState(null, "", `/flow?token=${token}`);
+    mocks.fetcher.mockReturnValue(new Promise(() => {}));
+    const flow = await LoginFlow();
+
+    await act(async () => {
+      root.render(<StrictMode>{flow}</StrictMode>);
+    });
+
+    await vi.waitFor(() => expect(mocks.fetcher).toHaveBeenCalledOnce());
+    expect(window.location.search).toBe("");
+    expect(
+      container.querySelector('[role="status"][aria-busy="true"]'),
+    ).not.toBeNull();
+    expect(container.querySelector('input[name="email"]')).toBeNull();
+  });
+
   it("advances enrollment after proving an unregistered email", async () => {
     window.history.replaceState(null, "", `/flow?token=${token}`);
     mocks.fetcher.mockResolvedValue({
@@ -298,8 +318,6 @@ describe("Login step", () => {
         linkFailureMessage,
       ),
     );
-    // The link settles when its dialog closes.
-    expect(window.location.search).toBe(`?token=${token}`);
     await act(async () => {
       document.body
         .querySelector<HTMLButtonElement>('[data-slot="dialog-close"]')

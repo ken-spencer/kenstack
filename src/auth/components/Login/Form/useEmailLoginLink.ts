@@ -32,7 +32,8 @@ function toLinkFailure(result: FetchError): EmailLoginLinkFailure {
 
 // Each token is verified once, and null verifies nothing. While it verifies, it asks the site's other
 // tabs whether one waits on that sign-in. The outcome reaches the caller through one callback, for the
-// latest token only: answered, when the waiting tab carries on; success; or failure.
+// latest token only: answered, when the waiting tab carries on; success; or failure. Returns whether
+// the token's outcome is still to come.
 export default function useEmailLoginLink(
   token: string | null,
   {
@@ -47,7 +48,7 @@ export default function useEmailLoginLink(
     returnTo?: () => string;
   },
 ) {
-  useParamAction(
+  return useParamAction(
     token,
     (activeToken) => {
       const path = returnTo?.();
@@ -64,10 +65,7 @@ export default function useEmailLoginLink(
         onFailure({ message: linkRequestFailureMessage });
       } else if (verified.result.status !== "success") {
         onFailure(toLinkFailure(verified.result));
-      } else if (
-        "email" in verified.result.authState &&
-        verified.emails.has(verified.result.authState.email)
-      ) {
+      } else if (verified.isAnswered) {
         onAnswered();
       } else {
         onSuccess(verified.result);

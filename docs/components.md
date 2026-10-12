@@ -65,8 +65,12 @@ helper ladder follow `docs/code-organization.md`.
   the accessibility tree.
 - Create a `region` landmark only when its content is important enough for independent landmark
   navigation, and name it with `aria-labelledby` when it has a visible heading; layout wrappers,
-  loading skeletons, and focus targets are not landmarks. Put loading or status wording in real text,
-  visually hidden when necessary, never in an `aria-label` on a generic container.
+  loading skeletons, and focus targets are not landmarks.
+- A pending area that shows anything shows a height-preserving skeleton of what it will hold, with its
+  wording, such as "Signing you in", in a visually hidden status line; never a visible line such as
+  "Loading…" or "Checking payment…". A pending button keeps its label and takes `Button`'s `isPending`,
+  which shows its spinner; never swap the label for one such as "Saving…". Status wording goes in real
+  text, never in an `aria-label` on a generic container.
 
 ## Visual language
 

@@ -96,13 +96,15 @@ export default function AttachmentList({
                 <span className="text-foreground line-clamp-1 text-sm leading-snug font-medium break-all">
                   {attachment.filename || attachment.title || kindLabel}
                 </span>
-                <span className="text-muted-foreground flex items-center gap-1 text-xs">
-                  {status ? (
+                <span className="text-muted-foreground flex min-h-4 items-center gap-1 text-xs">
+                  {attachment.uploadState === "error" ? (
+                    status
+                  ) : status ? (
                     <>
-                      {status === "Uploading" ? (
+                      {attachment.uploadState === "uploading" ? (
                         <ProgressIcon className="size-3 animate-spin" />
                       ) : null}
-                      {status}
+                      <span className="sr-only">{status}</span>
                     </>
                   ) : (
                     [kindLabel, fileSize].filter(Boolean).join(" · ")

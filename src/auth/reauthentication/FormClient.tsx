@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
+import { Fragment, type ReactNode, useRef, useState } from "react";
 
 import LoginForm from "@kenstack/auth/components/Login/Form";
 import type { LoginMethod } from "@kenstack/auth/components/Login/method";
@@ -14,7 +14,6 @@ import {
   DialogTitle,
 } from "@kenstack/components/Dialog";
 import Notice from "@kenstack/components/Notice";
-import useConsumedSearchParam from "@kenstack/hooks/useConsumedSearchParam";
 
 import { postReauthentication, useReauthenticationMessages } from "./channel";
 import { AuthorizationContext } from "./context";
@@ -73,16 +72,6 @@ export default function ReauthenticationFormClient({
   const openingRef = useRef(opening);
   const protectedAreaRef = useRef<HTMLDivElement>(null);
   const isOpen = heldCount > 0;
-  // Set by a confirmation link opened in a new tab; the change it confirms is held in the first one.
-  const isConfirmedElsewhere =
-    useConsumedSearchParam("identityConfirmed") !== null;
-  const [hasSavedHere, setHasSavedHere] = useState(false);
-
-  useEffect(() => {
-    if (isConfirmedElsewhere) {
-      postReauthentication({ type: "confirmed", userId });
-    }
-  }, [isConfirmedElsewhere, userId]);
 
   // A confirmation in another tab confirms this browser, so what is held replays. A password reset
   // or email change finished elsewhere signed the account in afresh, so what is held here must not
@@ -113,9 +102,6 @@ export default function ReauthenticationFormClient({
   ) {
     return request().then((result) => {
       if (result.code !== "reauthentication-required") {
-        if (result.status === "success") {
-          setHasSavedHere(true);
-        }
         return result;
       }
       return new Promise<T>((resolve, reject) => {
@@ -133,9 +119,6 @@ export default function ReauthenticationFormClient({
             }
             if (replayed.code === "reauthentication-required") {
               return false;
-            }
-            if (replayed.status === "success") {
-              setHasSavedHere(true);
             }
             // A refusal for another account or no session settles here, like any other result.
             resolve(replayed);
@@ -240,13 +223,6 @@ export default function ReauthenticationFormClient({
         userId,
       }}
     >
-      {isConfirmedElsewhere && !hasSavedHere ? (
-        <Notice
-          className="mb-6"
-          message="You’re confirmed, but nothing has been saved yet. Go back to the tab where you started; it finishes by itself. If that tab is closed or on another device, make the change again here."
-          status="information"
-        />
-      ) : null}
       {/* Keyed by account, so a page shown again for another account never carries a draft over. */}
       <div ref={protectedAreaRef}>
         <Fragment key={userId}>{children}</Fragment>
@@ -285,8 +261,8 @@ export default function ReauthenticationFormClient({
               />
             ) : null}
             {isReplaying ? (
-              <p aria-live="polite" className="text-sm">
-                Continuing…
+              <p className="sr-only" role="status">
+                Continuing
               </p>
             ) : null}
             <AuthorizationContext

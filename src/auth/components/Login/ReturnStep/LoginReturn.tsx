@@ -27,11 +27,7 @@ export function LoginReturnController({
   destination?: { path: string; userId: number };
 }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const returnTo = getSafeReturnToPath(searchParams.get("returnTo"));
-  // An emailed link in the address is still being verified by the sign-in step's controller, its
-  // failure dialog is open, or a waiting tab answered it and this tab stays where it is.
-  const isVerifyingLink = searchParams.has("token");
+  const returnTo = getSafeReturnToPath(useSearchParams().get("returnTo"));
   const { isActive } = useStep();
   const userInfo = useUserInfo();
   const userId =
@@ -51,7 +47,6 @@ export function LoginReturnController({
   useEffect(() => {
     if (
       !isActive ||
-      isVerifyingLink ||
       hasChanged ||
       userId === undefined ||
       destination === undefined
@@ -69,7 +64,7 @@ export function LoginReturnController({
     return () => {
       isCurrent = false;
     };
-  }, [destination, hasChanged, isActive, isVerifyingLink, router, userId]);
+  }, [destination, hasChanged, isActive, router, userId]);
 
   return null;
 }

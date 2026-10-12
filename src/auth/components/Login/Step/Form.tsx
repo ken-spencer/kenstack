@@ -4,8 +4,10 @@ import { useState, type ComponentProps } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { useStep } from "@kenstack/components/StepFlow/context";
+import useIsHydrated from "@kenstack/hooks/useIsHydrated";
 
 import LoginForm from "../Form";
+import { useLinkStore } from "./linkStore";
 
 export default function StepLoginForm({
   challengeKey,
@@ -17,9 +19,11 @@ export default function StepLoginForm({
   "challengeKey" | "email" | "method" | "passwordPath"
 >) {
   const { id, isActive, next } = useStep();
-  // An emailed link's token stays in the address while the step's controller verifies it; the form
-  // mounts once it has settled, since it would consume the token.
-  const isSigningIn = useSearchParams().has("token");
+  // The step's controller verifies an emailed link once hydrated; until then, an arrival address with
+  // a token shows the same placeholder, so the form never flashes first.
+  const isVerifyingLink = useLinkStore((state) => state.isVerifying);
+  const isHydrated = useIsHydrated();
+  const hasArrivalToken = useSearchParams().has("token");
   // A redeemed email challenge must not survive into the next login.
   const [redeemedChallengeKey, setRedeemedChallengeKey] = useState<string>();
   // A completed sign-in stays on screen as it was while the flow moves on or
@@ -39,11 +43,11 @@ export default function StepLoginForm({
     setSignIns((count) => count + 1);
   }
 
-  if (isSigningIn) {
+  if (isVerifyingLink || (!isHydrated && hasArrivalToken)) {
     return (
-      <p aria-live="polite" className="text-sm">
-        Signing you in…
-      </p>
+      <div aria-busy="true" className="min-h-72 animate-pulse" role="status">
+        <p className="sr-only">Signing you in</p>
+      </div>
     );
   }
 

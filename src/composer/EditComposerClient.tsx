@@ -176,11 +176,9 @@ export default function EditComposerClient({
     ? dateFormat(new Date(publication.publishedAt))
     : null;
   // The publication control carries the status itself; this label only
-  // reports save activity.
+  // reports save activity. The Save button's spinner shows a save in flight.
   const saveStatusLabel = form.formState.isDirty
-    ? isPending
-      ? "Saving…"
-      : "Unsaved changes"
+    ? "Unsaved changes"
     : hasUnpublishedChanges
       ? "Changes pending"
       : null;
