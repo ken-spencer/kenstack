@@ -187,6 +187,14 @@ beyond what it names; ask before changing anything else.
 - Report failures and material blockers; passing checks get at most one line, "Checks pass."
 - Run production builds only when explicitly asked.
 
+## Workspace
+
+- Put temporary audit files, generated inspection artifacts, screenshots, intermediate exports, and
+  agent-only scripts under the repository's `tmp/`, never in new top-level output or scripts folders.
+- `tmp/` is pruned: each top-level entry with nothing modified for 7 days is deleted when a Claude Code
+  session starts. Keep anything needed longer, such as a source asset or a record, in the project's own
+  folders; ask the user where when no folder fits.
+
 ## Git
 
 - Stage only when the user asks, except deletions and moves, which need no review: delete a tracked file

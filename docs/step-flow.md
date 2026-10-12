@@ -58,8 +58,12 @@ summaries, and browser persistence in Kenstack and host sites.
   held, such as a seat hold, is released with it, so the flow may resume at an earlier step.
   `createLoginStep()` starts the step skipped for a visit the server sees signed in, and its
   controller follows browser identity: signing in, in the flow or another tab, skips the step so the
-  flow moves on, and losing identity brings it forward. Signing in updates browser identity in
-  place, and the login step's controller then refreshes the server render without waiting on it, so
+  flow moves on, and losing identity brings it forward. The login page passes `skippable: false`:
+  its step always shows, so a signed-in visitor can sign in again, and it moves on only for a
+  sign-in made on it, by its form, or by an emailed link landing on it. For a page loaded signed out,
+  a sign-in in another tab to the email its form sent a code to, such as by that code's emailed link,
+  moves it on too; any other sign-in in another tab leaves it. Signing in updates browser
+  identity in place, and the login step's controller then refreshes the server render without waiting on it, so
   account menus and other output that depends on identity update. The account menu also refreshes it
   when a page rendered signed out adopts a sign-in made in another tab. Data a step needs from the
   account, such as its saved details, reaches the browser in the user info, which the users module's

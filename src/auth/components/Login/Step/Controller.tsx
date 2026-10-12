@@ -27,25 +27,28 @@ import useEmailLoginLink from "../Form/useEmailLoginLink";
 
 export default function LoginController({
   authState: initialAuthState,
+  skippable,
 }: {
   authState: PublicAuthState;
+  skippable: boolean;
 }) {
   const userInfo = useUserInfo(initialAuthState);
-  const { id, setSatisfied, setSkipped } = useStep();
+  const { id, isActive, next, setSatisfied, setSkipped } = useStep();
   const hasIdentity =
     userInfo.state === "authenticated" || userInfo.state === "proven";
 
   // A signed-in visitor skips the step, forward and Back. Losing identity, in
   // this tab or another, brings it forward, and signing in, in the flow or
-  // another tab, skips it again so the flow resumes where it was.
+  // another tab, skips it again so the flow resumes where it was. A step that
+  // isn't skippable stays shown, and only a sign-in made on it moves on.
   useLayoutEffect(() => {
     if (userInfo.state === "loading") {
       return;
     }
 
-    setSkipped(hasIdentity);
+    setSkipped(skippable && hasIdentity);
     setSatisfied(hasIdentity);
-  }, [hasIdentity, setSatisfied, setSkipped, userInfo.state]);
+  }, [hasIdentity, setSatisfied, setSkipped, skippable, userInfo.state]);
 
   // A sign-in inside the flow, by this step, an emailed link or account creation, refreshes the
   // server render without waiting, so the menus and other output that depends on identity update.
@@ -103,6 +106,10 @@ export default function LoginController({
       setLoginDestination(authState, path);
       setUserInfo(authState);
       setIsLinkSettled(true);
+      // A shown step moves on as its form does after a sign-in; a skippable one is skipped instead.
+      if (!skippable && isActive) {
+        next();
+      }
     },
   });
 
@@ -159,7 +166,12 @@ export default function LoginController({
             anchor={id}
             method="email"
             mode="embedded"
-            onComplete={closeLinkFailure}
+            onComplete={() => {
+              closeLinkFailure();
+              if (!skippable && isActive) {
+                next();
+              }
+            }}
           />
         ) : null}
         <AlertDialogFooter>

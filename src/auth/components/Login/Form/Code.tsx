@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 
 import type { EmailLoginVerificationResult } from "@kenstack/auth/api";
 import { loginCodeSchema } from "@kenstack/auth/email/login/schemas";
@@ -52,23 +52,38 @@ export default function LoginCodeForm({
       ? email
       : null,
   );
-  // A flow moves on through its own steps, and a confirmation through its wrapper. A standalone form
-  // has neither: when the visitor comes back, the user-info reload on focus adopts this form's sign-in
-  // if it was finished elsewhere, such as by the emailed link, and names the account's destination,
-  // so the form goes where its own sign-in would.
+  // When the visitor comes back, the user-info reload on focus adopts this form's sign-in if it was
+  // finished elsewhere, such as by the emailed link, and names the account's destination. A
+  // standalone form then goes where its own sign-in would, and an embedded one completes as its own
+  // sign-in would, so a login step that always shows moves on too. A confirmation moves on through
+  // its wrapper. A page rendered for an account adopts no other account's session and already shows
+  // its own, so it never moves on for a sign-in made elsewhere. That is judged in the first effect,
+  // once the page's account is recorded and before adopting a sign-in records a new one.
+  const wasRenderedForAccount = useRef<boolean>(undefined);
   const userInfo = useUserInfo();
   const destination = useLoginDestination();
   const isSignedInElsewhere =
     (userInfo.state === "authenticated" || userInfo.state === "proven") &&
     userInfo.email === normalizeEmail(email);
-  const moveOn = useEffectEvent((path: string) =>
-    window.location.assign(resolveReturnTo(continuation) || path),
-  );
+  const moveOn = useEffectEvent((path: string) => {
+    if (continuation.mode === "embedded") {
+      continuation.onComplete();
+    } else {
+      window.location.assign(resolveReturnTo(continuation) || path);
+    }
+  });
+  // A sign-in this form completed itself has already moved on.
   useEffect(() => {
-    if (continuation.mode === undefined && isSignedInElsewhere) {
+    wasRenderedForAccount.current ??= typeof getRenderedAccount() === "number";
+    if (
+      continuation.mode !== "reauthentication" &&
+      !wasRenderedForAccount.current &&
+      isSignedInElsewhere &&
+      !isCompleting
+    ) {
       moveOn(destination ?? "/");
     }
-  }, [continuation.mode, destination, isSignedInElsewhere]);
+  }, [continuation.mode, destination, isCompleting, isSignedInElsewhere]);
   // The emailed link, opened in another tab, confirms this browser, so coming back to this tab tries
   // the held change again. The server decides, and a refusal changes nothing here.
   const retryHeld = useEffectEvent(() => replay());
