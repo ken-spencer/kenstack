@@ -47,7 +47,7 @@ helper ladder follow `docs/code-organization.md`.
   choices switch state through `onValueChange`.
 - An option's `description` adds a quieter second line under its label, such as a place's town.
 - A stacked list of choices, where the fill alone reads as a set of buttons, takes `radio`: each choice
-  shows a radio circle, filled when chosen. Links never show one.
+  shows a radio circle, checked when chosen. Links never show one.
 - Name a toolbar group with `label`. In a form field the fieldset's legend names the choice, so the
   group takes none.
 - On is a solid fill in `--toggle-on` with `--toggle-on-foreground` text; a site sets both in its
@@ -85,9 +85,7 @@ These apply to every Kenstack site. Do not use:
   neither, ask;
 - italic accent words inside headings; the heading's wording carries the emphasis;
 - numbered section labels such as `01` or `02`; the heading names the section;
-- monospace labels; use the site's body or heading font;
-- a label at one edge of a wide screen and its value, amount or time at the other; keep line items,
-  totals, label–value lists and lists of items with amounts or times in a column of at most about
-  45rem (about 60rem for a list with several columns), or in a main column beside a sidebar. Kenstack's
-  shared admin module list is the exception: its status column stays at the right edge, so it sits in
-  the same place in every module.
+- monospace labels; use the site's body or heading font.
+
+Never put a label that defines a value at one edge of a wide screen and the value it defines at the
+other; keep these labels near their values.

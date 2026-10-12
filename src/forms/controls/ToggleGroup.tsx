@@ -29,7 +29,7 @@ type ToggleGroupProps<TOption extends ToggleGroupOption = ToggleGroupOption> =
     label?: string;
     disabled?: boolean;
     name?: string;
-    // Draws a radio circle at the start of each choice, filled when chosen, as in a stacked list where
+    // Draws a radio circle at the start of each choice, checked when chosen, as in a stacked list where
     // the fill alone reads as a set of buttons. The options are radio buttons either way; links never
     // show one.
     radio?: boolean;

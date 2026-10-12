@@ -72,24 +72,32 @@
     }
   }
 
-  /* A ToggleGroup's radio circle, in the option's text colour; a dot fills it when chosen. */
+  /* A ToggleGroup's radio circle, in the option's text colour; chosen, it fills and shows a check in the
+     fill colour. */
   .toggle-radio {
+    --toggle-check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20 6 9 17l-5-5' fill='none' stroke='black' stroke-linecap='round' stroke-linejoin='round' stroke-width='3'/%3E%3C/svg%3E");
+
     display: inline-flex;
     flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    width: 1rem;
-    height: 1rem;
+    width: 1.25rem;
+    height: 1.25rem;
     margin-inline-end: 0.25rem;
     border: 1.5px solid currentColor;
     border-radius: 50%;
 
-    input:checked + .toggle &::after {
-      width: 0.5rem;
-      height: 0.5rem;
-      content: "";
-      border-radius: 50%;
+    input:checked + .toggle & {
       background: currentColor;
+
+      &::after {
+        width: 0.75rem;
+        height: 0.75rem;
+        content: "";
+        background: var(--toggle-on, #a21caf);
+        -webkit-mask: var(--toggle-check) center / contain no-repeat;
+        mask: var(--toggle-check) center / contain no-repeat;
+      }
     }
   }
 
