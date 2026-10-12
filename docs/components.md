@@ -45,6 +45,9 @@ helper ladder follow `docs/code-organization.md`.
 - A `ToggleGroup`'s options are all links or all choices. Links, each with an `href`, switch views,
   such as one theatre's calendar, and can render from a server component when they have no `icon`;
   choices switch state through `onValueChange`.
+- An option's `description` adds a quieter second line under its label, such as a place's town.
+- A stacked list of choices, where the fill alone reads as a set of buttons, takes `radio`: each choice
+  shows a radio circle, filled when chosen. Links never show one.
 - Name a toolbar group with `label`. In a form field the fieldset's legend names the choice, so the
   group takes none.
 - On is a solid fill in `--toggle-on` with `--toggle-on-foreground` text; a site sets both in its

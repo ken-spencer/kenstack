@@ -10,6 +10,8 @@ import { cn } from "@kenstack/lib/utils";
 type ToggleGroupOption<TValue extends string = string> = {
   icon?: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   label: string;
+  // A second, quieter line under the label, such as an organization's town.
+  description?: string;
   value: TValue;
   // Makes the option a link to another view, such as one theatre's calendar, marked current when chosen.
   href?: string;
@@ -27,6 +29,10 @@ type ToggleGroupProps<TOption extends ToggleGroupOption = ToggleGroupOption> =
     label?: string;
     disabled?: boolean;
     name?: string;
+    // Draws a radio circle at the start of each choice, filled when chosen, as in a stacked list where
+    // the fill alone reads as a set of buttons. The options are radio buttons either way; links never
+    // show one.
+    radio?: boolean;
   };
 
 // One choice among several, shown as a row of on/off buttons. Options are radio buttons, so the arrow
@@ -38,6 +44,7 @@ function ToggleGroup<TOption extends ToggleGroupOption = ToggleGroupOption>({
   label,
   name,
   options,
+  radio,
   value,
   onValueChange,
   ...props
@@ -54,11 +61,18 @@ function ToggleGroup<TOption extends ToggleGroupOption = ToggleGroupOption>({
       {...props}
     >
       {options.map((option) => {
-        const { icon: Icon, href } = option;
+        const { icon: Icon, href, description } = option;
         const content = (
           <>
             {Icon ? <Icon className="size-3.5" aria-hidden="true" /> : null}
-            {option.label}
+            {description ? (
+              <span className="toggle-text">
+                {option.label}
+                <span className="toggle-description">{description}</span>
+              </span>
+            ) : (
+              option.label
+            )}
           </>
         );
 
@@ -86,7 +100,12 @@ function ToggleGroup<TOption extends ToggleGroupOption = ToggleGroupOption>({
               className="sr-only"
               onChange={() => onValueChange?.(option.value, option)}
             />
-            <span className={cn("toggle", itemClassName)}>{content}</span>
+            <span className={cn("toggle", itemClassName)}>
+              {radio ? (
+                <span className="toggle-radio" aria-hidden="true" />
+              ) : null}
+              {content}
+            </span>
           </label>
         );
       })}
