@@ -396,6 +396,10 @@ export type ComboboxOption = SelectOption & {
 };
 
 type ComboboxProps<TOption extends ComboboxOption> = {
+  // A form field's label and message wiring, as FormControl gives it, which belongs on the input.
+  id?: string;
+  "aria-describedby"?: string;
+  "aria-invalid"?: boolean;
   className?: string;
   commitOnBlur?: boolean;
   emptyMessage?: React.ReactNode;
@@ -444,6 +448,9 @@ function findTypedOption<TOption extends ComboboxOption>(
 }
 
 function Combobox<TOption extends ComboboxOption>({
+  id,
+  "aria-describedby": ariaDescribedBy,
+  "aria-invalid": ariaInvalid,
   className,
   commitOnBlur = true,
   emptyMessage = "No matches found.",
@@ -498,6 +505,10 @@ function Combobox<TOption extends ComboboxOption>({
     >
       <ComboboxInput
         {...restInputProps}
+        // A form field's wiring wins; without one, the input keeps its own.
+        id={id ?? restInputProps.id}
+        aria-describedby={ariaDescribedBy ?? restInputProps["aria-describedby"]}
+        aria-invalid={ariaInvalid ?? restInputProps["aria-invalid"]}
         onKeyDown={(event) => {
           onKeyDown?.(event);
 

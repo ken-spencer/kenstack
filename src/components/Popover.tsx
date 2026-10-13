@@ -172,7 +172,15 @@ function PopoverContent({
 
   useEffect(() => {
     const dialog = dialogRef.current;
-    if (mounted && open && autoFocus && dialog?.open) {
+    // The browser may already have focused a control inside as it opened; taking focus from it would
+    // count as leaving that field, and a required one would show its error before anything was done.
+    if (
+      mounted &&
+      open &&
+      autoFocus &&
+      dialog?.open &&
+      !dialog.contains(document.activeElement)
+    ) {
       dialog.focus({ preventScroll: true });
     }
   }, [autoFocus, mounted, open]);

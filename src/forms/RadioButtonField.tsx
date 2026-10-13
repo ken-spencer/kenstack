@@ -49,7 +49,15 @@ export default function RadioButtonField({
           name={field.name}
           options={options}
           value={typeof field.value === "string" ? field.value : ""}
-          onBlur={field.onBlur}
+          // Only leaving the group counts, not moving between its buttons before a choice lands.
+          onBlur={(event) => {
+            if (
+              !(event.relatedTarget instanceof Node) ||
+              !event.currentTarget.contains(event.relatedTarget)
+            ) {
+              field.onBlur();
+            }
+          }}
           onValueChange={(value, option) => {
             field.onChange(value);
             onValueChange?.(value, option);

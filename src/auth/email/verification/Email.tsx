@@ -1,6 +1,7 @@
 import "server-only";
 
-import { Button, Heading, Hr, render, Section, Text } from "react-email";
+import { Heading, Hr, render, Section, Text } from "react-email";
+import EmailButton from "@kenstack/components/EmailButton";
 import { EmailContainer } from "@app/email";
 
 import type { CreateVerificationEmail } from "./sendCode";
@@ -80,19 +81,7 @@ export function createVerificationEmail(
             textAlign: "center",
           }}
         >
-          <Button
-            href={url}
-            style={{
-              backgroundColor: "#111111",
-              color: "#ffffff",
-              fontSize: "14px",
-              fontWeight: "bold",
-              padding: "12px 22px",
-              textDecoration: "none",
-            }}
-          >
-            {copy.actionLabel}
-          </Button>
+          <EmailButton href={url}>{copy.actionLabel}</EmailButton>
         </Section>
         <Hr style={{ borderColor: "#e5e5e5", margin: "26px 0" }} />
         <Text

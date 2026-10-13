@@ -7,7 +7,7 @@ import { twMerge } from "tailwind-merge";
 import Combobox, {
   type ComboboxOption,
 } from "@kenstack/forms/controls/Combobox";
-import Field, { type FieldProps } from "@kenstack/forms/Field";
+import Field, { FormControl, type FieldProps } from "@kenstack/forms/Field";
 
 type ComboboxFieldProps = FieldProps &
   Omit<ComponentProps<"div">, "onChange"> & {
@@ -76,22 +76,25 @@ export default function ComboboxField({
         }
 
         return (
-          <Combobox
-            options={comboboxOptions}
-            value={value}
-            emptyMessage={emptyMessage}
-            inputProps={{
-              autoComplete: inputAutoComplete,
-              className: twMerge("w-full", inputClass),
-              disabled,
-              placeholder,
-              showClear,
-              onBlur: field.onBlur,
-            }}
-            onValueChange={(_nextValue, option) => {
-              commitOption(option);
-            }}
-          />
+          <FormControl>
+            <Combobox
+              options={comboboxOptions}
+              value={value}
+              emptyMessage={emptyMessage}
+              inputProps={{
+                autoComplete: inputAutoComplete,
+                className: twMerge("w-full", inputClass),
+                disabled,
+                placeholder,
+                showClear,
+                ref: field.ref,
+                onBlur: field.onBlur,
+              }}
+              onValueChange={(_nextValue, option) => {
+                commitOption(option);
+              }}
+            />
+          </FormControl>
         );
       }}
     />

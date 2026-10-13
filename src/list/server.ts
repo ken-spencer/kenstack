@@ -88,7 +88,8 @@ export function resolveFilters(
             : undefined;
         const to =
           "to" in range && typeof range.to === "string" ? range.to : undefined;
-        const field = sql`${filter.field}`;
+        // Bracketed, so a field written as an expression keeps its own precedence in a comparison.
+        const field = sql`(${filter.field})`;
         if (
           "columnType" in filter.field &&
           (filter.field.columnType === "PgDate" ||
@@ -123,13 +124,13 @@ export function resolveFilters(
       }
       case "boolean": {
         if (typeof rawValue === "boolean") {
-          where.push(eq(sql`${filter.field}`, rawValue));
+          where.push(eq(sql`(${filter.field})`, rawValue));
         }
         break;
       }
       case "enum": {
         const { include, exclude } = parseOptionFilterValue(filter, rawValue);
-        const field = sql`${filter.field}`;
+        const field = sql`(${filter.field})`;
         // An empty option stands for no value, which a nullable column stores
         // as NULL; comparisons alone never match or exclude NULL.
         const isBlank = sql`(${field} is null or ${field} = '')`;
@@ -166,7 +167,7 @@ export function resolveFilters(
         const filterText = parseTextFilter(rawValue);
         if (filterText) {
           const condition = ilike(
-            sql`${filter.field}`,
+            sql`(${filter.field})`,
             `%${filterText.value}%`,
           );
           where.push(filterText.exclude ? not(condition) : condition);

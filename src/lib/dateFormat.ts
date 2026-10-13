@@ -2,7 +2,7 @@ import deps from "@app/deps";
 import {
   differenceInCalendarDays,
   format,
-  formatDistanceToNow,
+  formatDistanceToNowStrict,
   isValid,
   parseISO,
 } from "date-fns";
@@ -139,5 +139,5 @@ export function relativeDateFormat(
     return dateFormat(date, { timeZone });
   }
 
-  return formatDistanceToNow(date, { addSuffix: true });
+  return formatDistanceToNowStrict(date, { addSuffix: true });
 }

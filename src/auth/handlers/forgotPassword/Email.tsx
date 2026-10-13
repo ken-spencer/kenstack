@@ -1,4 +1,5 @@
-import { Button, Heading, Hr, Section, Text } from "react-email";
+import { Heading, Hr, Section, Text } from "react-email";
+import EmailButton from "@kenstack/components/EmailButton";
 import { EmailContainer, attachments } from "@app/email";
 import { type Geo } from "@vercel/functions";
 
@@ -68,21 +69,7 @@ export default function ForgotPasswordEmail({
           marginBottom: "32px",
         }}
       >
-        <Button
-          style={{
-            padding: "10px 20px",
-            backgroundColor: "#1D4ED8",
-            borderRadius: "4px",
-            color: "#ffffff",
-            fontSize: "14px",
-            fontWeight: "bold",
-            textDecoration: "none",
-            textAlign: "center",
-          }}
-          href={url}
-        >
-          Reset your password
-        </Button>
+        <EmailButton href={url}>Reset your password</EmailButton>
       </Section>
       <Text
         style={{

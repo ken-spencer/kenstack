@@ -104,8 +104,10 @@ user.
 A ruling is only what the user said. Record it with their words quoted (typos corrected, nothing else
 changed) and the date; never paraphrase a remark into a ruling or attach the user's name to the
 agent's reading of it. A proposal the user didn't answer, or answered by changing the subject, is open,
-never approved. A remark that points something out (a duplicate, a bug, a name) authorizes no change
-beyond what it names; ask before changing anything else.
+never approved. A remark that points out a problem (a bug, a duplicate, a workaround, a clipped control)
+covers every instance of that problem, not just the one named. Search the repositories for other
+instances and for a shared cause. Fix the cause where there is one, otherwise fix each instance, and
+report every place changed. Ask before any change that isn't that problem.
 
 ## Code posture
 

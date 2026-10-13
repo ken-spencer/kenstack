@@ -1,4 +1,5 @@
-import { Button, Heading, Hr, Section, Text } from "react-email";
+import { Heading, Hr, Section, Text } from "react-email";
+import EmailButton from "@kenstack/components/EmailButton";
 
 import { EmailContainer, attachments } from "@app/email";
 
@@ -42,20 +43,7 @@ export default function OnboardingEmail({
           textAlign: "center",
         }}
       >
-        <Button
-          href={url}
-          style={{
-            backgroundColor: "#1D4ED8",
-            borderRadius: "4px",
-            color: "#ffffff",
-            fontSize: "14px",
-            fontWeight: "bold",
-            padding: "10px 20px",
-            textDecoration: "none",
-          }}
-        >
-          Go to login
-        </Button>
+        <EmailButton href={url}>Go to login</EmailButton>
       </Section>
       <Text style={{ color: "#000000", fontSize: "14px", lineHeight: "24px" }}>
         Your email address will be filled in. Select Email me a code to receive

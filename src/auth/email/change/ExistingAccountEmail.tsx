@@ -1,4 +1,5 @@
-import { Button, Heading, Hr, Section, Text } from "react-email";
+import { Heading, Hr, Section, Text } from "react-email";
+import EmailButton from "@kenstack/components/EmailButton";
 import { EmailContainer } from "@app/email";
 
 // Sent instead of a confirmation code when the requested address already has
@@ -34,19 +35,7 @@ export default function ExistingAccountEmail({
           textAlign: "center",
         }}
       >
-        <Button
-          href={loginUrl}
-          style={{
-            backgroundColor: "#111111",
-            color: "#ffffff",
-            fontSize: "14px",
-            fontWeight: "bold",
-            padding: "12px 22px",
-            textDecoration: "none",
-          }}
-        >
-          Sign in
-        </Button>
+        <EmailButton href={loginUrl}>Sign in</EmailButton>
       </Section>
       <Hr style={{ borderColor: "#e5e5e5", margin: "26px 0" }} />
       <Text style={{ color: "#666666", fontSize: "12px", lineHeight: "20px" }}>

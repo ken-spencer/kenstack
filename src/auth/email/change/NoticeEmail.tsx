@@ -1,4 +1,5 @@
-import { Button, Heading, Hr, Section, Text } from "react-email";
+import { Heading, Hr, Section, Text } from "react-email";
+import EmailButton from "@kenstack/components/EmailButton";
 import { EmailContainer } from "@app/email";
 
 // Sent to the address being replaced when a sign-in email change is requested.
@@ -35,19 +36,7 @@ export default function NoticeEmail({
           textAlign: "center",
         }}
       >
-        <Button
-          href={cancelUrl}
-          style={{
-            backgroundColor: "#111111",
-            color: "#ffffff",
-            fontSize: "14px",
-            fontWeight: "bold",
-            padding: "12px 22px",
-            textDecoration: "none",
-          }}
-        >
-          This wasn’t me
-        </Button>
+        <EmailButton href={cancelUrl}>This wasn’t me</EmailButton>
       </Section>
       <Hr style={{ borderColor: "#e5e5e5", margin: "26px 0" }} />
       <Text style={{ color: "#666666", fontSize: "12px", lineHeight: "20px" }}>

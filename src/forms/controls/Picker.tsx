@@ -414,21 +414,12 @@ function PickerContent({
   const updateContentPosition = React.useCallback(() => {
     const root = rootRef.current;
     const content = contentRef.current;
-    const target = portalTarget ?? root?.ownerDocument.body;
 
-    if (!root || !content || !target) {
+    if (!root || !content) {
       return;
     }
 
     const rootRect = root.getBoundingClientRect();
-    const targetRect =
-      target instanceof HTMLDialogElement
-        ? target.getBoundingClientRect()
-        : { left: 0, top: 0 };
-    const targetScroll =
-      target instanceof HTMLDialogElement
-        ? { left: target.scrollLeft, top: target.scrollTop }
-        : { left: 0, top: 0 };
     const viewportPadding = 8;
     const sideOffset = 4;
     const viewportWidth = document.documentElement.clientWidth;
@@ -454,14 +445,12 @@ function PickerContent({
 
     setDropdownSide(nextSide);
     content.dataset.side = nextSide;
-    content.style.left = left - targetRect.left + targetScroll.left + "px";
+    content.style.left = left + "px";
     content.style.maxHeight = maxHeight + "px";
     content.style.minWidth = width + "px";
-    content.style.position =
-      target instanceof HTMLDialogElement ? "absolute" : "fixed";
-    content.style.top = topViewport - targetRect.top + targetScroll.top + "px";
+    content.style.top = topViewport + "px";
     content.style.width = width + "px";
-  }, [contentRef, portalTarget, rootRef, setDropdownSide]);
+  }, [contentRef, rootRef, setDropdownSide]);
 
   React.useEffect(() => {
     if (!isOpen) {
@@ -476,6 +465,10 @@ function PickerContent({
       contentRef.current = node;
 
       if (node) {
+        // In the top layer, above the dialog or popover the picker sits in, which would otherwise clip it.
+        if (!node.matches(":popover-open")) {
+          node.showPopover();
+        }
         updateContentPosition();
       }
     },
@@ -508,10 +501,11 @@ function PickerContent({
     <div
       data-slot="picker-content"
       className={cn(
-        "bg-popover text-popover-foreground ring-foreground/10 dark:ring-border inset-auto z-50 m-0 overflow-hidden rounded-lg shadow-md ring-1",
+        "bg-popover text-popover-foreground ring-foreground/10 dark:ring-border fixed inset-auto z-50 m-0 overflow-hidden rounded-lg border-0 p-0 shadow-md ring-1",
         className,
       )}
       data-side={dropdownSide}
+      popover="manual"
       ref={setContentElement}
       style={style}
       {...props}

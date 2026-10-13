@@ -5,7 +5,7 @@
  * read-only view at /admin/<name>/<id>. Exports only ViewButton.
  */
 
-import { Eye } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import FormNavButton from "@kenstack/forms/NavButton";
 import { useAdminEdit } from "../context";
@@ -24,12 +24,12 @@ export default function ViewButton() {
       href={
         `/admin/${name}/${id}` + (searchParams.size ? "?" + searchParams : "")
       }
-      aria-label="View"
+      aria-label="Back"
       size="icon"
-      tooltip="View"
+      tooltip="Back"
       variant="ghost"
     >
-      <Eye className="text-foreground size-6" />
+      <ChevronLeft className="text-foreground size-6" />
     </FormNavButton>
   );
 }
