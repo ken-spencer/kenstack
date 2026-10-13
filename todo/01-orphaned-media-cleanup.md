@@ -4,6 +4,14 @@
 
 **Open.** Cleanup of staged and superseded square variants is implemented and now reports failures through `deps.error()`. Whole-row orphan cleanup is not implemented. The next useful milestone is the fail-closed reference registry plus a report-only dry run; quarantine, the cron route, revision pruning, and the restore drill remain later work.
 
+**Shared-bucket fit, 13 October 2026.** The [monorepo thought dump](../../todo/32-monorepo-and-central-services.md)
+makes a shared Sympolis bucket with a per-site key prefix (such as `civic/`) the default, with a
+customer's own bucket optional. Before quarantine is built, state the quarantine layout for both
+cases: where a prefixed site's quarantined objects land, how the `deleted/` lifecycle rule and any
+public-access policy apply when several sites share the bucket, and that a customer bucket needs its
+own rule. Plan 32 also requires missed runs, not only failed ones, to be visible across sites; Vercel
+cron does not retry, so a run that never happens currently reports nothing. The mechanism is open.
+
 ## Problem
 
 Media rows and S3 objects can be orphaned: uploads that never complete (`status: "pending"`), uploads completed but never attached to a record (`status: "uploaded"`), and media detached from records (`status: "removed"`). Nothing currently deletes the S3 objects or prunes the rows.

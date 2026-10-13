@@ -1,8 +1,8 @@
 "use client";
 
 /*
- * Public entry point: the account a later step acts for, such as "Paying as" on a flow's payment
- * step, with "Not you?" to sign out. Exports only SignedInAs.
+ * Public entry point: the account a flow's submitting step acts for, "Signed in as" by default or
+ * "Paying as" on a payment step, with "Not you?" to sign out. Exports only SignedInAs.
  */
 
 import { useRouter } from "next/navigation";
@@ -17,7 +17,11 @@ import { cn } from "@kenstack/lib/utils";
 // It reassures a visitor the flow skipped sign-in for that it knows who they are. Signing out stays on
 // the page: the refreshed render shows the visitor signed out, and in a flow the login step comes back.
 // Whatever the old session held, such as a seat hold, goes with it, so the flow may resume earlier.
-export default function SignedInAs({ label }: { label: string }) {
+export default function SignedInAs({
+  label = "Signed in as",
+}: {
+  label?: string;
+}) {
   const router = useRouter();
   const user = useUserInfo();
   // While a sign-in change in another tab stands, the bar shows the old account greyed and "Not you?"

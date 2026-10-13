@@ -6,6 +6,14 @@ Slice 1 built (2 October 2026); slices 2 and 3 remain. Implement the shared capa
 Civic and other sites can adopt it through table registration, a webhook route, and site-specific AWS
 configuration. The schema and the decisions below were ruled with Ken on 2 October 2026.
 
+**Later direction, 13 October 2026:** the [monorepo thought dump](../../todo/32-monorepo-and-central-services.md)
+makes delivery feedback, the blocklist and one mail log central and keyed by site, while mailing lists
+and preferences stay site-owned. That conflicts with the per-host webhook, SNS topic, configuration set
+and blocks under "Kenstack and host ownership" below, and with this file's use of the log as the
+newsletter queue. The metadata-only and no-stored-bodies rulings still hold. Resolve the conflicts with
+Ken before building slices 2 and 3, so they are not built per host first. Plan 32 also sets a shared
+SES account as the default, which answers the shared-account check below.
+
 Build in three slices, each visible on its own:
 
 1. Every email logged: `emailMessages`, the mailer writing a row per send, and the read-only "Email

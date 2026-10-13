@@ -42,6 +42,9 @@ helper ladder follow `docs/code-organization.md`.
   `aria-pressed` or a styled radio row for them. A checkbox or switch stays a checkbox or switch.
 - A toggle's label never changes with its state; whether it is on shows only through its pressed
   state.
+- A toggle never shows a forward arrow or chevron, which promises that clicking moves on or opens
+  something; when a toggle has an indicator, its unchosen state leaves it empty. Arrows belong only on
+  controls that navigate or advance.
 - A `ToggleGroup`'s options are all links or all choices. Links, each with an `href`, switch views,
   such as one theatre's calendar, and can render from a server component when they have no `icon`;
   choices switch state through `onValueChange`.
