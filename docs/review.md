@@ -18,9 +18,9 @@ cannot otherwise be judged.
    A guard whose comment names no path that reaches it, or whose named path an access check, step
    rule, schema or loader already blocks, is such a branch. Code reshaped to make TypeScript accept it
    (a cast, a bypassed owner, exported internals, a copied derivation) is such a mechanism when a fix at
-   the inference source would remove it: report it with that fix. If a code path seems convoluted, and
-   additional fixes are needed to make it work, check if there is a simpler alternative that would
-   eliminate the whole problem chain.
+   the inference source would remove it: report it with that fix. When two or more findings land in
+   one mechanism, stop listing them: report the mechanism as one finding, with the simplest design that
+   removes it and every finding with it.
 4. Check the applicable ownership, import-organization, public-surface, and technical contracts routed by
    `AGENTS.md`, including the ownership trace in `docs/code-organization.md#unit-ownership`.
    For an affected reusable owner, inspect every new or changed configuration branch
