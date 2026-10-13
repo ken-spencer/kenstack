@@ -14,7 +14,7 @@ import {
   type LockConfig,
   type LockStrength,
   type PgColumn,
-  type PgSelectBase,
+  type PgAsyncSelectBase,
   type SelectedFields,
 } from "drizzle-orm/pg-core";
 import type {
@@ -160,7 +160,7 @@ class Query<
     return this.toDrizzle().getSQL();
   }
 
-  private toDrizzle(): PgSelectBase<
+  private toDrizzle(): PgAsyncSelectBase<
     TTable["_"]["name"],
     TSelection,
     "partial",

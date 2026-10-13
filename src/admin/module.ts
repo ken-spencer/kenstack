@@ -9,7 +9,12 @@ import "server-only";
 import type { ComponentType, SVGProps } from "react";
 import startCase from "lodash-es/startCase";
 import type { AnyColumn, SQL } from "drizzle-orm";
-import { getTableColumns, getTableName } from "drizzle-orm";
+import {
+  extractExtendedColumnType,
+  getColumnTable,
+  getTableColumns,
+  getTableName,
+} from "drizzle-orm";
 
 import {
   getListSelect,
@@ -585,7 +590,9 @@ function resolveModuleFields<TFields extends DefinedFields>(
 function hasIdentityColumn(table: AnyPgTable): table is NumericIdTable {
   const id = getTableColumns(table).id;
 
-  return Boolean(id && id.dataType === "number" && id.notNull);
+  return Boolean(
+    id && extractExtendedColumnType(id).type === "number" && id.notNull,
+  );
 }
 
 function defineSort(
@@ -664,7 +671,7 @@ function defineReorder(
       `Admin reorder scope column "${scope.fieldKey}" is nullable; scoped reorder requires a non-nullable column.`,
     );
   }
-  if (scope && scope.field.dataType !== "number") {
+  if (scope && extractExtendedColumnType(scope.field).type !== "number") {
     throw new Error(
       `Admin reorder scope column "${scope.fieldKey}" has data type "${scope.field.dataType}"; scoped reorder requires a number-valued column.`,
     );
@@ -693,7 +700,7 @@ function resolveReorderColumn(
     const reference =
       typeof fieldOption === "string"
         ? fieldOption
-        : `${getTableName(fieldOption.table)}.${fieldOption.name}`;
+        : `${getTableName(getColumnTable(fieldOption))}.${fieldOption.name}`;
     throw new Error(
       `Admin reorder column "${reference}" does not belong to table "${getTableName(table)}".`,
     );

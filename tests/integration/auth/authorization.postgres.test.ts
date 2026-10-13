@@ -43,7 +43,7 @@ const binding = { sessionId: 1 };
 beforeAll(async () => {
   cluster = await startTestPostgres();
   client = postgres({ ...cluster.connection, max: 5, prepare: false });
-  const database = drizzle(client);
+  const database = drizzle({ client });
   mocks.transaction.mockImplementation(database.transaction.bind(database));
   await client.unsafe(`
     create table users (id integer primary key, deleted_at timestamptz);

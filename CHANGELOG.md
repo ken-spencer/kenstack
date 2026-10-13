@@ -5,6 +5,26 @@ contract lives in `docs/upgrading.md`.
 
 ## Unreleased
 
+### Drizzle 1.0
+
+Kenstack now requires `drizzle-orm` and `drizzle-kit` `1.0.0-rc.4`. `createDb()` takes no argument
+(was `createDb({ schema })`), since Drizzle 1.0 drops the `schema` option and no site uses relational
+queries. `sessionsRelations` is gone from `@kenstack/db/tables/sessions`. `defineTable` and
+`defineKeyTable` constrain their columns to Drizzle 1.0's `AnyPgColumnBuilder`, which replaces
+`PgColumnBuilderBase`. To migrate:
+
+- Pin both packages to `1.0.0-rc.4` and change `createDb({ schema: tables })` to `createDb()`. Code
+  that names `PgColumnBuilderBase` uses `AnyPgColumnBuilder`.
+- Call `drizzle({ client })` where a script or test called `drizzle(client)` or passed `{ schema }`.
+- Run `npx drizzle-kit up --config=drizzle.config.ts` once to convert `drizzle/` to Drizzle 1.0's
+  folder layout; the SQL is unchanged.
+- Drizzle 1.0's first migrate on a database refuses, changing nothing, while `__drizzle_migrations`
+  holds a row that matches no migration in `drizzle/`. When every such row belongs to a migration that
+  was consolidated before it was ever committed, which `git log` confirms, delete those rows and
+  migrate again. Otherwise the checkout is missing migrations that database ran: bring them in first.
+- A unit test that fakes the database with `drizzle-orm/pg-proxy` returns values as the real driver
+  does, such as a `Date` for a timestamp; Drizzle 1.0's proxy no longer converts raw strings.
+
 ### Error Alerts Without Upstash
 
 The error reporter now emails repeats of one error once per 15 minutes using Vercel's Runtime Cache,

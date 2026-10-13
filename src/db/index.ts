@@ -23,8 +23,4 @@ const makeClient = () =>
 const globalForDb = globalThis;
 const sql = globalForDb.__sql ?? (globalForDb.__sql = makeClient());
 
-export const createDb = <TSchema extends Record<string, unknown>>({
-  schema,
-}: {
-  schema: TSchema;
-}) => drizzle(sql, { schema });
+export const createDb = () => drizzle({ client: sql });

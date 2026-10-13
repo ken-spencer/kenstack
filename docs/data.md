@@ -12,8 +12,10 @@ pipeline schema work, or batch scripts.
   commit introduces only that one, so a later fix from the same commit updates or regenerates the
   private migration. Consolidate with the `flatten-drizzle` skill, under the migration-history rules
   below.
-- Leave generated files under `drizzle/` exactly as Drizzle emits them and review the generated SQL
-  diff directly; the formatter runs only on handwritten schema and source files.
+- Create every migration with `npm run db:generate`, never by writing one by hand. Edit its SQL
+  afterwards only for a result drizzle-kit can't produce, such as emptying a migration that only
+  re-records the snapshot, and report the edit. Review the generated SQL diff directly; the formatter
+  runs only on handwritten schema and source files.
 - Postgres extensions come from Kenstack's supported list in `src/db/scripts/drizzle.mjs`, which
   `db:migrate` enables before `drizzle-kit migrate`, so a schema or migration may use them. Add an
   extension by adding it to that list, and only one that ships with standard Postgres. A Drizzle
@@ -32,7 +34,7 @@ pipeline schema work, or batch scripts.
 ### Migration history
 
 - Append to committed history by default. Once Preview, staging, or production has recorded a
-  migration, preserve its SQL, snapshot, and journal entry exactly.
+  migration, preserve its migration folder exactly.
 - Treat uncommitted migrations as private development without asking for confirmation unless evidence
   indicates they reached a shared environment. Before consolidating them, check that the development
   database has applied all of them, and ask before applying any it hasn't: the consolidated migration
@@ -43,6 +45,9 @@ pipeline schema work, or batch scripts.
   consolidation, without asking, so it is never left broken: record the consolidated migration in its
   ledger and add the schema it is missing. Never reset it, and never delete its ledger rows, tables,
   columns or data; list for the user what the consolidated chain drops or changes that it still holds.
+  The one exception is a database's first Drizzle 1.0 migrate, which refuses while the ledger holds a
+  row matching no migration folder: delete the rows of migrations that `git log` confirms were never
+  committed, and stop and ask about any other.
 - A consolidated migration's drops run on every database at the pushed state, production included.
   Bring each drop of a pushed table or column to the user before it is committed.
 - The final check of a consolidated or new migration replays the whole chain, from the first migration,

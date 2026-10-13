@@ -4,8 +4,6 @@
  * implementation from its canonical files, not through this entry point.
  */
 
-import "server-only";
-
 import { sql } from "drizzle-orm";
 import snakeCase from "lodash-es/snakeCase";
 
@@ -20,12 +18,12 @@ import {
   boolean,
   type AnyPgTable,
   type IndexBuilder,
-  type PgColumnBuilderBase,
+  type AnyPgColumnBuilder,
+  type PgBuildColumns,
   type PgTableExtraConfigValue,
   type AnyPgColumn,
   type PgTableWithColumns,
 } from "drizzle-orm/pg-core";
-import type { BuildColumns } from "drizzle-orm/column-builder";
 import { createId } from "@paralleldrive/cuid2";
 
 import { nextUpdatedAt } from "@kenstack/db/updatedAt";
@@ -77,7 +75,7 @@ const seoColumns = () => ({
 });
 
 type TableColumns<
-  TColumnsMap extends Record<string, PgColumnBuilderBase>,
+  TColumnsMap extends Record<string, AnyPgColumnBuilder>,
   TPublicId extends boolean | undefined,
   TReorder extends boolean | undefined,
   TPublish extends boolean | undefined,
@@ -103,7 +101,7 @@ type TableColumns<
 
 type DefinedPgTable<
   TName extends string,
-  TColumnsMap extends Record<string, PgColumnBuilderBase>,
+  TColumnsMap extends Record<string, AnyPgColumnBuilder>,
   TPublicId extends boolean | undefined,
   TReorder extends boolean | undefined,
   TPublish extends boolean | undefined,
@@ -112,10 +110,9 @@ type DefinedPgTable<
 > = PgTableWithColumns<{
   name: TName;
   schema: undefined;
-  columns: BuildColumns<
+  columns: PgBuildColumns<
     TName,
-    TableColumns<TColumnsMap, TPublicId, TReorder, TPublish, TSeo, TTrash>,
-    "pg"
+    TableColumns<TColumnsMap, TPublicId, TReorder, TPublish, TSeo, TTrash>
   >;
   dialect: "pg";
 }> &
@@ -152,7 +149,7 @@ export const addressColumns = {
 };
 
 export type ExtraTable<
-  TColumnsMap extends Record<string, PgColumnBuilderBase>,
+  TColumnsMap extends Record<string, AnyPgColumnBuilder>,
   TPublicId extends boolean | undefined = false,
   TReorder extends boolean | undefined = false,
   TPublish extends boolean | undefined = false,
@@ -187,7 +184,7 @@ export type ExtraTable<
 
 export type BuildTableOptions<
   TName extends string,
-  TColumnsMap extends Record<string, PgColumnBuilderBase>,
+  TColumnsMap extends Record<string, AnyPgColumnBuilder>,
   TPublicId extends boolean | undefined = false,
   TReorder extends boolean | undefined = false,
   TPublish extends boolean | undefined = false,
@@ -210,7 +207,7 @@ export type BuildTableOptions<
 
 export type BuildKeyTableOptions<
   TName extends string,
-  TColumnsMap extends Record<string, PgColumnBuilderBase>,
+  TColumnsMap extends Record<string, AnyPgColumnBuilder>,
 > = {
   name: TName;
   columns: TColumnsMap;
@@ -218,7 +215,7 @@ export type BuildKeyTableOptions<
 
 export const defineTable = <
   TName extends string,
-  const TColumnsMap extends Record<string, PgColumnBuilderBase>,
+  const TColumnsMap extends Record<string, AnyPgColumnBuilder>,
   const TPublicId extends boolean | undefined = false,
   const TReorder extends boolean | undefined = false,
   const TPublish extends boolean | undefined = false,
@@ -262,7 +259,7 @@ export const defineTable = <
 
   const table = pgTable(
     name,
-    tableColumns as Record<string, PgColumnBuilderBase>,
+    tableColumns as Record<string, AnyPgColumnBuilder>,
     (t) => {
       const live = (built: IndexBuilder) =>
         trash === false ? built : built.where(sql`${t.deletedAt} IS NULL`);
@@ -317,7 +314,7 @@ export const defineTable = <
 
 export const defineKeyTable = <
   TName extends string,
-  const TColumnsMap extends Record<string, PgColumnBuilderBase>,
+  const TColumnsMap extends Record<string, AnyPgColumnBuilder>,
 >({
   name,
   columns,
@@ -415,7 +412,7 @@ export function defineRelationship<
       .notNull()
       .references(() => to.table.id, { onDelete: "cascade" }),
     relationship: text("relationship").notNull(),
-  } satisfies Record<string, PgColumnBuilderBase>;
+  } satisfies Record<string, AnyPgColumnBuilder>;
 
   const table = defineTable({
     name,

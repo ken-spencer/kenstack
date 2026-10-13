@@ -388,7 +388,9 @@ export async function savePreparedRecord<
     values: Record<string, unknown>,
     token?: Date | null,
   ) => {
-    const [row] = await tx
+    // Drizzle 1.0 leaves update().returning()'s result unresolved for a generic selection; this is the
+    // type it resolves to for any concrete table.
+    const [row] = (await tx
       .update(table)
       .set({
         ...values,
@@ -407,7 +409,7 @@ export async function savePreparedRecord<
               : sql`false`,
         ),
       )
-      .returning(select);
+      .returning(select)) as SelectedFieldValues<TTable, TFields>[];
     return row;
   };
   // A miss: the record changed since load, or is gone. The lock reconcileChange takes is held to the

@@ -110,10 +110,9 @@ const moduleConfig = defineModule({
     },
   },
 });
-const schema = { movies, parents, revisions };
 
 let cluster: Awaited<ReturnType<typeof startTestPostgres>>;
-let database: PostgresJsDatabase<typeof schema>;
+let database: PostgresJsDatabase;
 let sqlClient: ReturnType<typeof postgres>;
 
 beforeAll(async () => {
@@ -123,7 +122,7 @@ beforeAll(async () => {
     max: 4,
     prepare: false,
   });
-  database = drizzle(sqlClient, { schema });
+  database = drizzle({ client: sqlClient });
   mocks.database = database as unknown as Record<PropertyKey, unknown>;
 
   await sqlClient.unsafe(`

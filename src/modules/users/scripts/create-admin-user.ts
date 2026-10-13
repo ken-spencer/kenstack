@@ -55,7 +55,7 @@ const sql = postgres(connectionString, {
   idle_timeout: 20,
   max_lifetime: 60 * 30,
 });
-const db = drizzle(sql, { schema: { users } });
+const db = drizzle({ client: sql });
 
 try {
   await createAdminUser();

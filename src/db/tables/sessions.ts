@@ -9,7 +9,6 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 import { users } from "@kenstack/modules/users/tables";
-import { relations } from "drizzle-orm";
 
 export const loginProvider = pgEnum("login_provider", [
   "password",
@@ -58,12 +57,5 @@ export const sessions = pgTable(
     index("sessions_expires_at_idx").on(t.expiresAt),
   ],
 );
-
-export const sessionsRelations = relations(sessions, ({ one }) => ({
-  user: one(users, {
-    fields: [sessions.userId],
-    references: [users.id],
-  }),
-}));
 
 export type Sessions = typeof sessions;

@@ -39,7 +39,7 @@ beforeAll(async () => {
     max: 6,
     prepare: false,
   });
-  database = drizzle(sqlClient);
+  database = drizzle({ client: sqlClient });
   mocks.database = database as unknown as Record<PropertyKey, unknown>;
 
   await sqlClient.unsafe(`

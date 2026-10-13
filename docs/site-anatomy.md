@@ -49,9 +49,8 @@ unsupported top-level directories are transitional and set no precedent.
   top-level module table entry points for the database schema registry. Each module, feature, or
   integration aggregates its child table entry points; the site registry imports only the parent.
   Child definitions and internal imports stay with their owners. `db/setup.ts` is the site's single
-  database-setup executable. `db/index.ts` creates the schema-aware database with
-  `createDb({ schema: tables })` and supplies the `@app/db` binding; query modules import that owner
-  directly.
+  database-setup executable. `db/index.ts` creates the database with `createDb()` and supplies the
+  `@app/db` binding; query modules import that owner directly.
 - `modules/index.ts`, `email/index.ts`, `deps.ts`, and `roles.ts` supply the `@app/modules`,
   `@app/email`, `@app/deps`, and `@app/roles` bindings. These are compile-time path bindings, not a
   runtime dependency container.
