@@ -19,9 +19,10 @@ queries. `sessionsRelations` is gone from `@kenstack/db/tables/sessions`. `defin
 - Run `npx drizzle-kit up --config=drizzle.config.ts` once to convert `drizzle/` to Drizzle 1.0's
   folder layout; the SQL is unchanged.
 - Drizzle 1.0's first migrate on a database refuses, changing nothing, while `__drizzle_migrations`
-  holds a row that matches no migration in `drizzle/`. When every such row belongs to a migration that
-  was consolidated before it was ever committed, which `git log` confirms, delete those rows and
-  migrate again. Otherwise the checkout is missing migrations that database ran: bring them in first.
+  holds a row that matches no migration in `drizzle/`. Delete a row when `git log` confirms its
+  migration was never committed, or was replaced by a later consolidation that the same database also
+  records, then migrate again. For any other row, the checkout is missing migrations that database ran:
+  bring them in first.
 - A unit test that fakes the database with `drizzle-orm/pg-proxy` returns values as the real driver
   does, such as a `Date` for a timestamp; Drizzle 1.0's proxy no longer converts raw strings.
 

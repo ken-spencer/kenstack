@@ -47,7 +47,8 @@ pipeline schema work, or batch scripts.
   columns or data; list for the user what the consolidated chain drops or changes that it still holds.
   The one exception is a database's first Drizzle 1.0 migrate, which refuses while the ledger holds a
   row matching no migration folder: delete the rows of migrations that `git log` confirms were never
-  committed, and stop and ask about any other.
+  committed, or that a later consolidation replaced when the same ledger records that consolidation,
+  and stop and ask about any other.
 - A consolidated migration's drops run on every database at the pushed state, production included.
   Bring each drop of a pushed table or column to the user before it is committed.
 - The final check of a consolidated or new migration replays the whole chain, from the first migration,
