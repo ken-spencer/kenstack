@@ -35,7 +35,6 @@ export default function FormNavButton({
         name="action"
         type="submit"
         value={href}
-        aria-busy={isPending || undefined}
       >
         {children}
       </Button>

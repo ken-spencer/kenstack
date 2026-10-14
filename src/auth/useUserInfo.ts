@@ -199,8 +199,18 @@ export function adoptLogout(pathname: string) {
   }
 }
 
+// One return to the page fires focus and visibilitychange a moment apart, so the first event checks
+// at once and the rest of the return is ignored.
+const returnCheckGapMs = 500;
+let lastReturnCheckAt = -Infinity;
+
 function refreshWhenVisible() {
-  if (document.visibilityState === "visible") {
+  const now = Date.now();
+  if (
+    document.visibilityState === "visible" &&
+    now - lastReturnCheckAt >= returnCheckGapMs
+  ) {
+    lastReturnCheckAt = now;
     void loadUserInfo();
   }
 }
@@ -273,11 +283,14 @@ export function useUserInfo(authState?: PublicAuthState) {
     }
   }, [authState]);
 
-  return useSyncExternalStore(
+  const userInfo = useSyncExternalStore(
     subscribe,
     getSnapshot,
     () => authState ?? loadingSnapshot,
   );
+  // A component mounted after hydration renders before the layout effect above seeds the store; the
+  // server's answer stands in until it does, so the account never reads as loading in between.
+  return userInfo.state === "loading" && authState ? authState : userInfo;
 }
 
 // Resolves once any user-info check in flight has settled: true while the page's account still
