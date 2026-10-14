@@ -18,6 +18,8 @@ describe("Combobox keyboard focus", () => {
   beforeEach(() => {
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     Element.prototype.scrollIntoView = vi.fn();
+    // jsdom has no Popover API, which Picker uses to open its list in the top layer.
+    HTMLElement.prototype.showPopover = vi.fn();
     container = document.createElement("div");
     document.body.append(container);
     root = createRoot(container);

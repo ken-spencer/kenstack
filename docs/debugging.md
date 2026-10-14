@@ -6,8 +6,9 @@ hydration mismatch, or broken UI.
 ## Establish the cause
 
 - A diagnosis-only request is read-only. Edit only when the request includes fixing the problem.
-- Establish the exact observed failure and the narrowest code or boundary capable of causing it before
-  editing. Distinguish reproduced evidence from a leading hypothesis.
+- Establish the exact observed failure, then follow the wrong value or call back to the code that first
+  produces it; the fix goes there. A change where it is read is compensation unless the producer is
+  correct and the reader misreads it. Distinguish reproduced evidence from a leading hypothesis.
 - Make a change only when the evidence supports a causal explanation and the change is narrow enough to
   test that explanation. Verify it with the smallest check that exercises the failing boundary.
 - If an experimental change fails, remove only that experiment before continuing. Preserve pre-existing
