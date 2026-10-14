@@ -153,6 +153,7 @@ export default function Button({
         : child;
 
     const button = React.cloneElement(content, {
+      "aria-busy": isPending || undefined,
       ...props,
       className: twMerge(buttonClassName, child.props.className),
       disabled: disabled || isPending,
@@ -171,6 +172,7 @@ export default function Button({
 
   const button = (
     <button
+      aria-busy={isPending || undefined}
       className={buttonClassName}
       disabled={disabled || isPending}
       {...props}
