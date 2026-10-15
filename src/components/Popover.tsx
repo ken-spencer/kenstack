@@ -172,14 +172,20 @@ function PopoverContent({
 
   useEffect(() => {
     const dialog = dialogRef.current;
-    // The browser may already have focused a control inside as it opened; taking focus from it would
-    // count as leaving that field, and a required one would show its error before anything was done.
+    const active = document.activeElement;
+    // Opening focuses the box itself, not the first link or button the browser chose, since Safari
+    // rings a control focused after a click. A field keeps its focus: leaving it would count as
+    // visiting it, and a required one would show its error before anything was done.
     if (
       mounted &&
       open &&
       autoFocus &&
       dialog?.open &&
-      !dialog.contains(document.activeElement)
+      !(
+        active &&
+        dialog.contains(active) &&
+        active.matches("input, select, textarea, [contenteditable]")
+      )
     ) {
       dialog.focus({ preventScroll: true });
     }
